@@ -2252,7 +2252,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(lpi->cpxenv, lpi->cpxlp);
-   lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
 
 #if CPX_VERSION == 12070100
    /* restore previous value for presolving */
@@ -2274,7 +2273,13 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
+   if ( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2316,9 +2321,12 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
             return SCIP_LPERROR;
          }
 
-         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
          lpi->instabilityignored = FALSE;
+         assert( lpi->solstat != CPX_STAT_INForUNBD );
+
+         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -2328,7 +2336,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
+         SCIPerrorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off.\n");
       }
    }
 
@@ -2389,7 +2397,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
-   lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -2404,7 +2411,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
+   if ( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2432,10 +2445,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
             return SCIP_LPERROR;
          }
 
-         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
          lpi->instabilityignored = FALSE;
+         assert( lpi->solstat != CPX_STAT_INForUNBD );
+
+         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -2573,7 +2589,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    SCIPdebugMessage("calling CPXhybaropt()\n");
    retval = CPXhybbaropt(lpi->cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
-   lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -2589,6 +2604,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   if ( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
@@ -2614,16 +2633,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
       lpi->instabilityignored = FALSE;
-      SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+      assert( lpi->solstat != CPX_STAT_INForUNBD );
 
-      if( lpi->solstat == CPX_STAT_INForUNBD )
-      {
-         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off\n");
-      }
+      lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
+      SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
       setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
