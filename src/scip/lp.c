@@ -14439,6 +14439,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
    SCIP_Longint lpcount;
+   SCIP_COL* col;
    int nlpicols;
    int nlpirows;
    int c;
@@ -14478,9 +14479,6 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activity, lp->nlpirows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ray, lp->nlpicols) );
 
-   /* get primal feasible point */
-   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
-
    /* get primal unbounded ray */
    SCIP_CALL( SCIPlpiGetPrimalRay(lp->lpi, ray) );
 
@@ -14490,47 +14488,131 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    nlpirows = lp->nlpirows;
    lpcount = stat->lpcount;
 
-   /* calculate the objective value decrease of the ray */
+   /* calculate the objective value decrease of the ray and heuristically try to construct primal solution */
    rayobjval = 0.0;
    for( c = 0; c < nlpicols; ++c )
    {
       assert(lpicols[c] != NULL);
       assert(lpicols[c]->var != NULL);
 
+      col = lpicols[c];
+
       /* there should only be a nonzero value in the ray if there is no finite bound in this direction */
       if( rayfeasible != NULL )
+      {
          *rayfeasible = *rayfeasible
-            && (!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -lpicols[c]->lb))
-            && (!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  lpicols[c]->ub));
+            && (!SCIPsetIsNegative(set, ray[c]) || SCIPsetIsInfinity(set, -col->lb))
+            && (!SCIPsetIsPositive(set, ray[c]) || SCIPsetIsInfinity(set,  col->ub));
+      }
 
-      /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
-       * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
-       */
-      if( primalfeasible != NULL )
-         *primalfeasible = *primalfeasible
-            && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
-            && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);
+      if( ! SCIPsetIsZero(set, ray[c]) )
+         rayobjval += ray[c] * col->obj;
 
-      if( !SCIPsetIsZero(set, ray[c]) )
-         rayobjval += ray[c] * lpicols[c]->obj;
+      /* Many LP solvers cannot directly provide a feasible solution if they detected unboundedness. We therefore first
+       * heuristically try to construct a primal solution. */
+      primsol[c] = 0.0;
+      if( SCIPsetIsFeasZero(set, ray[c]) )
+      {
+         /* if the ray component is 0, we try to satisfy as many rows as possible */
+         if( SCIPvarGetNLocksDown(col->var) == 0 && ! SCIPsetIsInfinity(set, -col->lb) )
+            primsol[c] = col->lb;
+         else if( SCIPvarGetNLocksUp(col->var) == 0 && ! SCIPsetIsInfinity(set, col->ub) )
+            primsol[c] = col->ub;
+      }
+
+      /* make sure we respect the bounds */
+      primsol[c] = MAX(primsol[c], col->lb);
+      primsol[c] = MIN(primsol[c], col->ub);
+
+      assert( SCIPsetIsFeasGE(set, primsol[c], col->lb) && SCIPsetIsFeasGE(set, primsol[c], col->lb) );
    }
 
-   /* if the finite point is already infeasible, we do not have to add the ray */
+   /* check feasibility of heuristic solution and compute activity */
+   for( r = 0; r < nlpirows; ++r )
+   {
+      SCIP_Real act = 0.0;
+      SCIP_ROW* row;
+
+      row = lpirows[r];
+      assert( row != NULL );
+
+      for( c = 0; c < row->nlpcols; ++c )
+      {
+         col = row->cols[c];
+
+         assert( col != NULL );
+         assert( col->lppos >= 0 );
+         assert( row->linkpos[c] >= 0 );
+         assert( primsol[col->lppos] < SCIP_INVALID );
+
+         act += row->vals[c] * primsol[col->lppos];
+      }
+
+      if( row->nunlinked > 0 )
+      {
+         for( c = row->nlpcols; c < row->len; ++c )
+         {
+            col = row->cols[c];
+
+            assert( col != NULL );
+
+            if( col->lppos >= 0 )
+               act += row->vals[c] * primsol[col->lppos];
+         }
+      }
+
+      /* check feasibility */
+      if( (! SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasLT(set, act, row->lhs) ) ||
+          (! SCIPsetIsInfinity(set, row->rhs)  && SCIPsetIsFeasGT(set, act, row->rhs) ) )
+         break;
+
+      activity[r] = act;
+   }
+
+   /* if heuristic solution is not feasible, try to obtain solution from LPI */
+   if( r < nlpirows )
+   {
+      /* get primal feasible point */
+      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
+
+      /* determine feasibility status */
+      if( primalfeasible != NULL )
+      {
+         for( c = 0; c < nlpicols; ++c )
+         {
+            assert( lpicols[c] != NULL );
+            assert( lpicols[c]->var != NULL );
+
+            /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
+             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined */
+            *primalfeasible = *primalfeasible
+               && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
+               && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);
+         }
+      }
+   }
+   else
+   {
+      if( primalfeasible != NULL )
+         *primalfeasible = TRUE;
+   }
+
    if( primalfeasible != NULL && !(*primalfeasible) )
    {
+      /* if the finite point is already infeasible, we do not have to add the ray */
       rayscale = 0.0;
    }
-   /* if the ray is already infeasible (due to numerics), we do not want to add the ray */
    else if( rayfeasible != NULL && !(*rayfeasible) )
    {
+      /* if the ray is already infeasible (due to numerics), we do not want to add the ray */
       rayscale = 0.0;
    }
-   /* due to numerical problems, the objective of the ray might be nonnegative,
-    *
-    * @todo How to check for negative objective value here?
-    */
    else if( !SCIPsetIsNegative(set, rayobjval) )
    {
+      /* due to numerical problems, the objective of the ray might be nonnegative,
+       *
+       * @todo How to check for negative objective value here?
+       */
       if( rayfeasible != NULL )
       {
          *rayfeasible = FALSE;
@@ -14567,13 +14649,15 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          lpicols[c]->primsol = primsol[c];
       else
       {
-         SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
+         SCIP_Real primsolval;
+         primsolval = primsol[c] + rayscale * ray[c];
          lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval)); /*lint !e666*/
       }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
    }
 
+   /* transfer solution and check feasibility */
    for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = SCIP_INVALID;
