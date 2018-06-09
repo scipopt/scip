@@ -114,6 +114,7 @@ fixed bugs:
 - fixed bug with releasing slack variable and linear constraint in cons_indicator
 - fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 - fixed bug in gcd reductions of cons_linear regarding an outdated flag for variable types
+- fixed bug in heur_dualval regarding fixing routine for integer variables
 
 data structures:
 - expression interpreter objects are now stored in the block memory
