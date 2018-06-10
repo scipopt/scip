@@ -51,7 +51,9 @@
 #define scipmskobjsen MSKobjsensee
 #define SENSE2MOSEK(objsen) (((objsen)==SCIP_OBJSEN_MINIMIZE)?(MSK_OBJECTIVE_SENSE_MINIMIZE):(MSK_OBJECTIVE_SENSE_MAXIMIZE))
 
-#define MOSEK_CALL(x)  do                                                                                     \
+typedef enum MSKoptimizertype_enum MSKoptimizertype;
+
+#define MOSEK_CALL(x)  do                                               \
                        {  /*lint --e{641}*/                                                                   \
                           MSKrescodee _restat_;                                                               \
                           _restat_ = (x);                                                                     \
@@ -140,7 +142,7 @@ struct SCIP_LPi
    int                   itercount;          /**< iteration count of last optimization run */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting */
    int                   lpid;               /**< id for LP within same task */
-   int                   lastalgo;           /**< algorithm type of last solving call */
+   MSKoptimizertype      lastalgo;           /**< algorithm type of last solving call */
    MSKstakeye*           skx;                /**< basis status for columns */
    MSKstakeye*           skc;                /**< basis status for rows */
    MSKboundkeye*         bkx;                /**< bound keys for columns */
@@ -845,7 +847,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lpid = nextlpid++;
-   (*lpi)->lastalgo = -1;
+   (*lpi)->lastalgo = MSK_OPTIMIZER_FREE;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
    (*lpi)->bkx = NULL;
@@ -3554,8 +3556,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          /* store old objective coefficients and set them to 0 */
          for (j = 0; j < ncols; ++j)
          {
-            MSK_getcj(lpi->task, j, &objcoefs[j]);
-            MSK_putcj(lpi->task, j, 0.0);
+            MOSEK_CALL( MSK_getcj(lpi->task, j, &objcoefs[j]) );
+            MOSEK_CALL( MSK_putcj(lpi->task, j, 0.0) );
          }
 
          /* solve problem again */
