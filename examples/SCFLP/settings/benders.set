@@ -1,5 +1,3 @@
-# SCIP version 5.0.1.4
-
 # Should Benders' decomposition be used to solve the problem?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 reading/scflpreader/usebenders = TRUE
