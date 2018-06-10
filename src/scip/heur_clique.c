@@ -682,6 +682,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
+   /* refresh nbinvars in case constructLP suddenly added new ones */
+   nbinvars = SCIPgetNBinVars(scip);
+   assert(nbinvars >= 2);
+
    *result = SCIP_DIDNOTFIND;
 
    /* start probing */
