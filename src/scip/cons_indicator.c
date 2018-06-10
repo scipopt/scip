@@ -3164,10 +3164,6 @@ SCIP_RETCODE consdataCreate(
 #endif
    }
 
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
-
    return SCIP_OKAY;
 }
 
@@ -5626,6 +5622,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
    assert( consdata != NULL );
 
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
+
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -7440,6 +7440,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
+      /* do not need to capture slack variable and linear constraint here */
 
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -7464,10 +7465,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
          }
       }
    }
-
-   /* release slack variable and linear constraint */
-   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
-   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
    return SCIP_OKAY;
 }
@@ -7627,6 +7624,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    return SCIP_OKAY;
 }

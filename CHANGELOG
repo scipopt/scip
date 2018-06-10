@@ -21,6 +21,8 @@ fixed bugs:
 - fix parsing of version number in the CMake module for Ipopt
 - fixed handling of implicit integer variables when attempting to solve sub-MIP in nlpdiving heuristic
 - added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
+- fixed bug with releasing slack variable and linear constraint in cons_indicator
+- fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 - fixed bug in heur_vbound triggered when new variables were added while constructing the LP
 
 data structures:

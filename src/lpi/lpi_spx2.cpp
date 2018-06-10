@@ -74,6 +74,15 @@
 #undef SCIP_DEBUG
 #endif
 
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+ * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+ */
+#ifdef __GNUC__
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
 /* include SoPlex solver */
 #include "soplex.h"
 
@@ -307,15 +316,15 @@ public:
    // @todo member variable?
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( _probname != NULL )
          spx_free(_probname);
-      len = (int)strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(_probname, len + 1);
-      strncpy(_probname, probname, len); /*lint !e732*/
-      _probname[len] = '\0';
+      memcpy(_probname, probname, len + 1);
    }
 
    void setRep(SPxSolver::Representation p_rep)
