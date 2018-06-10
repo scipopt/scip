@@ -102,9 +102,6 @@
 #if (SOPLEX_VERSION >= 160)
 #if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
-#else
-#include "soplex/spxgithash.h"
-#endif
 #endif
 #endif
 
