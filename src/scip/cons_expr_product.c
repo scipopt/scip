@@ -1260,6 +1260,14 @@ SCIP_RETCODE separatePointProduct(
             SCIP_INTERVAL bounds;
 
             midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
+
+            if( midval == 0.0 )
+            {
+               /* TODO FIXME we should avoid getting here */
+               SCIPdebugMsg(scip, "<%s> fixed to 0.0, we should not even be called for separation\n", SCIPvarGetName(var));
+               goto CLEANUP;
+            }
+
             SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
             SCIPintervalMul(SCIP_INTERVAL_INFINITY, &fixedinterval, fixedinterval, bounds);
          }
