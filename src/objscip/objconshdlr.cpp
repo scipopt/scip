@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -424,7 +424,7 @@ SCIP_DECL_CONSLOCK(consLockObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, nlockspos, nlocksneg) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, locktype, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }

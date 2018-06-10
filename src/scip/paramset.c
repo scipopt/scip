@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2792,6 +2792,10 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       if( strcmp(heurname, "dualval") == 0 )
          continue;
 
+      /* the aggressive Benders' decomposition heuristics should remain disabled */
+      if( strstr(heurname, "benders") != NULL )
+         continue;
+
       /* get frequency parameter of heuristic */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
@@ -3871,7 +3875,6 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
                }
             }
          }
-
       }
       break;
    case SCIP_PARAMEMPHASIS_PHASEPROOF:

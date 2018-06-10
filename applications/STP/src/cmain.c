@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 
 #include "reader_stp.h"
+#include "reader_gr.h"
 #include "cons_stp.h"
 #include "heur_tm.h"
 #include "heur_local.h"
@@ -70,6 +71,7 @@ SCIP_RETCODE runShell(
 
    /* include Steiner tree reader */
    SCIP_CALL( SCIPincludeReaderStp(scip) );
+   SCIP_CALL( SCIPincludeReaderGr(scip) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -107,6 +109,8 @@ SCIP_RETCODE runShell(
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );
 
+   SCIP_CALL( SCIPsetSubscipsOff(scip, FALSE) );
+
    /* set STP-specific default parameters */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );
@@ -117,18 +121,21 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.3) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.1) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) ); // todo tune
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );   // todo tune
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) ); // todo tune
 
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
+
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) );
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/alns/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/farkasdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/guideddiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/linesearchdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/nlpdiving/freq", -1) );

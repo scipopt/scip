@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,7 +19,6 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
@@ -133,8 +132,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
    SCIPinfoMessage(scip, NULL, "====================================\n\n");
 
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-   SCIP_CALL( SCIPcycPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
    /**************
     * Statistics *
     **************/
@@ -369,6 +366,9 @@ SCIP_RETCODE SCIPrunCyc(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
+#ifdef WITH_DEBUG_SOLUTION
+   SCIPdebugSolEnable(scip);
+#endif
    /* include reader, problemdata*/
    SCIP_CALL( SCIPincludeCycPlugins(scip) );
 
@@ -377,6 +377,7 @@ SCIP_RETCODE SCIPrunCyc(
     **********************************/
 
    SCIP_CALL( processArguments(scip, argc, argv, defaultsetname) );
+
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* free scip */

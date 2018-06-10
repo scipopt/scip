@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3781,20 +3781,20 @@ SCIP_DECL_CONSLOCK(consLockOptcumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
 
       /* the binary decision variable should not get rounded up; rounding down does not influence the feasibility */
       assert(consdata->binvars[v] != NULL);
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[v], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

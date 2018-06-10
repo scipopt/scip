@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,13 +32,34 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/heur_vbounds.h"
+#include "blockmemshell/memory.h"
 #include "scip/heur_locks.h"
+#include "scip/heur_vbounds.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #ifdef SCIP_STATISTIC
 #include "scip/clock.h"
@@ -112,10 +133,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem? */
    SCIP_Bool             uselockfixings;     /**< should more variables be fixed based on variable locks if
-                                              *   the fixing rate was not reached?
-                                              */
-
-
+                                              *   the fixing rate was not reached? */
 };
 
 /**@name Heuristic defines
@@ -411,7 +429,6 @@ SCIP_RETCODE topologicalSort(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &cliqueexit, SCIPgetNCliques(scip)) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
 
-
    /* while there are unvisited nodes, run dfs on the inverse graph starting from one of these nodes; the dfs orders are
     * stored in the topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which
     * gives us a topological order
@@ -564,7 +581,6 @@ SCIP_RETCODE applyVboundsFixings(
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
          continue;
-
 
       /* there are two cases for tighten:
        * 1) tighten == TRUE:  we go through the list of variables and fix variables to force propagation;

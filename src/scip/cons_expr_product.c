@@ -2020,7 +2020,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    /* TODO FIXME: we need an INITSOL callback so that calls like SCIPsolve() SCIPfreeTransform() and then SCIPsolve()
     * again behave the same; right now, the initial seed is set when SCIP include the plugin, but this happens only once
     */
-   SCIP_CALL( SCIPcreateRandom(scip, &exprhdlrdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &exprhdlrdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
             EXPRHDLR_PRECEDENCE, evalProduct, exprhdlrdata) );

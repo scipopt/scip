@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,13 +28,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_repair.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "scip/scipdefplugins.h"
 #include "scip/cons_varbound.h"
+#include "scip/heur_repair.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/scipdefplugins.h"
+#include <string.h>
 
 #define HEUR_NAME             "repair"
 #define HEUR_DESC             "tries to repair a primal infeasible solution"
@@ -416,7 +438,7 @@ SCIP_RETCODE checkCands(
          {
             SCIP_Real roundedvalue;
 
-            if( SCIPvarGetNLocksUp(vars[i]) > SCIPvarGetNLocksDown(vars[i]) )
+            if( SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) )
             {
                roundedvalue = SCIPceil(scip, value - 1.0);
             }
@@ -707,7 +729,6 @@ SCIP_RETCODE applyRepair(
 #endif
       }
 
-
 #ifdef SCIP_STATISTIC
       if( SCIPisFeasLT(scip, value, lb) || SCIPisFeasGT(scip, value, ub) )
       {
@@ -819,7 +840,6 @@ SCIP_RETCODE applyRepair(
             nviolatedrows[pos]++;
          }
       }
-
 
       /* create a new linear constraint, representing the old one */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &subcons[i], SCIProwGetName(rows[i]),
@@ -1037,7 +1057,6 @@ SCIP_DECL_HEURFREE(heurFreeRepair)
 static
 SCIP_DECL_HEURINIT(heurInitRepair)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
@@ -1339,7 +1358,6 @@ SCIP_RETCODE SCIPincludeHeurRepair(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
-
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixed",

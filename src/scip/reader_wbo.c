@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,10 +22,12 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
+#include "scip/pub_message.h"
+#include "scip/pub_reader.h"
 #include "scip/reader_opb.h"
 #include "scip/reader_wbo.h"
+#include "scip/scip_reader.h"
+#include <string.h>
 
 #define READER_NAME             "wboreader"
 #define READER_DESC             "file reader for pseudoboolean wbo file format"

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,7 +20,7 @@
  * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
- * This file implements the reader used to read and write Steiner tree problems.
+ * This file implements a reader used to read and write Steiner tree problems.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,6 +34,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** include user parameters */
+extern
+SCIP_RETCODE SCIPStpReaderIncludeParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** includes the stp file reader in SCIP */
 extern

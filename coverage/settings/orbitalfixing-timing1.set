@@ -1,0 +1,3 @@
+misc/usesymmetry = 2
+propagating/orbitalfixing/symcomptiming = 1
+propagating/orbitalfixing/performpresolving = TRUE

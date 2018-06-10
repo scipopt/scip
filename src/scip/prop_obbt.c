@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,16 +35,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/prop_obbt.h"
-#include "scip/prop_genvbounds.h"
-#include "scip/debug.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_nonlinear.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/intervalarith.h"
+#include "scip/prop_genvbounds.h"
+#include "scip/prop_obbt.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -2537,8 +2563,6 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
    {
-
-      /*SCIPdebugMsg(scip, "cons_quadratic is there!\n");*/
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
@@ -2789,7 +2813,6 @@ SCIP_RETCODE initBounds(
       bilinidx = 0;
       nbilinterms = 0;
 
-
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &y, nbilins) );
@@ -2933,7 +2956,7 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
    SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

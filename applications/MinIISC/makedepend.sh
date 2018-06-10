@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for the MinIISC application
+# This scripts generates the dependencies for the MinIISC application
 #
 
 OPTS=(opt dbg opt-gccold)

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,6 +43,9 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 EXTERN
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
+   SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -56,22 +59,6 @@ EXTERN
 SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
-   );
-
-/** register that a specific symmetry is needed */
-EXTERN
-SCIP_RETCODE SCIPregisterSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_HANDLETYPE        symtype,            /**< type of symmetry handling of callee */
-   SYM_SPEC              type,               /**< variable types the callee is interested in */
-   SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
-   );
-
-/** return at what time symmetry is computed (before or after presolving) */
-EXTERN
-SCIP_RETCODE SCIPgetTimingSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed in stage initpre or exitpre */
    );
 
 #ifdef __cplusplus

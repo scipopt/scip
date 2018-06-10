@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -254,8 +254,8 @@ struct SCIP_Var
    int                   parentvarssize;     /**< available slots in parentvars array */
    int                   nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
    int                   nuses;              /**< number of times, this variable is referenced */
-   int                   nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
-   int                   nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
+   int                   nlocksdown[NLOCKTYPES]; /**< array of variable locks for rounding down; if zero, rounding down is always feasible */
+   int                   nlocksup[NLOCKTYPES];   /**< array of variable locks for rounding up; if zero, rounding up is always feasible */
    int                   branchpriority;     /**< priority of the variable for branching */
    int                   lbchginfossize;     /**< available slots in lbchginfos array */
    int                   nlbchginfos;        /**< number of lower bound changes from root node to current node */

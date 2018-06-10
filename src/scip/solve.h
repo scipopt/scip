@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,24 +25,24 @@
 #define __SCIP_SOLVE_H__
 
 
-#include <stdio.h>
-
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_event.h"
-#include "scip/type_lp.h"
-#include "scip/type_prob.h"
-#include "scip/type_primal.h"
-#include "scip/type_tree.h"
-#include "scip/type_reopt.h"
-#include "scip/type_pricestore.h"
-#include "scip/type_sepastore.h"
-#include "scip/type_cutpool.h"
+#include "scip/def.h"
 #include "scip/type_conflict.h"
 #include "scip/type_conflictstore.h"
+#include "scip/type_cutpool.h"
+#include "scip/type_event.h"
+#include "scip/type_lp.h"
+#include "scip/type_mem.h"
+#include "scip/type_message.h"
+#include "scip/type_pricestore.h"
+#include "scip/type_primal.h"
+#include "scip/type_prob.h"
+#include "scip/type_reopt.h"
+#include "scip/type_retcode.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_tree.h"
 
 #ifdef __cplusplus
 extern "C" {

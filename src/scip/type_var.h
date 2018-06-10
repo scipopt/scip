@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -76,6 +76,15 @@ enum SCIP_BoundchgType
    SCIP_BOUNDCHGTYPE_PROPINFER = 2      /**< bound change was due to an inference of a domain propagator */
 };
 typedef enum SCIP_BoundchgType SCIP_BOUNDCHGTYPE;
+
+/** types of variable locks */
+#define NLOCKTYPES 2                    /**< number of lock types */
+enum SCIP_LockType
+{
+   SCIP_LOCKTYPE_MODEL    = 0,          /**< variable locks for model and check constraints */
+   SCIP_LOCKTYPE_CONFLICT = 1           /**< variable locks for conflict constraints */
+};
+typedef enum SCIP_LockType SCIP_LOCKTYPE;
 
 typedef struct SCIP_DomChgBound SCIP_DOMCHGBOUND; /**< static domain change data for bound changes */
 typedef struct SCIP_DomChgBoth SCIP_DOMCHGBOTH;   /**< static domain change data for bound and hole changes */
