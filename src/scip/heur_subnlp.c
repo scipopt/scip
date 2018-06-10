@@ -18,6 +18,7 @@
  * @author  Stefan Vigerske
  * 
  * @todo set cutoff or similar in NLP
+ * @todo reconstruct sub-SCIP if problem has changed
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2110,16 +2111,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    /* reset solution found counter */
    heurdata->nsolfound = 0;
 
-   if( heurdata->keepcopy )
-   {
-      /* create sub-SCIP for later use */
-      SCIP_CALL( createSubSCIP(scip, heurdata) );
-
-      /* creating sub-SCIP may fail if the NLP solver interfaces did not copy into subscip */
-      if( heurdata->subscip == NULL )
-         return SCIP_OKAY;
-   }
-
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
@@ -2182,18 +2173,16 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* if keepcopy and subscip == NULL, then InitsolNlp decided that we do not need an NLP solver,
-    *   probably because we do not have nonlinear continuous or implicit integer variables
-    * if triedsetupsubscip and subscip == NULL, then we run the heuristic already, but gave up due to some serious error
-    * in both cases, we do not want to run
+   /* if triedsetupsubscip and keepcopy and subscip == NULL, then we tried to setup a subSCIP before, but failed due to some serious error
+    * thus, we should do not need to try again
     *
     * otherwise, we continue and let SCIPapplyHeurSubNlp try to create subscip
     */
-   if( heurdata->subscip == NULL && (heurdata->keepcopy || heurdata->triedsetupsubscip) )
+   if( heurdata->subscip == NULL && heurdata->keepcopy && heurdata->triedsetupsubscip )
       return SCIP_OKAY;
 
-   /* if we recreate the subSCIP in every run, then also check whether we want to run the heuristic at all */
-   if( !heurdata->keepcopy && !runHeuristic(scip) )
+   /* before we run the heuristic for the first time, check whether we want to run the heuristic at all */
+   if( SCIPheurGetNCalls(heur) == 0 && !runHeuristic(scip) )
       return SCIP_OKAY;
 
    if( heurdata->startcand == NULL )
