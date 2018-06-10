@@ -2275,7 +2275,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if ( lpi->solstat != CPX_STAT_INForUNBD )
+   if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2398,7 +2398,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if ( lpi->solstat != CPX_STAT_INForUNBD )
+   if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
@@ -2578,7 +2578,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
 
-   if ( lpi->solstat != CPX_STAT_INForUNBD )
+   if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
