@@ -1342,7 +1342,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
       SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, propdata->varboundrelax) );
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr\n", interval.inf, interval.sup);
+      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
@@ -8836,7 +8836,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
     */
    SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
 
-   SCIPdebugMsg(scip, "added auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
+   SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
    /* add variable locks in both directions */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );

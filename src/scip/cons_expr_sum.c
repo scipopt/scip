@@ -925,6 +925,8 @@ SCIP_RETCODE separatePointSum(
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
    SCIPaddRowprepSide(*rowprep, -exprdata->constant);
 
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "sum");  /* @todo make cutname unique, e.g., add LP number */
+
    return SCIP_OKAY;
 }
 
@@ -937,6 +939,12 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
    assert(overestimate || underestimate);
 
    *infeasible = FALSE;
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "initSepaSum %d children: ", SCIPgetConsExprExprNChildren(expr));
+   SCIPprintConsExprExpr(scip, expr, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
    /* i = 0 for overestimation; i = 1 for underestimation */
    for( i = 0; i < 2 && !*infeasible; ++i )
@@ -972,6 +980,12 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
             SCIP_CALL( SCIPchgRowLhs(scip, row, rowprep->side) );
          }
 
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "adding row ");
+         SCIPprintRow(scip, row, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -995,6 +1009,13 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
          SCIP_ROW* row;
 
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "adding row ");
+         SCIPprintRow(scip, row, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
