@@ -5366,6 +5366,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
 #ifdef SCIP_DEBUG
    if( error )
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
+#else
+   (void)error;
 #endif
 
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm);
@@ -5376,6 +5378,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
 #ifdef SCIP_DEBUG
    if( error )
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
+#else
+   (void)error;
 #endif
 
    return SCIP_OKAY;
