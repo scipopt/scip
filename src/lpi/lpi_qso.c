@@ -1768,7 +1768,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    /* There seems to be a bug in qsopt: The function QSget_obj_list might return values for slack variables. We
     * therefore have to use a workarround. */
-#if 0
+#ifdef SCIP_DISABLED_CODE
    QS_CONDRET( QSget_obj_list(lpi->prob, len, lpi->iccnt, vals) );
 #endif
 
