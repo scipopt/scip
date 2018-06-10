@@ -141,6 +141,12 @@ struct SCIP_RowPrep
    SCIP_SIDETYPE         sidetype;           /**< type of side */
    SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
    char                  name[SCIP_MAXSTRLEN]; /**< row name */
+
+   SCIP_Bool             recordmodifications;/**< whether to remember variables which coefficients were modified during cleanup */
+   SCIP_VAR**            modifiedvars;       /**< variables which coefficient were modified by cleanup */
+   int                   nmodifiedvars;      /**< number of variables which coefficient was modified */
+   int                   modifiedvarssize;   /**< length of modifiedvars array */
+   SCIP_Bool             modifiedside;       /**< whether the side was modified (relaxed) by cleanup */
 };
 typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
@@ -824,6 +830,27 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
    SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
+);
+
+/** Scales up a rowprep to increase coefficients/sides that are within epsilon to an integer value, if possible.
+ *
+ * Computes the minimal fractionality of all fractional coefficients and the side of the rowprep.
+ * If this fractionality is below epsilon, the rowprep is scaled up such that the fractionality exceeds epsilon,
+ * if this will not put any coefficient or side above SCIPhugeValue.
+ *
+ * This does not relax the rowprep.
+ * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
+ * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
+ * If *success is set to FALSE, then the rowprep will not have been modified.
+ *
+ * @return The applied scaling factor, if *success is set to TRUE.
+ */
+EXTERN
+SCIP_Real SCIPscaleupRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */
+   SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
 );
 
 /** scales a rowprep

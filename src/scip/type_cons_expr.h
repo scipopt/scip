@@ -350,8 +350,9 @@ extern "C" {
  *
  * input:
  *  - scip : SCIP main data structure
- *  - expr : expression to be hashed
+ *  - expr : expression
  *  - sol  : solution (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
  *  - success: buffer to store whether the branching score callback was successful
  */
@@ -359,6 +360,7 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
    unsigned int brscoretag, \
    SCIP_Bool* success)
 

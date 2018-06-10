@@ -283,7 +283,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
       return SCIP_OKAY;
 
    /* call the branching callback of the expression handler */
-   SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, brscoretag, success) );
+   SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, auxvalue, brscoretag, success) );
 
    if( *success )
       return SCIP_OKAY;

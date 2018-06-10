@@ -394,13 +394,7 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
 
 /** calls the expression branching score callback */
 extern
-SCIP_RETCODE SCIPbranchscoreConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_SOL*                  sol,          /**< solution (NULL for the LP solution) */
-   unsigned int               brscoretag,   /**< value to be passed on to SCIPaddConsExprExprBranchScore() */
-   SCIP_Bool*                 success       /**< buffer to store whether the branching score callback was successful */
-   );
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
 
 /** increments the branching score count of an expression handler */
 extern
