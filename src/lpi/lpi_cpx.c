@@ -2277,6 +2277,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
    if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
@@ -2400,6 +2402,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
    if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
 
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
@@ -2580,6 +2584,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    if( lpi->solstat != CPX_STAT_INForUNBD )
       lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
