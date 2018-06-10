@@ -72,7 +72,7 @@ void setup(void)
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1, TRUE) );
 }
 
 /* releases variables, frees scip */

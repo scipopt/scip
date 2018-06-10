@@ -56,7 +56,7 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );

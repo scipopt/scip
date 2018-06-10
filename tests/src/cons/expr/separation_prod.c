@@ -295,7 +295,7 @@ void testMultilinearLP(int lpsize)
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    /* build separation LP */
    SCIP_CALL( buildMultilinearSeparationLP(scip, lpsize, &lp) );
