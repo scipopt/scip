@@ -13,7 +13,7 @@
 
 * [ ] Are CHANGELOG entries added?
 * [ ] Is necessary user documentation added (doc/xternal.c, doc/inc/faq/, installation instructions, ...)?
-* [ ] Are new files added to makedist.sh and both build systems?
+* [ ] Are new files added to makedist.sh and both build systems?  Updated dependencies via makedepend.sh?
 
 ### Testing
 
