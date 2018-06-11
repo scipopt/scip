@@ -56,7 +56,8 @@
  *  - @subpage HOWTOADD            Detailed guides for adding user plugins
  *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
- *  - @subpage FURTHERINFO         Changes between SCIP versions
+ *  - @subpage CHG                 Release notes and changes between different versions of SCIP
+ *  - @subpage AUTHORS             SCIP Authors
  *
  *
  * @section QUICKSTART Quickstart
@@ -150,9 +151,9 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page GETTINGSTARTED Getting started
- * 
+ *
  * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * 
+ *
  * - @subpage LICENSE "License"
  * - @subpage INSTALL "Installation"
  * - @subpage SHELL       "Tutorial: the interactive shell"
@@ -222,20 +223,33 @@
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  */
 
-/**@page FURTHERINFO Further information
- *
- * - @subpage CHG Changes between different versions of SCIP
- * - @subpage AUTHORS SCIP Authors
- *
- */
-
 /**@page AUTHORS SCIP Authors
  * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
  */
 
-/**@page CHG Changes between different versions of SCIP
- * - \subpage CHANGELOG    "Change log"
+/**@page CHG Release notes and changes between different versions of SCIP
+ *
+ * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
+ * release notes:
+ *
+ * - \subpage RN60         "SCIP 6.0"
+ * - \subpage RN50         "SCIP 5.0"
+ * - \subpage RN40         "SCIP 4.0"
+ * - \subpage RN32         "SCIP 3.2"
+ * - \subpage RN31         "SCIP 3.1"
+ * - \subpage RN30         "SCIP 3.0"
+ * - \subpage RN21         "SCIP 2.1"
+ * - \subpage RN20         "SCIP 2.0"
+ * - \subpage RN12         "SCIP 1.2"
+ * - \subpage RN11         "SCIP 1.1"
+ * - \subpage RN10         "SCIP 1.0"
+ * - \subpage RN09         "SCIP 0.9"
+ * - \subpage RN08         "SCIP 0.8"
+ * - \subpage RN07         "SCIP 0.7"
+ *
+ * TODO: integrate the old release notes and interface changes into the new CHANGELOG
+ *
  * - \subpage RELEASENOTES "Release notes"
  * - \subpage CHG11        "Interface changes between version 5.0 and 5.1"
  * - \subpage CHG10        "Interface changes between version 4.0 and 5.0"
@@ -1057,7 +1071,7 @@
  */
 
 /**@page BRANCHANDPRICE Branch-and-price
- * 
+ *
  * <table>
  *  <tr>
  *  <td>
@@ -1078,7 +1092,7 @@
  *  </td>
  *  </tr>
  *  </table>
- * 
+ *
  */
 
 /**@page BENDERSDECOMP Benders' decomposition
@@ -1117,7 +1131,7 @@
  *  </td>
  *  </tr>
  *  </table>
- * 
+ *
  */
 
 /**@page CALLABLELIBRARY Callable library
@@ -8502,7 +8516,7 @@
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faq.inc
+ * \htmlinclude faq/faq.inc
  */
 
 /**@page RELEASENOTES Release notes
@@ -8547,13 +8561,6 @@
  *
  * \verbinclude SCIP-release-notes-1.1
  */
-
-/**@page CHANGELOG CHANGELOG
- *
- * \verbinclude CHANGELOG
- *
- */
-
 
 
 /**@page PARAMETERS List of all SCIP parameters

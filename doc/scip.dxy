@@ -285,7 +285,7 @@ OPTIMIZE_OUTPUT_VHDL   = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      =
+EXTENSION_MAPPING      = no_extension=C
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -304,7 +304,7 @@ MARKDOWN_SUPPORT       = YES
 # Minimum value: 0, maximum value: 99, default value: 0.
 # This tag requires that the tag MARKDOWN_SUPPORT is set to YES.
 
-TOC_INCLUDE_HEADINGS   = 0
+TOC_INCLUDE_HEADINGS   = 1
 
 # When enabled doxygen tries to link words that correspond to documented
 # classes, or namespaces to their corresponding documentation. Such a link can
@@ -785,6 +785,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = . \
+                         ../CHANGELOG \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
@@ -844,6 +845,7 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
+                         CHANGELOG \
                          *.hpp
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
@@ -1013,7 +1015,7 @@ EXAMPLE_PATTERNS       =
 # irrespective of the value of the RECURSIVE tag.
 # The default value is: NO.
 
-EXAMPLE_RECURSIVE      = YES
+EXAMPLE_RECURSIVE      = NO
 
 # The IMAGE_PATH tag can be used to specify one or more files or directories
 # that contain images that are to be included in the documentation (see the
@@ -1055,7 +1057,7 @@ INPUT_FILTER           = "sed 's/^EXTERN\([ ]*\)$/extern/g; /^SCIP_DEPRECATED/d'
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by doxygen.
 
-FILTER_PATTERNS        =
+FILTER_PATTERNS        = "*/CHANGELOG=\"sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'\""
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
