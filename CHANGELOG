@@ -3800,7 +3800,7 @@ interface:
 - replaced methods SCIPvarGetClosestVlb() and SCIPvarGetClosestVub() from pub_var.h by new methods
   SCIPgetVarClosestVlb() and SCIPgetVarClosestVlb() in scip.h
 - new method SCIPresetParams()
-- modified SCIP_SUBVERSION to be a number instead of a string (to be able to use #if SCIP_SUBVERSION >= ...)
+- modified SCIP_SUBVERSION to be a number instead of a string (to be able to use \#if SCIP_SUBVERSION >= ...)
 - SCIPsubversion() now returns an int instead of a const char*
 - new methods SCIPtightenVarLbGlobal() and SCIPtightenVarUbGlobal()
 - new method SCIPgetRootNode() (in combination with SCIPcutoffNode(), this allows the immediate finishing of the
@@ -4538,8 +4538,8 @@ interface:
   SCIPconshdlrWasPresolvingDelayed()
 - new method SCIPinProbing()
 - new method SCIPgetProbName()
-- source code was moved into subdirectories: replace includes #include "scip.h" by #include "scip/scip.h" and #include
-"objscip.h" by #include "objscip/objscip.h"; This should allow a user to have include files of the same name as the ones
+- source code was moved into subdirectories: replace includes "scip.h" by "scip/scip.h" and
+"objscip.h" by "objscip/objscip.h"; This should allow a user to have include files of the same name as the ones
 of SCIP, e.g. "tree.h" or "var.h".
 - method SCIPreadProb() does not free the current problem - this is done in SCIPcreateProb() now, which is usually
   called by a problem reader; in this way, a reader can generate "extra information" for the current problem, s.t.  the
