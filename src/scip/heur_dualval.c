@@ -1583,20 +1583,24 @@ SCIP_RETCODE fixDiscreteVars(
       if ( SCIPhashmapGetImage(heurdata->indicopymap, subvar) != NULL )
          subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, subvar);
 
-      /* get value of the variables, taking NULL as refpoint gives us the current LP solution,
-       * otherwise we get our start point */
-      fixval = SCIPgetSolVal(scip, refpoint, heurdata->integervars[i]);
-
-      /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large
-       * values - thus, we set to 0.0 here and project on bounds below
-       */
-      if( REALABS(fixval) > BIG_VALUE && refpoint == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      /* if we do not really have a startpoint, we set to 0.0 here and project on bounds below */
+      if( refpoint == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
          fixval = 0.0;
+      else
+      {
+         /* get value of the variables (NULL as refpoint gives the current LP solution, otherwise the start point) */
+         fixval = SCIPgetSolVal(scip, refpoint, heurdata->integervars[i]);
 
-      /* round fractional variables to the nearest integer,
-       * use exact integral value, if the variable is only integral within numerical tolerances
-       */
-      fixval = SCIPfloor(scip, fixval+0.5);
+         /* take care that we do not fix variables to very large values (project on bounds below) */
+         if( REALABS(fixval) > BIG_VALUE )
+            fixval = 0.0;
+         else
+         {
+            /* round fractional variables to the nearest integer, use exact integral value, if the variable is only
+             * integral within numerical tolerances */
+            fixval = SCIPfloor(scip, fixval + 0.5);
+         }
+      }
 
       /* adjust value to the global bounds of the corresponding SCIP variable */
       fixval = MAX(fixval, SCIPvarGetLbGlobal(heurdata->integervars[i]));  /*lint !e666*/

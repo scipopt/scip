@@ -117,6 +117,10 @@ Miscellaneous
 - add statistic that presents the number of resolves for instable LPs
 - remove LEGACY mode, compiler needs to be C++11-compliant
 
+fixed bugs:
+- fixed bug in gcd reductions of cons_linear regarding an outdated flag for variable types
+- fixed bug in heur_dualval regarding fixing routine for integer variables
+
 @page RN50 Release notes for SCIP 5.0
 
 @section RN502 SCIP 5.0.2
@@ -144,6 +148,7 @@ fixed bugs:
 - added workaround for bug when solving certain bivariate quadratic interval equations with unbounded second variable
 - fixed bug with releasing slack variable and linear constraint in cons_indicator
 - fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
+- fixed bug in heur_vbound triggered when new variables were added while constructing the LP
 
 data structures:
 - expression interpreter objects are now stored in the block memory

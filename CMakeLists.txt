@@ -465,6 +465,13 @@ add_subdirectory(examples)
 #
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+
+#
+# add AMPL interface
+#
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
+add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()
