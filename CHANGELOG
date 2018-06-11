@@ -31,6 +31,7 @@ Performance improvements
 - improved bound tightening for some quadratic equations
 - constraint handler checking order for original solutions has been modified to check those with negative check priority
   that don't need constraints after all other constraint handlers and constraints have been checked
+- deactivate gauge cuts
 
 Examples and applications
 -------------------------
@@ -110,26 +111,16 @@ Deleted files
 - removed presolving plugin presol_implfree
 - TODO: add scip.c removal/split
 
-Miscellaneous
--------------
+Data structures
+---------------
 
-- updated CppAD to version 20180000.0
-- add statistic that presents the number of resolves for instable LPs
-- remove LEGACY mode, compiler needs to be C++11-compliant
+- expression interpreter objects are now stored in the block memory
 
-fixed bugs:
+Fixed bugs
+----------
+
 - fixed bug in gcd reductions of cons_linear regarding an outdated flag for variable types
 - fixed bug in heur_dualval regarding fixing routine for integer variables
-
-@page RN50 Release notes for SCIP 5.0
-
-@section RN502 SCIP 5.0.2
-*************************
-
-performance improvements:
-- deactivate gauge cuts
-
-fixed bugs:
 - suppress debug solution warnings during problem creation stage
 - fixed check for activated debugging solution in components constraint handler
 - fixed potential bug concerning solution linking to LP in SCIPperformGenericDivingAlgorithm()
@@ -150,9 +141,15 @@ fixed bugs:
 - fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 - fixed bug in heur_vbound triggered when new variables were added while constructing the LP
 
-data structures:
-- expression interpreter objects are now stored in the block memory
+Miscellaneous
+-------------
 
+- updated CppAD to version 20180000.0
+- add statistic that presents the number of resolves for instable LPs
+- remove LEGACY mode, compiler needs to be C++11-compliant
+
+
+@page RN50 Release notes for SCIP 5.0
 
 @section RN501 SCIP 5.0.1
 *************************
