@@ -234,8 +234,10 @@ SCIP_RETCODE getScoreLikeCoefdiving(
        * - if variable may be rounded in both directions, round corresponding to the fractionality
        * - otherwise, round in the infeasible direction
        */
-      if( mayrounddown && mayroundup && divetype != SCIP_DIVETYPE_SOS1VARIABLE )
+      if( mayrounddown && mayroundup )
       {
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
+
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
             *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
@@ -355,8 +357,10 @@ SCIP_RETCODE getScore(
        * - if variable may be rounded in both directions, round corresponding to the fractionality
        * - otherwise, round in the feasible direction
        */
-      if( mayrounddown && mayroundup && divetype != SCIP_DIVETYPE_SOS1VARIABLE )
+      if( mayrounddown && mayroundup )
       {
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
+
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
             *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
