@@ -2262,7 +2262,6 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool root;
    SCIP_Bool allowlocal;
    int maxseparounds;
-   int maxincseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
    int stallnfracs;
@@ -2309,9 +2308,6 @@ SCIP_RETCODE priceAndCutLoop(
    maxnsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
    if( maxnsepastallrounds == -1 )
       maxnsepastallrounds = INT_MAX;
-   maxincseparounds = set->sepa_maxincrounds;
-   if( maxincseparounds == -1 )
-      maxincseparounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
    /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
@@ -2477,7 +2473,6 @@ SCIP_RETCODE priceAndCutLoop(
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && stat->nincseparounds < maxincseparounds
          && nsepastallrounds < maxnsepastallrounds
          && !(*cutoff);
 
