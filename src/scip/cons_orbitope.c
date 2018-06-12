@@ -1499,6 +1499,13 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int** lexminfixes;
+   int** lexmaxfixes;
+   int i;
+   int j;
+   int m;
+   int n;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1519,7 +1526,171 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    assert( consdata->vars != NULL );
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
-   SCIP_CALL( propagateFullOrbitope(scip, cons, consdata->vars, 0, consdata->nblocks, 0, consdata->nspcons, consdata->nblocks, nfixedvars, infeasible) );
+   m = consdata->nspcons;
+   n = consdata->nblocks;
+   vars = consdata->vars;
+
+   /* Initialize lexicographically minimal matrix by fixed entries at the current node.
+    * Free entries in the last column are set to 0.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, m) );
+   for (i = 0; i < m; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
+            lexminfixes[i][j] = 1;
+         else if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 || j == n - 1 )
+            lexminfixes[i][j] = 0;
+         else
+            lexminfixes[i][j] = 2;
+      }
+   }
+
+   /* iterate over columns in reverse order and find the lexicographically minimal face
+    * of the hypercube containing lexminfixes
+    */
+   for (j = n - 2; j >= 0; --j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
+      for (i = 0; i < m; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         {
+            assert( lexminfixes[i][j + 1] == 0 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed != -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
+         {
+            assert( lexminfixes[i][j + 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( minfixed != 1 && maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+               goto FREELEXMIN;
+            }
+         }
+
+         if ( lexminfixes[i][j] == 2 )
+            lexminfixes[i][j] = lexminfixes[i][j + 1];
+      }
+
+      /* ensure that column j is lexicographically not smaller than column j + 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+         assert( maxdiscriminating >= 0 );
+
+         lexminfixes[maxdiscriminating][j] = 1;
+      }
+   }
+
+   /* Initialize lexicographically maximal matrix by fixed entries at the current node.
+    * Free entries in the fist column are set to 1.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, m) );
+   for (i = 0; i < m; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 )
+            lexmaxfixes[i][j] = 0;
+         else if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 || j == 0 )
+            lexmaxfixes[i][j] = 1;
+         else
+            lexmaxfixes[i][j] = 2;
+      }
+   }
+
+   /* iterate over columns and find the lexicographically maximal face of the hypercube containing lexmaxfixes */
+   for (j = 1; j < n; ++j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
+      for (i = 0; i < m; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         {
+            assert( lexmaxfixes[i][j - 1] == 1 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed != -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
+         {
+            assert( lexmaxfixes[i][j - 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( minfixed != -1 && maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+               goto FREELEXMAX;
+            }
+         }
+
+         if ( lexmaxfixes[i][j] == 2 )
+            lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+      }
+
+      /* ensure that column j is lexicographically not greater than column j - 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+         assert( maxdiscriminating >= 0 );
+
+         lexmaxfixes[maxdiscriminating][j] = 0;
+      }
+   }
+
+   /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
+    * row to the corresponding value in lexminfixes (or lexmaxfixes).
+    */
+   for (j = 0; j < n; ++j)
+   {
+      for (i = 0; i < m; ++i)
+      {
+         if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
+            break;
+
+         if ( SCIPvarGetLbLocal(vars[i][j]) < 0.5 && SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
+         {
+            SCIP_Bool success;
+
+            SCIP_CALL( SCIPfixVar(scip, vars[i][j], (SCIP_Real) lexminfixes[i][j], infeasible, &success) );
+
+            if ( success )
+               *nfixedvars += 1;
+         }
+      }
+   }
+
+ FREELEXMAX:
+   for (i = 0; i < m; ++i)
+      SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
+   SCIPfreeBufferArray(scip, &lexmaxfixes);
+
+ FREELEXMIN:
+   for (i = 0; i < m; ++i)
+      SCIPfreeBufferArray(scip, &lexminfixes[i]);
+   SCIPfreeBufferArray(scip, &lexminfixes);
 
    return SCIP_OKAY;
 }
@@ -2731,10 +2902,6 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
       SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
-   }
-   else
-   {
-      SCIP_CALL( resolvePropagationFullOrbitopes(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
