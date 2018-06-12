@@ -603,7 +603,7 @@ SCIP_RETCODE presolveUpgrade(
    SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
 
    /* call the upgrading methods */
-   SCIPdebugMsg(scip, "upgrading expression constraint <%s> (up to %d upgrade methods):\n",
+   SCIPdebugMsg(scip, "upgrading expression constraint <%s> (up to %d upgrade methods): ",
       SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
    SCIPdebugPrintCons(scip, cons, NULL);
 
@@ -1325,11 +1325,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
          SCIPdebugMsg(scip, "Calling interval evaluation of nlhdlr <%s>\n", nlhdlr->name);
          nlhdlrinterval = interval;
          SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->varboundrelax) );
-         SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr\n", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
-
+         SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr ", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-         SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+         SCIPdebugMsgPrint(scip, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
 
          /* intersect with interval */
@@ -1344,7 +1343,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+      SCIPdebugMsgPrint(scip, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
 #endif
    }
 
@@ -2657,12 +2656,6 @@ SCIP_RETCODE reversePropConss(
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
 
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "call reverse propagation for ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
-#endif
-
       assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
       if( expr->nenfos > 0 )
       {
@@ -2677,8 +2670,11 @@ SCIP_RETCODE reversePropConss(
 
             /* call the reverseprop of the nlhdlr */
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "Use nlhdlr <%s>\n", nlhdlr->name);
+            SCIPdebugMsg(scip, "call reverse propagation for ");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
+
             nreds = 0;
             SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, queue, infeasible, &nreds, force) );
             assert(nreds >= 0);
@@ -2689,6 +2685,12 @@ SCIP_RETCODE reversePropConss(
       {
          /* if node without enforcement (no auxvar or in presolve), call reverse propagation callback of exprhdlr directly */
          int nreds = 0;
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMsg(scip, "call reverse propagation for ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
+#endif
 
          /* call the reverseprop of the exprhdlr */
          SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, expr, queue, infeasible, &nreds, force) );
@@ -2806,7 +2808,7 @@ SCIP_RETCODE propConss(
           */
          if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
-            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d)\n", SCIPconsGetName(conss[i]), roundnr);
+            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
             SCIPdebugPrintCons(scip, conss[i], NULL);
 
             cutoff = FALSE;
@@ -5229,14 +5231,14 @@ SCIP_RETCODE separatePoint(
       #ifdef SEPA_DEBUG
       {
          int i;
-         printf("separating point\n");
+         SCIPdebugMsg(scip, "separating point\n");
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_VAR* var;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
-            printf("%s = %g bounds: %g,%g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMsg("  %s = %g bounds: %g,%g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
-         printf("in constraint\n");
+         SCIPdebugMsg(scip, "in constraint\n");
          SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
          SCIPinfoMessage(scip, NULL, ";\n");
       }
@@ -8513,10 +8515,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    *cutoff = FALSE;
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "Trying to tighten bounds of expr ");
+      SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "");
-      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+      SCIPdebugMsgPrint(scip, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
 #endif
 
    /* check if the new bounds lead to an empty interval */
