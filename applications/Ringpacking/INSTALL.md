@@ -1,30 +1,70 @@
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                           *
-*                  This file is part of the program and library             *
-*         SCIP --- Solving Constraint Integer Programs                      *
-*                                                                           *
-*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
-*                            fuer Informationstechnik Berlin                *
-*                                                                           *
-*  SCIP is distributed under the terms of the ZIB Academic License.         *
-*                                                                           *
-*  You should have received a copy of the ZIB Academic License              *
-*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
-*                                                                           *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Building and installing the Ringpacking application               {#INSTALL}
+================================================
+
+The Ringpacking application may be built in two ways, either by using Cmake
+or by using SCIP's own Makefile system. The choice of the
+build system depends on the desired target platform and the availability
+of those tools there, as well as your personal preferences.
+For most users, we recommend to use the CMake system, especially on
+non Unix platforms.
+
+
+Installation information using CMake
+------------------------------------
+
+Please compile SCIP first,
+see the INSTALL_CMAKE in the main SCIP directory for instructions,
+or refer to the online documentation of SCIP.
+The Ringpacking application can be compiled within the same build directory
+as SCIP. Assuming that the build directory of SCIP was named "build",
+simply execute
+
+```
+cd build
+make ringpacking
+```
+
+The Ringpacking application is part of the SCIP applications. To build all
+applications at once, use
+
+```
+make applications
+```
+
+It is also possible to build the Ringpacking application in a stand-alone
+build directory. Therefore, it is necessary to create the
+stand-alone build directory first and generate the Makefile using
+CMake. It might be necessary to specify the SCIP build directory
+or installation directory, if SCIP has not yet been installed systemwide.
+
+```
+mkdir build
+cd build
+cmake .. [-DSCIP_DIR=../../]
+make
+```
+
+Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
+for a list of available
+configuration options for this application, and available tests.
+
+
+
+Installation information for SCIP's custom Makefile system on Linux
+-------------------------------------------------------------------
 
 In the following, some of the names depend on your machine and your
 compilation settings:
 
-- $(OSTYPE): the operating system
-             the string returned by "uname -s" in lower case with the following
+- "OSTYPE" : the operating system
+             the string returned by `uname -s` in lower case with the following
              replacements:
              - "cygwin*" is replaced by only "cygwin"
              - "irix??" is replaced by only "irix"
              - "windows*" is replaced by only "windows"
 
-- $(ARCH):   the architecture
-             the string returned by "uname -m", modified by the following
+- "ARCH":   the architecture
+             the string returned by `uname -m`, modified by the following
              rules to subsume some architectures:
               - "sun??" is replaced by "sparc"
               - "i?86" is replaced by "x86"
@@ -33,25 +73,23 @@ compilation settings:
               - "Power Macintosh" is replaced by "ppc"
               - "00??????????" is replaced by "pwr4"
 
-- $(COMP):   the compiler
+- "COMP":   the compiler
              "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
 
-- $(OPT):    the optimization level of compilation
+- "OPT":    the optimization level of compilation
              "dbg", "opt", or "prf"
 
-- $(LPS):    the LP solver to use
+- "LPS":    the LP solver to use
              "spx", "spx132", "clp", "cpx", "xprs", "msk"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, and using Soplex version >= 1.4.0
 as LP solver, you would have the following names:
-- $(OSTYPE) = linux
-- $(ARCH)   = x86
-- $(COMP)   = gnu
-- $(OPT)    = dbg
-- $(LPS)    = spx
-
------------------------------------------------------------------------------
+- "OSTYPE" = linux
+- "ARCH"   = x86
+- "COMP"   = gnu
+- "OPT"    = dbg
+- "LPS"    = spx
 
 Here is what you have to do to get the ringpacking example project
 using SCIP as a library running:
@@ -70,6 +108,7 @@ using SCIP as a library running:
    - "OPT=dbg"       to use debug compilation mode
    - "OPT=prf"       to use performance analysis compilation mode
    - "LPS=spx"         to use SOPLEX Version >= 1.4.0 as LP solver (default)
+   - "LPS=spx132"      to use SOPLEX Version 1.3.2 as LP solver
    - "LPS=cpx"         to use CPLEX as LP solver
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver
