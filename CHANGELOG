@@ -88,6 +88,7 @@ Interface changes
   directly by the target node limit within the heuristic
 - removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
   of other components anymore
+- changed default value of separating/maxincrounds to -1 (unlimited)
 
 ### New parameters
 

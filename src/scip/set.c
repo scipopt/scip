@@ -421,7 +421,7 @@
                                                  *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement in local nodes (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXINCROUNDS       20 /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXINCROUNDS       -1 /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
