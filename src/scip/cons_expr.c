@@ -1322,13 +1322,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
             continue;
 
          /* let nlhdlr evaluate current expression */
-         SCIPdebugMsg(scip, "Calling interval evaluation of nlhdlr <%s>\n", nlhdlr->name);
          nlhdlrinterval = interval;
          SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->varboundrelax) );
-         SCIPdebugMsg(scip, "Nlhdlr <%s> computed interval [%g, %g] for expr ", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
+         SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-         SCIPdebugMsgPrint(scip, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+         SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
 
          /* intersect with interval */
@@ -1343,7 +1342,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPdebugMsgPrint(scip, " in [%g,%g]\n", expr->interval.inf, expr->interval.sup);
+      SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
 #endif
    }
 
@@ -4546,6 +4545,8 @@ SCIP_RETCODE registerBranchingCandidates(
             /* introduce variable if it has not been fixed yet and has a branching score > 0 */
             if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
+               SCIPdebugMsg(scip, "add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var), brscore);
+
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                ++(*nnotify);
             }
@@ -5101,7 +5102,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          }
          else
          {
-            SCIPdebugMsg(scip, "nlhdlr <%s> was not successful\n", nlhdlr->name);
+            /* SCIPdebugMsg(scip, "nlhdlr <%s> was not successful\n", nlhdlr->name); */
          }
       }
    }
@@ -5385,7 +5386,7 @@ SCIP_RETCODE enforceConstraints(
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
-   SCIPdebugMsg(scip, "maxviol=%e\n", maxviol);
+   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %d\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
@@ -8514,18 +8515,21 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    oldub = SCIPintervalGetSup(expr->interval);
    *cutoff = FALSE;
 
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPdebugMsgPrint(scip, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+#if 0 /* def SCIP_DEBUG */
+   SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPdebugMsgPrint(scip, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
 #endif
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
       || SCIPintervalGetSup(newbounds) < oldlb )
    {
+      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%g,%g] with old bounds [%g,%g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
+
       SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -8537,8 +8541,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
    {
+      SCIPdebugMsg(scip, "cut off due to infinite new bounds [%g,%g]\n", newlb, newub);
+
       SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -8576,12 +8583,22 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          {
             SCIP_CALL( SCIPtightenVarLb(scip, var, newlb, force, cutoff, &tightened) );
             (*ntightenings) += tightened ? 1 : 0;
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %g\n", SCIPvarGetName(var), newlb);
+            }
          }
 
          if( tightenub && !(*cutoff) )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
             (*ntightenings) += tightened ? 1 : 0;
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %g\n", SCIPvarGetName(var), newub);
+            }
          }
       }
 
