@@ -3563,7 +3563,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          /* solve problem again */
          SCIP_CALL( SolveWSimplex(lpi) );
 
-         MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
+         /* At this point we assume that the problem is feasible, since we previously ran the primal simplex and it
+          * produced a ray.
 
          /* get primal solution */
          MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
