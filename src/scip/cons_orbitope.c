@@ -1578,14 +1578,14 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          }
 
          /* is row i j-fixed? */
-         if ( minfixed != -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
+         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
          {
             assert( lexminfixes[i][j + 1] != 2 );
 
             minfixed = i;
 
             /* detect infeasibility */
-            if ( minfixed != 1 && maxdiscriminating > minfixed )
+            if ( maxdiscriminating > minfixed )
             {
                *infeasible = TRUE;
                goto FREELEXMIN;
@@ -1642,14 +1642,14 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          }
 
          /* is row i j-fixed? */
-         if ( minfixed != -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
          {
             assert( lexmaxfixes[i][j - 1] != 2 );
 
             minfixed = i;
 
             /* detect infeasibility */
-            if ( minfixed != -1 && maxdiscriminating > minfixed )
+            if ( maxdiscriminating > minfixed )
             {
                *infeasible = TRUE;
                goto FREELEXMAX;
