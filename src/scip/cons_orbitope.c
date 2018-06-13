@@ -67,6 +67,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -125,6 +126,7 @@ struct SCIP_ConsData
 {
    SCIP_VAR***           vars;               /**< matrix of variables on which the symmetry acts            */
    SCIP_VAR**            tmpvars;            /**< temporary storage for variables                           */
+   SCIP_HASHMAP*         rowindexmap;        /**< map of variables to row index in orbitope matrix */
    SCIP_Real**           vals;               /**< LP-solution for those variables                           */
    SCIP_Real*            tmpvals;            /**< temporary storage for values                              */
    SCIP_Real**           weights;            /**< SC weight table                                           */
@@ -154,6 +156,11 @@ SCIP_RETCODE consdataFree(
 
    assert( consdata != NULL );
    assert( *consdata != NULL );
+
+   if ( (*consdata)->rowindexmap != NULL )
+   {
+      SCIPhashmapFree(&((*consdata)->rowindexmap));
+   }
 
    p = (*consdata)->nspcons;
    q = (*consdata)->nblocks;
@@ -202,6 +209,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
+   SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
 
    for (i = 0; i < nspcons; ++i)
    {
@@ -234,6 +242,7 @@ SCIP_RETCODE consdataCreate(
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
+            SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
          }
       }
    }
@@ -1696,6 +1705,338 @@ SCIP_RETCODE propagateFullOrbitopeCons(
 }
 
 
+/* Compute dynamic order of rows based on the branching decisions, i.e., the row of the first branching variable
+ * determines the first row in the new ordering, the row of the second branching variable determines the second
+ * rows in the new ordering if it differs from the row of the first branching variable, and so on.
+ *
+ * The roworder array stores this reordering, where acutally only the first maxrowlabel entries encode the
+ * reordering in reverse order. That is, entry maxrowlabel encodes the first row w.r.t. this order, entry
+ * (maxrowlabel - 1) encodes the second row, and so on.
+ */
+static
+SCIP_RETCODE computeDynamicRowOrder(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_HASHMAP*         rowindexmap,        /**< map of variables to indices in orbitope vars matrix */
+   SCIP_Shortbool*       rowused,            /**< bitset marking whether a row has been considered in the new order */
+   int*                  roworder,           /**< reordering of the rows w.r.t. branching decisions */
+   int                   nrows,              /**< number of rows in orbitope */
+   int*                  maxrowlabel         /**< maximum row label in ordering */
+   )
+{
+   int i;
+   SCIP_NODE* node;
+
+   assert( scip != NULL );
+   assert( rowindexmap != NULL );
+   assert( roworder != NULL );
+   assert( nrows > 0 );
+   assert( maxrowlabel != NULL );
+
+   /* initialize row order with trivial entries */
+   for (i = 0; i < nrows; ++i)
+   {
+      roworder[i] = nrows;
+      rowused[i] = FALSE;
+   }
+   *maxrowlabel = 0;
+
+   /* get current node */
+   node = SCIPgetCurrentNode(scip);
+
+   /* follow path to the root (in the root no domains were changed due to branching) */
+   while ( SCIPnodeGetDepth(node) != 0 )
+   {
+      SCIP_BOUNDCHG* boundchg;
+      SCIP_DOMCHG* domchg;
+      SCIP_VAR* branchvar;
+      int nboundchgs;
+
+      /* get domain changes of current node */
+      domchg = SCIPnodeGetDomchg(node);
+      assert( domchg != NULL );
+
+      /* loop through all bound changes */
+      nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
+      for (i = 0; i < nboundchgs; ++i)
+      {
+         /* get bound change info */
+         boundchg = SCIPdomchgGetBoundchg(domchg, i);
+         assert( boundchg != NULL );
+
+         /* branching decisions have to be in the beginning of the bound change array */
+         if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
+            break;
+
+         /* get corresponding branching variable */
+         branchvar = SCIPboundchgGetVar(boundchg);
+
+         /* we only consider binary variables */
+         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
+         {
+            int rowidx;
+
+            /* make sure that branching variable is present in the orbitope */
+            if ( ! SCIPhashmapExists(rowindexmap, (void*) branchvar) )
+               continue;
+
+            rowidx = (int) (size_t) SCIPhashmapGetImage(rowindexmap, (void*) branchvar);
+
+            if ( ! rowused[rowidx] )
+            {
+               roworder[*maxrowlabel] = rowidx;
+               rowused[rowidx] = TRUE;
+               *maxrowlabel += 1;
+            }
+         }
+      }
+
+      node = SCIPnodeGetParent(node);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** propagation method for a single full orbitope constraint based on a dynamic ordering of the rows */
+static
+SCIP_RETCODE propagateFullOrbitopeConsDynamic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   SCIP_Shortbool* rowused;
+   int* roworder;
+   int** lexminfixes;
+   int** lexmaxfixes;
+   int maxrowlabel;
+   int i;
+   int j;
+   int m;
+   int n;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
+
+   *nfixedvars = 0;
+   *infeasible = FALSE;
+
+   /* @todo Can the following be removed? */
+   if ( ! SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
+   /* do nothing if we are in a probing node */
+   if ( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+   assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
+
+   m = consdata->nspcons;
+   n = consdata->nblocks;
+   vars = consdata->vars;
+
+   /* determine order of orbitope rows dynamically by branching decisions */
+   SCIP_CALL( SCIPallocBufferArray(scip, &roworder, m) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowused, m) );
+
+   SCIP_CALL( computeDynamicRowOrder(scip, consdata->rowindexmap, rowused, roworder, m, &maxrowlabel) );
+
+   /* if no branching variable is contained in the full orbitope */
+   if ( maxrowlabel == 0 )
+   {
+      SCIPfreeBufferArray(scip, &rowused);
+      SCIPfreeBufferArray(scip, &roworder);
+
+      return SCIP_OKAY;
+   }
+
+   /* Initialize lexicographically minimal matrix by fixed entries at the current node.
+    * Free entries in the last column are set to 0. Iterate in reverse order because
+    * the ordering has to be read in reverse order.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, maxrowlabel) );
+   for (i = maxrowlabel - 1; i >= 0; --i)
+   {
+      int origrow = roworder[i];
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 )
+            lexminfixes[i][j] = 1;
+         else if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 || j == n - 1 )
+            lexminfixes[i][j] = 0;
+         else
+            lexminfixes[i][j] = 2;
+      }
+   }
+
+   /* iterate over columns in reverse order and find the lexicographically minimal face
+    * of the hypercube containing lexminfixes
+    */
+   for (j = n - 2; j >= 0; --j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
+      for (i = 0; i < maxrowlabel; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         {
+            assert( lexminfixes[i][j + 1] == 0 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
+         {
+            assert( lexminfixes[i][j + 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+               goto FREELEXMIN;
+            }
+         }
+
+         if ( lexminfixes[i][j] == 2 )
+            lexminfixes[i][j] = lexminfixes[i][j + 1];
+      }
+
+      /* ensure that column j is lexicographically not smaller than column j + 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+         assert( maxdiscriminating >= 0 );
+
+         lexminfixes[maxdiscriminating][j] = 1;
+      }
+   }
+
+   /* Initialize lexicographically maximal matrix by fixed entries at the current node.
+    * Free entries in the fist column are set to 1.  Iterate in reverse order because
+    * the ordering has to be read in reverse order.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, maxrowlabel) );
+   for (i = maxrowlabel - 1; i >= 0; --i)
+   {
+      int origrow = roworder[i];
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 )
+            lexmaxfixes[i][j] = 0;
+         else if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 || j == 0 )
+            lexmaxfixes[i][j] = 1;
+         else
+            lexmaxfixes[i][j] = 2;
+      }
+   }
+
+   /* iterate over columns and find the lexicographically maximal face of the hypercube containing lexmaxfixes */
+   for (j = 1; j < n; ++j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
+      for (i = 0; i < maxrowlabel; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         {
+            assert( lexmaxfixes[i][j - 1] == 1 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
+         {
+            assert( lexmaxfixes[i][j - 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+               goto FREELEXMAX;
+            }
+         }
+
+         if ( lexmaxfixes[i][j] == 2 )
+            lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+      }
+
+      /* ensure that column j is lexicographically not greater than column j - 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+         assert( maxdiscriminating >= 0 );
+
+         lexmaxfixes[maxdiscriminating][j] = 0;
+      }
+   }
+
+   /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
+    * row to the corresponding value in lexminfixes (or lexmaxfixes).
+    */
+   for (j = 0; j < n; ++j)
+   {
+      for (i = 0; i < maxrowlabel; ++i)
+      {
+         int origrow = roworder[maxrowlabel - 1 - i];
+
+         if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
+            break;
+
+         if ( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 && SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 )
+         {
+            SCIP_Bool success;
+
+            SCIP_CALL( SCIPfixVar(scip, vars[origrow][j], (SCIP_Real) lexminfixes[i][j], infeasible, &success) );
+
+            if ( success )
+               *nfixedvars += 1;
+         }
+      }
+   }
+
+ FREELEXMAX:
+   for (i = 0; i < maxrowlabel; ++i)
+      SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
+   SCIPfreeBufferArray(scip, &lexmaxfixes);
+
+ FREELEXMIN:
+   for (i = 0; i < maxrowlabel; ++i)
+      SCIPfreeBufferArray(scip, &lexminfixes[i]);
+   SCIPfreeBufferArray(scip, &lexminfixes);
+
+   SCIPfreeBufferArray(scip, &rowused);
+   SCIPfreeBufferArray(scip, &roworder);
+
+   return SCIP_OKAY;
+}
+
+
 /** propagation method for a single orbitope constraint */
 static
 SCIP_RETCODE propagateCons(
@@ -1720,7 +2061,7 @@ SCIP_RETCODE propagateCons(
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars) );
+      SCIP_CALL( propagateFullOrbitopeConsDynamic(scip, cons, infeasible, nfixedvars) );
    }
    else
    {
