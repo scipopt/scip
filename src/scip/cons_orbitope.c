@@ -1861,24 +1861,28 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
    }
 
    /* Initialize lexicographically minimal matrix by fixed entries at the current node.
-    * Free entries in the last column are set to 0. Iterate in reverse order because
-    * the ordering has to be read in reverse order.
+    * Free entries in the last column are set to 0. Since the first row appears last in
+    * roworder, the i-th row in roworder is the (maxrowlabel - i)-th row in lexminfixes.
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, maxrowlabel) );
-   for (i = maxrowlabel - 1; i >= 0; --i)
+   for (i = 0; i < maxrowlabel; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+   }
+
+   for (i = 0; i < maxrowlabel; ++i)
    {
       int origrow = roworder[i];
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+      int lexminrow = maxrowlabel - 1 - i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 )
-            lexminfixes[i][j] = 1;
+            lexminfixes[lexminrow][j] = 1;
          else if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 || j == n - 1 )
-            lexminfixes[i][j] = 0;
+            lexminfixes[lexminrow][j] = 0;
          else
-            lexminfixes[i][j] = 2;
+            lexminfixes[lexminrow][j] = 2;
       }
    }
 
@@ -1930,24 +1934,28 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
    }
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
-    * Free entries in the fist column are set to 1.  Iterate in reverse order because
-    * the ordering has to be read in reverse order.
+    * Free entries in the first column are set to 1. Since the first row appears last in
+    * roworder, the i-th row in roworder is the (maxrowlabel - i)-th row in lexminfixes.
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, maxrowlabel) );
-   for (i = maxrowlabel - 1; i >= 0; --i)
+   for (i = 0; i < maxrowlabel; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+   }
+
+   for (i = 0; i < maxrowlabel; ++i)
    {
       int origrow = roworder[i];
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+      int lexmaxrow = maxrowlabel - 1 - i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 )
-            lexmaxfixes[i][j] = 0;
+            lexmaxfixes[lexmaxrow][j] = 0;
          else if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 || j == 0 )
-            lexmaxfixes[i][j] = 1;
+            lexmaxfixes[lexmaxrow][j] = 1;
          else
-            lexmaxfixes[i][j] = 2;
+            lexmaxfixes[lexmaxrow][j] = 2;
       }
    }
 
