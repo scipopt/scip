@@ -1570,7 +1570,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       for (i = 0; i < m; ++i)
       {
          /* is row i j-discriminating? */
-         if ( lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
          {
             assert( lexminfixes[i][j + 1] == 0 );
 
@@ -1634,7 +1634,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       for (i = 0; i < m; ++i)
       {
          /* is row i j-discriminating? */
-         if ( lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
          {
             assert( lexmaxfixes[i][j - 1] == 1 );
 
@@ -1894,7 +1894,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       for (i = 0; i < maxrowlabel; ++i)
       {
          /* is row i j-discriminating? */
-         if ( lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
          {
             assert( lexminfixes[i][j + 1] == 0 );
 
@@ -1961,7 +1961,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       for (i = 0; i < maxrowlabel; ++i)
       {
          /* is row i j-discriminating? */
-         if ( lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
          {
             assert( lexmaxfixes[i][j - 1] == 1 );
 
