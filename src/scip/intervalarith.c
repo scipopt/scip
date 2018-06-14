@@ -3067,7 +3067,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             z += negate(b);
             resultant->inf = z / sqrcoeff;
@@ -3085,7 +3085,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          {
             /* let resultant = [0,-c/z] for now */
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
             SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             z += negate(b);
             resultant->sup = negate(rhs/z);
@@ -3171,7 +3171,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    if( xbnds.sup >= 0 )
    {
       SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs, xbnds);
-      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%g,%g]\n",
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.20g,%.20g]\n",
          sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, MAX(xbnds.inf, 0.0), xbnds.sup, xpos.inf, xpos.sup);
    }
    else
