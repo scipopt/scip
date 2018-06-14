@@ -2918,28 +2918,17 @@ SCIP_RETCODE determineBestBounds(
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( SCIPisInfinity(scip, - *bestlb) ) /* if there is no lb, use ub */
             *selectedbound = SCIP_BOUNDTYPE_UPPER;
-#if 1
-	 // fujii
-	 else if( REALABS(*bestub-*bestlb) < 1.0e-10  && ((*bestlbtype)>=0 || (*bestubtype)>=0) ){
-	   if ( (*bestlbtype >= 0) && (*bestubtype >= 0) ){
-	     if( SCIPisGT(scip, simple_upper_bound, simple_lower_bound) ){
-	       *selectedbound = SCIP_BOUNDTYPE_UPPER;
-	     }else{
-	       *selectedbound = SCIP_BOUNDTYPE_LOWER;
-	     }
-	   }else if( (*bestlbtype >= 0) ){
-	     *selectedbound = SCIP_BOUNDTYPE_LOWER;
-	   }else if( (*bestubtype >= 0) ){
-	     *selectedbound = SCIP_BOUNDTYPE_UPPER;
-	   }else{
-	     *selectedbound = SCIP_BOUNDTYPE_LOWER;
-	   }
-	 }
-#endif	 
          else if( SCIPisLT(scip, varsol, (1.0 - boundswitch) * (*bestlb) + boundswitch * (*bestub)) )
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( SCIPisGT(scip, varsol, (1.0 - boundswitch) * (*bestlb) + boundswitch * (*bestub)) )
             *selectedbound = SCIP_BOUNDTYPE_UPPER;
+         else if( ((*bestlbtype)>=0 || (*bestubtype)>=0) && !SCIPisEQ(scip, *bestlb - simple_lower_bound, simple_upper_bound - *bestub) )
+         {
+            if( *bestlb - simple_lower_bound > simple_upper_bound - *bestub )
+               *selectedbound = SCIP_BOUNDTYPE_LOWER;
+            else
+               *selectedbound = SCIP_BOUNDTYPE_UPPER;
+         }
          else if( *bestlbtype == -1 )  /* prefer global standard bounds */
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( *bestubtype == -1 )  /* prefer global standard bounds */
