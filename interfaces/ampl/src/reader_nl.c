@@ -707,6 +707,8 @@ SCIP_RETCODE walkExpression(
       case OP_log:
       case OP_sqrt:
       case OP_exp:
+      case OP_cos:
+      case OP_sin:
       case ABS:
       {
          SCIP_EXPROP operand;
@@ -728,6 +730,12 @@ SCIP_RETCODE walkExpression(
                break;
             case OP_exp:
                operand = SCIP_EXPR_EXP;
+               break;
+            case OP_cos:
+               operand = SCIP_EXPR_COS;
+               break;
+            case OP_sin:
+               operand = SCIP_EXPR_SIN;
                break;
             case ABS:
                operand = SCIP_EXPR_ABS;
@@ -780,16 +788,6 @@ SCIP_RETCODE walkExpression(
 
          break;
       }
-
-      case OP_cos:
-         SCIPerrorMessage("AMPL operand number OP_cos not supported so far.\n");
-         *doingfine = FALSE;
-         break;
-
-      case OP_sin:
-         SCIPerrorMessage("AMPL operand number OP_sin not supported so far.\n");
-         *doingfine = FALSE;
-         break;
 
       default:
          SCIPerrorMessage("AMPL operand number %d not supported so far.\n", opnum);
