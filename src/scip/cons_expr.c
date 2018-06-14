@@ -1215,6 +1215,7 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVariable)
    SCIP_Real varboundrelax;
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_Real bnd;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1225,32 +1226,37 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVariable)
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
+   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
-   if( varboundrelax > 0.0 )
+   /* integer variables should always have integral bounds in SCIP */
+   assert(EPSFRAC(lb, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
+   assert(EPSFRAC(ub, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
+
+   /* relax variable bounds, if a value is given and the variable is not integral */
+   if( varboundrelax > 0.0 && !SCIPvarIsIntegral(var) )
    {
-      /* relax bounds by given amount, but not as much as that the variable sign is changing, though
-       * (this is to ensure that an original positive variable does not get negative by this,
-       * which may have an adverse effect on convexity recognition, for example)
-       */
+      /* TODO take varboundrelax as a relative value, i.e., relax by |lb|*varboundrelax ? */
 
-      /* if bound in [0,varboundrelax], then relax to 0.0, otherwise relax by -varboundrelax */
-      if( lb >= 0.0 && lb <= varboundrelax )
-         lb = 0.0;
-      else if( !SCIPisInfinity(scip, -lb) )
-         lb -= varboundrelax;
+      if( !SCIPisInfinity(scip, -lb) )
+      {
+         /* reduce lb by varboundrelax, or to the next integer value, which ever is higher */
+         bnd = floor(lb);
+         lb = MAX(bnd, lb - varboundrelax);
+      }
 
-      /* if bound in [-varboundrelax,0], then relax to 0.0, otherwise relax by +varboundrelax */
-      if( ub <= 0.0 && ub >= -varboundrelax )
-         ub = 0.0;
-      else if( !SCIPisInfinity(scip, ub) )
-         ub += varboundrelax;
+      if( !SCIPisInfinity(scip, ub) )
+      {
+         /* increase ub by varboundrelax, or to the next integer value, which ever is lower */
+         bnd = ceil(ub);
+         ub = MIN(bnd, ub + varboundrelax);
+      }
    }
 
    /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
    lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
    ub =  infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, ub);
+   assert(lb <= ub);
 
-   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
    SCIPintervalSetBounds(&interval, lb, ub);
 
    return interval;
