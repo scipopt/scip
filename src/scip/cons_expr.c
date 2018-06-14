@@ -2846,6 +2846,8 @@ SCIP_RETCODE propConss(
  * might violate variable bounds by up to feastol, too.
  * This is the main reason why the redundancy check is not done in propConss(), which relaxes variable bounds by epsilon only.
  *
+ * Also removes constraints of the form lhs <= variable <= rhs.
+ *
  * @TODO it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
  */
 static
@@ -2855,7 +2857,8 @@ SCIP_RETCODE checkRedundancyConss(
    SCIP_CONS**           conss,              /**< constraints to propagate */
    int                   nconss,             /**< total number of constraints */
    SCIP_Bool*            cutoff,             /**< pointer to store whether infeasibility has been identified */
-   int*                  ndelconss           /**< buffer to add the number of deleted constraints */
+   int*                  ndelconss,          /**< buffer to add the number of deleted constraints */
+   int*                  nchgbds             /**< buffer to add the number of variable bound tightenings */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -2870,6 +2873,7 @@ SCIP_RETCODE checkRedundancyConss(
    assert(nconss >= 0);
    assert(cutoff != NULL);
    assert(ndelconss != NULL);
+   assert(nchgbds != NULL);
 
    /* no constraints to check */
    if( nconss == 0 )
@@ -2893,7 +2897,7 @@ SCIP_RETCODE checkRedundancyConss(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant */
+      /* handle constant expressions separately: either the problem is infeasible or the constraint is redundant */
       if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
       {
          SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
@@ -2915,13 +2919,53 @@ SCIP_RETCODE checkRedundancyConss(
          continue;
       }
 
+      /* handle variable expressions separately: tighten variable bounds to constraint sides, then remove constraint (now redundant) */
+      if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      {
+         SCIP_VAR* var;
+         SCIP_Bool tightened;
+
+         var = SCIPgetConsExprExprVarVar(consdata->expr);
+         assert(var != NULL);
+
+         SCIPdebugMsg(scip, "variable constraint <%s> can be made redundant: <%s>[%g,%g] in [%g,%g] ", SCIPconsGetName(conss[i]), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), consdata->lhs, consdata->rhs);
+
+         /* ensure that variable bounds are within constraint sides */
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, var, consdata->lhs, TRUE, cutoff, &tightened) );
+
+            if( tightened )
+               ++*nchgbds;
+
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, var, consdata->rhs, TRUE, cutoff, &tightened) );
+
+            if( tightened )
+               ++*nchgbds;
+
+            if( *cutoff )
+               return SCIP_OKAY;
+         }
+
+         /* delete the (now) redundant constraint locally */
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[i]) );
+         ++*ndelconss;
+
+         continue;
+      }
+
       /* reevaluate all bounds to remove some possible leftovers that could be in this
        * expression from a reverse propagation in a previous propagation round
        *
        * we relax variable bounds by feastol here, as solutions that are checked later can also violate
        * variable bounds by up to feastol
-       *
-       * TODO for fixed variables, we should not relax
+       * (relaxing fixed variables seems to be too much, but they would be removed by presolve soon anyway)
        */
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -5376,74 +5420,6 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
-/** removes locally fixed/bound constraints, i.e. constraints for which the root expression is a value or var */
-static
-SCIP_RETCODE removeFixedAndBoundConstraints(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
-   SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            infeasible,         /**< buffer to update whether the node is infeasible */
-   int*                  ndelconss           /**< buffer to add the total number of deleted constraints */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Real value;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(infeasible != NULL);
-   assert(ndelconss != NULL);
-
-   for( c = 0; c < nconss; ++c )
-   {
-      assert(conss != NULL && conss[c] != NULL);
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
-      {
-         value = SCIPgetConsExprExprValueValue(consdata->expr);
-         if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisLT(scip, value - consdata->lhs, -SCIPfeastol(scip)))
-            || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisGT(scip, value - consdata->rhs, SCIPfeastol(scip))) )
-         {
-            /* we should not stop here since SCIP is calling initSolve() independent if the problem is infeasible or
-             * not; having some value expression as the root node of some other constraints trigger asserts at different
-             * places, e.g. the creation of a sub-SCIP in the subnlp heuristic
-             */
-            *infeasible = TRUE;
-         }
-
-         /* delete the redundant constraint locally */
-         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
-         ++(*ndelconss);
-      }
-
-      if( !(*infeasible) && consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
-      {
-         /* propagation may not have tightened the bounds of the variable if small boundchanges were not forced
-          * thus, ensure here that variable bounds are within constraint sides
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-         {
-            SCIP_CALL( SCIPtightenVarLb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->lhs, TRUE, infeasible, NULL) );
-         }
-         if( !*infeasible && !SCIPisInfinity(scip, consdata->rhs) )
-         {
-            SCIP_CALL( SCIPtightenVarUb(scip, SCIPgetConsExprExprVarVar(consdata->expr), consdata->rhs, TRUE, infeasible, NULL) );
-         }
-
-         /* delete the redundant constraint locally */
-         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
-         ++(*ndelconss);
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 /** helper function to enforce constraints */
 static
@@ -6552,26 +6528,11 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 
    /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
-   assert(*nchgbds >= 0);
-   assert(*ndelconss >= 0);
-
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
    /* check for redundant constraints, remove constraints that are a value expression */
-   SCIP_CALL( checkRedundancyConss(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
-   if( infeasible )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
-   /* it might be possible that after simplification only a value expression remains in the root node
-    * FIXME: we can't terminate presolve before calling this function, since constraints' expression
-    * can't be value nor variable expression in several functions!
-    * TODO: removing value expressions is done by checkRedundancyConss now
-    * TODO: removing variable expressions should be done by propConss */
-   SCIP_CALL( removeFixedAndBoundConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
+   SCIP_CALL( checkRedundancyConss(scip, conshdlr, conss, nconss, &infeasible, ndelconss, nchgbds) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
