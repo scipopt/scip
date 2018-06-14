@@ -107,7 +107,7 @@
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 #define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
-
+#define DEFAULT_USEDYNAMICPROP     TRUE /**< whether we use a dynamic version of the propagation routine */
 
 /*
  * Data structures
@@ -119,6 +119,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
+   SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
 };
 
 /** constraint data for orbitope constraints */
@@ -136,6 +137,10 @@ struct SCIP_ConsData
    SCIP_ORBITOPETYPE     orbitopetype;       /**< type of orbitope constraint                               */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                           */
    SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already globally been fixed to zero?  */
+   int*                  roworder;           /**< order of orbitope rows if dynamic propagation for full orbitopes
+                                              *   is used. */
+   SCIP_Bool*            rowused;            /**< whether a row has been considered in roworder */
+   int                   nrowsused;       /**< number of rows that have already been considered in roworder */
 };
 
 
@@ -147,7 +152,8 @@ struct SCIP_ConsData
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata            /**< pointer to orbitope constraint data */
+   SCIP_CONSDATA**       consdata,           /**< pointer to orbitope constraint data */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    int i;
@@ -157,7 +163,7 @@ SCIP_RETCODE consdataFree(
    assert( consdata != NULL );
    assert( *consdata != NULL );
 
-   if ( (*consdata)->rowindexmap != NULL )
+   if ( usedynamicprop && (*consdata)->rowindexmap != NULL )
    {
       SCIPhashmapFree(&((*consdata)->rowindexmap));
    }
@@ -172,6 +178,11 @@ SCIP_RETCODE consdataFree(
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);     /*lint !e866*/
    }
 
+   if ( usedynamicprop )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
+   }
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
@@ -195,7 +206,8 @@ SCIP_RETCODE consdataCreate(
    int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
-   SCIP_Bool             resolveprop         /**< should propagation be resolved?                         */
+   SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    int i;
@@ -209,7 +221,12 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
-   SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
+   if ( usedynamicprop )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rowused, nspcons) );
+   }
 
    for (i = 0; i < nspcons; ++i)
    {
@@ -217,7 +234,10 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e866*/
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
+      if ( usedynamicprop )
+         (*consdata)->roworder[i] = nspcons;
    }
+   (*consdata)->nrowsused = 0;
 
    (*consdata)->tmpvals = NULL;
    (*consdata)->tmpvars = NULL;
@@ -242,7 +262,10 @@ SCIP_RETCODE consdataCreate(
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
-            SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
+            if ( usedynamicprop )
+            {
+               SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
+            }
          }
       }
    }
@@ -1717,14 +1740,17 @@ static
 SCIP_RETCODE computeDynamicRowOrder(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_HASHMAP*         rowindexmap,        /**< map of variables to indices in orbitope vars matrix */
-   SCIP_Shortbool*       rowused,            /**< bitset marking whether a row has been considered in the new order */
+   SCIP_Bool*            rowused,            /**< bitset marking whether a row has been considered in the new order */
    int*                  roworder,           /**< reordering of the rows w.r.t. branching decisions */
    int                   nrows,              /**< number of rows in orbitope */
+   int                   ncols,              /**< number of columns in orbitope */
    int*                  maxrowlabel         /**< maximum row label in ordering */
    )
 {
    int i;
    SCIP_NODE* node;
+   int* branchdecisions;
+   int nbranchdecision;
 
    assert( scip != NULL );
    assert( rowindexmap != NULL );
@@ -1732,13 +1758,8 @@ SCIP_RETCODE computeDynamicRowOrder(
    assert( nrows > 0 );
    assert( maxrowlabel != NULL );
 
-   /* initialize row order with trivial entries */
-   for (i = 0; i < nrows; ++i)
-   {
-      roworder[i] = nrows;
-      rowused[i] = FALSE;
-   }
-   *maxrowlabel = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchdecisions, nrows * ncols) );
+   nbranchdecision = 0;
 
    /* get current node */
    node = SCIPgetCurrentNode(scip);
@@ -1780,18 +1801,25 @@ SCIP_RETCODE computeDynamicRowOrder(
                continue;
 
             rowidx = (int) (size_t) SCIPhashmapGetImage(rowindexmap, (void*) branchvar);
-
-            if ( ! rowused[rowidx] )
-            {
-               roworder[*maxrowlabel] = rowidx;
-               rowused[rowidx] = TRUE;
-               *maxrowlabel += 1;
-            }
+            branchdecisions[nbranchdecision++] = rowidx;
          }
       }
 
       node = SCIPnodeGetParent(node);
    }
+
+   /* insert branching decisions of current path into global row order */
+   for (i = 0; i < nbranchdecision; ++i)
+   {
+      if ( ! rowused[branchdecisions[i]] )
+      {
+         roworder[*maxrowlabel] = branchdecisions[i];
+         rowused[branchdecisions[i]] = TRUE;
+         *maxrowlabel += 1;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &branchdecisions);
 
    return SCIP_OKAY;
 }
@@ -1808,11 +1836,10 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
-   SCIP_Shortbool* rowused;
    int* roworder;
    int** lexminfixes;
    int** lexmaxfixes;
-   int maxrowlabel;
+   int nrowsused;
    int i;
    int j;
    int m;
@@ -1846,34 +1873,29 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
    vars = consdata->vars;
 
    /* determine order of orbitope rows dynamically by branching decisions */
-   SCIP_CALL( SCIPallocBufferArray(scip, &roworder, m) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowused, m) );
-
-   SCIP_CALL( computeDynamicRowOrder(scip, consdata->rowindexmap, rowused, roworder, m, &maxrowlabel) );
+   SCIP_CALL( computeDynamicRowOrder(scip, consdata->rowindexmap, consdata->rowused, consdata->roworder, m, n, &(consdata->nrowsused)) );
 
    /* if no branching variable is contained in the full orbitope */
-   if ( maxrowlabel == 0 )
-   {
-      SCIPfreeBufferArray(scip, &rowused);
-      SCIPfreeBufferArray(scip, &roworder);
-
+   if ( consdata->nrowsused == 0 )
       return SCIP_OKAY;
-   }
+
+   nrowsused = consdata->nrowsused;
+   roworder = consdata->roworder;
 
    /* Initialize lexicographically minimal matrix by fixed entries at the current node.
     * Free entries in the last column are set to 0. Since the first row appears last in
-    * roworder, the i-th row in roworder is the (maxrowlabel - i)-th row in lexminfixes.
+    * roworder, the i-th row in roworder is the (nrowsused - i)-th row in lexminfixes.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, maxrowlabel) );
-   for (i = 0; i < maxrowlabel; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
    }
 
-   for (i = 0; i < maxrowlabel; ++i)
+   for (i = 0; i < nrowsused; ++i)
    {
       int origrow = roworder[i];
-      int lexminrow = maxrowlabel - 1 - i;
+      int lexminrow = nrowsused - 1 - i;
 
       for (j = 0; j < n; ++j)
       {
@@ -1895,7 +1917,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       int minfixed = -1;
 
       /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
-      for (i = 0; i < maxrowlabel; ++i)
+      for (i = 0; i < nrowsused; ++i)
       {
          /* is row i j-discriminating? */
          if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
@@ -1935,18 +1957,18 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
     * Free entries in the first column are set to 1. Since the first row appears last in
-    * roworder, the i-th row in roworder is the (maxrowlabel - i)-th row in lexminfixes.
+    * roworder, the i-th row in roworder is the (nrowsused - i)-th row in lexminfixes.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, maxrowlabel) );
-   for (i = 0; i < maxrowlabel; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
    }
 
-   for (i = 0; i < maxrowlabel; ++i)
+   for (i = 0; i < nrowsused; ++i)
    {
       int origrow = roworder[i];
-      int lexmaxrow = maxrowlabel - 1 - i;
+      int lexmaxrow = nrowsused - 1 - i;
 
       for (j = 0; j < n; ++j)
       {
@@ -1966,7 +1988,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       int minfixed = -1;
 
       /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
-      for (i = 0; i < maxrowlabel; ++i)
+      for (i = 0; i < nrowsused; ++i)
       {
          /* is row i j-discriminating? */
          if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
@@ -2009,9 +2031,9 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
     */
    for (j = 0; j < n; ++j)
    {
-      for (i = 0; i < maxrowlabel; ++i)
+      for (i = 0; i < nrowsused; ++i)
       {
-         int origrow = roworder[maxrowlabel - 1 - i];
+         int origrow = roworder[nrowsused - 1 - i];
 
          if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
             break;
@@ -2029,17 +2051,14 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
    }
 
  FREELEXMAX:
-   for (i = 0; i < maxrowlabel; ++i)
+   for (i = 0; i < nrowsused; ++i)
       SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
    SCIPfreeBufferArray(scip, &lexmaxfixes);
 
  FREELEXMIN:
-   for (i = 0; i < maxrowlabel; ++i)
+   for (i = 0; i < nrowsused; ++i)
       SCIPfreeBufferArray(scip, &lexminfixes[i]);
    SCIPfreeBufferArray(scip, &lexminfixes);
-
-   SCIPfreeBufferArray(scip, &rowused);
-   SCIPfreeBufferArray(scip, &roworder);
 
    return SCIP_OKAY;
 }
@@ -2051,7 +2070,8 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
-   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2069,7 +2089,14 @@ SCIP_RETCODE propagateCons(
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      SCIP_CALL( propagateFullOrbitopeConsDynamic(scip, cons, infeasible, nfixedvars) );
+      if ( usedynamicprop )
+      {
+         SCIP_CALL( propagateFullOrbitopeConsDynamic(scip, cons, infeasible, nfixedvars) );
+      }
+      else
+      {
+         SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars) );
+      }
    }
    else
    {
@@ -2914,10 +2941,15 @@ SCIP_DECL_CONSFREE(consFreeOrbitope)
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   SCIP_CALL( consdataFree(scip, consdata) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->usedynamicprop) );
 
    return SCIP_OKAY;
 }
@@ -2926,6 +2958,7 @@ SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 static
 SCIP_DECL_CONSTRANS(consTransOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
@@ -2935,12 +2968,15 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
-         sourcedata->orbitopetype, sourcedata->resolveprop) );
+         sourcedata->orbitopetype, sourcedata->resolveprop, conshdlrdata->usedynamicprop) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -3139,6 +3175,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 static
 SCIP_DECL_CONSPROP(consPropOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int nfixedvars = 0;
    int c;
@@ -3150,6 +3187,9 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 
    *result = SCIP_DIDNOTRUN;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* propagate all useful constraints */
    for (c = 0; c < nusefulconss && !infeasible; ++c)
    {
@@ -3157,7 +3197,7 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 
       SCIPdebugMsg(scip, "Propagation of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars, conshdlrdata->usedynamicprop) );
    }
 
    /* return the correct result */
@@ -3185,6 +3225,7 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 static
 SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int noldfixedvars;
    int c;
@@ -3197,6 +3238,9 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    *result = SCIP_DIDNOTRUN;
    noldfixedvars = *nfixedvars;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* propagate all useful constraints */
    for (c = 0; c < nconss && !infeasible; ++c)
    {
@@ -3206,7 +3250,7 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
       SCIPdebugMsg(scip, "Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed) );
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
    }
 
@@ -3660,6 +3704,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usedynamicprop",
+         "Whether we use a dynamic version of the propagation routine.",
+         &conshdlrdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -3777,7 +3825,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype, resolveprop) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype,
+         resolveprop, conshdlrdata->usedynamicprop) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
