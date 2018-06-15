@@ -1208,8 +1208,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
+/** interval evaluation of variables as used in bound tightening
+ *
+ * Returns slightly relaxed local variable bounds of a variable as interval.
+ * Does not relax beyond integer values, thus does not relax bounds on integer variables at all.
+ */
 static
-SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVariable)
+SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
 {
    SCIP_INTERVAL interval;
    SCIP_Real varboundrelax;
@@ -1255,6 +1260,44 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVariable)
    /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
    lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
    ub =  infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, ub);
+   assert(lb <= ub);
+
+   SCIPintervalSetBounds(&interval, lb, ub);
+
+   return interval;
+}
+
+
+/** interval evaluation of variables as used in redundancy check
+ *
+ * Returns local variable bounds of a variable, relaxed by feastol, as interval.
+ */
+static
+SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
+{
+   SCIP_INTERVAL interval;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
+
+   /* TODO maybe we should not relax fixed variables? */
+
+   /* relax variable bounds */
+   if( !SCIPisInfinity(scip, -lb) )
+      lb -= SCIPfeastol(scip);
+
+   if( !SCIPisInfinity(scip, ub) )
+      ub += SCIPfeastol(scip);
+
+   /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
+   lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
+   ub =  infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  ub);
    assert(lb <= ub);
 
    SCIPintervalSetBounds(&interval, lb, ub);
@@ -2584,7 +2627,7 @@ SCIP_RETCODE forwardPropCons(
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
    varboundrelax = SCIPepsilon(scip);
-   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVariable, &varboundrelax, boxtag, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVarBoundTightening, &varboundrelax, boxtag, infeasible, ntightenings) );
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
@@ -2928,7 +2971,6 @@ SCIP_RETCODE checkRedundancyConss(
    SCIP_CONSDATA* consdata;
    SCIP_INTERVAL activity;
    SCIP_INTERVAL sides;
-   SCIP_Real varboundrelax;
    int i;
 
    assert(scip != NULL);
@@ -2953,7 +2995,6 @@ SCIP_RETCODE checkRedundancyConss(
    SCIPdebugMsg(scip, "checking %d constraints for redundancy\n", nconss);
 
    *cutoff = FALSE;
-   varboundrelax = SCIPfeastol(scip);
    for( i = 0; i < nconss; ++i )
    {
       if( !SCIPconsIsActive(conss[i]) || SCIPconsIsDeleted(conss[i]) )
@@ -3035,7 +3076,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, consdata->expr, FALSE, FALSE, intEvalVariable, &varboundrelax, conshdlrdata->lastintevaltag, cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
