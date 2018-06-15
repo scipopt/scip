@@ -1628,6 +1628,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       if ( minfixed > -1 && maxdiscriminating < m )
       {
          assert( maxdiscriminating >= 0 );
+         assert( SCIPvarGetUbLocal(vars[maxdiscriminating][j]) > 0.5 );
 
          lexminfixes[maxdiscriminating][j] = 1;
       }
@@ -1697,6 +1698,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       if ( minfixed > -1 && maxdiscriminating < m )
       {
          assert( maxdiscriminating >= 0 );
+         assert( SCIPvarGetLbLocal(vars[maxdiscriminating][j]) < 0.5 );
 
          lexmaxfixes[maxdiscriminating][j] = 0;
       }
@@ -1965,6 +1967,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       if ( minfixed > -1 && maxdiscriminating < m )
       {
          assert( maxdiscriminating >= 0 );
+         assert( SCIPvarGetUbLocal(vars[maxdiscriminating][j]) > 0.5 );
 
          lexminfixes[maxdiscriminating][j] = 1;
       }
@@ -2041,6 +2044,7 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
       if ( minfixed > -1 && maxdiscriminating < m )
       {
          assert( maxdiscriminating >= 0 );
+         assert( SCIPvarGetLbLocal(vars[maxdiscriminating][j]) < 0.5 );
 
          lexmaxfixes[maxdiscriminating][j] = 0;
       }
