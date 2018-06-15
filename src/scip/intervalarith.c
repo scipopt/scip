@@ -2925,10 +2925,15 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
    roundmode = SCIPintervalGetRoundingMode();
 
+   /* this should actually be round_upwards, but unless lincoeff is min_double,
+    * there shouldn't be any rounding happening when dividing by 2, i.e., shifting exponent,
+    * so it is ok to not change the rounding mode here
+    */
+   b = lincoeff / 2.0;
+
    if( lincoeff >= 0.0 )
    { /* b >= 0.0 */
       SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
-      b = lincoeff / 2.0;
       if( rhs > 0.0 )
       { /* b >= 0.0 and c > 0.0 */
          delta = b*b + sqrcoeff*rhs;
@@ -2963,7 +2968,6 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    else
    { /* b < 0.0 */
       SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
-      b = lincoeff / 2.0;
       if( rhs > 0.0 )
       { /* b < 0.0 and c > 0.0 */
          if( sqrcoeff > 0.0 )
@@ -2987,8 +2991,12 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          {
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
             z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
-            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            /* continue with downward rounding, because we want z (>= 0) to be small,
+             * because -rhs/z needs to be large (-rhs >= 0)
+             */
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             z += negate(b);
+            /* also now compute rhs/z with downward rounding, so that -(rhs/z) becomes large */
             resultant->sup = negate(rhs/z);
          }
          /* @todo actually we could generate a hole here */
