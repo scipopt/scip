@@ -2273,7 +2273,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* evaluate all subexpressions */
+   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, NULL, NULL) );
 
    /* compute curvatures */
@@ -5030,6 +5030,7 @@ SCIP_RETCODE detectNlhdlrs(
 
       /* make sure intervals in expression are uptodate (use 0 force recomputing)
        * we do this here to have bounds for the auxiliary variables
+       * NOTE: We do not relax bounds on non-auxiliary variables here, because we are not in boundtightening. I hope it is ok to do it this way.
        */
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0, NULL, NULL) );
 
