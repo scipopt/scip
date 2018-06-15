@@ -184,6 +184,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
+   char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
 
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
@@ -1217,17 +1218,16 @@ static
 SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
 {
    SCIP_INTERVAL interval;
-   SCIP_Real varboundrelax;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Real bnd;
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(intevalvardata != NULL);
 
-   varboundrelax = *(SCIP_Real*)intevalvardata;
-   assert(varboundrelax > 0.0);
+   conshdlrdata = (SCIP_CONSHDLRDATA*)intevalvardata;
+   assert(conshdlrdata != NULL);
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
@@ -1237,23 +1237,62 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    assert(EPSFRAC(lb, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
    assert(EPSFRAC(ub, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
 
-   /* relax variable bounds, if a value is given and the variable is not integral */
-   if( varboundrelax > 0.0 && !SCIPvarIsIntegral(var) )
+   switch( conshdlrdata->varboundrelax )
    {
-      /* TODO take varboundrelax as a relative value, i.e., relax by |lb|*varboundrelax ? */
+      case 'n' : /* no relaxation */
+         break;
 
-      if( !SCIPisInfinity(scip, -lb) )
+      case 'a' : /* relax by absolute value */
       {
-         /* reduce lb by varboundrelax, or to the next integer value, which ever is higher */
-         bnd = floor(lb);
-         lb = MAX(bnd, lb - varboundrelax);
+         /* do not look at integer variables, they already have integral bounds, so wouldn't be relaxed */
+         if( SCIPvarIsIntegral(var) )
+            break;
+
+         if( !SCIPisInfinity(scip, -lb) )
+         {
+            /* reduce lb by epsilon, or to the next integer value, which ever is higher */
+            bnd = floor(lb);
+            lb = MAX(bnd, lb - SCIPepsilon(scip));
+         }
+
+         if( !SCIPisInfinity(scip, ub) )
+         {
+            /* increase ub by epsilon, or to the next integer value, which ever is lower */
+            bnd = ceil(ub);
+            ub = MIN(bnd, ub + SCIPepsilon(scip));
+         }
+
+         break;
       }
 
-      if( !SCIPisInfinity(scip, ub) )
+      case 'r' : /* relax by relative value */
       {
-         /* increase ub by varboundrelax, or to the next integer value, which ever is lower */
-         bnd = ceil(ub);
-         ub = MIN(bnd, ub + varboundrelax);
+         /* do not look at integer variables, they already have integral bounds, so wouldn't be relaxed */
+         if( SCIPvarIsIntegral(var) )
+            break;
+
+         if( !SCIPisInfinity(scip, -lb) )
+         {
+            /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is higher */
+            bnd = floor(lb);
+            lb = MAX(bnd, lb - REALABS(lb) * SCIPepsilon(scip));
+         }
+
+         if( !SCIPisInfinity(scip, ub) )
+         {
+            /* increase ub by epsilon*|ub|, or to the next integer value, which ever is lower */
+            bnd = ceil(ub);
+            ub = MIN(bnd, ub + REALABS(ub) * SCIPepsilon(scip));
+         }
+
+         break;
+      }
+
+      default :
+      {
+         SCIPerrorMessage("Unsupported value '%c' for varboundrelax option.\n");
+         SCIPABORT();
+         break;
       }
    }
 
@@ -2591,7 +2630,6 @@ SCIP_RETCODE forwardPropCons(
 {
    SCIP_INTERVAL interval;
    SCIP_CONSDATA* consdata;
-   SCIP_Real varboundrelax;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2626,8 +2664,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   varboundrelax = SCIPepsilon(scip);
-   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVarBoundTightening, &varboundrelax, boxtag, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
@@ -9454,6 +9491,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelax",
+         "strategy on how to relax variable bounds during bound tightening: relax (n)ot, relax by (a)bsolute value, relax by (r)relative value",
+         &conshdlrdata->varboundrelax, TRUE, 'a', "nar", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
