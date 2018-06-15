@@ -2922,6 +2922,10 @@ SCIP_RETCODE determineBestBounds(
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( SCIPisGT(scip, varsol, (1.0 - boundswitch) * (*bestlb) + boundswitch * (*bestub)) )
             *selectedbound = SCIP_BOUNDTYPE_UPPER;
+         else if( *bestlbtype == -1 )  /* prefer global standard bounds */
+            *selectedbound = SCIP_BOUNDTYPE_LOWER;
+         else if( *bestubtype == -1 )  /* prefer global standard bounds */
+            *selectedbound = SCIP_BOUNDTYPE_UPPER;
          else if( ((*bestlbtype)>=0 || (*bestubtype)>=0) && !SCIPisEQ(scip, *bestlb - simple_lower_bound, simple_upper_bound - *bestub) )
          {
             if( *bestlb - simple_lower_bound > simple_upper_bound - *bestub )
@@ -2929,10 +2933,6 @@ SCIP_RETCODE determineBestBounds(
             else
                *selectedbound = SCIP_BOUNDTYPE_UPPER;
          }
-         else if( *bestlbtype == -1 )  /* prefer global standard bounds */
-            *selectedbound = SCIP_BOUNDTYPE_LOWER;
-         else if( *bestubtype == -1 )  /* prefer global standard bounds */
-            *selectedbound = SCIP_BOUNDTYPE_UPPER;
          else if( *bestlbtype >= 0 )   /* prefer variable bounds over local bounds */
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( *bestubtype >= 0 )   /* prefer variable bounds over local bounds */
