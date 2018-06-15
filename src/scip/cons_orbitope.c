@@ -1616,7 +1616,12 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          }
 
          if ( lexminfixes[i][j] == 2 )
-            lexminfixes[i][j] = lexminfixes[i][j + 1];
+         {
+            if ( minfixed == -1 )
+               lexminfixes[i][j] = lexminfixes[i][j + 1];
+            else
+               lexminfixes[i][j] = 0;
+         }
       }
 
       /* ensure that column j is lexicographically not smaller than column j + 1 */
@@ -1680,7 +1685,12 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          }
 
          if ( lexmaxfixes[i][j] == 2 )
-            lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+         {
+            if ( minfixed == -1 )
+               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+            else
+               lexmaxfixes[i][j] = 1;
+         }
       }
 
       /* ensure that column j is lexicographically not greater than column j - 1 */
@@ -1943,7 +1953,12 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
          }
 
          if ( lexminfixes[i][j] == 2 )
-            lexminfixes[i][j] = lexminfixes[i][j + 1];
+         {
+            if ( minfixed == -1 )
+               lexminfixes[i][j] = lexminfixes[i][j + 1];
+            else
+               lexminfixes[i][j] = 0;
+         }
       }
 
       /* ensure that column j is lexicographically not smaller than column j + 1 */
@@ -2014,7 +2029,12 @@ SCIP_RETCODE propagateFullOrbitopeConsDynamic(
          }
 
          if ( lexmaxfixes[i][j] == 2 )
-            lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+         {
+            if ( minfixed == -1 )
+               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+            else
+               lexmaxfixes[i][j] = 1;
+         }
       }
 
       /* ensure that column j is lexicographically not greater than column j - 1 */
