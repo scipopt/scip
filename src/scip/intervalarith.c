@@ -2933,9 +2933,9 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
    if( lincoeff >= 0.0 )
    { /* b >= 0.0 */
-      SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
       if( rhs > 0.0 )
       { /* b >= 0.0 and c > 0.0 */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
          delta = b*b + sqrcoeff*rhs;
          if( delta < 0.0 || (sqrcoeff == 0.0 && lincoeff == 0.0) )
          {
@@ -2956,6 +2956,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       { /* b >= 0.0 and c <= 0.0 */
          if( sqrcoeff < 0.0 )
          {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
             z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
@@ -2967,11 +2968,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    }
    else
    { /* b < 0.0 */
-      SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
       if( rhs > 0.0 )
       { /* b < 0.0 and c > 0.0 */
          if( sqrcoeff > 0.0 )
          {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
             z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
@@ -2986,6 +2987,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       }
       else
       { /* b < 0.0 and c <= 0.0 */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
          delta = b*b + sqrcoeff * rhs;
          if( delta >= 0.0 && sqrcoeff <= 0.0 )
          {
