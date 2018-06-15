@@ -1236,8 +1236,8 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
    /* integer variables should always have integral bounds in SCIP */
-   assert(EPSFRAC(lb, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
-   assert(EPSFRAC(ub, 0.0) == 0.0 || !SCIPvarIsIntegral(var));
+   assert(EPSFRAC(lb, 0.0) == 0.0 || !SCIPvarIsIntegral(var));  /*lint !e835*/
+   assert(EPSFRAC(ub, 0.0) == 0.0 || !SCIPvarIsIntegral(var));  /*lint !e835*/
 
    switch( conshdlrdata->varboundrelax )
    {
@@ -1277,14 +1277,14 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
          {
             /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is higher */
             bnd = floor(lb);
-            lb = MAX(bnd, lb - REALABS(lb) * conshdlrdata->varboundrelaxamount);
+            lb = MAX(bnd, lb - REALABS(lb) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
             /* increase ub by epsilon*|ub|, or to the next integer value, which ever is lower */
             bnd = ceil(ub);
-            ub = MIN(bnd, ub + REALABS(ub) * conshdlrdata->varboundrelaxamount);
+            ub = MIN(bnd, ub + REALABS(ub) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
          }
 
          break;
@@ -1315,7 +1315,7 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
  */
 static
 SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL interval;
    SCIP_Real lb;
    SCIP_Real ub;

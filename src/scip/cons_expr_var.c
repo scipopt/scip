@@ -267,8 +267,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
       *interval = intevalvar(scip, var, intevalvardata);
    else
       SCIPintervalSetBounds(interval,
-         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(var)),
-          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(var)));
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(var)),    /*lint --e{666}*/
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(var)));   /*lint --e{666}*/
 
    return SCIP_OKAY;
 }
