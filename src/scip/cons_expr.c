@@ -185,6 +185,8 @@ struct SCIP_ConshdlrData
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
+   SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
+   SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
 
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
@@ -1252,14 +1254,14 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
          {
             /* reduce lb by epsilon, or to the next integer value, which ever is higher */
             bnd = floor(lb);
-            lb = MAX(bnd, lb - SCIPepsilon(scip));
+            lb = MAX(bnd, lb - conshdlrdata->varboundrelaxamount);
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
             /* increase ub by epsilon, or to the next integer value, which ever is lower */
             bnd = ceil(ub);
-            ub = MIN(bnd, ub + SCIPepsilon(scip));
+            ub = MIN(bnd, ub + conshdlrdata->varboundrelaxamount);
          }
 
          break;
@@ -1275,14 +1277,14 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
          {
             /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is higher */
             bnd = floor(lb);
-            lb = MAX(bnd, lb - REALABS(lb) * SCIPepsilon(scip));
+            lb = MAX(bnd, lb - REALABS(lb) * conshdlrdata->varboundrelaxamount);
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
             /* increase ub by epsilon*|ub|, or to the next integer value, which ever is lower */
             bnd = ceil(ub);
-            ub = MIN(bnd, ub + REALABS(ub) * SCIPepsilon(scip));
+            ub = MIN(bnd, ub + REALABS(ub) * conshdlrdata->varboundrelaxamount);
          }
 
          break;
@@ -2630,6 +2632,7 @@ SCIP_RETCODE forwardPropCons(
 {
    SCIP_INTERVAL interval;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2639,6 +2642,9 @@ SCIP_RETCODE forwardPropCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *infeasible = FALSE;
    *redundant = FALSE;
@@ -2670,8 +2676,8 @@ SCIP_RETCODE forwardPropCons(
    if( !(*infeasible) )
    {
       /* relax sides by SCIPepsilon() and handle infinite sides */
-      SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - SCIPepsilon(scip);
-      SCIP_Real rhs = SCIPisInfinity(scip, consdata->rhs) ? SCIP_INTERVAL_INFINITY : consdata->rhs + SCIPepsilon(scip);
+      SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
+      SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
 
       /* compare root expression interval with constraint sides; store the result in the root expression */
       SCIPintervalSetBounds(&interval, lhs, rhs);
@@ -9495,6 +9501,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelax",
          "strategy on how to relax variable bounds during bound tightening: relax (n)ot, relax by (a)bsolute value, relax by (r)relative value",
          &conshdlrdata->varboundrelax, TRUE, 'a', "nar", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelaxamount",
+         "by how much to relax variable bounds during bound tightening if strategy 'a' or 'r'",
+         &conshdlrdata->varboundrelaxamount, TRUE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/conssiderelaxamount",
+         "by how much to relax constraint sides during bound tightening",
+         &conshdlrdata->conssiderelaxamount, TRUE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
