@@ -390,7 +390,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaConvex, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaConvex, NULL, NULL);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;

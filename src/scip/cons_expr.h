@@ -124,31 +124,16 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
-/** set the separation initialization callback of an expression handler */
-EXTERN
-SCIP_RETCODE SCIPsetConsExprExprHdlrInitSepa(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa))  /**< separation initialization callback (can be NULL) */
-);
-
-/** set the separation deinitialization callback of an expression handler */
-EXTERN
-SCIP_RETCODE SCIPsetConsExprExprHdlrExitSepa(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-);
-
-/** set the separation callback of an expression handler */
+/** set the separation and estimation callbacks of an expression handler */
 EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa))      /**< separation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa)), /**< separation deinitialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa)),     /**< separation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
 );
 
 /** set the reverse propagation callback of an expression handler */
@@ -226,6 +211,12 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
 /** returns whether expression handler implements the separation callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprExprHdlrSepa(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the estimator callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
@@ -359,7 +350,7 @@ SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR*        expr          /**< expression */
    );
 
-/** calls separator method of expression handler to separate LP solution */
+/** calls separator method of expression handler to separate a given solution */
 extern
 SCIP_RETCODE SCIPsepaConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
@@ -371,6 +362,10 @@ SCIP_RETCODE SCIPsepaConsExprExprHdlr(
    SCIP_RESULT*               result,       /**< pointer to store the result */
    int*                       ncuts         /**< pointer to store the number of added cuts */
    );
+
+/** calls estimator method of expression handler */
+extern
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr);
 
 /** calls the expression interval evaluation callback */
 extern
@@ -1220,7 +1215,8 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (must not be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 );
 
@@ -1283,6 +1279,12 @@ SCIP_Bool SCIPhasConsExprNlhdlrSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
+/** returns whether nonlinear handler implements the estimator callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
 /** returns whether nonlinear handler implements the interval evaluation callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprNlhdlrInteval(
@@ -1338,6 +1340,10 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
 /** calls the separation callback of a nonlinear handler */
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
+
+/** calls the estimator callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** calls the interval evaluation callback of a nonlinear handler */
 EXTERN

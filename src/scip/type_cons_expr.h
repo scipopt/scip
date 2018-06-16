@@ -27,6 +27,9 @@
 #ifndef __SCIP_TYPE_CONS_EXPR_H__
 #define __SCIP_TYPE_CONS_EXPR_H__
 
+#define SCIP_PRIVATE_ROWPREP
+#include "scip/cons_quadratic.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -322,6 +325,34 @@ extern "C" {
    SCIP_Real mincutviolation, \
    SCIP_RESULT* result, \
    int* ncuts)
+
+/** expression under/overestimation callback
+ *
+ * The method tries to compute a linear under- or overestimator that is as tight as possible
+ * at a given point by using auxiliary variables stored in all children.
+ * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
+ * the constant part in \par constant.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression
+ *  - sol  : solution at which to estimate (NULL for the LP solution)
+ *  - overestimate : whether the expression needs to be over- or underestimated
+ *  - coefs : array to store coefficients of estimator
+ *  - constant : buffer to store constant part of estimator
+ *  - islocal : buffer to store whether estimator is valid locally only
+ *  - success : buffer to indicate whether an estimator could be computed
+ */
+#define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_SOL* sol, \
+   SCIP_Bool overestimate, \
+   SCIP_Real* coefs, \
+   SCIP_Real* constant, \
+   SCIP_Bool* islocal, \
+   SCIP_Bool* success)
 
 /** expression hash callback
  *
@@ -715,6 +746,34 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)
+
+/** nonlinear handler under/overestimation callback
+ *
+ * The method tries to compute a linear under- or overestimator that is as tight as possible
+ * at a given point.
+ * If successful, it shall store the estimator in a given rowprep data structure and set the
+ * rowprep->local flag accordingly.
+ * It is assumed that the sidetype of the rowprep is not changed by the callback.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression
+ *  - sol  : solution at which to estimate (NULL for the LP solution)
+ *  - overestimate : whether the expression needs to be over- or underestimated
+ *  - rowprep : a rowprep where to store the estimator
+ *  - success : buffer to indicate whether an estimator could be computed
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_SOL* sol, \
+   SCIP_Real auxvalue, \
+   SCIP_Bool overestimate, \
+   SCIP_ROWPREP* rowprep, \
+   SCIP_Bool* success)
 
 /** nonlinear handler interval evaluation callback
  *

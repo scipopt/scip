@@ -224,6 +224,47 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
+{ /*lint --e{715}*/
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   /* if we did not say that we will separate, then stand by it */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* make sure enough space is available in rowprep arrays */
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPgetConsExprExprNChildren(expr)) );
+   assert(rowprep->varssize >= SCIPgetConsExprExprNChildren(expr));
+
+   /* call the estimation callback of the expression handler */
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, rowprep->coefs, &constant, &rowprep->local, success) );
+
+   if( *success )
+   {
+      int i;
+
+      /* add variables to rowprep */
+      for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      {
+         rowprep->vars[i] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
+         assert(rowprep->vars[i] != NULL);
+      }
+
+      rowprep->side = -constant;
+      /* TODO set rowprep->name */
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
@@ -360,7 +401,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 
