@@ -23,6 +23,7 @@
  * and a constant, i.e., coef * prod_i x_i.
  *
  * @todo initsepaProduct
+ * @todo replace sepaProduct by estimateProduct
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
