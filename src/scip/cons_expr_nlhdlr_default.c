@@ -261,7 +261,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       }
 
       rowprep->side = -constant;
-      /* TODO set rowprep->name */
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
+         overestimate ? "over" : "under",
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
    }
 
    return SCIP_OKAY;
