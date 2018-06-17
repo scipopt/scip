@@ -103,8 +103,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
-   /* return sepa possibility if exprhdlr for expr has a sepa callback and enforcement is not ensured already */
-   if( SCIPhasConsExprExprHdlrSepa(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
+   /* return sepa possibility if exprhdlr for expr has a sepa or estimate callback and enforcement is not ensured already */
+   if( (SCIPhasConsExprExprHdlrSepa(exprhdlr) || SCIPhasConsExprExprHdlrEstimate(exprhdlr)) && (!*enforcedbelow || !*enforcedabove) )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )

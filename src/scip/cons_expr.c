@@ -5141,15 +5141,13 @@ SCIP_RETCODE sepaConsExprNlhdlr(
    assert(result != NULL);
    assert(ncuts != NULL);
 
-   /* call separation callback of the nlhdlr, if available */
-   if( SCIPhasConsExprNlhdlrSepa(nlhdlr) )
-   {
-      SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
+   /* call separation callback of the nlhdlr */
+   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
 
+   /* if it was not running (e.g., because it was not available), then try with estimator callback */
+   if( *result != SCIP_DIDNOTRUN )
       return SCIP_OKAY;
-   }
 
-   *result = SCIP_DIDNOTRUN;
    *ncuts = 0;
 
    /* now call the estimator callback of the nlhdlr */
