@@ -812,15 +812,13 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
    return SCIP_OKAY;
 }
 
-/** nonlinear handler separation callback */
+/** nonlinear handler estimation callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
 {  /*lint --e{715}*/
-   SCIP_ROWPREP* rowprep;
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Real coef2;
-   SCIP_Bool success;
    int j;
 
    assert(scip != NULL);
@@ -828,46 +826,23 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    assert(conshdlr != NULL);
    assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
    assert(nlhdlrexprdata != NULL);
-   assert(result != NULL);
-   assert(ncuts != NULL);
-
-   *ncuts = 0;
-   *result = SCIP_DIDNOTRUN;
+   assert(rowprep != NULL);
+   assert(success != NULL);
 
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them
+    * propagate them, but it does not separate these
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
-      return SCIP_OKAY;
-
-   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
-
-   *result = SCIP_DIDNOTFIND;
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-
-   /* check violation side; one must use expression stored in nlhdlrexprdata!
-    * TODO: maybe have a flag to know whether the expression is quadratic in the original variables
-    */
    {
-      SCIP_Real side;
-
-      side = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-
-      SCIPdebugMsg(scip, "Activity = %g (act of expr is %g), side = %g, curvature %s\n", auxvalue,
-            SCIPgetConsExprExprValue(expr), side, nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX ? "convex" :
-            "concave");
-
-      if( auxvalue - side > mincutviolation && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
-         rowprep->sidetype = SCIP_SIDETYPE_RIGHT;
-      else if( mincutviolation < side - auxvalue && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE )
-         rowprep->sidetype = SCIP_SIDETYPE_LEFT;
-      else
-         goto CLEANUP;
+      *success = FALSE;
+      return SCIP_OKAY;
    }
 
+   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || overestimate);
+   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE || !overestimate);
+
    /*
-    * compute cut: quadfun(sol) + \nabla quadfun(sol) (x - sol) - auxvar(expr)
+    * compute estimator: quadfun(sol) + \nabla quadfun(sol) (x - sol)
     */
 
    /* constant */
@@ -881,8 +856,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
    }
 
    /* quadratic variables */
-   success = TRUE;
-   for( j = 0; j < nlhdlrexprdata->nquadexprs && success; ++j )
+   *success = TRUE;
+   for( j = 0; j < nlhdlrexprdata->nquadexprs; ++j )
    {
       int k;
       SCIP_VAR* var;
@@ -895,7 +870,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       coef = 0.0;
       constant = 0.0;
       SCIPaddSquareLinearization(scip, nlhdlrexprdata->quadexprterms[j].sqrcoef, SCIPgetSolVal(scip, sol, var),
-         nlhdlrexprdata->quadexprterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef, &constant, &success);
+         nlhdlrexprdata->quadexprterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef, &constant, success);
+      if( !*success )
+         return SCIP_OKAY;
 
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
       SCIPaddRowprepConstant(rowprep, constant);
@@ -918,53 +895,20 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
          coef2 = 0.0;
          constant = 0.0;
          SCIPaddBilinLinearization(scip, bilinexprterm->coef, SCIPgetSolVal(scip, sol, var), SCIPgetSolVal(scip, sol,
-                  var2), &coef, &coef2, &constant, &success);
-         if( success )
-         {
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var2, coef2) );
-            SCIPaddRowprepConstant(rowprep, constant);
-         }
-         else
-            break;
+                  var2), &coef, &coef2, &constant, success);
+         if( !*success )
+            return SCIP_OKAY;
+
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var2, coef2) );
+         SCIPaddRowprepConstant(rowprep, constant);
       }
    }
-   if( !success )
-      goto CLEANUP;
 
-   /* add auxiliary variable */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+   /* merge coefficients that belong to same variable */
+   SCIPmergeRowprepTerms(scip, rowprep);
 
-   /* check build cut and check violation */
-   {
-      SCIP_ROW* row;
-      SCIP_Bool infeasible;
-
-      SCIPmergeRowprepTerms(scip, rowprep);
-
-      /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-      if( !success )
-         goto CLEANUP;
-
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
-
-      SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-
-      if( infeasible )
-         *result = SCIP_CUTOFF;
-      else
-      {
-         *result = SCIP_SEPARATED;
-         ++*ncuts;
-      }
-
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
-
-CLEANUP:
-   SCIPfreeRowprep(scip, &rowprep);
+   rowprep->local = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1372,7 +1316,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrsepaHdlrQuadratic, NULL, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateQuadratic, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreQuadratic);
 
