@@ -253,7 +253,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       int i;
 
       /* add variables to rowprep */
-      for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      rowprep->nvars = SCIPgetConsExprExprNChildren(expr);
+      for( i = 0; i < rowprep->nvars; ++i )
       {
          rowprep->vars[i] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
          assert(rowprep->vars[i] != NULL);
