@@ -1267,6 +1267,23 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          else
             rest_i.inf = -SCIP_INTERVAL_INFINITY;
 
+#if 0 /* I (SV) added the following in cons_quadratic to fix/workaround some bug. Maybe we'll need this here, too? */
+         /* FIXME in theory, rest_i should not be empty here
+          * what we tried to do here is to remove the contribution of the i'th bilinear term (=bilinterm) to [minquadactivity,maxquadactivity] from rhs
+          * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than q_i (a*ak*yk) and since interval arithmetics do overestimation,
+          * it can happen that q_i is actually slightly larger than quadactivity, which results in rest_i being (slightly) empty
+          * a proper fix could be to compute the quadactivity also as x*a1*y1+...+x*an*yn if sqrcoef=0, but due to taking
+          * also infinite bounds into account, this complicates the code even further
+          * instead, I'll just work around this by turning an empty rest_i into a small non-empty one
+          */
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rest_i) )
+         {
+            assert(SCIPisSumRelEQ(scip, rest_i.inf, rest_i.sup));
+            SCIPswapReals(&rest_i.inf, &rest_i.sup);
+         }
+#endif
+         assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rest_i));
+
          /* compute rhs_i */
          SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs_i, rhs, rest_i);
 
