@@ -829,14 +829,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    assert(rowprep != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
     * propagate them, but it does not separate these
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
 
    /* if estimating on non-convex side, then do nothing */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
