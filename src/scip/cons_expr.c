@@ -2574,6 +2574,7 @@ SCIP_RETCODE reversePropConss(
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               allexprs,         /**< whether reverseprop should be called for all expressions, regardless of whether their interval was tightened */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
@@ -2608,8 +2609,8 @@ SCIP_RETCODE reversePropConss(
       if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
          continue;
 
-      /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
-      if( !consdata->expr->hastightened || (!SCIPhasConsExprExprHdlrReverseProp(consdata->expr->exprhdlr) && consdata->expr->nenfos == 0) )
+      /* skip expressions that could not have been tightened, unless allexprs is set */
+      if( !consdata->expr->hastightened && !allexprs )
          continue;
 
       /* add expressions which are not in the queue so far */
@@ -2676,6 +2677,23 @@ SCIP_RETCODE reversePropConss(
          assert(nreds >= 0);
          *ntightenings += nreds;
       }
+
+      /* if allexprs is set, then make sure that all children of expr are in the queue
+       * SCIPtightenConsExprExpr only adds children to the queue which expr could be tightened
+       */
+      if( allexprs )
+         for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPgetConsExprExprChildren(expr)[i];
+
+            if( !child->inqueue && (SCIPhasConsExprExprHdlrReverseProp(child->exprhdlr) || child->nenfos > 0) )
+            {
+               SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
+               child->inqueue = TRUE;
+            }
+         }
 
       /* stop propagation if the problem is infeasible */
       if( *infeasible )
@@ -2816,7 +2834,7 @@ SCIP_RETCODE propConss(
       }
 
       /* apply backward propagation; mark constraint as propagated */
-      SCIP_CALL( reversePropConss(scip, conss, nconss, force, &cutoff, &ntightenings) );
+      SCIP_CALL( reversePropConss(scip, conss, nconss, force, FALSE, &cutoff, &ntightenings) );
 
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
