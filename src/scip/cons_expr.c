@@ -2615,7 +2615,7 @@ SCIP_RETCODE reversePropConss(
          continue;
 
       /* add expressions which are not in the queue so far */
-      if( !consdata->expr->inqueue )
+      if( !consdata->expr->inqueue && SCIPgetConsExprExprNChildren(consdata->expr) > 0 )
       {
          SCIP_CALL( SCIPqueueInsert(queue, (void*) consdata->expr) );
          consdata->expr->inqueue = TRUE;
@@ -2632,7 +2632,6 @@ SCIP_RETCODE reversePropConss(
 
       expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
       assert(expr != NULL);
-      assert(expr->exprhdlr->reverseprop != NULL || expr->nenfos > 0);
 
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
@@ -2679,8 +2678,8 @@ SCIP_RETCODE reversePropConss(
          *ntightenings += nreds;
       }
 
-      /* if allexprs is set, then make sure that all children of expr are in the queue
-       * SCIPtightenConsExprExpr only adds children to the queue which expr could be tightened
+      /* if allexprs is set, then make sure that all children of expr with children are in the queue
+       * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability
        */
       if( allexprs )
          for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
@@ -2689,7 +2688,7 @@ SCIP_RETCODE reversePropConss(
 
             child = SCIPgetConsExprExprChildren(expr)[i];
 
-            if( !child->inqueue && (SCIPhasConsExprExprHdlrReverseProp(child->exprhdlr) || child->nenfos > 0) )
+            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 )
             {
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
                child->inqueue = TRUE;
@@ -8739,14 +8738,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
                return SCIP_OKAY;
          }
       }
-   }
 
-   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
-   if( reversepropqueue != NULL && (tightenlb || tightenub) && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
-   {
-      /* @todo put children which are in the queue to the end of it! */
-      if( !expr->inqueue && expr->nchildren > 0 )
+      /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
+      if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
       {
+         /* @todo put children which are in the queue to the end of it! */
          SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
          expr->inqueue = TRUE;
       }
