@@ -268,6 +268,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* add constant */
    SCIPaddRowprepConstant(rowprep, constant);
 
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
+      overestimate ? "over" : "under",
+      (void*)expr,
+      sol != NULL ? "sol" : "lp",
+      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+
    *success = TRUE;
 
    return SCIP_OKAY;
