@@ -2609,7 +2609,7 @@ SCIP_RETCODE reversePropConss(
          continue;
 
       /* skip expressions that could not have been tightened or do not implement the reverseprop callback; */
-      if( !consdata->expr->hastightened || (consdata->expr->exprhdlr->reverseprop == NULL && consdata->expr->nenfos == 0) )
+      if( !consdata->expr->hastightened || (!SCIPhasConsExprExprHdlrReverseProp(consdata->expr->exprhdlr) && consdata->expr->nenfos == 0) )
          continue;
 
       /* add expressions which are not in the queue so far */
@@ -8652,39 +8652,41 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
          if( tightenlb )
          {
             SCIP_CALL( SCIPtightenVarLb(scip, var, newlb, force, cutoff, &tightened) );
-            (*ntightenings) += tightened ? 1 : 0;
 
             if( tightened )
             {
+               ++*ntightenings;
                SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %g\n", SCIPvarGetName(var), newlb);
             }
+
+            if( *cutoff )
+               return SCIP_OKAY;
          }
 
-         if( tightenub && !(*cutoff) )
+         if( tightenub )
          {
             SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
-            (*ntightenings) += tightened ? 1 : 0;
 
             if( tightened )
             {
+               ++*ntightenings;
                SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %g\n", SCIPvarGetName(var), newub);
             }
+
+            if( *cutoff )
+               return SCIP_OKAY;
          }
       }
+   }
 
-      /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
-      if( reversepropqueue != NULL && !*cutoff )
+   /* if a reversepropagation queue is given, then add expression to that queue if it has at least one child and could have a reverseprop callback */
+   if( reversepropqueue != NULL && (tightenlb || tightenub) && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
+   {
+      /* @todo put children which are in the queue to the end of it! */
+      if( !expr->inqueue && expr->nchildren > 0 )
       {
-         if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && expr->nenfos > 0) ||
-             (SCIPgetStage(scip) != SCIP_STAGE_SOLVING && expr->exprhdlr->reverseprop != NULL) )
-         {
-            /* @todo put children which are in the queue to the end of it! */
-            if( !expr->inqueue && expr->nchildren > 0 )
-            {
-               SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
-               expr->inqueue = TRUE;
-            }
-         }
+         SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
+         expr->inqueue = TRUE;
       }
    }
 
