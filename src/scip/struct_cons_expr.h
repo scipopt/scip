@@ -41,15 +41,15 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_CONSEXPR_EXPRHDLRDATA*   data;    /**< data of handler */
    unsigned int            precedence;    /**< precedence of expression operation relative to other expression (used for printing) */
 
-   SCIP_Longint            nsepacalls;    /**< number of times, the separation callback was called */
+   SCIP_Longint            nsepacalls;    /**< number of times, the separation or estimation callbacks were called */
    SCIP_Longint            npropcalls;    /**< number of times, the propagation callback was called */
-   SCIP_Longint            ncutsfound;    /**< number of cuts found by this expression handler */
+   SCIP_Longint            ncutsfound;    /**< number of cuts added by this expression handler */
    SCIP_Longint            ncutoffs;      /**< number of cutoffs found so far by this expression handler */
    SCIP_Longint            ndomreds;      /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint            nsimplifycalls; /**< number of times, the simplification callback was called */
    SCIP_Longint            nbranchscores; /**< number of times, branching scores were added by (or for) this expression handler */
 
-   SCIP_CLOCK*             sepatime;      /**< time used for separation */
+   SCIP_CLOCK*             sepatime;      /**< time used for separation or estimation */
    SCIP_CLOCK*             proptime;      /**< time used for propagation */
    SCIP_CLOCK*             intevaltime;   /**< time used for interval evaluation */
    SCIP_CLOCK*             simplifytime;  /**< time used for expression simplification */
@@ -148,16 +148,16 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
    unsigned int                  priority;   /**< priority of nonlinearity handler */
 
-   SCIP_Longint                  nsepacalls; /**< number of times, the separation callback was called */
+   SCIP_Longint                  nsepacalls; /**< number of times, the separation or estimation callback was called */
    SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */
-   SCIP_Longint                  ncutsfound; /**< number of cuts found by this expression handler */
+   SCIP_Longint                  ncutsfound; /**< number of cuts added by this expression handler */
    SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this nonlinear handler */
    SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint                  ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
    SCIP_Longint                  nbranchscores; /**< number of times, branching scores were added by this nonlinear handler */
 
    SCIP_CLOCK*                   detecttime; /**< time used for detection */
-   SCIP_CLOCK*                   sepatime;   /**< time used for separation */
+   SCIP_CLOCK*                   sepatime;   /**< time used for separation or estimation */
    SCIP_CLOCK*                   proptime;   /**< time used for reverse propagation */
    SCIP_CLOCK*                   intevaltime;/**< time used for interval evaluation */
 

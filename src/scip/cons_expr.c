@@ -5193,11 +5193,13 @@ SCIP_RETCODE sepaConsExprNlhdlr(
          {
             *result = SCIP_CUTOFF;
             *ncuts = 0;
+            ++nlhdlr->ncutoffs;
          }
          else
          {
             *result = SCIP_SEPARATED;
             *ncuts = 1;
+            ++nlhdlr->ncutsfound;
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -7720,14 +7722,11 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
 
    if( SCIPhasConsExprExprHdlrEstimate(expr->exprhdlr) )
    {
-      /* TODO use extra statistics for estimation */
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
       SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, coefs, constant, islocal, success) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
 
       /* update statistics */
-      if( *success )
-         ++expr->exprhdlr->ncutsfound;
       ++expr->exprhdlr->nsepacalls;
    }
 
@@ -10391,15 +10390,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
    }
 #endif
 
-   /* TODO have own statistics for estimate */
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
    SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, rowprep, success) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */
    ++nlhdlr->nsepacalls;
-   if( *success )
-      ++nlhdlr->ncutsfound;
 
    return SCIP_OKAY;
 }
