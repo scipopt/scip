@@ -839,8 +839,8 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    }
 
    /* if estimating on non-convex side, then do nothing */
-   if( ( overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE) )
+   if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
+       (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
       return SCIP_OKAY;
 
    /*
@@ -911,6 +911,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    SCIPmergeRowprepTerms(scip, rowprep);
 
    rowprep->local = FALSE;
+
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_quadratic%p_%s%d",
+      overestimate ? "over" : "under",
+      (void*)expr,
+      sol != NULL ? "sol" : "lp",
+      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
