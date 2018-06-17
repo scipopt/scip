@@ -1838,7 +1838,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
       /* add cut */
       SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
       *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
+      if( !infeasible )
+         ++*ncuts;
 
 #ifdef SCIP_DEBUG
       if( *result == SCIP_CUTOFF )

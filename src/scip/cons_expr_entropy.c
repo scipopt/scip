@@ -552,7 +552,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaEntropy)
    /* add cut */
    SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
    *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-   *ncuts += 1;
+
+   if( !infeasible )
+      ++*ncuts;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "add cut with violation %e\n", violation);

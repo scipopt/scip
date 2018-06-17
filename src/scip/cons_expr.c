@@ -5324,7 +5324,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
          if( separesult == SCIP_CUTOFF )
          {
-            assert(ncuts > 0);
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
             sepadata->result = SCIP_CUTOFF;
             *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -5492,7 +5491,6 @@ SCIP_RETCODE separatePoint(
 
       if( sepadata.result == SCIP_CUTOFF || sepadata.result == SCIP_SEPARATED )
       {
-         assert(sepadata.ncuts > 0);
          *result = sepadata.result;
 
          if( *result == SCIP_CUTOFF )

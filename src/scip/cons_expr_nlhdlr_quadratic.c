@@ -951,12 +951,14 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrsepaHdlrQuadratic)
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
       SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-      (*ncuts)++;
 
       if( infeasible )
          *result = SCIP_CUTOFF;
       else
+      {
          *result = SCIP_SEPARATED;
+         ++*ncuts;
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }

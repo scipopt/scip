@@ -1091,10 +1091,18 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 #endif
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+      }
+      else
+      {
+         *result = SCIP_SEPARATED;
+         ++*ncuts;
+      }
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
 
    /* free rowprep */

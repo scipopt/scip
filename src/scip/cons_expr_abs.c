@@ -485,7 +485,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       if( SCIPisGE(scip, violation, mincutviolation) )
       {
          SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
-         *ncuts += 1;
 
          if( infeasible )
          {
@@ -493,7 +492,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
             break;
          }
          else
+         {
             *result = SCIP_SEPARATED;
+            ++*ncuts;
+         }
       }
    }
 

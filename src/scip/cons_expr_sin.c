@@ -1104,15 +1104,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-         *ncuts += 1;
-
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
             break;
          }
          else
+         {
             *result = SCIP_SEPARATED;
+            ++*ncuts;
+         }
       }
 
       SCIPfreeRowprep(scip, &cuts[i]);

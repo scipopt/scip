@@ -298,12 +298,17 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
       SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-      (*ncuts)++;
 
       if( infeasible )
+      {
          *result = SCIP_CUTOFF;
+         *ncuts = 0;
+      }
       else
+      {
          *result = SCIP_SEPARATED;
+         *ncuts = 1;
+      }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
