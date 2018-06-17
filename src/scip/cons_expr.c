@@ -5161,14 +5161,14 @@ SCIP_RETCODE sepaConsExprNlhdlr(
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, rowprep, &success) );
+      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      assert(auxvar != NULL);
+
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
 
       /* complete estimator to cut and clean it up */
       if( success )
       {
-         auxvar = SCIPgetConsExprExprAuxVar(expr);
-         assert(auxvar != NULL);
-
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
          SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
@@ -7723,7 +7723,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrEstimate(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, coefs, constant, islocal, success) );
+      SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
 
       /* update statistics */
@@ -10391,7 +10391,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, rowprep, success) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */

@@ -246,7 +246,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    assert(rowprep->varssize >= SCIPgetConsExprExprNChildren(expr));
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, rowprep->coefs, &constant, &rowprep->local, success) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success) );
 
    if( *success )
    {

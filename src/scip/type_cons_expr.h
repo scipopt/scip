@@ -330,6 +330,9 @@ extern "C" {
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
  * at a given point by using auxiliary variables stored in all children.
+ * If the value of the estimator in the solution does not exceed (fall below) targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
  * the constant part in \par constant.
  *
@@ -338,6 +341,7 @@ extern "C" {
  *  - expr : expression
  *  - sol  : solution at which to estimate (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
+ *  - targetvalue : a value that the estimator shall exceed, can be +/-infinity
  *  - coefs : array to store coefficients of estimator
  *  - constant : buffer to store constant part of estimator
  *  - islocal : buffer to store whether estimator is valid locally only
@@ -349,6 +353,7 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
+   SCIP_Real targetvalue, \
    SCIP_Real* coefs, \
    SCIP_Real* constant, \
    SCIP_Bool* islocal, \
@@ -751,15 +756,23 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
  * at a given point.
+ * If the value of the estimator in the solution does not exceed (fall below) targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the estimator in a given rowprep data structure and set the
  * rowprep->local flag accordingly.
  * It is assumed that the sidetype of the rowprep is not changed by the callback.
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr : constraint handler
+ *  - nlhdlr : nonlinear handler
  *  - expr : expression
+ *  - nlhdlrexprdata : expression data of nonlinear handler
  *  - sol  : solution at which to estimate (NULL for the LP solution)
+ *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
+ *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
  *  - rowprep : a rowprep where to store the estimator
  *  - success : buffer to indicate whether an estimator could be computed
  */
@@ -772,6 +785,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
+   SCIP_Real targetvalue, \
    SCIP_ROWPREP* rowprep, \
    SCIP_Bool* success)
 
