@@ -200,6 +200,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    *success = FALSE;
 
+   /* if estimating on non-convex side, then do nothing
+    * TODO we are vertex-polyhedral and so should compute something
+    */
+   if( ( overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX) ||
+       (!overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE) )
+      return SCIP_OKAY;
+
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
 
