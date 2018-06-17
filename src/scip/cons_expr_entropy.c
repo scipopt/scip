@@ -44,113 +44,6 @@
  * Local methods
  */
 
-/** helper function to separate a given point; needed for proper unittest */
-static
-SCIP_RETCODE separatePointEntropy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< entropy expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
-   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
-   )
-{
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_ROWPREP* rowprep;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* childvar;
-   SCIP_Real refpoint;
-   SCIP_Real coef;
-   SCIP_Real constant;
-   SCIP_Bool success;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
-   assert(expr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
-   assert(cut != NULL);
-
-   *cut = NULL;
-
-   /* get linearization variable */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
-
-   /* get expression data */
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
-
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-   /* reference point is outside the domain of f(x) = x*log(x) */
-   if( refpoint < 0.0 )
-      return SCIP_OKAY;
-
-   /* use secant for underestimate (locally valid) */
-   if( !overestimate )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real vallb;
-      SCIP_Real valub;
-
-      lb = SCIPvarGetLbLocal(childvar);
-      ub = SCIPvarGetUbLocal(childvar);
-
-      if( lb < 0.0 || SCIPisInfinity(scip, ub) || SCIPisEQ(scip, lb, ub) )
-         return SCIP_OKAY;
-
-      assert(lb >= 0.0 && ub >= 0.0);
-      assert(ub - lb != 0.0);
-
-      vallb = (lb == 0.0) ? 0.0 : -lb * log(lb);
-      valub = (ub == 0.0) ? 0.0 : -ub * log(ub);
-
-      coef = (valub - vallb) / (ub - lb);
-      constant = valub - coef * ub;
-      assert(SCIPisEQ(scip, constant, vallb - coef * lb));
-   }
-   /* use gradient cut for underestimate (globally valid) */
-   else
-   {
-      /* no gradient cut possible if reference point is too close at 0 */
-      if( SCIPisZero(scip, refpoint) )
-         return SCIP_OKAY;
-
-      /* -x*(1+log(x*)) + x* <= -x*log(x) */
-      coef = -(1.0 + log(refpoint));
-      constant = refpoint;
-   }
-
-   /* give up if the constant or coefficient is too large */
-   if( SCIPisInfinity(scip, REALABS(constant)) || SCIPisInfinity(scip, REALABS(coef)) )
-      return SCIP_OKAY;
-
-   /* create cut */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overestimate) );
-   SCIPaddRowprepConstant(rowprep, constant);
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, coef) );
-
-   /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-   if( success )
-   {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "entropy_cut");  /* @todo make cutname unique, e.g., add LP number */
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
-   }
-
-   SCIPfreeRowprep(scip, &rowprep);
-
-   return SCIP_OKAY;
-}
-
 /** helper function for reverseProp() which returns an x* in [xmin,xmax] s.t. the distance -x*log(x) and a given target
  *  value is minimized; the function assumes that -x*log(x) is monotone on [xmin,xmax];
  */
@@ -532,36 +425,82 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
+/** expression estimator callback */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaEntropy)
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 {  /*lint --e{715}*/
-   SCIP_ROW* cut;
-   SCIP_Bool infeasible;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real refpoint;
 
-   cut = NULL;
-   *ncuts = 0;
-   *result = SCIP_DIDNOTFIND;
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
 
-   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
+   *success = FALSE;
 
-   /* failed to compute a nice cut */
-   if( cut == NULL )
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   refpoint = SCIPgetSolVal(scip, sol, childvar);
+
+   /* reference point is outside the domain of f(x) = -x*log(x) */
+   if( refpoint < 0.0 )
       return SCIP_OKAY;
 
-   /* add cut */
-   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
-   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   /* use secant for underestimate (locally valid) */
+   if( !overestimate )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real vallb;
+      SCIP_Real valub;
 
-   if( !infeasible )
-      ++*ncuts;
+      lb = SCIPvarGetLbLocal(childvar);
+      ub = SCIPvarGetUbLocal(childvar);
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-#endif
+      if( lb < 0.0 || SCIPisInfinity(scip, ub) || SCIPisEQ(scip, lb, ub) )
+         return SCIP_OKAY;
 
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      assert(lb >= 0.0 && ub >= 0.0);
+      assert(ub - lb != 0.0);
+
+      vallb = (lb == 0.0) ? 0.0 : -lb * log(lb);
+      valub = (ub == 0.0) ? 0.0 : -ub * log(ub);
+
+      *coefs = (valub - vallb) / (ub - lb);
+      *constant = valub - *coefs * ub;
+      assert(SCIPisEQ(scip, *constant, vallb - *coefs * lb));
+
+      *islocal = TRUE;
+   }
+   /* use gradient cut for underestimate (globally valid) */
+   else
+   {
+      /* no gradient cut possible if reference point is too close at 0 */
+      if( SCIPisZero(scip, refpoint) )
+         return SCIP_OKAY;
+
+      /* -x*(1+log(x*)) + x* <= -x*log(x) */
+      *coefs = -(1.0 + log(refpoint));
+      *constant = refpoint;
+
+      *islocal = FALSE;
+   }
+
+   /* give up if the constant or coefficient is too large */
+   if( SCIPisInfinity(scip, REALABS(*constant)) || SCIPisInfinity(scip, REALABS(*coefs)) )
+      return SCIP_OKAY;
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -710,7 +649,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, sepaEntropy, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );
