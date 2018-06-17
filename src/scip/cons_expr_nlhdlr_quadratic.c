@@ -838,8 +838,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
       return SCIP_OKAY;
    }
 
-   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || overestimate);
-   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE || !overestimate);
+   /* if estimating on non-convex side, then do nothing */
+   if( ( overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX) ||
+       (!overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE) )
+      return SCIP_OKAY;
 
    /*
     * compute estimator: quadfun(sol) + \nabla quadfun(sol) (x - sol)
