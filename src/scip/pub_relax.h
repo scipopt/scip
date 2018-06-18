@@ -103,6 +103,36 @@ SCIP_Longint SCIPrelaxGetNCalls(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
+/** gets the total number of times, the relaxation handler cut off a node */
+EXTERN
+SCIP_Longint SCIPrelaxGetNCutoffs(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times, the relaxation handler improved a nodes lower bound */
+EXTERN
+SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times, the relaxation handler added constraints */
+EXTERN
+SCIP_Longint SCIPrelaxGetNAddedConss(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times, the relaxation handler reduced variable domains */
+EXTERN
+SCIP_Longint SCIPrelaxGetNReducedDomains(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times, the relaxation handler separated cutting planes */
+EXTERN
+SCIP_Longint SCIPrelaxGetNSeparatedCuts(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
 /** is relaxation handler initialized? */
 EXTERN
 SCIP_Bool SCIPrelaxIsInitialized(

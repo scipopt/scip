@@ -3162,7 +3162,7 @@ SCIP_RETCODE solveNodeRelax(
 
       lowerbound = -SCIPsetInfinity(set);
 
-      SCIP_CALL( SCIPrelaxExec(set->relaxs[r], set, stat, depth, &lowerbound, &result) );
+      SCIP_CALL( SCIPrelaxExec(set->relaxs[r], set, tree, stat, depth, &lowerbound, &result) );
 
       switch( result )
       {

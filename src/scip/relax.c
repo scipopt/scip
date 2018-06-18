@@ -26,6 +26,7 @@
 
 #include "scip/def.h"
 #include "scip/set.h"
+#include "scip/tree.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
@@ -133,6 +134,11 @@ SCIP_RETCODE doRelaxCreate(
    SCIP_CALL( SCIPclockCreate(&(*relax)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*relax)->relaxclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*relax)->ncalls = 0;
+   (*relax)->ncutoffs = 0;
+   (*relax)->nimprbounds = 0;
+   (*relax)->naddedconss = 0;
+   (*relax)->nreduceddom = 0;
+   (*relax)->nseparated = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
 
@@ -329,6 +335,7 @@ SCIP_RETCODE SCIPrelaxExitsol(
 SCIP_RETCODE SCIPrelaxExec(
    SCIP_RELAX*           relax,              /**< relaxation handler */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Real*            lowerbound,         /**< pointer to lower bound computed by the relaxation handler */
@@ -383,6 +390,24 @@ SCIP_RETCODE SCIPrelaxExec(
          stat->relaxcount++;
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
+         else if( *result == SCIP_CUTOFF )
+            ++relax->ncutoffs;
+         else
+         {
+            SCIP_NODE* node;
+
+            node = SCIPtreeGetCurrentNode(tree);
+
+            if( !SCIPsetIsInfinity(set, -*lowerbound) && (node == NULL || SCIPsetIsRelGT(set, *lowerbound, SCIPnodeGetLowerbound(node))) )
+               ++relax->nimprbounds;
+
+            if( *result == SCIP_CONSADDED )
+               ++relax->naddedconss;
+            else if( *result == SCIP_REDUCEDDOM )
+               ++relax->nreduceddom;
+            else if( *result == SCIP_SEPARATED )
+               ++relax->nseparated;
+         }
       }
    }
 
@@ -570,6 +595,56 @@ SCIP_Longint SCIPrelaxGetNCalls(
    assert(relax != NULL);
 
    return relax->ncalls;
+}
+
+/** gets the total number of times, the relaxation handler cut off a node */
+SCIP_Longint SCIPrelaxGetNCutoffs(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->ncutoffs;
+}
+
+/** gets the total number of times, the relaxation handler improved a nodes lower bound */
+SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->nimprbounds;
+}
+
+/** gets the total number of times, the relaxation handler added constraints */
+SCIP_Longint SCIPrelaxGetNAddedConss(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->naddedconss;
+}
+
+/** gets the total number of times, the relaxation handler reduced variable domains */
+SCIP_Longint SCIPrelaxGetNReducedDomains(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->nreduceddom;
+}
+
+/** gets the total number of times, the relaxation handler separated cutting planes */
+SCIP_Longint SCIPrelaxGetNSeparatedCuts(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->nseparated;
 }
 
 /** is relaxation handler initialized? */
