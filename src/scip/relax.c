@@ -395,15 +395,20 @@ SCIP_RETCODE SCIPrelaxExec(
          stat->relaxcount++;
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
-         else if( *result == SCIP_CUTOFF )
+         else if( *result == SCIP_CUTOFF || SCIPsetIsInfinity(set, *lowerbound) )
             ++relax->ncutoffs;
          else
          {
             SCIP_NODE* node;
+            SCIP_Real oldlowerbound;
 
             node = SCIPtreeGetCurrentNode(tree);
+            if( node != NULL )
+               oldlowerbound = SCIPnodeGetLowerbound(node);
+            else
+               oldlowerbound = -SCIPsetInfinity(set);
 
-            if( !SCIPsetIsInfinity(set, -*lowerbound) && (node == NULL || SCIPsetIsRelGT(set, *lowerbound, SCIPnodeGetLowerbound(node))) )
+            if( !SCIPsetIsInfinity(set, -*lowerbound) && SCIPsetIsRelGT(set, *lowerbound, oldlowerbound) )
                ++relax->nimprbounds;
 
             if( *result == SCIP_CONSADDED )
