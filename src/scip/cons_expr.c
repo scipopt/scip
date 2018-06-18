@@ -1252,14 +1252,14 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
 
          if( !SCIPisInfinity(scip, -lb) )
          {
-            /* reduce lb by epsilon, or to the next integer value, which ever is higher */
+            /* reduce lb by epsilon, or to the next integer value, which ever is larger */
             bnd = floor(lb);
             lb = MAX(bnd, lb - conshdlrdata->varboundrelaxamount);
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
-            /* increase ub by epsilon, or to the next integer value, which ever is lower */
+            /* increase ub by epsilon, or to the next integer value, which ever is smaller */
             bnd = ceil(ub);
             ub = MIN(bnd, ub + conshdlrdata->varboundrelaxamount);
          }
@@ -1275,14 +1275,14 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
 
          if( !SCIPisInfinity(scip, -lb) )
          {
-            /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is higher */
+            /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is larger */
             bnd = floor(lb);
             lb = MAX(bnd, lb - REALABS(lb) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
-            /* increase ub by epsilon*|ub|, or to the next integer value, which ever is lower */
+            /* increase ub by epsilon*|ub|, or to the next integer value, which ever is smaller */
             bnd = ceil(ub);
             ub = MIN(bnd, ub + REALABS(ub) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
          }
