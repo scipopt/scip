@@ -3727,7 +3727,6 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
 /** simplifies expressions and replaces common subexpressions for a set of constraints
  * @todo put the constant to the constraint sides
- * @todo call removeFixedAndBoundConstraints() from here and remove it from CONSPRESOL
  */
 static
 SCIP_RETCODE canonicalizeConstraints(
@@ -5880,9 +5879,6 @@ void printConshdlrStatistics(
  * Callback methods of constraint handler
  */
 
-/* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
-
-
 /** upgrades quadratic constraint to expr constraint */
 static
 SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
@@ -7159,7 +7155,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if 0
+#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 {  /*lint --e{715}*/
@@ -7173,7 +7169,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 #endif
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 0
+#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsExpr)
 {  /*lint --e{715}*/
@@ -7187,7 +7183,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsExpr)
 #endif
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
-#if 0
+#if 0 /* TODO? */
 static
 SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExpr)
 {  /*lint --e{715}*/
@@ -9509,7 +9505,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
 
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
@@ -9518,13 +9513,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expression iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&conshdlrdata->iterator, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
-   conshdlr = NULL;
-
    /* include constraint handler */
-#if 0
-   /* use SCIPincludeConshdlr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
@@ -9540,45 +9529,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
          consEnableExpr, consDisableExpr, consDelvarsExpr,
          consPrintExpr, consCopyExpr, consParseExpr,
          consGetVarsExpr, consGetNVarsExpr, consGetDiveBdChgsExpr, conshdlrdata) );
-#else
-   /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpExpr, consEnfopsExpr, consCheckExpr, consLockExpr,
-         conshdlrdata) );
-   assert(conshdlr != NULL);
-
-   /* set non-fundamental callbacks via specific setter functions */
-   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveExpr) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExpr, consCopyExpr) );
-   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveExpr) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteExpr) );
-   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsExpr) );
-   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableExpr) );
-   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableExpr) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitExpr) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreExpr) );
-   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolExpr) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeExpr) );
-   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsExpr) );
-   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsExpr) );
-   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsExpr) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExpr) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreExpr) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolExpr) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpExpr) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseExpr) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExpr, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExpr) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropExpr, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
-         CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropExpr) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExpr, consSepasolExpr, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExpr) );
-   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExpr) );
-#endif
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
