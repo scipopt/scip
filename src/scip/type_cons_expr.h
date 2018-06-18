@@ -330,7 +330,7 @@ extern "C" {
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
  * at a given point by using auxiliary variables stored in all children.
- * If the value of the estimator in the solution does not exceed (fall below) targetvalue
+ * If the value of the estimator in the solution is smaller (larger) than targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
@@ -756,7 +756,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
  * at a given point.
- * If the value of the estimator in the solution does not exceed (fall below) targetvalue
+ * If the value of the estimator in the solution is smaller (larger) than targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the estimator in a given rowprep data structure and set the
