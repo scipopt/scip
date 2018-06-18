@@ -250,6 +250,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
    childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
 
+   /* no need for cut if child is fixed */
+   if( SCIPisRelEQ(scip, childlb, childub) )
+      return SCIP_OKAY;
+
    /* compute underestimating cuts */
    if( underestimate )
    {
@@ -336,6 +340,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
    refpoint = SCIPgetSolVal(scip, sol, childvar);
    childlb = SCIPgetConsExprExprInterval(child).inf;
    childub = SCIPgetConsExprExprInterval(child).sup;
+
+   /* no need for cut if child is fixed */
+   if( SCIPisRelEQ(scip, childlb, childub) )
+      return SCIP_OKAY;
 
    /* compute all possible inequalities; the resulting cuts are stored in the cuts array
     *
