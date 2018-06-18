@@ -146,6 +146,7 @@ struct SCIP_ConsExpr_Nlhdlr
    char*                         desc;       /**< nonlinearity handler description (can be NULL) */
    SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
    unsigned int                  priority;   /**< priority of nonlinearity handler */
+   SCIP_Bool                     enabled;    /**< whether the nonlinear handler should be used */
 
    SCIP_Longint                  nsepacalls; /**< number of times, the separation callback was called */
    SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */

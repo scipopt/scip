@@ -515,8 +515,9 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    {
       SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
 
+      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
       sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
-      if( sourcenlhdlr->copyhdlr != NULL)
+      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
       {
          SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
       }
@@ -4999,6 +5000,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       nlhdlr = conshdlrdata->nlhdlrs[h];
       assert(nlhdlr != NULL);
 
+      /* skip disabled nlhdlrs */
+      if( !nlhdlr->enabled )
+         continue;
+
       /* call detect routine of nlhdlr */
       nlhdlrexprdata = NULL;
       success = FALSE;
@@ -5823,6 +5828,10 @@ void printNlhdlrStatistics(
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr = conshdlrdata->nlhdlrs[i];
       assert(nlhdlr != NULL);
+
+      /* skip disabled nlhdlr */
+      if( !nlhdlr->enabled )
+         continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
@@ -10156,6 +10165,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   char paramname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -10185,6 +10195,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/expr/nlhdlr/%s/enabled", name);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
+      &(*nlhdlr)->enabled, FALSE, TRUE, NULL, NULL) );
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1);
 
