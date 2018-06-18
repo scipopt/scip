@@ -25,9 +25,6 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #include <string.h>
 
 /* fundamental expression handler properties */

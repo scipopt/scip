@@ -31,9 +31,6 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
 #define EXPRHDLR_PRECEDENCE      40000

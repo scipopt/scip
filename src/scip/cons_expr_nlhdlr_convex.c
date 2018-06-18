@@ -25,9 +25,6 @@
 
 #include <string.h>
 
-#define SCIP_PRIVATE_ROWPREP
-
-#include "scip/cons_quadratic.h" /* for SCIP_ROWPREP */
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"

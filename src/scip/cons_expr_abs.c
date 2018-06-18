@@ -28,9 +28,6 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
 #define EXPRHDLR_PRECEDENCE  70000

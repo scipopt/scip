@@ -37,9 +37,6 @@
 
 #include "scip/pub_misc.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "prod"
 #define EXPRHDLR_DESC         "product of children"
 #define EXPRHDLR_PRECEDENCE  50000

@@ -27,9 +27,6 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sin.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define NEWTON_NITERATIONS    100
 #define NEWTON_PRECISION      1e-12
 

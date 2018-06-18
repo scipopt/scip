@@ -28,9 +28,6 @@
 
 #include <string.h>
 
-#define SCIP_PRIVATE_ROWPREP
-
-#include "scip/cons_quadratic.h" /* for SCIP_ROWPREP */
 #include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"

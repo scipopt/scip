@@ -28,9 +28,6 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_log.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "log"
 #define EXPRHDLR_DESC         "logarithmic expression"
 #define EXPRHDLR_PRECEDENCE  80000

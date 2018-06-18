@@ -32,9 +32,6 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "pow"
 #define EXPRHDLR_DESC         "power expression"
 #define EXPRHDLR_PRECEDENCE  55000
