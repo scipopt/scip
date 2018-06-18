@@ -44,6 +44,7 @@
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/heur_subnlp.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -182,6 +183,7 @@ struct SCIP_ConshdlrData
    SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
+   SCIP_HEUR*               subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
@@ -6129,6 +6131,9 @@ SCIP_DECL_CONSINIT(consInitExpr)
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
+   /* get subnlp heuristic for later use */
+   conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
+
    /* reset statistics in expression handlers */
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -6193,6 +6198,8 @@ SCIP_DECL_CONSEXIT(consExitExpr)
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
       SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
    }
+
+   conshdlrdata->subnlpheur = NULL;
 
    return SCIP_OKAY;
 }
@@ -6590,6 +6597,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_Real          maxviol;
    unsigned int soltag;
    int c;
 
@@ -6603,8 +6611,9 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 
    *result = SCIP_FEASIBLE;
    soltag = ++(conshdlrdata->lastsoltag);
+   maxviol = 0.0;
 
-   /* check all nonlinear constraints for feasibility */
+   /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL && conss[c] != NULL);
@@ -6616,6 +6625,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          *result = SCIP_INFEASIBLE;
+         maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
 
          /* print reason for infeasibility */
          if( printreason )
@@ -6632,7 +6642,17 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
          }
+         else if( conshdlrdata->subnlpheur == NULL || sol == NULL )
+         {
+            /* if we don't want to pass to subnlp heuristic and don't need to print reasons, then can stop checking here */
+            return SCIP_OKAY;
+         }
       }
+   }
+
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
+   {
+      SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
 
    return SCIP_OKAY;
