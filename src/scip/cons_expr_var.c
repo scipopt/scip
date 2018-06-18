@@ -257,44 +257,18 @@ static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
-   SCIP_Real lb;
-   SCIP_Real ub;
 
    assert(expr != NULL);
-   assert(varboundrelax >= 0.0);
 
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-
-   if( varboundrelax > 0.0 )
-   {
-      /* relax bounds by given amount, but not as much as that the variable sign is changing, though
-       * (this is to ensure that an original positive variable does not get negative by this,
-       * which may have an adverse effect on convexity recognition, for example)
-       */
-
-      /* if bound in [0,varboundrelax], then relax to 0.0, otherwise relax by -varboundrelax */
-      if( lb >= 0.0 && lb <= varboundrelax )
-         lb = 0.0;
-      else if( !SCIPisInfinity(scip, -lb) )
-         lb -= varboundrelax;
-
-      /* if bound in [-varboundrelax,0], then relax to 0.0, otherwise relax by +varboundrelax */
-      if( ub <= 0.0 && ub >= -varboundrelax )
-         ub = 0.0;
-      else if( !SCIPisInfinity(scip, ub) )
-         ub += varboundrelax;
-   }
-
-   /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
-   lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
-   ub = infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, ub);
-
-   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
-   SCIPintervalSetBounds(interval, lb, ub);
+   if( intevalvar != NULL )
+      *interval = intevalvar(scip, var, intevalvardata);
+   else
+      SCIPintervalSetBounds(interval,  /*lint !e666*/
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(var)),    /*lint !e666*/
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(var)));   /*lint !e666*/
 
    return SCIP_OKAY;
 }
