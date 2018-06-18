@@ -5174,7 +5174,7 @@ SCIP_RETCODE sepaConsExprNlhdlr(
          SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
       }
 
-      /* if cut looks good (numerics ok and cutting of solution), then turn into row and add to sepastore */
+      /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
       if( success )
       {
          SCIP_ROW* row;
