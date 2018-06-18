@@ -6463,7 +6463,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
    soltag = ++(conshdlrdata->lastsoltag);
    maxviol = 0.0;
 
-   /* check all nonlinear constraints for feasibility */
+   /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL && conss[c] != NULL);
@@ -6491,6 +6491,11 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             {
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
+         }
+         else if( conshdlrdata->subnlpheur == NULL || sol == NULL )
+         {
+            /* if we don't want to pass to subnlp heuristic and don't need to print reasons, then can stop checking here */
+            return SCIP_OKAY;
          }
       }
    }
