@@ -240,7 +240,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
 /** expression estimation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
 
