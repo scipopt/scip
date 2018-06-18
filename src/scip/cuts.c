@@ -2660,7 +2660,7 @@ SCIP_RETCODE findBestLb(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
-   SCIP_Real*            simple_bound,       /**< pointer to store simple bound value */
+   SCIP_Real*            simplebound,        /**< pointer to store simple bound value */
    int*                  bestlbtype          /**< pointer to store best bound type */
    )
 {
@@ -2682,7 +2682,7 @@ SCIP_RETCODE findBestLb(
       }
    }
 
-   *simple_bound = *bestlb;
+   *simplebound = *bestlb;
 
    if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
@@ -2691,8 +2691,7 @@ SCIP_RETCODE findBestLb(
 
       SCIP_CALL( SCIPgetVarClosestVlb(scip, var, sol, &bestvlb, &bestvlbidx) );
       if( bestvlbidx >= 0
-	//         && (bestvlb > *bestlb || (*bestlbtype < 0 && SCIPisGE(scip, bestvlb, *bestlb))) )
-	  && ( SCIPisGT(scip, bestvlb, *bestlb) || (*bestlbtype < 0 && SCIPisGE(scip, bestvlb, *bestlb))) )
+	  && (bestvlb > *bestlb || (*bestlbtype < 0 && SCIPisGE(scip, bestvlb, *bestlb))) )
       {
          SCIP_VAR** vlbvars;
 
@@ -2722,7 +2721,7 @@ SCIP_RETCODE findBestUb(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
-   SCIP_Real*            simple_bound,       /**< pointer to store simple bound */
+   SCIP_Real*            simplebound,        /**< pointer to store simple bound */
    int*                  bestubtype          /**< pointer to store best bound type */
    )
 {
@@ -2744,7 +2743,7 @@ SCIP_RETCODE findBestUb(
       }
    }
 
-   *simple_bound = *bestub;
+   *simplebound = *bestub;
 
    if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
@@ -2798,12 +2797,11 @@ SCIP_RETCODE determineBestBounds(
    SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
 {
+   SCIP_Real simplelb;
+   SCIP_Real simpleub;
    int v;
 
    v = SCIPvarGetProbindex(var);
-
-   SCIP_Real simple_lower_bound;
-   SCIP_Real simple_upper_bound;      
 
    /* check if the user specified a bound to be used */
    if( boundsfortrans != NULL && boundsfortrans[v] > -3 )
@@ -2845,7 +2843,7 @@ SCIP_RETCODE determineBestBounds(
          *selectedbound = SCIP_BOUNDTYPE_LOWER;
 
          /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-         SCIP_CALL( findBestUb(scip, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, bestub, &simple_upper_bound, bestubtype) );
+         SCIP_CALL( findBestUb(scip, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, bestub, &simpleub, bestubtype) );
       }
       else
       {
@@ -2884,7 +2882,7 @@ SCIP_RETCODE determineBestBounds(
          *selectedbound = SCIP_BOUNDTYPE_UPPER;
 
          /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-         SCIP_CALL( findBestLb(scip, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, bestlb, &simple_lower_bound, bestlbtype) );
+         SCIP_CALL( findBestLb(scip, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, bestlb, &simplelb, bestlbtype) );
       }
    }
    else
@@ -2894,10 +2892,10 @@ SCIP_RETCODE determineBestBounds(
       /* bound selection should be done automatically */
 
       /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-      SCIP_CALL( findBestLb(scip, var, sol, usevbds, allowlocal, bestlb, &simple_lower_bound, bestlbtype) );
+      SCIP_CALL( findBestLb(scip, var, sol, usevbds, allowlocal, bestlb, &simplelb, bestlbtype) );
 
       /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-      SCIP_CALL( findBestUb(scip, var, sol, usevbds, allowlocal, bestub, &simple_upper_bound, bestubtype) );
+      SCIP_CALL( findBestUb(scip, var, sol, usevbds, allowlocal, bestub, &simpleub, bestubtype) );
 
       /* check, if variable is free variable */
       if( SCIPisInfinity(scip, - *bestlb) && SCIPisInfinity(scip, *bestub) )
@@ -2926,9 +2924,9 @@ SCIP_RETCODE determineBestBounds(
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
          else if( *bestubtype == -1 )  /* prefer global standard bounds */
             *selectedbound = SCIP_BOUNDTYPE_UPPER;
-         else if( ((*bestlbtype)>=0 || (*bestubtype)>=0) && !SCIPisEQ(scip, *bestlb - simple_lower_bound, simple_upper_bound - *bestub) )
+         else if( ((*bestlbtype) >= 0 || (*bestubtype) >= 0) && !SCIPisEQ(scip, *bestlb - simplelb, simpleub - *bestub) )
          {
-            if( *bestlb - simple_lower_bound > simple_upper_bound - *bestub )
+            if( *bestlb - simplelb > simpleub - *bestub )
                *selectedbound = SCIP_BOUNDTYPE_LOWER;
             else
                *selectedbound = SCIP_BOUNDTYPE_UPPER;
@@ -4716,18 +4714,18 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_Real bestlb;
       SCIP_Real bestub;
       SCIP_Real oldsolval;
+      SCIP_Real simplebnd;
       int bestlbtype;
       int bestubtype;
 
       k = bounddistpos[i];
 
-      SCIP_Real simple_bound;
-      SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &simple_bound, &bestlbtype) );
+      SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &simplebnd, &bestlbtype) );
 
       if( SCIPisInfinity(scip, -bestlb) )
          continue;
 
-      SCIP_CALL( findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &simple_bound, &bestubtype) );
+      SCIP_CALL( findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &simplebnd, &bestubtype) );
 
       if( SCIPisInfinity(scip, bestub) )
          continue;
@@ -5277,6 +5275,7 @@ SCIP_RETCODE determineBoundForSNF(
 
    SCIP_Real rowcoef;
    SCIP_Real solval;
+   SCIP_Real simplebound;
 
    int probidx;
 
@@ -5295,10 +5294,9 @@ SCIP_RETCODE determineBoundForSNF(
 
    assert(!EPSZ(rowcoef, QUAD_EPSILON));
 
-   SCIP_Real simple_bound;
    /* get closest simple lower bound and closest simple upper bound */
-   SCIP_CALL( findBestLb(scip, var, sol, FALSE, allowlocal, &bestslb[varposinrow], &simple_bound, &bestslbtype[varposinrow]) );
-   SCIP_CALL( findBestUb(scip, var, sol, FALSE, allowlocal, &bestsub[varposinrow], &simple_bound, &bestsubtype[varposinrow]) );
+   SCIP_CALL( findBestLb(scip, var, sol, FALSE, allowlocal, &bestslb[varposinrow], &simplebound, &bestslbtype[varposinrow]) );
+   SCIP_CALL( findBestUb(scip, var, sol, FALSE, allowlocal, &bestsub[varposinrow], &simplebound, &bestsubtype[varposinrow]) );
 
    /* do not use too large bounds */
    if( bestslb[varposinrow] <= -MAXBOUND )
@@ -7625,9 +7623,10 @@ SCIP_RETCODE cutsTransformStrongCG(
 
       if( QUAD_TO_DBL(coef) > 0.0 )
       {
+         SCIP_Real simplebound;
+
          /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
-	SCIP_Real simple_bound;
-	SCIP_CALL( findBestLb(scip, vars[v], sol, usevbds, allowlocal, bestbds + i, &simple_bound, boundtype + i) );
+         SCIP_CALL( findBestLb(scip, vars[v], sol, usevbds, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
          /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, -bestbds[i]) )
@@ -7640,9 +7639,10 @@ SCIP_RETCODE cutsTransformStrongCG(
       }
       else if( QUAD_TO_DBL(coef) < 0.0 )
       {
+         SCIP_Real simplebound;
+
          /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
-	SCIP_Real simple_bound;	
-	SCIP_CALL( findBestUb(scip, vars[cutinds[i]], sol, usevbds, allowlocal, bestbds + i, &simple_bound, boundtype + i) );
+         SCIP_CALL( findBestUb(scip, vars[cutinds[i]], sol, usevbds, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
           /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, bestbds[i]) )
