@@ -77,11 +77,11 @@
 
 /* enable nonlinear constraint upgrading */
 #include "scip/cons_nonlinear.h"
-#define NONLINCONSUPGD_PRIORITY   100000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+#define NONLINCONSUPGD_PRIORITY   600000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
 /* enable quadratic constraint upgrading */
 #include "scip/cons_quadratic.h"
-#define QUADCONSUPGD_PRIORITY     100000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+#define QUADCONSUPGD_PRIORITY     600000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 
 
@@ -5060,7 +5060,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
     */
    if( (!enforcedbelow || !enforcedabove) && !detectdata->infeasible )
    {
-      SCIPerrorMessage("no nonlinear handler provided enforcement for expression %s auxvar\n",
+      SCIPerrorMessage("no nonlinear handler provided enforcement for %s expression %s auxvar\n",
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
          (!enforcedbelow && !enforcedabove) ? "==" : (!enforcedbelow ? "<=" : ">="));
       return SCIP_ERROR;
    }
