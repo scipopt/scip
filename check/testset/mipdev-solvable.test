@@ -8,6 +8,8 @@ IP/miplib2010/ran14x18-disj-8.mps.gz
 IP/miplib2010/uct-subprob.mps.gz
 IP/miplib2010/wachplan.mps.gz
 IP/miplib2010/ns2118727.mps.gz
+IP/miplib2010/rail01.mps.gz
+IP/miplib2010/ns894244.mps.gz
 IP/coral/neos-841664.mps.gz
 IP/coral/neos-1346382.mps.gz
 IP/coral/neos-1622252.mps.gz
@@ -208,6 +210,7 @@ IP/coral/neos-957270.mps.gz
 IP/coral/neos-957323.mps.gz
 IP/coral/neos-957389.mps.gz
 IP/coral/neos-960392.mps.gz
+IP/coral/neos-932816.mps.gz
 IP/coral/nsa.mps.gz
 IP/coral/nug08.mps.gz
 IP/coral/pg.mps.gz
