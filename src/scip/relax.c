@@ -235,6 +235,11 @@ SCIP_RETCODE SCIPrelaxInit(
       SCIPclockReset(relax->setuptime);
       SCIPclockReset(relax->relaxclock);
       relax->ncalls = 0;
+      relax->ncutoffs = 0;
+      relax->nimprbounds = 0;
+      relax->naddedconss = 0;
+      relax->nreduceddom = 0;
+      relax->nseparated = 0;
       relax->lastsolvednode = -1;
    }
 
