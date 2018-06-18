@@ -4817,8 +4817,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    if( expr->auxvar == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p\n", (void*)expr);
-
    if( expr->nenfos > 0 )
    {
       /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
@@ -4838,6 +4836,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
    enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
    enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
+
+   SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p (%s); start with below %d above %d\n",
+      (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
+
    for( h = 0; h < conshdlrdata->nnlhdlrs && !detectdata->infeasible; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -4869,6 +4871,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
          continue;
       }
+
+      SCIPdebugMsg(scip, "nlhdlr <%s> detect successful; now enforced below: %d above: %d methods: %d\n",
+         SCIPgetConsExprNlhdlrName(nlhdlr), nlhdlrenforcedbelow, nlhdlrenforcedabove, nlhdlrenforcemethods);
 
       /* if the nlhdlr enforces, then it must have added at least one enforcement method */
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
@@ -4972,7 +4977,12 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected in forward prop of constraint <%s>\n", SCIPconsGetName(conss[i]));
          break;
       }
-      /* TODO if redundant, then delete? (we are in initlp here) */
+      /* forwardPropCons recognized redundant if the cons consists of a value expression
+       * for that one, we don't need nlhdlrs
+       * TODO can we delete constraint here (we are in initlp) ?
+       */
+      if( redundant )
+         continue;
 
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
