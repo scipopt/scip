@@ -34,6 +34,23 @@
 extern "C" {
 #endif
 
+/** callback that returns bounds for a given variable as used in interval evaluation
+ *
+ * Implements a relaxation scheme for variable bounds and translates between different infinity values.
+ *
+ *  input:
+ *  - scip           : SCIP main data structure
+ *  - var            : variable for which to obtain bounds
+ *  - intevalvardata : data that belongs to this callback
+ *  output:
+ *  - returns an interval that contains the current variable bounds, but might be (slightly) larger
+ */
+#define SCIP_DECL_CONSEXPR_INTEVALVAR(x) SCIP_INTERVAL x (\
+   SCIP* scip, \
+   SCIP_VAR* var, \
+   void* intevalvardata \
+   )
+
 /** expression handler copy callback
  *
  * the method includes the expression handler into a expression constraint handler
@@ -265,13 +282,15 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - interval : buffer where to store interval
  *  - expr : expression to be evaluated
- *  - varboundrelax : a suggested amount by which to relax variable bounds
+ *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - intevalvardata : data to be passed to intevalvar callback
  */
 #define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval, \
-   SCIP_Real varboundrelax)
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   void* intevalvardata)
 
 /** separation initialization method of an expression handler (called during CONSINITLP)
  *
@@ -799,7 +818,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
- *  - varboundrelax : a suggested amount by which to relax variable bounds
+ *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - intevalvardata : data to be passed to intevalvar callback
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -807,7 +827,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL* interval, \
-   SCIP_Real varboundrelax)
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   void* intevalvardata)
 
 /** nonlinear handler callback for reverse propagation
  *

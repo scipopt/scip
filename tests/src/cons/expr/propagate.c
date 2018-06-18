@@ -114,7 +114,7 @@ Test(propagate, sum)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, 0.5), "Expecting 0.5, got %g\n",  expr->interval.inf);
@@ -156,7 +156,7 @@ Test(propagate, product)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* test stuff */
@@ -210,7 +210,7 @@ Test(propagate, productwithzero)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* expression image is [-3,6], intersected with constraint sides [1,8], this should give [1,6]
@@ -257,7 +257,7 @@ Test(propagate, abs)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -295,7 +295,7 @@ Test(propagate, exp)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -335,7 +335,7 @@ Test(propagate, log)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -375,7 +375,7 @@ Test(propagate, sin)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -420,7 +420,7 @@ Test(propagate, entropy)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -455,7 +455,7 @@ Test(propagate, entropy)
    cr_assert_not(infeasible);
    cr_assert_not(redundant);
 
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
@@ -542,7 +542,7 @@ Test(propagate, complicated_expression)
    cr_expect(CHECK_EXPRINTERVAL(scip, rootexpr, 0.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,0.0,log(3)));
 
    /* apply reverse propagation */
-   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -766,13 +766,13 @@ Test(propagate, infeas_after_backwardprop)
    assert(CHECK_EXPRINTERVAL(scip, expr2, 3.5, 4.0));
 
    /* reverse propagation of cons2 should lead to new bounds on x and y */
-   SCIP_CALL( reversePropConss(scip, &cons2, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons2, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(CHECK_EXPRINTERVAL(scip, expr2->children[0], 1.5, 2.0));
    cr_assert(CHECK_EXPRINTERVAL(scip, expr2->children[1], 1.5, 2.0));
 
    /* reverse propagation of cons1 should lead to an empty interval for x */
-   SCIP_CALL( reversePropConss(scip, &cons1, 1, TRUE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropConss(scip, &cons1, 1, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert(infeasible);
    cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr1->children[0]->interval));
 

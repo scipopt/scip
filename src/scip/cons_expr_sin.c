@@ -597,6 +597,9 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
+   /* caller must ensure that variable is not already fixed */
+   assert(!SCIPisEQ(scip, childlb, childub));
+
    /* get expression data */
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
@@ -604,10 +607,6 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
-
-   /* if variable is fixed, it does not make sense to add cuts */
-   if( SCIPisEQ(scip, childlb, childub) )
-      return SCIP_OKAY;
 
    iscos = strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0;
 
@@ -993,6 +992,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
    childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
 
+   /* no need for cut if child is fixed */
+   if( SCIPisRelEQ(scip, childlb, childub) )
+      return SCIP_OKAY;
+
    /* compute underestimating cuts */
    if( underestimate )
    {
@@ -1079,6 +1082,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    refpoint = SCIPgetSolVal(scip, sol, childvar);
    childlb = SCIPgetConsExprExprInterval(child).inf;
    childub = SCIPgetConsExprExprInterval(child).sup;
+
+   /* no need for cut if child is fixed */
+   if( SCIPisRelEQ(scip, childlb, childub) )
+      return SCIP_OKAY;
 
    /* compute all possible inequalities; the resulting cuts are stored in the cuts array
     *

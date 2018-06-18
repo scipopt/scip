@@ -578,8 +578,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
 
    /* interval evaluate */
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, 0.0) );
-   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, 0.0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, NULL, NULL) );
+   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
 
    cr_expect_float_eq(interval.inf, matinf, 1e-7); cr_expect_leq(interval.inf, matinf);
    cr_expect_float_eq(interval.sup, matsup, 1e-7); cr_expect_geq(interval.sup, matsup);

@@ -1436,10 +1436,10 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
    {
-      /*FIXME somewhere we should have tightened the bound on x
-       * it is ok to do this tightening here, but let's print a warning for the time being
+      /* somewhere we should have tightened the bound on x, but small tightening are not always applied by SCIP
+       * it is ok to do this tightening here, but let's assert that we were close to 0.0 already
        */
-      SCIPwarningMessage(scip, "FIXME: pow(x,%g) with x >= %g: assuming x >= 0\n", exponent, childlb);
+      assert(SCIPisFeasZero(scip, childlb));
       childlb = 0.0;
       refpoint = MAX(refpoint, 0.0);
    }
@@ -1516,6 +1516,7 @@ static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
 {  /*lint --e{715}*/
    SCIP_INTERVAL interval;
+   SCIP_INTERVAL child;
    SCIP_Real exponent;
 
    assert(scip != NULL);
@@ -1525,15 +1526,33 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
 
    *nreductions = 0;
 
-   /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
-      return SCIP_OKAY;
-
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
-   /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
-   SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval,
-      SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]), exponent, SCIPgetConsExprExprInterval(expr));
+   interval = SCIPgetConsExprExprInterval(expr);
+   child = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+
+   SCIPdebugMsg(scip, "reverseprop x^%g in [%g,%g], x = [%g,%g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
+
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
+   {
+      /* if exponent is not integral, then make sure that child is non-negative */
+      if( !EPSISINT(exponent, 0.0) && child.inf < 0.0 )
+      {
+         SCIPintervalSetBounds(&interval, 0.0, child.sup);
+      }
+      else
+      {
+         SCIPdebugMsgPrint(scip, "-> no improvement\n");
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
+      SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
+   }
+
+   SCIPdebugMsgPrint(scip, " -> [%g,%g]\n", interval.inf, interval.sup);
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,

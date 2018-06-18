@@ -373,7 +373,8 @@ SCIP_RETCODE SCIPintevalConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
    SCIP_INTERVAL*             interval,     /**< buffer to store the interval */
-   SCIP_Real                  varboundrelax /**< a suggested amount by which to relax variable bounds */
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
+   void*                      intevalvardata /**< data to be passed to intevalvar call */
    );
 
 /** calls the expression callback for reverse propagation */
@@ -607,10 +608,9 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
  * If the box does not overlap with the domain of the function behind the expression
  * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
  *
- * For variables, the local variable bounds, possibly relaxed by the amount given
- * by varboundrelax, are used as interval. In the current implementation, variable
- * bounds are relaxed by varboundrelax if that does not change the sign of the bound,
- * and to 0.0 otherwise.
+ * For variables, the local variable bounds, possibly relaxed by some amount, are used as interval.
+ * The actual interval is determined by the intevalvar function, if not NULL.
+ * If NULL, then the local bounds of the variable are taken without modification.
  *
  * If a nonzero \p boxtag is passed, then only (sub)expressions are
  * reevaluated that have a different tag. If a tag of 0 is passed,
@@ -623,7 +623,8 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
-   SCIP_Real               varboundrelax     /**< amount by which variable bounds should be relaxed (at most) */
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
+   void*                   intevalvardata    /**< data to be passed to intevalvar call */
    );
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -1353,7 +1354,8 @@ SCIP_RETCODE SCIPintevalConsExprNlhdlr(
    SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
    SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
-   SCIP_Real                     varboundrelax     /**< a suggested amount by which to relax variable bounds */
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)),   /**< function to call to evaluate interval of variable */
+   void*                         intevalvardata    /**< data to be passed to intevalvar call */
 );
 
 /** calls the reverse propagation callback of a nonlinear handler */
