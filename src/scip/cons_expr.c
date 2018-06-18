@@ -4896,7 +4896,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &interval, SCIPepsilon(scip)) );
       SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
       /* tighten bounds of expression interval and the auxiliary variable */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, FALSE, NULL, &detectdata->infeasible, &ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, &detectdata->infeasible, &ntightenings) );
    }
 
    /* stop if the expression cannot be enforced

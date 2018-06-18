@@ -971,10 +971,10 @@ SCIP_RETCODE separatePointPow(
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
    {
-      /*FIXME somewhere we should have tightened the bound on x
-       * it is ok to do this tightening here, but let's print a warning for the time being
+      /* somewhere we should have tightened the bound on x, but small tightening are not always applied by SCIP
+       * it is ok to do this tightening here, but let's assert that we were close to 0.0 already
        */
-      SCIPwarningMessage(scip, "FIXME: pow(x,%g) with x >= %g: assuming x >= 0\n", exponent, childlb);
+      assert(SCIPisFeasZero(scip, childlb));
       childlb = 0.0;
       refpoint = MAX(refpoint, 0.0);
    }
