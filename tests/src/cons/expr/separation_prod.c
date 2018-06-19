@@ -27,89 +27,47 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* cut;
-   int i;
+   SCIP_Real coefs[2];
+   SCIP_Real constant;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, 1.5) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr) );
 
-   /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
-   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
-   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
-   expr->auxvar = auxvar;
-
    /*
-    * compute a cut for w = 1.5*x*y with x* = 0, y* = -4, w* = 1
-    * together with the bounds this should result in a cut of the form
-    *    w <= -4.5x - 1.5y - 4.5
+    * compute an overestimator for 1.5*x*y with x* = 0, y* = -4
+    * together with the bounds this should result in an estimator of the form
+    *    -4.5x - 1.5y - 4.5
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 1.0) );
 
-   cut = NULL;
-   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, 0.0, TRUE, &cut) );
+   SCIP_CALL( estimateProduct(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success) );
 
-   cr_assert(cut != NULL);
-   cr_assert_eq(SCIProwGetNNonz(cut), 3);
-   cr_assert_eq(SCIProwGetLhs(cut), 4.5);
-   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
+   cr_assert(success);
+   cr_assert_float_eq(constant, -4.5, SCIPepsilon(scip));
+   cr_assert_float_eq(coefs[0], -4.5, SCIPepsilon(scip));
+   cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
+   cr_assert(islocal);
 
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real coef;
-
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_assert_eq(coef, -4.5);
-      else if( var == SCIPvarGetTransVar(y) )
-         cr_assert_eq(coef, -1.5);
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_assert_eq(coef, -1.0);
-      else
-         cr_assert(FALSE, "found an unknown variable");
-   }
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    /*
-    * compute a cut for w = 1.5*x*y with x* = 0, y* = -4, w* = -1
-    * together with the bounds this should result in a cut of the form
-    *    w >= -9x - 1.5y - 9
+    * compute an underestimator for 1.5*x*y with x* = 0, y* = -4
+    * together with the bounds this should result in en estimator of the form
+    *    -9x - 1.5y - 9
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -1.0) );
 
-   cut = NULL;
-   SCIP_CALL( separatePointProduct(scip,  conshdlr, expr, sol, 0.0, FALSE, &cut) );
+   SCIP_CALL( estimateProduct(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success) );
 
-   cr_assert(cut != NULL);
-   cr_assert_eq(SCIProwGetNNonz(cut), 3);
-   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
-   cr_assert_eq(SCIProwGetRhs(cut), 9.0);
-
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real coef;
-
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_assert_eq(coef, -9.0);
-      else if( var == SCIPvarGetTransVar(y) )
-         cr_assert_eq(coef, -1.5);
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_assert_eq(coef, -1.0);
-      else
-         cr_assert(FALSE, "found an unknown variable");
-   }
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   cr_assert(success);
+   cr_assert_float_eq(constant, -9.0, SCIPepsilon(scip));
+   cr_assert_float_eq(coefs[0], -9.0, SCIPepsilon(scip));
+   cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
+   cr_assert(islocal);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -178,9 +136,10 @@ ParameterizedTest(const int* size, separation, multilinearLP)
 static void testBilinearLP(int lpsize)
 {
    SCIP_VAR* vars[2];
-   SCIP_Real facet[3];
-   SCIP_Real violation;
+   SCIP_Real facetcoefs[2];
+   SCIP_Real facetconstant;
    SCIP_LPI* lp;
+   SCIP_Bool success;
 
    /* build LP */
    SCIP_CALL( buildMultilinearSeparationLP(scip, lpsize, &lp) );
@@ -190,42 +149,36 @@ static void testBilinearLP(int lpsize)
    vars[1] = y;
 
    /*
-    * compute a cut for w = 1.5*x*y with x* = 0, y* = -4, w* = 1
-    * together with the bounds (in separation.h) this should result in a cut of the form
-    * w <= -4.5x - 1.5y - 4.5, so the facet = -4.5, -1.5, -4.5.
-    * Note that the point does not violate the facet, i.e., it can't be separated
+    * compute a facet of the concave envelope of 1.5*x*y with x* = 0, y* = -4
+    * together with the bounds (in separation.h) this should result in an estimator of the form
+    *   -4.5x - 1.5y - 4.5, so the facet = -4.5, -1.5, -4.5.
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 1.0) );
 
-   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, auxvar, 1.5, TRUE /* overestimate */,
-            1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, 1.5, TRUE /* overestimate */,
+      SCIPinfinity(scip), 1.0, (SCIP_INTERVAL){1.0, 1.0}, facetcoefs, &facetconstant, &success) );
 
-   cr_expect_eq(facet[0], -4.5);
-   cr_expect_eq(facet[1], -1.5);
-   cr_expect_eq(facet[2], -4.5);
-   /* it is *not* violated */
-   cr_expect_float_eq(violation, -0.5, SCIPfeastol(scip), "received a violation of %g instead of -0.5", violation);
+   cr_assert(success);
+   cr_expect_float_eq(facetcoefs[0], -4.5, SCIPepsilon(scip));
+   cr_expect_float_eq(facetcoefs[1], -1.5, SCIPepsilon(scip));
+   cr_expect_float_eq(facetconstant, -4.5, SCIPepsilon(scip));
 
    /*
-    * compute a cut for w = 1.5*x*y with x* = 0, y* = -4, w* = -1, re-using the separation lp
-    * together with the bounds this should result in a cut of the form
-    *    w >= -9x - 1.5y - 9
-    * This is also not violated
+    * compute a facet of the convex envelope for 1.5*x*y with x* = 0, y* = -4, re-using the separation lp
+    * together with the bounds this should result in an estimator of the form
+    *    -9x - 1.5y - 9
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -1.0) );
 
-   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, auxvar, 1.5, FALSE /* underestimate */,
-            1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, 1.5, FALSE /* underestimate */,
+      -SCIPinfinity(scip), 1.0, (SCIP_INTERVAL){1.0, 1.0}, facetcoefs, &facetconstant, &success) );
 
-   cr_expect_eq(facet[0], -9.0);
-   cr_expect_eq(facet[1], -1.5);
-   cr_expect_eq(facet[2], -9.0);
-   /* it is *not* violated */
-   cr_expect_float_eq(violation, -2.0, SCIPfeastol(scip), "received a violation of %g instead of -2.0", violation);
+   cr_assert(success);
+   cr_expect_float_eq(facetcoefs[0], -9.0, SCIPepsilon(scip));
+   cr_expect_float_eq(facetcoefs[1], -1.5, SCIPepsilon(scip));
+   cr_expect_float_eq(facetconstant, -9.0, SCIPepsilon(scip));
 
    SCIP_CALL( SCIPlpiFree(&lp) );
 }
@@ -283,12 +236,13 @@ void testMultilinearLP(int lpsize)
    int i;
    SCIP_LPI* lp;
    SCIP_VAR* vars[4];
-   SCIP_Real facet[5];
-   SCIP_Real violation;
+   SCIP_Real facetcoefs[4];
+   SCIP_Real facetconstant;
    char const* names[] = {"x", "y", "w", "z"};
    SCIP_Real lb[] = {-0.2, -10.0, 1.0, 0.09};
    SCIP_Real ub[] = { 0.7,   8.0, 1.3,  2.1};
    SCIP_Real solval[] = { 0.2, -4.0, 1.1, 0.18};
+   SCIP_Bool success;
 
    /* need a problem to create solutions */
    SCIP_CALL( SCIPcreate(&scip) );
@@ -308,49 +262,43 @@ void testMultilinearLP(int lpsize)
       SCIP_CALL( SCIPaddVar(scip, vars[i]) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], solval[i]) );
    }
-   SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, "t", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, auxvar) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 12.12) );
 
-   /* compute a cut for t = -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18, t* = 12.12
+   /* compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
     * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
-    * t <= 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
+    * -> 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
     */
-   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 4, auxvar, -0.7, TRUE /* overestimate */,
-            1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 4, -0.7, TRUE /* overestimate */,
+            SCIPinfinity(scip), 1.0, (SCIP_INTERVAL){1.0, 1.0}, facetcoefs, &facetconstant, &success) );
+   cr_assert(success);
 
    SCIP_Real exact_facet1[] = {63.0/100, 63.0/5000, 441.0/1000, 637.0/100, -8883.0/10000};
-   for( i = 0; i <= 4; ++i ) /* last index is the constant */
+   for( i = 0; i < 4; ++i ) /* index 4 is the constant */
    {
-      cr_expect_float_eq(facet[i], exact_facet1[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facet[i], exact_facet1[i]);
+      cr_expect_float_eq(facetcoefs[i], exact_facet1[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet1[i]);
    }
-   /* it is violated */
-   cr_expect_float_eq(violation, 11.301, SCIPfeastol(scip), "received a violation of %g instead of 11.301", violation);
+   cr_expect_float_eq(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
 
-   /* compute a cut for the same function as before, but now z is fixed to 1 and we underestimate
-    * t = -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1, t = -3.4
+   /* compute an underestimator for the same function as before, but now z is fixed to 1 and we underestimate
+    *   -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1
     * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]
-    * t >= -49/100 * (-100/7 x + y + 8w + 2)
+    * -> -49/100 * (-100/7 x + y + 8w + 2)
     */
-   /* create sol to separate */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -3.4) );
 
    /* compute cut */
-   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 3, auxvar, -0.7, FALSE /* underestimate */,
-            1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 3, -0.7, FALSE /* underestimate */,
+            -SCIPinfinity(scip), 1.0, (SCIP_INTERVAL){1.0, 1.0}, facetcoefs, &facetconstant, &success) );
+   cr_assert(success);
 
    SCIP_Real exact_facet2[] = {7.0, -49.0/100, -98.0/25, -49.0/50};
-   for( i = 0; i <= 3; ++i ) /* last index is the constant */
+   for( i = 0; i < 3; ++i ) /* index 3 is the constant */
    {
-      cr_expect_float_eq(facet[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facet[i], exact_facet2[i]);
+      cr_expect_float_eq(facetcoefs[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet2[i]);
    }
-   /* it is violated */
-   cr_expect_float_eq(violation, 1.468, SCIPfeastol(scip), "received a violation of %g instead of 1.468", violation);
+   cr_expect_float_eq(facetconstant, exact_facet2[3], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
 
    /* free all */
    SCIPfreeRandom(scip, &randnumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &vars[3]) );
    SCIP_CALL( SCIPreleaseVar(scip, &vars[2]) );
    SCIP_CALL( SCIPreleaseVar(scip, &vars[1]) );
@@ -401,13 +349,13 @@ Test(separation, errorfacet)
 
    /* compute the maximum error */
    printf("computing maximum error\n");
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] += 1.0;
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 1.0);
    facet[3] -= 1.0;
 
@@ -416,7 +364,7 @@ Test(separation, errorfacet)
     * 1.3) the function is 6.37 and the facet 4.48. However, if the fixed
     * variable would have been -1, the value of the function would be -6.37
     * giving an error of 6.37 + 4.48 = 10.85 */
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){-1.0, 3.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, FALSE, 1.0, (SCIP_INTERVAL){-1.0, 3.0}, facet, facet[3]);
    printf("maxfaceterror = %g\n", maxfaceterror);
    cr_expect_float_eq(maxfaceterror, 10.85, SCIPfeastol(scip), "difference is %g\n", maxfaceterror - 10.85);
 
@@ -426,18 +374,18 @@ Test(separation, errorfacet)
 
    /* compute the maximum error */
    printf("computing maximum error over\n");
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] -= 1.0;
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){1.0, 1.0}, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 1.0);
    facet[3] += 1.0;
 
    /* change interval */
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){-1.0, 3.0}, facet);
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, 3, TRUE, 1.0, (SCIP_INTERVAL){-1.0, 3.0}, facet, facet[3]);
    printf("maxfaceterror over = %g\n", maxfaceterror);
    cr_expect_float_eq(maxfaceterror, 10.85, SCIPfeastol(scip), "difference is %g\n", maxfaceterror - 10.85);
 

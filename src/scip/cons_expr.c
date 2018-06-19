@@ -5344,6 +5344,100 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
    return SCIP_OKAY;
 }
 
+/** call separation or estimator callback of nonlinear handler
+ *
+ * Calls the separation callback, if available.
+ * Otherwise, calls the estimator callback, if available, and constructs a cut from the estimator.
+ */
+static
+SCIP_RETCODE sepaConsExprNlhdlr(
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler data of expression */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  ncuts               /**< pointer to store the number of added cuts */
+   )
+{
+   assert(result != NULL);
+   assert(ncuts != NULL);
+
+   /* call separation callback of the nlhdlr */
+   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
+
+   /* if it was not running (e.g., because it was not available), then try with estimator callback */
+   if( *result != SCIP_DIDNOTRUN )
+      return SCIP_OKAY;
+
+   *ncuts = 0;
+
+   /* now call the estimator callback of the nlhdlr */
+   if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
+   {
+      SCIP_ROWPREP* rowprep;
+      SCIP_VAR* auxvar;
+      SCIP_Bool success;
+
+      *result = SCIP_DIDNOTFIND;
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      assert(auxvar != NULL);
+
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
+
+      /* complete estimator to cut and clean it up */
+      if( success )
+      {
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+      }
+
+      /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
+      if( success )
+      {
+         SCIP_ROW* row;
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMsg(scip, "adding cut ");
+         SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            *ncuts = 0;
+            ++nlhdlr->ncutoffs;
+         }
+         else
+         {
+            *result = SCIP_SEPARATED;
+            *ncuts = 1;
+            ++nlhdlr->ncutsfound;
+         }
+
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression walk callback for separating a given solution */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
@@ -5433,8 +5527,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
          if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )  /*lint !e777*/
          {
-            /* call the separation callback of the nonlinear handler for overestimation */
-            SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+            /* call the separation or estimation callback of the nonlinear handler for overestimation */
+            SCIP_CALL( sepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
                expr->enfos[e]->auxvalue, TRUE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
 
             assert(ncuts >= 0);
@@ -5449,8 +5543,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
          if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )  /*lint !e777*/
          {
-            /* call the separation callback of the nonlinear handler for underestimation */
-            SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
+            /* call the separation or estimation callback of the nonlinear handler for underestimation */
+            SCIP_CALL( sepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
                expr->enfos[e]->auxvalue, FALSE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
 
             assert(ncuts >= 0);
@@ -5459,7 +5553,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
 
          if( separesult == SCIP_CUTOFF )
          {
-            assert(ncuts > 0);
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
             sepadata->result = SCIP_CUTOFF;
             *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -5627,7 +5720,6 @@ SCIP_RETCODE separatePoint(
 
       if( sepadata.result == SCIP_CUTOFF || sepadata.result == SCIP_SEPARATED )
       {
-         assert(sepadata.ncuts > 0);
          *result = sepadata.result;
 
          if( *result == SCIP_CUTOFF )
@@ -7390,47 +7482,23 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    return SCIP_OKAY;
 }
 
-/** set the separation initialization callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrInitSepa(
+/** set the separation and estimation callbacks of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa))  /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa)), /**< separation deinitialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa)),     /**< separation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
    )
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->initsepa = initsepa;
-
-   return SCIP_OKAY;
-}
-
-/** set the separation deinitialization callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrExitSepa(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
-   assert(exprhdlr != NULL);
-
    exprhdlr->exitsepa = exitsepa;
-
-   return SCIP_OKAY;
-}
-
-/** set the separation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa))      /**< separation callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
-   assert(exprhdlr != NULL);
-
    exprhdlr->sepa = sepa;
+   exprhdlr->estimate = estimate;
 
    return SCIP_OKAY;
 }
@@ -7563,6 +7631,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrSepa(
    assert(exprhdlr != NULL);
 
    return exprhdlr->sepa != NULL;
+}
+
+/** returns whether expression handler implements the estimator callback */
+SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->estimate != NULL;
 }
 
 /** returns whether expression handler implements the interval evaluation callback */
@@ -7873,6 +7951,29 @@ SCIP_RETCODE SCIPsepaConsExprExprHdlr(
          ++(expr->exprhdlr->ncutoffs);
       expr->exprhdlr->ncutsfound += *ncuts;
       ++(expr->exprhdlr->nsepacalls);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls estimator method of expression handler */
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(coefs != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( SCIPhasConsExprExprHdlrEstimate(expr->exprhdlr) )
+   {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+
+      /* update statistics */
+      ++expr->exprhdlr->nsepacalls;
    }
 
    return SCIP_OKAY;
@@ -10220,15 +10321,17 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (must not be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 )
 {
    assert(nlhdlr != NULL);
-   assert(sepa != NULL);
+   assert(sepa != NULL || estimate != NULL);
 
    nlhdlr->initsepa = initsepa;
    nlhdlr->sepa = sepa;
+   nlhdlr->estimate = estimate;
    nlhdlr->exitsepa = exitsepa;
 }
 
@@ -10320,6 +10423,14 @@ SCIP_Bool SCIPhasConsExprNlhdlrSepa(
 )
 {
    return nlhdlr->sepa != NULL;
+}
+
+/** returns whether nonlinear handler implements the estimator callback */
+SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->estimate != NULL;
 }
 
 /** returns whether nonlinear handler implements the interval evaluation callback */
@@ -10470,6 +10581,40 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
 
    return SCIP_OKAY;
 }
+
+/** calls the estimator callback of a nonlinear handler */
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->sepatime != NULL);
+   assert(success != NULL);
+
+   if( nlhdlr->estimate == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+#ifndef NDEBUG
+   /* check that auxvalue is correct by reevaluating */
+   {
+      SCIP_Real auxvaluetest;
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
+      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
+   }
+#endif
+
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+
+   /* update statistics */
+   ++nlhdlr->nsepacalls;
+
+   return SCIP_OKAY;
+}
+
 
 /** calls the interval evaluation callback of a nonlinear handler */
 SCIP_RETCODE SCIPintevalConsExprNlhdlr(

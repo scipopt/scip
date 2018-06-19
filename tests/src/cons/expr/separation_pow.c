@@ -598,78 +598,37 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_ROW* cut;
-   int i;
+   SCIP_Real constant;
+   SCIP_Real slope;
+   SCIP_Bool islocal;
+   SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr, xexpr, 2.0) );
 
-   /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
-   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
-   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
-   expr->auxvar = auxvar;
-
    /*
-    * compute cut for w = x^2 with x* = 1.0 and w* = -5.0
-    * this should result in an gradient cut at x*
+    * compute underestimator for x^2 with x* = 1.0
+    * this should result in an gradient estimator
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -5.0) );
 
-   cut = NULL;
-   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, 0.0, FALSE, &cut) );
-   cr_assert(cut != NULL);
+   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success) );
 
-   cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert_eq(SCIProwGetLhs(cut), -SCIPinfinity(scip));
-   cr_assert_eq(SCIProwGetRhs(cut), 1.0);
-
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real coef;
-
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_assert_eq(coef, 2.0);
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_assert_eq(coef, -1.0);
-      else
-         cr_assert(FALSE, "found an unknown variable");
-   }
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   cr_assert(success);
+   cr_assert_float_eq(constant, -1.0, SCIPepsilon(scip));
+   cr_assert_float_eq(slope, 2.0, SCIPepsilon(scip));
+   cr_assert(!islocal);
 
    /*
-    * compute cut for w = x^2 with x* = 1.0 and w* = 5.0
-    * this should result in a secant cut
+    * compute overestimator for x^2 with x* = 1.0
+    * this should result in a secant estimator
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 5.0) );
 
-   cut = NULL;
-   SCIP_CALL( separatePointPow(scip,  conshdlr, expr, sol, 0.0, TRUE, &cut) );
-   cr_assert(cut != NULL);
-   cr_assert_eq(SCIProwGetNNonz(cut), 2);
-   cr_assert_eq(SCIProwGetLhs(cut), -5.0);
-   cr_assert_eq(SCIProwGetRhs(cut), SCIPinfinity(scip));
-
-   for( i = 0; i < SCIProwGetNNonz(cut); ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real coef;
-
-      var = SCIPcolGetVar(SCIProwGetCols(cut)[i]);
-      coef = SCIProwGetVals(cut)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_assert_eq(coef, 4.0);
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_assert_eq(coef, -1.0);
-      else
-         cr_assert(FALSE, "found an unknown variable");
-   }
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success) );
+   cr_assert(success);
+   cr_assert_float_eq(constant, 5.0, SCIPepsilon(scip));
+   cr_assert_float_eq(slope, 4.0, SCIPepsilon(scip));
+   cr_assert(islocal);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

@@ -371,15 +371,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-         *ncuts += 1;
-
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
             break;
          }
          else
+         {
             *result = SCIP_SEPARATED;
+            ++*ncuts;
+         }
       }
 
       SCIPfreeRowprep(scip, &cuts[i]);
@@ -532,8 +533,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalCos) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaCos) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaCos) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaCos, NULL, sepaCos, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffCos) );

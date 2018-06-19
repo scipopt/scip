@@ -509,7 +509,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, reversepropHdlr);
 
    return SCIP_OKAY;
@@ -593,7 +593,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );

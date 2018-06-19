@@ -28,9 +28,6 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_log.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "log"
 #define EXPRHDLR_DESC         "logarithmic expression"
 #define EXPRHDLR_PRECEDENCE  80000
@@ -240,29 +237,12 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
    return SCIP_OKAY;
 }
 
-/** helper function to separate a given point; needed for proper unittest */
+/** expression estimation callback */
 static
-SCIP_RETCODE separatePointLog(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Real             mincutviolation,    /**< minimal cut violation to be achieved */
-   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
-   SCIP_ROW**            cut                 /**< pointer to store the row */
-   )
-{
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_ROWPREP* rowprep;
-   SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
-   SCIP_Real refpoint;
-   SCIP_Real lincoef;
-   SCIP_Real linconstant;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Bool islocal;
-   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -270,102 +250,52 @@ SCIP_RETCODE separatePointLog(
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
-   assert(cut != NULL);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(success != NULL);
 
    /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
-   *cut = NULL;
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-   if( SCIPisLE(scip, refpoint, 0.0) )
-      return SCIP_OKAY;
-
-   lincoef = 0.0;
-   linconstant = 0.0;
-   success = TRUE;
-
-   lb = SCIPvarGetLbLocal(childvar);
-   ub = SCIPvarGetUbLocal(childvar);
-
-   /* adjust the reference points */
-   refpoint = MAX(MIN(refpoint, ub), lb);
-   assert(SCIPisLE(scip, refpoint, ub) && SCIPisGE(scip, refpoint, lb));
+   *coefs = 0.0;
+   *constant = 0.0;
+   *success = TRUE;
 
    if( overestimate )
    {
-      SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), &lincoef, &linconstant, &success);
-      islocal = FALSE; /* linearization are globally valid */
+      SCIP_Real refpoint;
+
+      /* get reference point */
+      refpoint = SCIPgetSolVal(scip, sol, childvar);
+      if( SCIPisLE(scip, refpoint, 0.0) )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
+      *islocal = FALSE; /* linearization are globally valid */
    }
    else
    {
-      SCIPaddLogSecant(scip, lb, ub, &lincoef, &linconstant, &success);
-      islocal = TRUE; /* secants are only valid locally */
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      lb = SCIPvarGetLbLocal(childvar);
+      ub = SCIPvarGetUbLocal(childvar);
+
+      SCIPaddLogSecant(scip, lb, ub, coefs, constant, success);
+      *islocal = TRUE; /* secants are only valid locally */
    }
-
-   /* give up if not successful */
-   if( !success )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, islocal) );
-   SCIPaddRowprepConstant(rowprep, linconstant);
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, childvar, lincoef) );
-
-   /* take care of cut numerics */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-   if( success )
-   {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "log_cut");  /* @todo make cutname unique, e.g., add LP number */
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
-   }
-
-   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaLog)
-{  /*lint --e{715}*/
-   SCIP_ROW* cut;
-   SCIP_Bool infeasible;
-
-   cut = NULL;
-   *ncuts = 0;
-   *result = SCIP_DIDNOTFIND;
-
-   SCIP_CALL( separatePointLog(scip, conshdlr, expr, sol, mincutviolation, overestimate, &cut) );
-
-   /* failed to compute a good cut */
-   if( cut == NULL )
-      return SCIP_OKAY;
-
-   /* add cut */
-   SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
-   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-
-   *ncuts += 1;
-
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-#endif
-
-   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-
-   return SCIP_OKAY;
-}
-
-/** expression reverse propagaton callback */
+/** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
 {  /*lint --e{715}*/
@@ -465,7 +395,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaLog) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffLog) );

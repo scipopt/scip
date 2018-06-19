@@ -18,6 +18,7 @@
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  *
+ * @todo implement estimateAbs ?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,9 +27,6 @@
 
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
-
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
 
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
@@ -485,7 +483,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       if( SCIPisGE(scip, violation, mincutviolation) )
       {
          SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
-         *ncuts += 1;
 
          if( infeasible )
          {
@@ -493,7 +490,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
             break;
          }
          else
+         {
             *result = SCIP_SEPARATED;
+            ++*ncuts;
+         }
       }
    }
 
@@ -682,9 +682,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaAbs) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaAbs) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaAbs, exitSepaAbs, sepaAbs, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffAbs) );

@@ -16,6 +16,8 @@
 /**@file   cons_expr_sin.c
  * @brief  handler for sine expressions
  * @author Fabian Wegscheider
+ *
+ * @todo replace sepaSin by estimateSin
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1111,15 +1113,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-         *ncuts += 1;
-
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
             break;
          }
          else
+         {
             *result = SCIP_SEPARATED;
+            ++*ncuts;
+         }
       }
 
       SCIPfreeRowprep(scip, &cuts[i]);
@@ -1264,8 +1267,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, sepaSin, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );

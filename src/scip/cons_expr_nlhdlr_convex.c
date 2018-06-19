@@ -25,9 +25,6 @@
 
 #include <string.h>
 
-#define SCIP_PRIVATE_ROWPREP
-
-#include "scip/cons_quadratic.h" /* for SCIP_ROWPREP */
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
@@ -181,14 +178,11 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
    return SCIP_OKAY;
 }
 
-/** separation callback */
+/** estimator callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
-   SCIP_ROWPREP* rowprep;
-   SCIP_SIDETYPE type;
    SCIP_Real constant;
-   SCIP_Real violation;
    int i;
 
    assert(scip != NULL);
@@ -196,14 +190,19 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrexprdata->varexprs != NULL);
    assert(nlhdlrexprdata->nvarexprs > 0);
-   assert(result != NULL);
-   assert(ncuts != NULL);
    assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
 
-   *ncuts = 0;
-   *result = SCIP_DIDNOTFIND;
-   type = SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
+   *success = FALSE;
+
+   /* if estimating on non-convex side, then do nothing
+    * TODO we are vertex-polyhedral and so should compute something
+    */
+   if( ( overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX) ||
+       (!overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE) )
+      return SCIP_OKAY;
 
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
@@ -215,7 +214,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       return SCIP_OKAY;
    }
 
-   /* compute g(x*) */
+   /* get g(x*) */
    constant = SCIPgetConsExprExprValue(expr);
    assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */  /*lint !e777*/
 
@@ -226,21 +225,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       return SCIP_OKAY;
    }
 
-   /* compute violation */
-   if( type == SCIP_SIDETYPE_RIGHT )
-      violation = constant - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-   else
-      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - constant;
-
-   /* expression is not violated -> skip */
-   if( violation < mincutviolation )
-      return SCIP_OKAY;
-
-   SCIPdebugMsg(scip, "violation of %p = %.12f\n", (void*)expr, violation);
-
    /* compute gradient cut */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, type, FALSE) );
-
+   rowprep->local = FALSE;
    for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
    {
       SCIP_VAR* var;
@@ -266,7 +252,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       {
          SCIPdebugMsg(scip, "evaluation error / too large values (%g %g) for %s in %p\n", derivative, val,
             SCIPvarGetName(var), (void*)expr);
-         goto CLEANUP;
+         return SCIP_OKAY;
       }
 
       /* - grad(g(x*))_i x*_i */
@@ -276,40 +262,16 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaConvex)
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, derivative) );
    }
 
-   /* add auxiliary variable */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
-
    /* add constant */
    SCIPaddRowprepConstant(rowprep, constant);
 
-   /* check build cut and check violation */
-   {
-      SCIP_ROW* row;
-      SCIP_Bool infeasible;
-      SCIP_Bool success;
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
+      overestimate ? "over" : "under",
+      (void*)expr,
+      sol != NULL ? "sol" : "lp",
+      sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
 
-      SCIPmergeRowprepTerms(scip, rowprep);
-
-      /* improve coefficients */
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-      if( !success )
-         goto CLEANUP;
-
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
-      SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-      (*ncuts)++;
-
-      if( infeasible )
-         *result = SCIP_CUTOFF;
-      else
-         *result = SCIP_SEPARATED;
-
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
-
-CLEANUP:
-   SCIPfreeRowprep(scip, &rowprep);
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -390,7 +352,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaConvex, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;

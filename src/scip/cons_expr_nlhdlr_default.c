@@ -103,8 +103,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
-   /* return sepa possibility if exprhdlr for expr has a sepa callback and enforcement is not ensured already */
-   if( SCIPhasConsExprExprHdlrSepa(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
+   /* return sepa possibility if exprhdlr for expr has a sepa or estimate callback and enforcement is not ensured already */
+   if( (SCIPhasConsExprExprHdlrSepa(exprhdlr) || SCIPhasConsExprExprHdlrEstimate(exprhdlr)) && (!*enforcedbelow || !*enforcedabove) )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -224,6 +224,54 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
+{ /*lint --e{715}*/
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   /* if we did not say that we will separate, then stand by it */
+   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* make sure enough space is available in rowprep arrays */
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPgetConsExprExprNChildren(expr)) );
+   assert(rowprep->varssize >= SCIPgetConsExprExprNChildren(expr));
+
+   /* call the estimation callback of the expression handler */
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success) );
+
+   if( *success )
+   {
+      int i;
+
+      /* add variables to rowprep */
+      rowprep->nvars = SCIPgetConsExprExprNChildren(expr);
+      for( i = 0; i < rowprep->nvars; ++i )
+      {
+         rowprep->vars[i] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
+         assert(rowprep->vars[i] != NULL);
+      }
+
+      rowprep->side = -constant;
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
+         overestimate ? "over" : "under",
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
+         (void*)expr,
+         sol != NULL ? "sol" : "lp",
+         sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
@@ -360,7 +408,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 

@@ -31,9 +31,6 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
 #define EXPRHDLR_PRECEDENCE      40000
@@ -1091,10 +1088,18 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 #endif
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-      *ncuts += 1;
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+      }
+      else
+      {
+         *result = SCIP_SEPARATED;
+         ++*ncuts;
+      }
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
 
    /* free rowprep */
@@ -1327,9 +1332,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, exitSepaSum, sepaSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
