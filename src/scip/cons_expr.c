@@ -183,7 +183,7 @@ struct SCIP_ConshdlrData
    SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
 
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
-   SCIP_HEUR*               subnlpheur;         /**< a pointer to the subnlp heuristic, if available */
+   SCIP_HEUR*               subnlpheur;      /**< a pointer to the subnlp heuristic, if available */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
