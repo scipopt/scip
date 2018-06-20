@@ -9,6 +9,7 @@ Features
 --------
 
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+- new diving heuristic conflictdiving that considers locks from conflict constraints
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 - "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
@@ -166,7 +167,6 @@ performance improvements:
 
 features:
 - allow output of lower bounds for visualization
-- new diving heuristic "conflictdiving"
 - add number of conflict constraints found by diving heuristics to statistics
 - added symmetry detection for linking constraints
 - SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code
