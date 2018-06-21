@@ -2394,6 +2394,7 @@ SCIP_RETCODE computeCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   depth,              /**< current depth */
    SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
    SCIP_SOL*             sol,                /**< current solution (might be NULL) */
    SCIP_Bool*            separated,          /**< pointer to store if we could separate the current solution */
@@ -2419,7 +2420,7 @@ SCIP_RETCODE computeCut(
 
    *separated = FALSE;
    *cutoff = FALSE;
-   islocalcut = SCIPgetDepth(scip) != 0;
+   islocalcut = depth != 0;
 
    /* create the cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "ec");
@@ -2611,6 +2612,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   depth,              /**< current depth */
    SCIP_SOL*             sol,                /**< current solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -2653,7 +2655,7 @@ SCIP_RETCODE separateCuts(
       SCIPdebugMsg(scip, "try to compute a cut for nonlinear row aggregation %d\n", i);
 
       /* compute and add cut */
-      SCIP_CALL( computeCut(scip, sepa, sepadata, nlrowaggr, sol, &separated, &cutoff) );
+      SCIP_CALL( computeCut(scip, sepa, sepadata, depth, nlrowaggr, sol, &separated, &cutoff) );
       SCIPdebugMsg(scip, "found a cut: %s cutoff: %s\n", separated ? "yes" : "no", cutoff ? "yes" : "no");
 
       /* stop if the current node gets cut off */
@@ -2741,7 +2743,6 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   int depth;
    int ncalls;
 
    sepadata = SCIPsepaGetData(sepa);
@@ -2766,8 +2767,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       SCIPdebugMsg(scip, "Skip since NLP is not constructed yet.\n");
       return SCIP_OKAY;
    }
-
-   depth = SCIPgetDepth(scip);
 
    /* only call separator up to a maximum depth */
    if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
@@ -2798,7 +2797,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    }
 
    /* search for edge-concave cuts */
-   SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sepadata, depth, NULL, result) );
 
    return SCIP_OKAY;
 }

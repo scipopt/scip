@@ -264,7 +264,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int ncols;
    int nrows;
    int ncalls;
-   int depth;
    int maxdepth;
    int maxsepacuts;
    int c;
@@ -280,7 +279,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    minfrac = sepadata->away;

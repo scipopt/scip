@@ -174,7 +174,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    int ncols;
    int nrows;
    int ncalls;
-   int depth;
    int maxsepacuts;
    int ncuts;
    int c;
@@ -193,7 +192,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call separator, if we are not close to terminating */

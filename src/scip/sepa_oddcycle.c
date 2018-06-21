@@ -3488,11 +3488,11 @@ SCIP_RETCODE separateOddCycles(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< given primal solution */
+   int                   depth,              /**< current depth */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
    SCIP_SEPADATA* sepadata;
-   int depth;
    int ncalls;
    /* cppcheck-suppress unassignedVariable */
    int oldnliftedcuts;
@@ -3504,7 +3504,6 @@ SCIP_RETCODE separateOddCycles(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call separator a given number of rounds at each b&b node */
@@ -3691,7 +3690,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( separateOddCycles(scip, sepa, NULL, result) );
+   SCIP_CALL( separateOddCycles(scip, sepa, NULL, depth, result) );
 
    return SCIP_OKAY;
 }
@@ -3705,7 +3704,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolOddcycle)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( separateOddCycles(scip, sepa, sol, result) );
+   SCIP_CALL( separateOddCycles(scip, sepa, sol, depth, result) );
 
    return SCIP_OKAY;
 }

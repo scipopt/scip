@@ -206,6 +206,7 @@ static
 SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_SEPA*            sepa,               /**< separator */
+   int                   depth,              /**< current depth */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   nrows,              /**< number of LP rows */
    SCIP_COL**            cols,               /**< LP columns */
@@ -509,7 +510,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    int nconss;
    int maxcuts;
    int ncalls;
-   int depth;
    int ncols;
    int nrows;
    int ind;
@@ -564,7 +564,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       return SCIP_OKAY;
 
    /* check for maxdepth < depth, maxinvcutsroot = 0 and maxinvcuts = 0 */
-   depth = SCIPgetDepth(scip);
    if ( ( sepadata->maxdepth >= 0 && sepadata->maxdepth < depth )
       || ( depth == 0 && sepadata->maxinvcutsroot == 0 )
       || ( depth > 0 && sepadata->maxinvcuts == 0 ) )
@@ -810,7 +809,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, depth, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 

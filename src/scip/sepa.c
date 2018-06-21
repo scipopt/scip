@@ -434,7 +434,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -542,7 +542,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);

@@ -178,7 +178,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result, allowlocal) );
+   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
@@ -195,7 +195,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result, allowlocal) );
+   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
