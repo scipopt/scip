@@ -597,7 +597,7 @@ SCIP_Real SCIPrelaxGetTime(
    return SCIPclockGetTime(relax->relaxclock);
 }
 
-/** gets the total number of times, the relaxation handler was called */
+/** gets the total number of times the relaxation handler was called */
 SCIP_Longint SCIPrelaxGetNCalls(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
@@ -607,7 +607,7 @@ SCIP_Longint SCIPrelaxGetNCalls(
    return relax->ncalls;
 }
 
-/** gets the total number of times, the relaxation handler cut off a node */
+/** gets the total number of times the relaxation handler cut off a node */
 SCIP_Longint SCIPrelaxGetNCutoffs(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
@@ -617,7 +617,7 @@ SCIP_Longint SCIPrelaxGetNCutoffs(
    return relax->ncutoffs;
 }
 
-/** gets the total number of times, the relaxation handler improved a nodes lower bound */
+/** gets the total number of times the relaxation handler improved a nodes lower bound */
 SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
@@ -627,7 +627,7 @@ SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    return relax->nimprbounds;
 }
 
-/** gets the total number of times, the relaxation handler added constraints */
+/** gets the total number of times the relaxation handler added constraints */
 SCIP_Longint SCIPrelaxGetNAddedConss(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
@@ -637,7 +637,7 @@ SCIP_Longint SCIPrelaxGetNAddedConss(
    return relax->naddedconss;
 }
 
-/** gets the total number of times, the relaxation handler reduced variable domains */
+/** gets the total number of times the relaxation handler reduced variable domains */
 SCIP_Longint SCIPrelaxGetNReducedDomains(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
@@ -647,7 +647,7 @@ SCIP_Longint SCIPrelaxGetNReducedDomains(
    return relax->nreduceddom;
 }
 
-/** gets the total number of times, the relaxation handler separated cutting planes */
+/** gets the total number of times the relaxation handler separated cutting planes */
 SCIP_Longint SCIPrelaxGetNSeparatedCuts(
    SCIP_RELAX*           relax               /**< relaxation handler */
    )
