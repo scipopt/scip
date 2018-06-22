@@ -1019,6 +1019,7 @@ SCIP_RETCODE appendVarSOS1(
    assert( var != NULL );
    assert( cons != NULL );
    assert( conshdlrdata != NULL );
+   assert( consdata->nvars >= 0 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
