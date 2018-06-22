@@ -38,7 +38,7 @@ struct SCIP_Relax
 {
    SCIP_Longint          ncalls;             /**< number of times, this relaxator was called */
    SCIP_Longint          ncutoffs;           /**< number of times, this relaxator cut off a node */
-   SCIP_Longint          nimprbounds;        /**< number of times, this relaxator improves the nodes lower bound (w.r.t. SCIPisRelGT) */
+   SCIP_Longint          nimprbounds;        /**< number of times, this relaxator improves the node's lower bound (w.r.t. SCIPisRelGT) */
    SCIP_Longint          naddedconss;        /**< number of times, this relaxator added constraints */
    SCIP_Longint          nreduceddom;        /**< number of times, this relaxator reduced variable domains */
    SCIP_Longint          nseparated;         /**< number of times, this relaxator separated cuts */

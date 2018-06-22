@@ -109,7 +109,7 @@ SCIP_Longint SCIPrelaxGetNCutoffs(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets the total number of times the relaxation handler improved a nodes lower bound */
+/** gets the total number of times the relaxation handler improved a node's lower bound */
 EXTERN
 SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    SCIP_RELAX*           relax               /**< relaxation handler */
