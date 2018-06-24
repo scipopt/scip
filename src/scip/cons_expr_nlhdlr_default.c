@@ -328,7 +328,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
 
    /* if we did not say that we will provide branching scores, then stand by it */
    if( (enfomethods & SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) == 0 )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
 
    /* call the branching callback of the expression handler */
    SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, auxvalue, brscoretag, success) );
