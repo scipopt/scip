@@ -4628,7 +4628,7 @@ SCIP_RETCODE createNlRow(
             nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
       }
 
-      SCIPfreeBufferArray(scip, &varsusage);
+      SCIPfreeCleanBufferArray(scip, &varsusage);
       SCIPfreeBufferArray(scip, &newchildren);
       SCIPfreeBufferArray(scip, &newlincoefs);
    }
