@@ -1239,6 +1239,13 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    ub = SCIPvarGetUbLocal(var);
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
 
+   /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+   {
+      lb = EPSROUND(lb, 0.0);
+      ub = EPSROUND(ub, 0.0);
+   }
+
    /* integer variables should always have integral bounds in SCIP */
    assert(EPSFRAC(lb, 0.0) == 0.0 || !SCIPvarIsIntegral(var));  /*lint !e835*/
    assert(EPSFRAC(ub, 0.0) == 0.0 || !SCIPvarIsIntegral(var));  /*lint !e835*/
