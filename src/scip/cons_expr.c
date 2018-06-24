@@ -4555,7 +4555,8 @@ SCIP_RETCODE createNlRow(
       int nnewchildren;
       int* varsusage;
 
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &varsusage, consdata->nvarexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, consdata->nvarexprs) );
+      BMSclearMemoryArray(varsusage, consdata->nvarexprs);
 
       SCIPexprGetVarsUsage(classicexpr, varsusage);
 
@@ -4628,7 +4629,7 @@ SCIP_RETCODE createNlRow(
             nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
       }
 
-      SCIPfreeCleanBufferArray(scip, &varsusage);
+      SCIPfreeBufferArray(scip, &varsusage);
       SCIPfreeBufferArray(scip, &newchildren);
       SCIPfreeBufferArray(scip, &newlincoefs);
    }
