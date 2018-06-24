@@ -4561,8 +4561,8 @@ SCIP_RETCODE createNlRow(
       SCIPexprGetVarsUsage(classicexpr, varsusage);
 
       nnewchildren = 0;
-      SCIP_CALL( SCIPallocBufferArray(scip, &newlincoefs, consdata->nvarexprs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &newchildren, consdata->nvarexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlincoefs, SCIPexprGetNChildren(classicexpr)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newchildren, SCIPexprGetNChildren(classicexpr)) );
       for( i = 0; i < SCIPexprGetNChildren(classicexpr); ++i )
       {
          int idx = -1;
