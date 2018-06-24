@@ -4509,41 +4509,6 @@ SCIP_RETCODE makeClassicExpr(
    return SCIP_OKAY;
 }
 
-/** given an expression and an array of occurring variable expressions, construct a classic expression tree */
-static
-SCIP_RETCODE makeClassicExprTree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to convert */
-   SCIP_CONSEXPR_EXPR**  varexprs,           /**< variable expressions that occur in expr */
-   int                   nvarexprs,          /**< number of variable expressions */
-   SCIP_EXPRTREE**       exprtree            /**< buffer to store classic expression tree, or NULL if failed */
-)
-{
-   SCIP_EXPR* classicexpr;
-   SCIP_VAR** vars;
-   int i;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(varexprs != NULL);  /* we could also create this here, if NULL; but for now, assume it is given by called */
-   assert(exprtree != NULL);
-
-   /* make classic expression */
-   SCIP_CALL( makeClassicExpr(scip, expr, &classicexpr, varexprs, nvarexprs) );
-
-   /* make classic expression tree */
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, classicexpr, nvarexprs, 0, NULL) );
-
-   /* set variables in expression tree */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarexprs) );
-   for( i = 0; i < nvarexprs; ++i )
-      vars[i] = SCIPgetConsExprExprVarVar(varexprs[i]);
-   SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvarexprs, vars) );
-   SCIPfreeBufferArray(scip, &vars);
-
-   return SCIP_OKAY;
-}
-
 /** create a nonlinear row representation of an expr constraint and stores them in consdata */
 static
 SCIP_RETCODE createNlRow(
@@ -4552,6 +4517,11 @@ SCIP_RETCODE createNlRow(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* classicexpr;
+   SCIP_VAR** nlvars;
+   int nnlvars;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4564,29 +4534,121 @@ SCIP_RETCODE createNlRow(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
+   /* @todo pass correct curvature */
+   SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+         0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
+
    if( consdata->expr == NULL )
+      return SCIP_OKAY;
+
+   /* make classic expression */
+   SCIP_CALL( makeClassicExpr(scip, consdata->expr, &classicexpr, consdata->varexprs, consdata->nvarexprs) );
+
+   /* reserve memory for variables array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
+
+   /* if root is sum, then split off linear part */
+   if( SCIPexprGetOperator(classicexpr) == SCIP_EXPR_LINEAR )
    {
-      /* @todo pass correct curvature */
-      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
-            0, NULL, NULL, 0, NULL, 0, NULL, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
+      SCIP_Real* newlincoefs;
+      SCIP_EXPR** newchildren;
+      int nnewchildren;
+      int* varsusage;
+
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &varsusage, consdata->nvarexprs) );
+
+      SCIPexprGetVarsUsage(classicexpr, varsusage);
+
+      nnewchildren = 0;
+      SCIP_CALL( SCIPallocBufferArray(scip, &newlincoefs, consdata->nvarexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newchildren, consdata->nvarexprs) );
+      for( i = 0; i < SCIPexprGetNChildren(classicexpr); ++i )
+      {
+         int idx = -1;
+
+         if( SCIPexprGetOperator(SCIPexprGetChildren(classicexpr)[i]) == SCIP_EXPR_VARIDX )
+         {
+            idx = SCIPexprGetOpIndex(SCIPexprGetChildren(classicexpr)[i]);
+            assert(varsusage[idx] >= 1);
+         }
+
+         if( idx >= 0 && varsusage[idx] == 1 )
+         {
+            /* printf("%g*<%s>\n", SCIPexprGetLinearCoefs(classicexpr)[i], SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[idx]))); */
+
+            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(consdata->varexprs[idx]), SCIPexprGetLinearCoefs(classicexpr)[i]) );
+
+            --varsusage[idx];
+
+            SCIPexprFreeDeep(SCIPblkmem(scip), &SCIPexprGetChildren(classicexpr)[i]);
+         }
+         else
+         {
+            newlincoefs[nnewchildren] = SCIPexprGetLinearCoefs(classicexpr)[i];
+            newchildren[nnewchildren] = SCIPexprGetChildren(classicexpr)[i];
+            ++nnewchildren;
+         }
+      }
+
+      if( nnewchildren < SCIPexprGetNChildren(classicexpr) )
+      {
+         SCIP_EXPR* newexpr;
+         int* reindexvars;
+
+         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &newexpr, nnewchildren, newchildren, newlincoefs, SCIPexprGetLinearConstant(classicexpr)) );
+
+         SCIPexprFreeShallow(SCIPblkmem(scip), &classicexpr);
+
+         classicexpr = newexpr;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &reindexvars, consdata->nvarexprs) );
+         nnlvars = 0;
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            if( varsusage[i] == 0 )
+            {
+               reindexvars[i] = -1;
+            }
+            else
+            {
+               reindexvars[i] = nnlvars;
+               nlvars[nnlvars] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+               ++nnlvars;
+            }
+         }
+
+         SCIPexprReindexVars(classicexpr, reindexvars);
+
+         SCIPfreeBufferArray(scip, &reindexvars);
+      }
+      else
+      {
+         nnlvars = consdata->nvarexprs;
+         for( i = 0; i < consdata->nvarexprs; ++i )
+            nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      }
+
+      SCIPfreeBufferArray(scip, &varsusage);
+      SCIPfreeBufferArray(scip, &newchildren);
+      SCIPfreeBufferArray(scip, &newlincoefs);
    }
    else
    {
-      /* get an exprtree representation of the cons-expr-expression */
-      SCIP_EXPRTREE* exprtree;
-
-      SCIP_CALL( makeClassicExprTree(scip, consdata->expr, consdata->varexprs, consdata->nvarexprs, &exprtree) );
-      if( exprtree == NULL )
-      {
-         SCIPerrorMessage("could not create classic expression tree from cons_expr expression\n");
-         return SCIP_ERROR;
-      }
-
-      /* @todo pass correct curvature */
-      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
-            0, NULL, NULL, 0, NULL, 0, NULL, exprtree, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      nnlvars = consdata->nvarexprs;
+      for( i = 0; i < consdata->nvarexprs; ++i )
+         nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
    }
+
+   /* make classic expression tree */
+   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, classicexpr, nnlvars, 0, NULL) );
+
+   /* set variables in expression tree */
+   SCIP_CALL( SCIPexprtreeSetVars(exprtree, nnlvars, nlvars) );
+   SCIPfreeBufferArray(scip, &nlvars);
+
+   SCIP_CALL( SCIPsetNlRowExprtree(scip, consdata->nlrow, exprtree) );
+
+   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
    return SCIP_OKAY;
 }
