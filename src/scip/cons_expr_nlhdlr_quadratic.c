@@ -780,6 +780,16 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
    assert(expr != NULL);
    assert(auxvalue != NULL);
 
+   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
+    * propagate them, but it does not separate these
+    * we then cannot evaluate w.r.t. auxvars, so we return the value of the expression instead
+    */
+   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+   {
+      *auxvalue = SCIPgetConsExprExprValue(expr);
+      return SCIP_OKAY;
+   }
+
    /* TODO: is this okay or should the constant be stored at the moment of creation? */
    *auxvalue = SCIPgetConsExprExprSumConstant(expr);
 
