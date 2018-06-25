@@ -2147,7 +2147,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* presolving */
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims, TRUE) );
+
+#ifdef WITH_UG
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, FALSE) );
+#else
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
+#endif
 
    graph = packedgraph;
    probdata->stp_type = graph->stp_type;

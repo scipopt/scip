@@ -1507,8 +1507,10 @@ SCIP_RETCODE graph_load(
             g->stp_type = STP_SPG;
       }
 
+#ifndef WITH_UG
       (void)printf(msg_finish_dddd,
          g->knots, g->edges, g->terms, g->source);
+#endif
 
       assert(graph_valid(g));
       return SCIP_OKAY;
