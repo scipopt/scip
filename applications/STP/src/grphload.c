@@ -837,7 +837,9 @@ SCIP_RETCODE graph_load(
    const char*  err_badedge_ddd = "Bad edge %d-%d (%d nodes)";
    const char*  err_badroot_dd  = "Bad root %d (%d nodes)";
    const char*  err_baddeg_dd   = "More degree constraints (%d) than nodes (%d)";
+#ifndef WITH_UG
    const char*  msg_finish_dddd = "Nodes: %d  Edges: %d  Terminals: %d  Source=%d\n";
+#endif
 
    const char*  endofline = "#;\n\r";
    const char*  separator = " \t:=";
