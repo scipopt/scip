@@ -1,5 +1,14 @@
 @page RN60 Release notes for SCIP 6.0
 
+@section RN700 SCIP 7.0.0
+*************************
+
+Features
+--------
+
+- extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
+
+
 @section RN600 SCIP 6.0.0
 *************************
 

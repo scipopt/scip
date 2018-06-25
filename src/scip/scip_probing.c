@@ -1058,7 +1058,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
       relax = set->relaxs[r];
       assert( relax != NULL );
 
-      SCIP_CALL( SCIPrelaxExec(relax, set, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
+      SCIP_CALL( SCIPrelaxExec(relax, set, scip->tree, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
 
       switch( result )
       {
