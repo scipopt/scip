@@ -3231,6 +3231,8 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions
+  (nlpi/*expr*) results in many renamings of types, structs and methods
 - the methods SCIPwriteVarName() SCIPwriteVarsList() and SCIPwriteVarsLinearsum() have a new parameter named "type" of
   type SCIP_Bool which determines if the variable type should be written or not
 - the methods SCIPparseVarName() and SCIPparseVarsList() got one new output parameter "endptr" which is filled with the
@@ -3238,17 +3240,13 @@ Interface changes
 - new parameter success in SCIPgetVarCopy() that will be FALSE if method is called after problem creation stage and no
   hash map is given or no image for the given variable is contained in the given hash map
 - SCIPcopyProb() and SCIP_DECL_PROBCOPY got a new parameter global
-- using proper terms "monomial" and "polynomial" (instead of "monom" and "polynom") in nonlinear expressions
-  (nlpi/*expr*) results in many renamings of types, structs and methods
 - added result value SCIP_NEWROUND that allows a separator/constraint handler to start a new separation round (without
   previous calls to other separators/conshdlrs)
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
-- SCIPchgVarType got an extra boolean to store infeasibility while upgrading a variable from continuous type to an
-  integer type
+- SCIPchgVarType got an extra boolean to store infeasibility while upgrading a variable from continuous type to an integer type
 - removed methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), SCIPnlpGetVarSolVal(); added methods SCIPgetNLPObjval()
   and SCIPvarGetNLPSol(); SCIPcreateNLPSol() now returns an error if NLP or NLP solution is not available
-- removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are
-  present
+- removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), NLP is now always constructed if nonlinearities are present
 - removed NLP methods from pub_nlp.h and added corresponding methods to scip.h; removed SCIPgetNLP()
 - due to adding SCIP_DECL_PROPINITPRE, SCIP_DECL_PROPEXITPRE, SCIP_DECL_PROPPRESOL, new timing flag and presolving
   parameters for propagators the SCIPincludeProp() method has a new list of parameters
@@ -3257,10 +3255,8 @@ Interface changes
 - due to the new timingmask for propagation calls SCIPincludeConshdlr() has the timingmask as a new parameter
 - allowed calling SCIPgetRowSolActivity() in SCIP_STAGE_SOLVED, since LP is still available
 - removed parameters timelimit and memorylimit from SCIPapplyRens()
-- added parameter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by
-  default
+- added parameter to SCIPincludeQuadconsUpgrade() to indicates whether the given upgrade method should be active by default
 - various extensions and modifications for expressions and expression trees (too much to state here)
-- split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - SCIPdelVar() got a new parameter "deleted", which stores whether the variable was successfully marked to be deleted
 - SCIPmarkDoNotMultaggrVar()/SCIPvarMarkDoNotMultaggr() now allow to mark negated and aggregated variables
 - SCIPcalcNodeselPriority() got a new parameter "branchdir", which defines the type of branching that was performed:
@@ -3455,6 +3451,7 @@ Interface changes
 
 ### Data structures
 
+- split off PARAMEMPHASIS from PARAMSETTING (in pub_paramset.c/paramset.c)
 - new data structure SCIP_STAIRMAP
 - add expression graph data structures and methods for reformulation, domain propagation and simple convexity check on
   nonlinear expressions
@@ -3966,8 +3963,7 @@ Performance improvements
 - improved settings/emphasis/cpsolver.set to decrease time per node
 - reworked access to pseudo solution and inference value of variables in order to reduce function calls
 - improved zerohalf cut separator: more than one delta is tested for MIR cuts, better handling of dense base
-  inequalities, faster scaling of fractional coefficients in rows (now enabled), improved parameter settings
-  (presolving)
+  inequalities, faster scaling of fractional coefficients in rows (now enabled), improved parameter settings (presolving)
 - changed default value of parameter "nodeselection/restartdfs/selectbestfreq" to 0; this means if the current node has
   no children the node with the best bound is selected (SCIPgetBestboundNode())
 - separators are not called any longer for an integral initial LP solution
@@ -3988,13 +3984,16 @@ Interface changes
 -----------------
 
 - NLP solver interface (NLPI) now independent of SCIP like LPI
-- Enhanced user interface for callable library: manual restarts,
-  predefined settings and many other features
-- Support of wbo format for weighted PBO problems, IBM's xml-solution
-  format and pip format for polynomial mixed-integer programs
+- Enhanced user interface for callable library: manual restarts, predefined settings and many other features
+- Support of wbo format for weighted PBO problems, IBM's xml-solution format and pip format for polynomial mixed-integer programs
 - Extended reader for Flatzinc models
-- Extended reader for .lp and .mps files for semicontinuous variables
-  and quadratic objective or constraints
+- Extended reader for .lp and .mps files for semicontinuous variables and quadratic objective or constraints
+- new API for "expressions interpreter" - code that evaluates expression trees, including first and second derivatives
+- SCIP can now maintain a central NLP relaxation of the problem (similar to LP)
+- SCIP can now manage a list of external codes (e.g., LP or NLP solver, ZIMPL)
+- lp.h/lp.c and the lpi's were changed according to the changes mentioned below.
+- adding and deletion of rows to the separation storage and to the LP can now be catched by events
+  (SCIP_EVENTTYPE_ROWADDEDSEPA, SCIP_EVENTTYPE_ROWDELETEDSEPA, SCIP_EVENTTYPE_ROWADDEDLP, SCIP_EVENTTYPE_ROWDELETEDLP)
 
 ### New and changed callbacks
 
@@ -4006,12 +4005,6 @@ Interface changes
 
 ### Deleted and changed API methods
 
-- added SCIPsortPtrPtrInt (and various other) and corresponding sorting/inserting/deleting methods in pub_misc.h and
-  necessary defines in misc.c
-- added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary
-  defines in misc.c
-- added to the method SCIPapplyRens() the parameter uselprows, this allows to switch between LP row and SCIP constraints
-  as basis for the subSCIP, setting ist to TRUE (uses LP rows) will lead to same version as before
 - new parameters "maxmksetcoefs", "delta" and "deltavalid" in sepa_cmir.c: SCIPcutGenerationHeuristicCmir()
 - added SCIP_DECL_...COPY for all plugins
 - added SCIP pointer to all C++ objects and constructors
@@ -4025,30 +4018,20 @@ Interface changes
 - methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and
   SCIPvarGetNCutoffsCurrentRun() now called SCIPvarGetInferenceSum(), SCIPvarGetInferenceSumCurrentRun(),
   SCIPvarGetCutoffSum() and SCIPvarGetCutoffSumCurrentRun(), resp., return SCIP_Real values instead of SCIP_Longint
-- the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
-- the SoPlex interface has the option to restore basis only after entire strong branching phase instead of after each
-  strong branch (off, because it mostly appears to increase strong branching time and iterations) (lpi_spx.cpp)
-- NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into
-  src/nlpi
+- NLPIs can now be used without generating a SCIP instance (i.e., do not require a SCIP pointer), code moved into src/nlpi
 - NLPIs can now be managed like other SCIP plugins, i.e., they can be included into the SCIP core and accessed by
   methods SCIPincludeNlpi(), SCIPfindNlpi(), SCIPgetNNlpis(), SCIPgetNlpis(), SCIPsetNlpiPriority()
-- new API for "expressions interpreter" - code that evaluates expression trees, including first and second derivatives
 - added SCIPsortPtrPtrLongIntInt(), SCIPsortLongPtrPtrIntInt() and corresponding sorting/inserting/deleting methods in
   pub_misc.h and necessary defines in misc.c
 - added SCIPcalcNegatedCliquePartition() to scip.c to calculate a clique partition on negations of all given binary
   variables
-- SCIP can now maintain a central NLP relaxation of the problem (similar to LP)
 - added SCIPsortLongPtrInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in
   misc.c
-- SCIP can now manage a list of external codes (e.g., LP or NLP solver, ZIMPL)
 - use of strongbranching changed: Now SCIPstartStrongbranch()/SCIPendStrongbranch() have to be called before/after
   strongbranching
 - SCIPgetVarStrongbranch() replaced by SCIPgetVarStrongbranchFrac()/SCIPgetVarStrongbranchInt()
 - two new functions SCIPgetVarsStrongbranchesFrac()/SCIPgetVarsStrongbranchesInt() for computing strong branching
   information for several variables
-- lp.h/lp.c and the lpi's were changed according to the above changes.
-- adding and deletion of rows to the separation storage and to the LP can now be catched by events
-  (SCIP_EVENTTYPE_ROWADDEDSEPA, SCIP_EVENTTYPE_ROWDELETEDSEPA, SCIP_EVENTTYPE_ROWADDEDLP, SCIP_EVENTTYPE_ROWDELETEDLP)
 - changes in a row can now be catched via row events (SCIPcatchRowEvent(), SCIPdropRowEvent(),
   SCIP_EVENTTYPE_ROWCOEFCHANGED, SCIP_EVENTTYPE_ROWCONSTCHANGED, SCIP_EVENTTYPE_ROWSIDECHANGED)
 - renamed SCIPintervalScalarProductRealsIntervals()/SCIPintervalScalarProduct() by
@@ -4056,7 +4039,6 @@ Interface changes
   SCIPintervalScalprodScalarsInf/Sup()
 - new parameter "usessubscip" for SCIPincludeHeur(), SCIPincludeSepa() and constructors ObjSepa(), ObjHeur()
 - added new parameter "varcopy" to SCIPcreateVar() to add the function for copying variable data
-- the SoPlex interface now includes equilibrium scaling on lp's solved from scratch without starting basis
 - the parameter "success" in "SCIP_DECL_CONSCOPY" has been renamed to "valid"
 - in case of using SCIPwriteTransProblem() the currently (locally) valid problem is written this now also includes the
   local constraints
@@ -4064,6 +4046,12 @@ Interface changes
 
 ### New API functions
 
+- added SCIPsortPtrPtrInt (and various other) and corresponding sorting/inserting/deleting methods in pub_misc.h and
+  necessary defines in misc.c
+- added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary
+  defines in misc.c
+- added to the method SCIPapplyRens() the parameter uselprows, this allows to switch between LP row and SCIP constraints
+  as basis for the subSCIP, setting ist to TRUE (uses LP rows) will lead to same version as before
 - for heuristics SCIPheurSetFreq() to change the frequency of the heuristic (pub_heur.h, heur.c)
 - allow user to trigger a restart during presolving SCIPrestartSolve()
 - can now forbid upgrading of individual linear constraints (SCIPmarkDoNotUpgradeConsLinear())
@@ -4138,9 +4126,13 @@ Interface changes
 ### Interfaces to external software
 
 - added interface to CppAD (nlpi/exprinterpret_cppad.cpp)
-- Improved SoPlex interface
 - Improved Xpress interface
 - Improved CPLEX interface
+- Improved SoPlex interface
+- the SoPlex interface can now double check each SoPlex result against CPLEX (lpi_spx.cpp)
+- the SoPlex interface has the option to restore basis only after entire strong branching phase instead of after each
+  strong branch (off, because it mostly appears to increase strong branching time and iterations) (lpi_spx.cpp)
+- the SoPlex interface now includes equilibrium scaling on lp's solved from scratch without starting basis
 
 ### Changed parameters
 
@@ -4445,23 +4437,15 @@ Interface changes
 
 ### Deleted and changed API methods
 
-- new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR() and sepa_cmir.c: tryDelta() to store
-  whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating
-  LP rows is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR()
-  and mksetcoefs is not valid.
+- new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR() and sepa_cmir.c: tryDelta() to store whether
+  "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows is empty
+  or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
 - new parameter "set" in SCIPconsSetInitial().
 - new parameters "lowerbound" and "result" in type_pricer.h: lowerbound can save a lower bound computed by the pricer,
   result indicates whether the pricer guarantees that there exist no more variables if no variable was found
-- added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
 - new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
 - extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort
   up to five arrays
-- added function SCIPaddObjoffset() in scip.h; sets offset of objective function
-- added function SCIPgetOrigObjoffset() in scip.h; returns the objective offset of the original problem
-- added function SCIPgetOrigObjscale() in scip.h; returns the objective scale of the original problem
-- added function SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
-- added function SCIPparseCons() in scip.h; parses constraint information (in cip format) out of a string
-- added function SCIPgetConsCopy() in scip.h; which copies a constraint of the source SCIP
 - new parameter "sol" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR() and sepa_cmir.c: tryDelta() to separate a sol
   different from the LP solution
 - new parameter "sol" in scip.c: SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() and var.c: SCIPvarGetClosestVlb() and
@@ -4471,15 +4455,21 @@ Interface changes
   binary variables and corresponding negated status
 - added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines
   in misc.c
-- added detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
-- added function SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables
-  negated, active or fixed the same way
-- heavily revised mosek interface
 
 ### New API functions
 
-- to deactivate a pricer SCIPdeactivatePricer() in scip.c
+- new methods to deactivate a pricer SCIPdeactivatePricer() in scip.c
 - new methods in pub_misc.h/misc.c to access hash map lists and elements of a hash map list and to clear all entries in a hash map
+- detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
+- SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables
+  negated, active or fixed the same way
+- SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
+- SCIPaddObjoffset() in scip.h; sets offset of objective function
+- SCIPgetOrigObjoffset() in scip.h; returns the objective offset of the original problem
+- SCIPgetOrigObjscale() in scip.h; returns the objective scale of the original problem
+- SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
+- SCIPparseCons() in scip.h; parses constraint information (in cip format) out of a string
+- SCIPgetConsCopy() in scip.h; which copies a constraint of the source SCIP
 - SCIPchgVarLbLazy() and SCIPchgVarUbLazy() in scip.h; These methods can be used to change the lazy lower or
   upper bound of a variable; This might has the consequences that the bounds of the corresponding variable is not in
   LP. This is the case if the lazy lower or upper bound is greater or less than the local lower or upper bound, respectively
@@ -4501,6 +4491,7 @@ Interface changes
 
 ### Interfaces to external software
 
+- heavily revised mosek interface
 - new interface to QSopt due to Daniel Espinoza
 - added interface to QSopt due to Daniel Espinoza
 - adjusted interface to ZIMPL (reader_zpl.{c,h} for ZIMPL version 2.10; this interface should also work with older ZIMPL
@@ -4760,9 +4751,18 @@ Interface changes
 
 - new callback method SCIP_DECL_READERWRITE(x) in type_reader.h; this method is called to write a problem to file stream
   in the format the reader stands for; useful for writing the transformed problem in LP or MPS format
+- the interface method SCIP_DECL_CONSCHECK() has a new parameter "printreason"; if this comes in TRUE the constraint
+  handler is ask to print for violated constraint a reason;
+- added new LPI pricing option SCIP_PRICING_LPIDEFAULT, such that every LP interface can set the default pricing
+  strategy on its own ('auto' is not useful for this, because for CPLEX, for example, SCIP seems to be worse with 'auto'
+  then with 'steepest edge')
+- added user pointer to callback methods of hash table
 
 ### Deleted and changed API methods
 
+- expand sorttpl.c by some parameters
+- added some downwards-sorting methods
+- changed some names for sorting methods
 - new parameters "extension" and "genericnames" in SCIPprintTransProblem() defining the requested format or NULL for
   default CIP format and using generic names for the variables and constraints e.g, SCIPprintTransProblem(scip, NULL,
   NULL, TRUE) displays the transformed problem in CIP format with generic variables and constraint names
@@ -4772,31 +4772,17 @@ Interface changes
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade()
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...() Note that the order
   of the parameters has been changed to simplify the template code in sorttpl.c!
-- expand sorttpl.c by some parameters
-- added some downwards-sorting methods
-- changed some names for sorting methods
 - new parameter 'maxfrac' for SCIPcalcStrongCG()
 - the parameter list of the method SCIPcheckSolOrig() (scip.h) has changed; the new advatage is, that SCIP can print the
   reason for a violation as for as the violated component supports this
 - the parameter list of the method SCIPcheckCons() (scip.h) has changed; the new advatage is, that SCIP can print the
   reason for the violation of a constraint as for as the constraint handler supports that
-- the interface method SCIP_DECL_CONSCHECK() has a new parameter "printreason"; if this comes in TRUE the constraint
-  handler is ask to print for violated constraint a reason;
 - the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" see for
   explanation the previous point
-- added user pointer to callback methods of hash table
-- added new LPI pricing option SCIP_PRICING_LPIDEFAULT, such that every LP interface can set the default pricing
-  strategy on its own ('auto' is not useful for this, because for CPLEX, for example, SCIP seems to be worse with 'auto'
-  then with 'steepest edge')
 - SCIPgetVarRedcost() now returns 0 for variables that have been aggregated out or removed in presolving.
   reduced cost in case of infeasible LPs)
 - new parameter "maxmksetcoefs" for SCIPcalcMIR() and SCIPcalcStrongCG() methods
-- Many changes in the SoPlex interface: The current one is tailored towards SoPlex 1.4 (aka 1.3.3). All SoPlex functions
-  (where applicable) should now have an exception handling. The Bugfix for adding columns has been moved to SoPlex.  One
-  can use ROW representation. Reading/writing of a basis has been implemented.
 - new parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use
-- changed default frequency parameters for RINS, Local Branching, Crossover and Mutation heuristic This should not
-  change the performance but happened just for consistency reasons
 
 ### New API functions
 
@@ -4841,8 +4827,14 @@ Interface changes
 
 ### Interfaces to external software
 
+- Many changes in the SoPlex interface: The current one is tailored towards SoPlex 1.4 (aka 1.3.3). All SoPlex functions
+  (where applicable) should now have an exception handling. The Bugfix for adding columns has been moved to SoPlex.  One
+  can use ROW representation. Reading/writing of a basis has been implemented.
+
 ### Changed parameters
 
+- changed default frequency parameters for RINS, Local Branching, Crossover and Mutation heuristic This should not
+  change the performance but happened just for consistency reasons
 - changed parameter default values for the priority of presolver "dualfix" and "inttobinary"
 - removed parameter "separating/cmir/maxtestdeltaroot"
 - new value 'l' for parameter "lp/pricing", which is the new default
@@ -5305,12 +5297,12 @@ Interface changes
 
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
 - replaced callback parameter "inlploop" and "inplunging" by "heurtiming" in SCIP_DECL_HEUREXEC
-
-### Deleted and changed API methods
-
 - slightly changed the meaning of the result codes returned by external relaxators: if they modify the LP or tighten
   bounds of variables, they are not automatically be called again (it is assumed that they already made use of these
   changes). They are only called again, if they returned SCIP_SUSPENDED or if some other plugin modified the LP.
+
+### Deleted and changed API methods
+
 - new parameter "escapecommand" for SCIPdialoghdlrAddHistory()
 - renamed all occurences of "removeable" by the correct English word "removable": SCIPconsIsRemovable(),
   SCIPsetConsRemovable(), SCIPvarIsRemovable(), SCIPcolIsRemovable(), SCIProwIsRemovable()
@@ -5322,28 +5314,6 @@ Interface changes
   deactivation of the node, you should set this flag to TRUE in order to make sure, that the constraint will always be
   associated to the node and not moved to a more global node if this would be possible
 - removed method SCIPgetVarData(); use SCIPvarGetData() from pub_var.h instead
-- replaced parameters "pseudonodes", "duringplunging", "duringlploop" and "afternode" by "timingmask" in
-  SCIPincludeHeur() and constructor of ObjHeur() class use the following table to translate old settings into the new
-  timingmask:
-
-      PSEUDONODES  DURINGPLUNGING  DURINGLPLOOP  AFTERNODE  timingmask
-          FALSE           FALSE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
-           TRUE           FALSE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
-          FALSE            TRUE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
-           TRUE            TRUE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
-          FALSE           FALSE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
-           TRUE           FALSE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
-          FALSE            TRUE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
-           TRUE            TRUE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
-          FALSE           FALSE         FALSE       TRUE  SCIP_HEURTIMING_AFTERLPPLUNGE
-           TRUE           FALSE         FALSE       TRUE  SCIP_HEURTIMING_AFTERPLUNGE
-          FALSE            TRUE         FALSE       TRUE  SCIP_HEURTIMING_AFTERLPNODE
-           TRUE            TRUE         FALSE       TRUE  SCIP_HEURTIMING_AFTERNODE
-          FALSE           FALSE          TRUE       TRUE  SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_DURINGLPLOOP
-           TRUE           FALSE          TRUE       TRUE  SCIP_HEURTIMING_AFTERPLUNGE | SCIP_HEURTIMING_DURINGLPLOOP
-          FALSE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERLPNODE | SCIP_HEURTIMING_DURINGLPLOOP
-           TRUE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
-
 - new calls SCIPgetLPBInvCol() and SCIPgetLPBInvACol() to access the basis inverse and simplex tableau columnwise
 - new parameter "ndomredsfound" of SCIPpropagateProbing()
 - new parameters "fixintegralrhs", "maxfrac", "mksetcoefs" and "fracnotinrange" in SCIPcalcMIR()
@@ -5351,6 +5321,28 @@ Interface changes
   value is outside of the current bounds
 - slightly changed semantics of SCIPaddConsNode() and SCIPaddConsLocal(), such that a constraint which is added to the
   root node now enters the global problem (and is still existing after a restart)
+- replaced parameters "pseudonodes", "duringplunging", "duringlploop" and "afternode" by "timingmask" in
+  SCIPincludeHeur() and constructor of ObjHeur() class use the following table to translate old settings into the new
+  timingmask:
+
+| PSEUDONODES | DURINGPLUNGING | DURINGLPLOOP | AFTERNODE | timingmask                                                    |
+|-------------|----------------|--------------|-----------|---------------------------------------------------------------|
+| FALSE       | FALSE          | FALSE        | FALSE     | SCIP_HEURTIMING_BEFORENODE                                    |
+| TRUE        | FALSE          | FALSE        | FALSE     | SCIP_HEURTIMING_BEFORENODE                                    |
+| FALSE       | TRUE           | FALSE        | FALSE     | SCIP_HEURTIMING_BEFORENODE                                    |
+| TRUE        | TRUE           | FALSE        | FALSE     | SCIP_HEURTIMING_BEFORENODE                                    |
+| FALSE       | FALSE          | TRUE         | FALSE     | SCIP_HEURTIMING_BEFORENODE \| SCIP_HEURTIMING_DURINGLPLOOP    |
+| TRUE        | FALSE          | TRUE         | FALSE     | SCIP_HEURTIMING_BEFORENODE \| SCIP_HEURTIMING_DURINGLPLOOP    |
+| FALSE       | TRUE           | TRUE         | FALSE     | SCIP_HEURTIMING_BEFORENODE \| SCIP_HEURTIMING_DURINGLPLOOP    |
+| TRUE        | TRUE           | TRUE         | FALSE     | SCIP_HEURTIMING_BEFORENODE \| SCIP_HEURTIMING_DURINGLPLOOP    |
+| FALSE       | FALSE          | FALSE        | TRUE      | SCIP_HEURTIMING_AFTERLPPLUNGE                                 |
+| TRUE        | FALSE          | FALSE        | TRUE      | SCIP_HEURTIMING_AFTERPLUNGE                                   |
+| FALSE       | TRUE           | FALSE        | TRUE      | SCIP_HEURTIMING_AFTERLPNODE                                   |
+| TRUE        | TRUE           | FALSE        | TRUE      | SCIP_HEURTIMING_AFTERNODE                                     |
+| FALSE       | FALSE          | TRUE         | TRUE      | SCIP_HEURTIMING_AFTERLPPLUNGE \| SCIP_HEURTIMING_DURINGLPLOOP |
+| TRUE        | FALSE          | TRUE         | TRUE      | SCIP_HEURTIMING_AFTERPLUNGE \| SCIP_HEURTIMING_DURINGLPLOOP   |
+| FALSE       | TRUE           | TRUE         | TRUE      | SCIP_HEURTIMING_AFTERLPNODE \| SCIP_HEURTIMING_DURINGLPLOOP   |
+| TRUE        | TRUE           | TRUE         | TRUE      | SCIP_HEURTIMING_AFTERNODE \| SCIP_HEURTIMING_DURINGLPLOOP     |
 
 ### New API functions
 
@@ -5848,8 +5840,8 @@ Interface changes
 ### Deleted and changed API methods
 
 - additional parameter "validnode" for SCIPaddConsLocal() and SCIPaddConsNode()
-- method SCIPhashtableRemove() can now also be called, if the element does not exist in the table
-- method SCIPhashmapRemove() can now also be called, if the element does not exist in the map
+- SCIPhashtableRemove() can now also be called, if the element does not exist in the table
+- SCIPhashmapRemove() can now also be called, if the element does not exist in the map
 - additional parameter "branchdir" for SCIPbranchVar()
 - replaced method SCIPmessage() by SCIPverbMessage() with additional parameter "file"
 - put block memory shell and tclique algorithm into separate subdirectories
@@ -6084,38 +6076,36 @@ Interface changes
 
 - calling SCIPaddCut() with forcecut=TRUE will add the cut to the LP even if it is redundant
 - SCIPaddVarImplication() now also adds variable lower and upper bounds, if the implied variable is non-binary
-- new possible result SCIP_DELAYED for EXEC method of separators, presolvers and propagators and SEPA, PROP, and
-  PRESOL methods of constraint handlers
-- methods SCIPvarLock(), SCIPvarLockDown(), SCIPvarLockUp(), SCIPvarLockBoth(), SCIPvarUnlock(), SCIPvarUnlockDown(),
+- SCIPvarLock(), SCIPvarLockDown(), SCIPvarLockUp(), SCIPvarLockBoth(), SCIPvarUnlock(), SCIPvarUnlockDown(),
   SCIPvarUnlockUp() and SCIPvarUnlockBoth() are replaced by SCIPaddVarLocks() which returns a RETCODE
-- methods SCIPvarLockDownCons(), SCIPvarLockUpCons(), SCIPvarUnlockDownCons() and SCIPvarUnlockUpCons() are replaced by
+- SCIPvarLockDownCons(), SCIPvarLockUpCons(), SCIPvarUnlockDownCons() and SCIPvarUnlockUpCons() are replaced by
   SCIPlockVarCons() and SCIPunlockVarCons() which return a RETCODE
-- methods SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
-- methods SCIPvarGetLbGlobal(), SCIPvarGetUbGlobal(), SCIPvarGetLbLocal() and SCIPvarGetUbLocal() now return the
+- SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
+- SCIPvarGetLbGlobal(), SCIPvarGetUbGlobal(), SCIPvarGetLbLocal() and SCIPvarGetUbLocal() now return the
   corresponding values of the transformed problem or current subproblem even for original problem variables
 - removed method SCIPsolGetObj() - use SCIPgetSolOrigObj() or SCIPgetSolTransObj() instead
-- method SCIPreadProb() does not free the current problem - this is done in SCIPcreateProb() now, which is usually
+- SCIPreadProb() does not free the current problem - this is done in SCIPcreateProb() now, which is usually
   called by a problem reader; in this way, a reader can generate "extra information" for the current problem, s.t.  the
   full problem information can be distributed to different files read by different readers
-- methods SCIPgetVarStrongbranch() and SCIPgetVarStrongbranchLast() now have two additional parameters that can be used
+- SCIPgetVarStrongbranch() and SCIPgetVarStrongbranchLast() now have two additional parameters that can be used
   to check, whether the returned values are correct dual bounds
-- method SCIPconshdlrGetNConss() is replaced by SCIPconshdlrGetNActiveConss() (returning the number of active
+- SCIPconshdlrGetNConss() is replaced by SCIPconshdlrGetNActiveConss() (returning the number of active
   constraints); method SCIPconshdlrGetNConss() does now return the total number of existing constraints, active and
   inactive
-- method SCIPconshdlrGetStartNConss() is now called SCIPconshdlrGetStartNActiveConss()
-- method SCIPconshdlrGetMaxNConss() is now called SCIPconshdlrGetMaxNActiveConss()
-- method SCIPdisableConsNode() is replaced by SCIPdelConsNode()
-- method SCIPdisableConsLocal() is replaced by SCIPdelConsLocal()
+- SCIPconshdlrGetStartNConss() is now called SCIPconshdlrGetStartNActiveConss()
+- SCIPconshdlrGetMaxNConss() is now called SCIPconshdlrGetMaxNActiveConss()
+- SCIPdisableConsNode() is replaced by SCIPdelConsNode()
+- SCIPdisableConsLocal() is replaced by SCIPdelConsLocal()
 - added new parameter "dynamic" to SCIPcreateCons() and all plugin methods SCIPcreateCons...()
-- methods SCIPvarGetProbvar(), SCIPvarGetProbvarBinary() now return the fixed or multi-aggregated variable instead of
+- SCIPvarGetProbvar(), SCIPvarGetProbvarBinary() now return the fixed or multi-aggregated variable instead of
   returning NULL or aborting with an error message; in SCIPvarGetProbvarBinary(), the fixing of a fixed variable does
   not influence the negation status anymore
-- method SCIPvarGetProbvarBound() returns the multi-aggregated variable instead of aborting with an error message
-- method SCIPvarGetProbvarSum() does not set *var to NULL for fixed variables anymore; it may also return a
+- SCIPvarGetProbvarBound() returns the multi-aggregated variable instead of aborting with an error message
+- SCIPvarGetProbvarSum() does not set *var to NULL for fixed variables anymore; it may also return a
   multi-aggregated variable instead of aborting with an error message
-- method SCIPgetBinvarRepresentative() now returns the fixed or multi-aggregated variable instead of returning NULL or
+- SCIPgetBinvarRepresentative() now returns the fixed or multi-aggregated variable instead of returning NULL or
   aborting with an error message
-- method SCIPdispDecimal() is replaced by SCIPdispInt() and SCIPdispLongint()
+- SCIPdispDecimal() is replaced by SCIPdispInt() and SCIPdispLongint()
 - additional parameter "maxproprounds" in SCIPpropagateProbing()
 - changed memory interface (see memory.h), MEMHDR is now called BLKMEM
 - additional parameter "aggregated" in SCIPmultiaggregateVars()
@@ -6125,8 +6115,6 @@ Interface changes
 of SCIP, e.g. "tree.h" or "var.h".
 - event handlers are now available as C++ wrapper class
 - new flag "afterrelaxation" for primal heuristics
-- new parameter delay for presolvers
-- new parameter delaypresol for constraint handlers
 
 ### New API functions
 
@@ -6191,6 +6179,8 @@ of SCIP, e.g. "tree.h" or "var.h".
 
 ### New parameters
 
+- new parameter delay for presolvers
+- new parameter delaypresol for constraint handlers
 - "lp/cleanupcolsroot" and "lp/cleanuprowsroot" to distinguish cleanup settings between root node and other nodes
 - "heuristics/fixandinfer/proprounds" and "heuristics/fixandinfer/minfixings"
 - "separating/.../delay"
@@ -6223,6 +6213,9 @@ of SCIP, e.g. "tree.h" or "var.h".
 - "branching/scorefunc"
 
 ### Data structures
+
+- new possible result SCIP_DELAYED for EXEC method of separators, presolvers and propagators and SEPA, PROP, and
+  PRESOL methods of constraint handlers
 
 Deleted files
 -------------
@@ -6339,7 +6332,7 @@ Interface changes
 ### Deleted and changed API methods
 
 - removed SCIPisFeasible(); use !SCIPisFeasNegative() instead
-- methods SCIPisIntegral(), SCIPisFracIntegral(), SCIPfloor(), SCIPceil() and SCIPfrac() don't use the feasibility
+- SCIPisIntegral(), SCIPisFracIntegral(), SCIPfloor(), SCIPceil() and SCIPfrac() don't use the feasibility
   tolerance anymore (default: 1e-06); instead, they are using epsilon (default: 1e-09); instead, for handling
   integrality of a variable "in feasibility tolerances", new methods SCIPisFeasIntegral(), SCIPisFeasFracIntegral(),
   SCIPfeasFloor(), SCIPfeasCeil() and SCIPfeasFrac() should be used
@@ -6528,8 +6521,8 @@ Interface changes
 ### Deleted and changed API methods
 
 - changed SCIPcatchVarEvent() and SCIPdropVarEvent()
-- method SCIPstage() is now called SCIPgetStage()
-- method SCIPprintStatus() is now called SCIPprintStage()
+- SCIPstage() is now called SCIPgetStage()
+- SCIPprintStatus() is now called SCIPprintStage()
 
 ### New API functions
 
