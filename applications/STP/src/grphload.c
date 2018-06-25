@@ -1055,7 +1055,9 @@ SCIP_RETCODE graph_load(
                case KEY_COMMENT_DATE :
                case KEY_COMMENT_CREATOR :
                case KEY_COMMENT_PROBLEM :
+#ifndef WITH_UG
                   (void)printf("Problem: [%s]\n", para[0].s);
+#endif
                   if( strcmp(para[0].s, "SPG") == 0 )
                      stp_type = STP_SPG;
                   else if( strcmp(para[0].s, "PCSPG") == 0
@@ -1086,7 +1088,9 @@ SCIP_RETCODE graph_load(
                      stp_type = STP_GSTP;
                   break;
                case KEY_COMMENT_REMARK :
+#ifndef WITH_UG
                   (void)printf("Comment: [%s]\n", para[0].s);
+#endif
                   if( strcmp(para[0].s, "Transformed") == 0 )
                      transformed = 1;
                   break;
