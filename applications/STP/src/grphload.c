@@ -58,7 +58,11 @@
 #define MSG_INFO     3
 #define MSG_DEBUG    4
 
+#ifdef WITH_UG
+#define VERBOSE      MSG_WARN
+#else
 #define VERBOSE      MSG_INFO
+#endif
 
 /* Try to get the maximum length of a path.
  *

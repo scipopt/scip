@@ -109,7 +109,7 @@ SCIP_RETCODE runShell(
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );
 
-   SCIP_CALL( SCIPsetSubscipsOff(scip, FALSE) );
+   SCIP_CALL( SCIPsetSubscipsOff(scip, TRUE) );
 
    /* set STP-specific default parameters */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
