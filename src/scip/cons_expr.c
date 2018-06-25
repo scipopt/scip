@@ -1242,8 +1242,8 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
    {
-      lb = EPSROUND(lb, 0.0);
-      ub = EPSROUND(ub, 0.0);
+      lb = EPSROUND(lb, 0.0); /*lint !e835*/
+      ub = EPSROUND(ub, 0.0); /*lint !e835*/
    }
 
    /* integer variables should always have integral bounds in SCIP */
