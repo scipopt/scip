@@ -1720,7 +1720,9 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          {
             SCIP_Bool success;
 
-            SCIP_CALL( SCIPfixVar(scip, vars[origrow][j], (SCIP_Real) lexminfixes[i][j], infeasible, &success) );
+            SCIP_CALL( SCIPinferBinvarCons(scip, vars[origrow][j], (SCIP_Bool) lexminfixes[i][j],
+                  cons, nrowsused, infeasible, &success) );
+            /* SCIP_CALL( SCIPfixVar(scip, vars[origrow][j], (SCIP_Real) lexminfixes[i][j], infeasible, &success) ); */
 
             if ( success )
                *nfixedvars += 1;
@@ -1773,6 +1775,74 @@ SCIP_RETCODE propagateCons(
    {
       assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING );
       SCIP_CALL( propagatePackingPartitioningCons(scip, cons, infeasible, nfixedvars) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE resolvePropagationFullOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of the corresponding constraint */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
+   int                   inferinfo,          /**< inference information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int* roworder;
+   int i;
+   int j;
+   SCIP_Bool dynamic;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+   assert( result != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   dynamic = conshdlrdata->usedynamicprop;
+   if ( dynamic )
+   {
+      assert( consdata->roworder != NULL );
+      assert( consdata->nrowsused > 0 );
+
+      roworder = consdata->roworder;
+   }
+
+   assert( inferinfo <= consdata->nspcons );
+
+   vars = consdata->vars;
+
+   for (i = 0; i < inferinfo; ++i)
+   {
+      for (j = 0; j < consdata->nblocks; ++j)
+      {
+         int origrow = dynamic ? roworder[i] : i;
+
+         if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 )
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[origrow][j], bdchgidx) );
+            *result = SCIP_SUCCESS;
+         }
+         else if ( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[origrow][j], bdchgidx) );
+            *result = SCIP_SUCCESS;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -2994,6 +3064,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
       SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+   }
+   else
+   {
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
