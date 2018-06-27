@@ -20,6 +20,7 @@ Features
 - a Benders' decomposition framework has been added. This framework provides the functionality for a user to solve a
   decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
   integer optimality cuts and no-good cuts.
+- new readers for stochastic programming problems in SMPS format (reader_sto.h, reader_smps.h)
 
 Performance improvements
 ------------------------
