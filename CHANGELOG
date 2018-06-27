@@ -111,7 +111,8 @@ Deleted files
 -------------
 
 - removed presolving plugin presol_implfree
-- TODO: add scip.c removal/split
+- separated scip.c into several smaller implementation files scip_*.c for better code overview; scip.c was removed,
+  but the central user header scip.h remains
 
 Data structures
 ---------------
