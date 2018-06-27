@@ -159,7 +159,6 @@ Features
 --------
 
 - allow output of lower bounds for visualization
-- new diving heuristic "conflictdiving"
 - added symmetry detection for linking constraints
 - SCIP executable handles the SIGTERM signal. If the process receives a SIGTERM, SCIP terminates the solution process with a new SCIP_STATUS code
   "SCIP_STATUS_TERMINATE" and displays all relevant statistics before exiting.
