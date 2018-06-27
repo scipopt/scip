@@ -8,6 +8,7 @@ Features
 --------
 
 - new diving heuristic farkasdiving that dives into the direction of the pseudosolution and tries to construct Farkas-proofs
+- new diving heuristic conflictdiving that considers locks from conflict constraints
 - restructuring of timing of symmetry computation that allows to add symmetry handling components within presolving
 - "lp/checkstability" is properly implemented for SoPlex LPI (spx2)
 - new branching rule lookahead that evaluates potential child and grandchild nodes to determine a branching decision
@@ -19,6 +20,7 @@ Features
   decomposed problem using Benders' decomposition. The framework includes classical optimality and feasibility cuts,
   integer optimality cuts and no-good cuts.
 - add statistic that presents the number of resolves for instable LPs
+- new readers for stochastic programming problems in SMPS format (reader_sto.h, reader_smps.h)
 
 Performance improvements
 ------------------------
@@ -85,6 +87,7 @@ Interface changes
   directly by the target node limit within the heuristic
 - removed parameter "presolving/symmetry/computepresolved" since this presolver does not compute symmetries independent
   of other components anymore
+- removed parameter "separating/maxincrounds"
 
 ### New parameters
 
@@ -112,7 +115,8 @@ Deleted files
 -------------
 
 - removed presolving plugin presol_implfree
-- split scip.{c,h} into several files; scip.h now only contains includes
+- separated scip.c into several smaller implementation files scip_*.c for better code overview; scip.c was removed,
+  but the central user header scip.h remains, which contains includes of the separated headers
 
 Fixed bugs
 ----------
@@ -138,6 +142,7 @@ Fixed bugs
 - fixed bug with releasing slack variable and linear constraint in cons_indicator
 - fixed problem when writing MPS file with indicator constraints with corresponding empty linear constraints
 - fixed bug in heur_vbound triggered when new variables were added while constructing the LP
+- fixed bug with unlinked columns in SCIProwGetLPSolCutoffDistance()
 
 Miscellaneous
 -------------

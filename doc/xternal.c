@@ -2772,12 +2772,12 @@
 
 /**@page SEPA How to add separators
  *
- * Separators are used to generate general purpose cutting planes.
- * Constraint based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and
+ * Separators are used to generate cutting planes that strengthen the LP relaxation of the problem formulation, but are
+ * not required for a completeness and correctness of the model.
+ * In contrast, constraint-based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and
  * CONSSEPASOL callback methods of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are
  * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
- * a single constraint class. In contrast, general purpose cuts do not require or exploit any knowledge about the
- * underlying problem structure but use only the current LP relaxation and the integrality conditions. See also
+ * a single constraint class. See also
  * "When should I implement a constraint handler, when should I implement a separator?" on \ref FAQ.
  * \n
  * A complete list of all separators contained in this release can be found \ref SEPARATORS "here".
