@@ -1,5 +1,6 @@
 
-@page RN60 Release notes for SCIP 6.0
+
+@page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
 *************************
@@ -9,6 +10,64 @@ Features
 
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
+
+@page RN60 Release notes for SCIP 6.0
+
+@section RN601 SCIP 6.0.1
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
 
 @section RN600 SCIP 6.0.0
 *************************
