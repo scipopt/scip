@@ -712,9 +712,10 @@
  *
  *
  * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
- * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find
+ * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
  * \ref DETAILEDINSTALL "Detailed installation description" below as well as \ref EXAMPLE1 "Examples".
-*
+ * We recommend using GCC version 4.8 or later.
+ *
  * @section BRIEFINSTALL Brief installation description
  *
  * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL. For
@@ -762,10 +763,8 @@
  * \SCIP contains a makefile system, which allows the individual setting of several parameters. A detailed list of parameter settings
  * obtained by <code>make help</code>. For instance, the following settings are supported:
  *
- * - <code>OPT=\<dbg|opt|opt-gccold\></code> Here <code>dbg</code> turns on the debug mode of \SCIP. This enables asserts
- *   and avoids macros for several function in order to ease debugging. The default is <code>opt</code>, which enables
- *   the optimized mode. The third option <code>opt-gccold</code> will work with older GCC compilers before version
- *   4.2. We recommend using newer GCC versions.
+ * - <code>OPT=\<dbg|opt\></code> Here <code>dbg</code> turns on the debug mode of \SCIP. This enables asserts
+ *   and avoids macros for several function in order to ease debugging.
  *
  * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should be
  *   installed separately from \SCIP. The options are the following:
@@ -1193,7 +1192,7 @@
  * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
  *
  * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>here</b></a>.
+ * <a href="http://scip.zib.de/doc/applications/CycleClustering"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_MINIISC MinIISC
