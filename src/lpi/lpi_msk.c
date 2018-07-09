@@ -4900,7 +4900,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIPdebugMessage("Setting max iter to : %d\n", ival);
       }
 #endif
-      /* 0 <= ival */
+      /* 0 <= ival, 0 stopping immediately */
       assert( ival >= 0 );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
@@ -4990,7 +4990,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
 #if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-9 <= dval <= inf */
       if( dval < 1e-9 )
          dval = 1e-9;
@@ -4998,7 +4998,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-9 <= dval <= inf */
       if( dval < 1e-9 )
          dval = 1e-9;
@@ -5007,6 +5007,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       /* 1e-14 <= dval <= inf */
+      assert( dval >= 0.0 );
       if( dval < 1e-14 )
          dval = 1e-14;
 
@@ -5030,7 +5031,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       /* 0 <= dval */
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */

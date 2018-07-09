@@ -3554,7 +3554,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
-      /* 0 <= ival */
+      /* 0 <= ival, 0 stopping immediately */
       ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
@@ -3635,18 +3635,19 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
        * For consistency we assert it to be strictly positive.
        */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       /* Xpress does not pose any restriction on dval,
        * however for consistency we assert it to be strictly positive.
        */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* no restriction on dval */
+      assert( dval >= 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
@@ -3658,7 +3659,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       * dval=0   No time limit
       * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit.
       */
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
       if( dval >= INT_MAX )
          ival = 0;
       else if( dval == 0.0 )

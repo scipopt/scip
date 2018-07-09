@@ -5179,7 +5179,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
-      /* -1 <= ival, -1 meaning no time limit */
+      /* -1 <= ival, -1 meaning no time limit, 0 stopping immediately */
       if( ival >= INT_MAX )
          ival = -1;
       lpi->spx->setIterationLimit(ival);
@@ -5305,13 +5305,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       /* 0 < dval */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       lpi->spx->setFeastol(dval);
       break;
 #if ((SOPLEX_VERSION == 160 && SOPLEX_SUBVERSION >= 5) || SOPLEX_VERSION > 160)
    case SCIP_LPPAR_DUALFEASTOL:
       /* 0 < dval */
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       lpi->spx->setOpttol(dval);
       break;
 #endif
@@ -5323,16 +5323,16 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 <= dval */
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert( dval >= 0 || dval == -1 );
+      assert( dval >= 0.0 || dval == -1.0 );
       lpi->rowrepswitch = dval;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
-      lpi->checkcondition = (dval >= 0);
+      lpi->checkcondition = (dval >= 0.0);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

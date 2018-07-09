@@ -3696,7 +3696,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
-      /* ival >= 0 */
+      /* ival >= 0, 0 stop immediately */
       assert( ival >= 0 );
       lpi->clp->setMaximumIterations(ival);
       break;
@@ -3767,7 +3767,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 0 < dval < 1e10 */
       if( dval > 1e+10 )
       {
@@ -3778,7 +3778,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 0 < dval < 1e10 */
       if( dval > 1e+10 )
       {
@@ -3797,7 +3797,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
       /* no restrictions on dval (clp handles the case dval < 0 internally and sets param to -1.) */
 
       lpi->clp->setMaximumSeconds(dval);

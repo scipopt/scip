@@ -5548,7 +5548,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
-      /* 0 <= ival */
+      /* 0 <= ival, 0 stopping immediately */
       {
          double itlim;
          itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);
@@ -5628,7 +5628,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-9 <= dval <= 1e-2 */
       if( dval < 1e-9 )
          dval = 1e-9;
@@ -5638,7 +5638,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_FEASIBILITYTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-9 <= dval <= 1e-2 */
       if (dval < 1e-9)
          dval = 1e-9;
@@ -5649,8 +5649,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* 0 <= dval <= 1 */
-      if( dval < 0.0 )
-         dval = 0.0;
+      assert( dval >= 0.0 );
       else if( dval > 1.0 )
          dval = 1.0;
 
@@ -5663,7 +5662,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 <= dval */
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
 
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;

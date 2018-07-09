@@ -4423,7 +4423,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
-      /* 0 <= ival */
+      /* 0 <= ival, 0 stopping immediately */
 #if (CPX_VERSION <= 1230)
       ival = MIN(ival, CPX_INT_MAX);
 #endif
@@ -4511,7 +4511,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-09 <= dval <= 1e-04 */
       if( dval < 1e-09 )
          dval = 1e-09;
@@ -4522,7 +4522,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      assert( dval > 0 );
+      assert( dval > 0.0 );
       /* 1e-09 <= dval <= 1e-04 */
       if( dval < 1e-09 )
          dval = 1e-09;
@@ -4533,6 +4533,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* 1e-10 <= dval */
+      assert( dval >= 0.0 );
       if( dval < 1e-10 )
          dval = 1e-10;
 
@@ -4546,7 +4547,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      assert( dval >= 0 );
+      assert( dval >= 0.0 );
       /* dval non-negative */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
