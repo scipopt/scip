@@ -2624,7 +2624,8 @@ SCIP_RETCODE SCIPbendersExec(
       SCIP_Bool skipsolve;
 
       skipsolve = FALSE;
-      SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, &skipsolve, result) );
+      SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, infeasible, auxviol, &skipsolve,
+            result) );
 
       /* evaluate result */
       if( (*result) != SCIP_DIDNOTRUN
