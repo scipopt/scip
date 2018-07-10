@@ -5662,7 +5662,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       /* 0 <= dval */
-      assert( dval >= 0.0 );
+      assert( dval > 0.0 );
 
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;

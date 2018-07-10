@@ -4547,7 +4547,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      assert( dval >= 0.0 );
+      assert( dval > 0.0 );
       /* dval non-negative */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;

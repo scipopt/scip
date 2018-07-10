@@ -4669,8 +4669,8 @@ static const char* paramname[] = {
    "SCIP_LPPAR_DUALFEASTOL",                 /* feasibility tolerance for dual variables and reduced costs */
    "SCIP_LPPAR_BARRIERCONVTOL",              /* convergence tolerance used in barrier algorithm */
    "SCIP_LPPAR_OBJLIM",                      /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit */
-   "SCIP_LPPAR_LPTILIM",                     /* LP time limit */
+   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit, greater than or equal 0 */
+   "SCIP_LPPAR_LPTILIM",                     /* LP time limit, positive */
    "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
    "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
                                               * if number of rows divided by number of columns exceeds this value */
@@ -4699,8 +4699,8 @@ const char* paramty2str(
    assert(SCIP_LPPAR_DUALFEASTOL == 7);      /* feasibility tolerance for dual variables and reduced costs */
    assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /* convergence tolerance used in barrier algorithm */
    assert(SCIP_LPPAR_OBJLIM == 9);           /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit */
-   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit */
+   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit, greater than or equal 0 */
+   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit, positive */
    assert(SCIP_LPPAR_MARKOWITZ == 12);       /* Markowitz tolerance */
    assert(SCIP_LPPAR_ROWREPSWITCH == 13);    /* row representation switch */
    assert(SCIP_LPPAR_THREADS == 14);         /* number of threads used to solve the LP */
@@ -5031,7 +5031,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       /* 0 <= dval */
-      assert( dval >= 0.0 );
+      assert( dval > 0.0 );
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */

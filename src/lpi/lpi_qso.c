@@ -3606,7 +3606,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_LPTILIM:
       /* 0 <= dval */
-      assert( 0.0 <= dval );
+      assert( 0.0 < dval );
       QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:

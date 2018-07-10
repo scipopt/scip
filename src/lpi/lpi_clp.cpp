@@ -3797,8 +3797,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      assert( dval >= 0.0 );
-      /* no restrictions on dval (clp handles the case dval < 0 internally and sets param to -1.) */
+      assert( dval > 0.0 );
+      /* no restrictions on dval
+       * (clp handles the case dval < 0 internally and sets param to -1 meaning no time limit.) */
 
       lpi->clp->setMaximumSeconds(dval);
       break;
