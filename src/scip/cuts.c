@@ -343,7 +343,25 @@ SCIP_Bool removeZerosQuad(
       int v = cutinds[i];
       QUAD_ARRAY_LOAD(val, cutcoefs, v);
 
-      if( EPSZ(QUAD_TO_DBL(val), minval) )
+		SCIP_Real lb;
+		SCIP_Real ub;
+		SCIP_Bool isfix;
+		if( cutislocal )
+		{
+			lb = SCIPvarGetLbLocal(vars[v]);
+			ub = SCIPvarGetUbLocal(vars[v]);
+		}
+		else
+		{
+			lb = SCIPvarGetLbGlobal(vars[v]);
+			ub = SCIPvarGetUbGlobal(vars[v]);
+		}
+		if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisZero(scip, ub-lb) )
+			isfix = TRUE;
+		else
+			isfix = FALSE;
+
+      if( EPSZ(QUAD_TO_DBL(val), minval) || isfix )
       {
          if( REALABS(QUAD_TO_DBL(val)) > QUAD_EPSILON )
          {
