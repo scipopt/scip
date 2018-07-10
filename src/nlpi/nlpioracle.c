@@ -557,7 +557,7 @@ void updateVariableDegreesCons(
    int j;
 
    assert(oracle != NULL);
-   assert(oracle->vardegrees != NULL);
+   assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
    assert(cons != NULL);
 
    for( j = 0; j < cons->nlinidxs; ++j )

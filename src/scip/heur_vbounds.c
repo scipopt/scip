@@ -993,12 +993,7 @@ SCIP_RETCODE applyVbounds(
    if( skipobj2 != NULL )
       *skipobj2 = FALSE;
 
-   /* get variable data of original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   SCIPstatistic( nprevars = nvars; )
-
-   if( nvbvars < nvars * heurdata->minintfixingrate )
+   if( nvbvars < SCIPgetNVars(scip) * heurdata->minintfixingrate )
       return SCIP_OKAY;
 
    if( *result == SCIP_DIDNOTRUN )
@@ -1054,6 +1049,11 @@ SCIP_RETCODE applyVbounds(
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
+
+   /* get variable data of original problem */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIPstatistic( nprevars = nvars; )
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );

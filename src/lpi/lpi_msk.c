@@ -3978,15 +3978,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_OFF) );
-#endif
-
    SCIP_CALL( handle_singular(lpi, bind, MSK_initbasissolve(lpi->task, bind)) );
-
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
-#endif
 
    for (i = 0; i < nrows; i++ )
    {

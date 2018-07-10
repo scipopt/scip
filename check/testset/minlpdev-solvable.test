@@ -5,8 +5,10 @@ MINLP/instances/minlplib/osil/batchs151208m.osil.gz
 MINLP/instances/minlplib/osil/batchs201210m.osil.gz
 MINLP/instances/minlplib/osil/blend480.osil.gz
 MINLP/instances/minlplib/osil/blend718.osil.gz
+MINLP/instances/minlplib/osil/blend852.osil.gz
 MINLP/instances/minlplib/osil/carton7.osil.gz
 MINLP/instances/minlplib/osil/casctanks.osil.gz
+MINLP/instances/minlplib/osil/cecil_13.osil.gz
 MINLP/instances/minlplib/osil/chp_shorttermplan2a.osil.gz
 MINLP/instances/minlplib/osil/clay0205h.osil.gz
 MINLP/instances/minlplib/osil/clay0303h.osil.gz
@@ -48,6 +50,7 @@ MINLP/instances/minlplib/osil/harker.osil.gz
 MINLP/instances/minlplib/osil/hvb11.osil.gz
 MINLP/instances/minlplib/osil/kall_circles_c6a.osil.gz
 MINLP/instances/minlplib/osil/kall_circles_c8a.osil.gz
+MINLP/instances/minlplib/osil/kall_circlespolygons_c1p12.osil.gz
 MINLP/instances/minlplib/osil/kall_circlespolygons_c1p13.osil.gz
 MINLP/instances/minlplib/osil/kall_circlesrectangles_c1r12.osil.gz
 MINLP/instances/minlplib/osil/kall_circlesrectangles_c1r13.osil.gz
