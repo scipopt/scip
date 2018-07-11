@@ -51,6 +51,8 @@ Build system
 Fixed bugs
 ----------
 
+- fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
+
 Miscellaneous
 -------------
 
