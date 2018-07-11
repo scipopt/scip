@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,6 +26,7 @@
 
 #ifdef __cplusplus
 #define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 #endif
 
 #include <stdio.h>
@@ -107,9 +108,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                501 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
-#define SCIP_APIVERSION              27 /**< SCIP API version number */
+#define SCIP_VERSION                600 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_APIVERSION              33 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

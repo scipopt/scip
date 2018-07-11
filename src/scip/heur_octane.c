@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,10 +20,25 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <math.h>
+#include "blockmemshell/memory.h"
 #include "scip/heur_octane.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME             "octane"
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
@@ -864,7 +879,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             subspacevars[currentindex] = vars[i];
             fracspace[i] = currentindex;
             ++currentindex;
-
          }
          else
          {
@@ -901,7 +915,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
-
 
    for( i = f_max; i >= 0; --i )
    {
@@ -1113,7 +1126,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                break;
          }
       }
-
 
       if( !cons_viol )
       {

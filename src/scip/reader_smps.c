@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,23 +21,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
+#include "blockmemshell/memory.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
+#include "scip/reader_cor.h"
+#include "scip/reader_smps.h"
+#include "scip/reader_sto.h"
+#include "scip/reader_tim.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
-
-#include "scip/reader_smps.h"
 
 /*
  * The SMPS reader coordinates the reading of the cor, tim and sto files. The public reading methods from the cor, tim
  * and sto readers are called from the SMPS reader. So, the header files for the cor, tim and sto readers are required.
  */
-#include "scip/reader_cor.h"
-#include "scip/reader_tim.h"
-#include "scip/reader_sto.h"
 
 #define READER_NAME             "smpsreader"
 #define READER_DESC             "file reader for core problem of stochastic programs in the SMPS file format"
@@ -93,7 +99,6 @@ SCIP_RETCODE smpsinputCreate(
    (*smpsi)->buf     [0] = '\0';
    (*smpsi)->f0          = NULL;
    (*smpsi)->f1          = NULL;
-
 
    return SCIP_OKAY;
 }
@@ -256,8 +261,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
    else
       parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
 
-   strncpy(parent, filename, parentlen);
-   parent[parentlen] = '\0';
+   (void)SCIPstrncpy(parent, filename, (int)parentlen + 1);
 
    fp = SCIPfopen(filename, "r");
    if( fp == NULL )
@@ -389,7 +393,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
             {
                SCIPinfoMessage(scip, NULL, "deterministic equivalent problem ");
             }
-
 
             SCIPinfoMessage(scip, NULL,
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",

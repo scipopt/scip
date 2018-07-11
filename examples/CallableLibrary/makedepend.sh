@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts generates the dependences for the CallableLibrary example
+# This scripts generates the dependencies for the CallableLibrary example
 #
 
 OPTS=(opt dbg opt-gccold)

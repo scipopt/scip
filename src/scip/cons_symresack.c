@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -46,13 +46,27 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_orbisack.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_symresack.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "symresack"
@@ -1338,7 +1352,6 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -1648,7 +1661,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
       SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
-
 
       if ( infeasible )
       {
@@ -2105,10 +2117,10 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
  *
  * - Symresack constraints may get violated if the variables with a negative coefficient
  *   in the FD inequality are rounded down, we therefor call
- *   SCIPaddVarLocks(..., nlockspos, nlocksneg).
+ *   SCIPaddVarLocksType(..., nlockspos, nlocksneg).
  * - Symresack constraints may get violated if the variables with a positive coefficient
  *   in the FD inequality are rounded up, we therefor call
- *   SCIPaddVarLocks(..., nlocksneg, nlockspo ).
+ *   SCIPaddVarLocksType(..., nlocksneg, nlockspo ).
  */
 static
 SCIP_DECL_CONSLOCK(consLockSymresack)
@@ -2148,11 +2160,11 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 
       if ( perm[i] > i )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlockspos, nlocksneg) );
       }
       else
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i], locktype, nlocksneg, nlockspos) );
       }
    }
 
@@ -2167,7 +2179,6 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 static
 SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Bool* covered;

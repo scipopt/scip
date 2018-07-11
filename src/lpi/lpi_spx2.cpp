@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -74,6 +74,15 @@
 #undef SCIP_DEBUG
 #endif
 
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+ * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+ */
+#ifdef __GNUC__
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
 /* include SoPlex solver */
 #include "soplex.h"
 
@@ -91,7 +100,9 @@
 #error "This interface is not compatible with SoPlex versions prior to 2.0.0.2"
 #endif
 
+#if (SOPLEX_APIVERSION <= 5)
 #include "spxgithash.h"
+#endif
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -311,15 +322,15 @@ public:
    // @todo member variable?
    void setProbname(const char* probname)
    {
-      int len;
+      size_t len;
 
       assert(probname != NULL);
       if( _probname != NULL )
          spx_free(_probname);
-      len = (int)strlen(probname);
+
+      len = strlen(probname);
       spx_alloc(_probname, len + 1);
-      strncpy(_probname, probname, len); /*lint !e732*/
-      _probname[len] = '\0';
+      memcpy(_probname, probname, len + 1);
    }
 
    void setRep(SPxSolver::Representation p_rep)
@@ -366,12 +377,15 @@ public:
          return "UNKNOWN";
       case SPxSolver::OPTIMAL:
          return "OPTIMAL";
+#if SOPLEX_APIVERSION >= 3
+      case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+         return "OPTIMAL_UNSCALED_VIOLATIONS";
+#endif
       case SPxSolver::UNBOUNDED:
          return "UNBOUNDED";
       case SPxSolver::INFEASIBLE:
          return "INFEASIBLE";
       default:
-         /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
          return "UNKNOWN";
       }  /*lint !e788*/
    }
@@ -2366,11 +2380,13 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::REGULAR:
    case SPxSolver::UNKNOWN:
    case SPxSolver::OPTIMAL:
+#if SOPLEX_APIVERSION >= 3
+   case SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS:
+#endif
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
    default:
-      /* since API version 3 SoPlex might return the OPTIMAL_UNSCALED_VIOLATIONS */
       return SCIP_LPERROR;
    }  /*lint !e788*/
 }
@@ -2883,11 +2899,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return lpi->solved;
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetSolFeasibility()\n");
@@ -3077,7 +3102,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3089,7 +3120,10 @@ SCIP_Bool SCIPlpiIsStable(
 
    if( lpi->spx->status() == SPxSolver::ERROR || lpi->spx->status() == SPxSolver::SINGULAR )
       return FALSE;
-
+#if SOPLEX_APIVERSION >= 3
+   if( lpi->spx->status() == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS )
+      return FALSE;
+#endif
    /* only if we have a regular basis and the condition limit is set, we compute the condition number of the basis;
     * everything above the specified threshold is then counted as instable
     */
@@ -3108,7 +3142,6 @@ SCIP_Bool SCIPlpiIsStable(
       if( kappa > lpi->conditionlimit )
          return FALSE;
    }
-
    return TRUE;
 }
 
@@ -3156,7 +3189,7 @@ int SCIPlpiGetInternalStatus(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiIsTimelimExc()\n");
+   SCIPdebugMessage("calling SCIPlpiGetInternalStatus()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -3176,8 +3209,11 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    assert(lpi->spx != NULL);
    assert(success != NULL);
 
-   /* instable situations cannot be ignored */
+#if SOPLEX_APIVERSION >= 4
+   *success = lpi->spx->ignoreUnscaledViolations();
+#else
    *success = FALSE;
+#endif
 
    return SCIP_OKAY;
 }
@@ -3199,7 +3235,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */

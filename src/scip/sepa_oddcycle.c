@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,10 +33,32 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_oddcycle.h"
-#include "scip/pub_misc.h"
+#include "blockmemshell/memory.h"
 #include "dijkstra/dijkstra.h"
-
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include "scip/sepa_oddcycle.h"
+#include <string.h>
 
 #define SEPA_NAME              "oddcycle"
 #define SEPA_DESC              "odd cycle separator"
@@ -1255,7 +1277,6 @@ SCIP_RETCODE checkArraySizesHeur(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
-
 
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
@@ -2744,7 +2765,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-
    /* if memorylimit would be exceeded or any other limit is reached free all data and exit */
    if( memorylimit <= additional/1048576.0 || SCIPisStopped(scip) )
    {
@@ -2767,7 +2787,6 @@ SCIP_RETCODE checkArraySizesGLS(
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
-
 
    if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {

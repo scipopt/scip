@@ -34,18 +34,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include <scip/cons_linear.h>
-#include <scip/cons_orbitope.h>
-#include <scip/cons_setppc.h>
-#include <scip/cons_symresack.h>
-#include <scip/misc.h>
-#include <scip/prop_probing.h>
-#include <scip/presol_symbreak.h>
-#include <scip/presol_symmetry.h>
-#include <symmetry/type_symmetry.h>
-
+#include "blockmemshell/memory.h"
+#include "scip/cons_orbitope.h"
+#include "scip/cons_symresack.h"
+#include "scip/misc.h"
+#include "scip/presol_symbreak.h"
+#include "scip/presol_symmetry.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
 #include <string.h>
 
 /* presolver properties */
@@ -451,7 +457,6 @@ SCIP_RETCODE extendSubOrbitope(
                *infeasible = TRUE;
                break;
             }
-
          }
       }
    }
@@ -994,7 +999,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0,
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
             &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
             &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
 

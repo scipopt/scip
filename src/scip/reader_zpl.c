@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,18 +25,32 @@
 
 #ifdef WITH_ZIMPL
 
-#include <assert.h>
 #include <unistd.h>
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
+#include "nlpi/pub_expr.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_indicator.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include "scip/type_reader.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1355,8 +1369,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
        * the location of the ZIMPL file
        */
-      (void)strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
-      buffer[SCIP_MAXSTRLEN-1] = '\0';
+      (void)SCIPstrncpy(buffer, filename, SCIP_MAXSTRLEN);
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
          (void) SCIPsnprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1110,7 +1110,7 @@ SCIP_RETCODE SCIPlpiCreate(
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_THREADS, 1) );
 #endif
 
-#if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
+#ifdef SCIP_DISABLED_CODE /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif
@@ -2468,7 +2468,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* this fixes the strange behavior of CPLEX, that in case of the objective limit exceedance, it returns the
     * solution for the basis preceeding the one with exceeding objective limit
     * (using this "wrong" dual solution can cause column generation algorithms to fail to find an improving column)
@@ -2993,11 +2993,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return (lpi->solstat != -1);
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    int pfeas;
@@ -3207,7 +3216,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == CPX_STAT_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3355,7 +3370,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -4289,33 +4308,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
       break;
-#if 0
-   case SCIP_LPPAR_PRICING:
-      switch( getIntParam(lpi, CPX_PARAM_PPRIIND) )
-      {
-      case CPX_PPRIIND_FULL:
-         *ival = (int)SCIP_PRICING_FULL;
-         break;
-      case CPX_PPRIIND_PARTIAL:
-         *ival = (int)SCIP_PRICING_PARTIAL;
-         break;
-      case CPX_PPRIIND_STEEP:
-         *ival = (int)SCIP_PRICING_STEEP;
-         break;
-      case CPX_PPRIIND_STEEPQSTART:
-         *ival = (int)SCIP_PRICING_STEEPQSTART;
-         break;
-#if (CPX_VERSION >= 900)
-      case CPX_PPRIIND_DEVEX:
-         *ival = (int)SCIP_PRICING_DEVEX;
-         break;
-#endif
-      default:
-         *ival = (int)SCIP_PRICING_AUTO;
-         break;
-      }
-      break;
-#endif
    case SCIP_LPPAR_LPINFO:
       *ival = (getIntParam(lpi, CPX_PARAM_SCRIND) == CPX_ON);
       break;

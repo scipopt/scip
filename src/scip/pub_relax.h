@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -97,9 +97,39 @@ SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets the total number of times, the relaxation handler was called */
+/** gets the total number of times the relaxation handler was called */
 EXTERN
 SCIP_Longint SCIPrelaxGetNCalls(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler cut off a node */
+EXTERN
+SCIP_Longint SCIPrelaxGetNCutoffs(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler improved a node's lower bound */
+EXTERN
+SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler added constraints */
+EXTERN
+SCIP_Longint SCIPrelaxGetNAddedConss(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler reduced variable domains */
+EXTERN
+SCIP_Longint SCIPrelaxGetNReducedDomains(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   );
+
+/** gets the total number of times the relaxation handler separated cutting planes */
+EXTERN
+SCIP_Longint SCIPrelaxGetNSeparatedCuts(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 

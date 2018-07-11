@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,8 +31,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
- *
+/** @mainpage Overview
  *
  * @section WHATISSCIP What is SCIP?
  *
@@ -42,276 +41,49 @@
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
  * - is a framework for branch-and-cut-and-price.
  *
- * \SCIP is developed together with
- * <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
- * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
- * and has more than 500,000 lines of C code.
- *
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
- * @section GETTINGSTARTED Getting started
  *
- * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * - \ref CMAKE   "Installation information using CMake"
- * - \ref MAKE    "Installation information using Makefiles"
- * - \ref LICENSE "License"
+ * @section TABLEOFCONTENTS Structure of this manual
  *
- * - \ref SHELL       "Tutorial: the interactive shell"
- * - \ref FILEREADERS "Readable file formats"
- * - \ref START       "How to start a new project"
- * - \ref EXAMPLES    "Examples"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
- * - \ref LPI         "Available LP solver interfaces"
- * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
+ * This manual gives an accessible introduction to the functionality of the SCIP code in the following chapters
  *
- * @section FURTHERINFORMATION References
- *
- * - \ref PUBLICAPI "List of callable functions"
- * - \ref PARAMETERS "List of all SCIP parameters"
- *
- * - \ref DOC     "How to search the documentation for interface methods"
- * - \ref FAQ     "Frequently asked questions (FAQ)"
+ *  - @subpage GETTINGSTARTED      Installation and license information and an interactive shell tutorial
+ *  - @subpage EXAMPLES            Coding examples in C and C++ in the source code distribution
+ *  - @subpage APPLICATIONS        Extensions of SCIP for specific applications
+ *  - @subpage PARAMETERS          List of all SCIP parameters
+ *  - @subpage PROGRAMMING         Important programming concepts for working with(in) SCIP.
+ *  - @subpage HOWTOADD            Detailed guides for adding user plugins
+ *  - @subpage HOWTOUSESECTION     Detailed guides for advanced SCIP topics
+ *  - @subpage FAQ                 Frequently asked questions (FAQ)
+ *  - @subpage CHG                 Release notes and changelog
+ *  - @subpage AUTHORS             SCIP Authors
  *
  *
- * @section PROGRAMMING Programming with SCIP
+ * @section QUICKSTART Quickstart
  *
- * @subsection CODINGBASICS Coding basics for SCIP
+ *  Let's consider the following minimal example in LP format. A 4-variable problem with a single, general integer
+ *  variable and three linear constraints
  *
- *   - \ref CODE    "Coding style guidelines"
- *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
- *   - \ref MEMORY  "Using the memory functions of SCIP"
- *   - \ref DEBUG   "Debugging"
+ *  \verbinclude simple.lp
  *
- * @subsection HOWTOADD How to add ...
+ *  Saving this file as "simple.lp" allows to read it into SCIP and solve it.
  *
- *    Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
+ * ```
+ * scip -c "read simple.lp optimize quit"
+ * ```
+ * reads and optimizes this model in no time:
  *
- *   - \ref CONS    "Constraint handlers"
- *   - \ref PRICER  "Variable pricers"
- *   - \ref PRESOL  "Presolvers"
- *   - \ref SEPA    "Separators"
- *   - \ref PROP    "Propagators"
- *   - \ref BRANCH  "Branching rules"
- *   - \ref NODESEL "Node selectors"
- *   - \ref HEUR    "Primal heuristics"
- *      + \ref DIVINGHEUR "Diving heuristics"
- *   - \ref RELAX   "Relaxation handlers"
- *   - \ref READER  "File readers"
- *   - \ref DIALOG  "Dialogs"
- *   - \ref DISP    "Display columns"
- *   - \ref EVENT   "Event handler"
- *   - \ref NLPI    "Interface to NLP solvers"
- *   - \ref EXPRINT "Interfaces to expression interpreters"
- *   - \ref PARAM   "additional user parameters"
- *   - \ref TABLE   "Statistics tables"
+ * \verbinclude output.log
  *
- * @subsection HOWTOUSESECTION How to use ...
- *
- *   - \ref CONF    "Conflict analysis"
- *   - \ref TEST    "How to run automated tests with SCIP"
- *   - \ref COUNTER "How to use SCIP to count feasible solutions"
- *   - \ref REOPT   "How to use reoptimization in SCIP"
- *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
- *
- *
- * @section FURTHERINFO Further information
- *
- * @subsection CHG Changes between different versions of SCIP
- * - \ref CHANGELOG    "Change log"
- * - \ref RELEASENOTES "Release notes"
- * - \ref CHG11        "Interface changes between version 5.0 and 5.1"
- * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
- * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
- * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
- * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
- * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
- * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
- * - \ref CHG4         "Interface changes between version 1.2 and 2.0"
- * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
- * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
- * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
- *
- * @subsection AUTHORS SCIP Authors
- * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
- *
- * @version  5.0.1.4
+ * @version  6.0.0.2
  *
  * \image html scippy.png
- *
- */
-
-/** @page EXAMPLES Example projects
- *
- *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
- *  in the source code distribution.
- *
- *  @section BRANCHANDPRICE Branch-and-price
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref BINPACKING_MAIN "Binpacking"
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
- *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>
- *  </td>
- *  <td>
- *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
- *  programming algorithm.
- *  </td>
- *  </tr>
- *  </table>
- *
- *  @section BRANCHANDCUT Branch-and-cut
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref LOP_MAIN "Linear Ordering"
- *  </td>
- *  <td>
- *  An example for implementing a constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref TSP_MAIN "The TSP example"
- *  </td>
- *  <td>
- *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
- *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
- *  </td>
- *  </tr>
- *  </table>
- *
- *  @section CALLABLELIBRARY Callable library
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref CALLABLELIBRARY_MAIN "Callable Library Example"
- *  </td>
- *  <td>
- *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref MIPSOLVER_MAIN "MIP solver"
- *  </td>
- *  <td>
- *  A minimal implementation for using \SCIP included into another source code
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
- *  </td>
- *  <td>
- *  An example showing the use of \SCIP as callable library.
- *  </td>
- *  </tr>
- *  </table>
- *
- *
- *  @section OTHERPLUGINS Other plugins
- *
- *  <table>
- *  <tr>
- *  <td>
- *  \ref EVENTHDLR_MAIN "Event handler"
- *  </td>
- *  <td>
- *  A small example illustrating the use of an event handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref GMI_MAIN "Gomory mixed integer cut example"
- *  </td>
- *  <td>
- *  An example about Gomory mixed-integer cuts.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  \ref RELAXATOR_MAIN "Relaxator example"
- *  </td>
- *  <td>
- *  An example about using custom relaxators.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/** @page APPLICATIONS Application projects
- *
- *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
- *  in the source code distribution.
- *
- *  <table>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
- *  </td>
- *  <td>
- *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
- *  </td>
- *  <td>
- *  A solver for scheduling problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/STP"><b>Steiner Tree Problem</b></a>
- *  </td>
- *  <td>
- *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
- *  </td>
- *  <td>
- *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
- *  </td>
- *  </tr>
- *  </table>
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** @page LPI Available LP solver interfaces
+/** @page LPI Available implementations of the LP solver interface
  *
  * SCIP provides a range of different interfaces to LP solvers:
  *
@@ -320,10 +92,10 @@
  * `spx`    | SoPlex
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
- * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek (experimental)
+ * `msk`    | Mosek
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
@@ -334,8 +106,6 @@
  * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
  * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
  * that may not be supported.
- *
- * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
  */
 
@@ -379,6 +149,106 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page GETTINGSTARTED Getting started
+ *
+ * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
+ *
+ * - @subpage LICENSE "License"
+ * - @subpage INSTALL "Installation"
+ * - @subpage SHELL       "Tutorial: the interactive shell"
+ * - @subpage FILEREADERS "Readable file formats"
+ * - @subpage INTERFACES "Interfaces"
+ * - @subpage START       "How to start a new project"
+ * - @subpage DOC         "How to search the documentation for interface methods"
+ */
+
+/**@page INSTALL Installing SCIP
+ *
+ * This chapter is a detailed guide to the installation procedure of SCIP.
+ *
+ * SCIP lets you freely choose between its own, manually maintained Makefile system
+ * or the CMake cross platform build system generator. For new users, we strongly
+ * recommend to use CMake, if available on their targeted platform.
+ *
+ * Please note that there are differences between both systems, most notably, the generated
+ * library libscip will not be compatible between the versions. For more information, we
+ * refer to the INSTALL file of the SCIP source code distribution.
+ *
+ * - @subpage CMAKE   "Installation information using CMake (recommended for new users)"
+ * - @subpage MAKE    "Installation information using Makefiles"
+ * - @subpage LPI         "Available implementations of the LP solver interface"
+ * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
+ */
+
+/**@page PROGRAMMING Programming with SCIP
+ *
+ * - @subpage CODE    "Coding style guidelines"
+ * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
+ * - @subpage MEMORY  "Using the memory functions of SCIP"
+ * - @subpage DEBUG   "Debugging"
+ */
+/**@page HOWTOADD How to add ...
+ *
+ * Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
+ *
+ * - @subpage CONS    "Constraint handlers"
+ * - @subpage PRICER  "Variable pricers"
+ * - @subpage PRESOL  "Presolvers"
+ * - @subpage SEPA    "Separators"
+ * - @subpage PROP    "Propagators"
+ * - @subpage BRANCH  "Branching rules"
+ * - @subpage NODESEL "Node selectors"
+ * - @subpage HEUR    "Primal heuristics"
+ * - @subpage DIVINGHEUR "Diving heuristics"
+ * - @subpage RELAX   "Relaxation handlers"
+ * - @subpage READER  "File readers"
+ * - @subpage DIALOG  "Dialogs"
+ * - @subpage DISP    "Display columns"
+ * - @subpage EVENT   "Event handler"
+ * - @subpage NLPI    "Interface to NLP solvers"
+ * - @subpage EXPRINT "Interfaces to expression interpreters"
+ * - @subpage PARAM   "additional user parameters"
+ * - @subpage TABLE   "Statistics tables"
+ * - @subpage BENDER "Benders' decomposition"
+ *   + @subpage BENDERSCUT "Benders' decomposition cuts"
+ */
+/**@page HOWTOUSESECTION How to use ...
+ *
+ * - @subpage CONF    "Conflict analysis"
+ * - @subpage TEST    "How to run automated tests with SCIP"
+ * - @subpage COUNTER "How to use SCIP to count feasible solutions"
+ * - @subpage REOPT   "How to use reoptimization in SCIP"
+ * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage BENDDECF "How to use the Benders' decomposition framework"
+ */
+
+/**@page AUTHORS SCIP Authors
+ * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
+ *
+ */
+
+/**@page CHG Release notes and changes between different versions of SCIP
+ *
+ * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
+ * release notes:
+ *
+ * - \subpage RN60         "SCIP 6.0"
+ * - \subpage RN50         "SCIP 5.0"
+ * - \subpage RN40         "SCIP 4.0"
+ * - \subpage RN32         "SCIP 3.2"
+ * - \subpage RN31         "SCIP 3.1"
+ * - \subpage RN30         "SCIP 3.0"
+ * - \subpage RN21         "SCIP 2.1"
+ * - \subpage RN20         "SCIP 2.0"
+ * - \subpage RN12         "SCIP 1.2"
+ * - \subpage RN11         "SCIP 1.1"
+ * - \subpage RN10         "SCIP 1.0"
+ * - \subpage RN09         "SCIP 0.9"
+ * - \subpage RN08         "SCIP 0.8"
+ * - \subpage RN07         "SCIP 0.7"
+ *
+ */
 
 /**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
  *
@@ -588,6 +458,16 @@
  *    </td>
  *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
  * </tr>
+ * <tr>
+ *    <td>Mixed-integer semidefinite program (MISDP)</td>
+ *    <td>\f{align*}{
+ *         \text{inf} \quad \thinspace & b^T y \\
+ *         \text{s.t.} \quad & \sum_{j=1}^m A_j\, y_j - A_0 \succeq 0 \\
+ *         & y_j \in \mathbb{Z} && \forall\, j \in \mathcal{I}
+ *        \f}
+ *    </td>
+ *    <td colspan="3"> see the <a href="http://www.opt.tu-darmstadt.de/scipsdp/">SCIP-SDP web page</a></td>
+ * </tr>
  * </table>
  *
  *
@@ -599,30 +479,65 @@
  *
  * We follow the following coding style guidelines and recommend them for all developers.
  *
+ * @section CODESPACING Spacing:
+ *
  * - Indentation is 3 spaces. No tabs anywhere in the code.
- * - Always only one declaration in a line.
- * - Braces are on a new line and not indented.
+ * - Every opening parenthesis requires an additional indentation of 3 spaces.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleParenIndent}
+ *
  * - Spaces around all operators.
+ * - Spaces around the arguments inside an if/for/while-statement, as well as inside macros (e.g., SCIP_CALL).
  * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding brackets.
  * - No spaces between a function name and the parenthesis in both the definition and function calls.
- * - Use assert() to show preconditions for the parameters, invariants and postconditions.
+ * - Braces are on a new line and not indented.
+ * - Braces in if/for-statements should only be omitted if they enclose a single line.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleIfFor}
+ *
+ * - In function declarations, every parameter is on a new line. The name of the parameter starts at column 26,
+ *   the comment starts at column 46 (if column-count starts with 1).
+ * - Maximal line length is 120 characters.
+ * - Always only one declaration in a line.
+ * - Variable names should be all lower case.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
+ *
+ * - Blank lines are inserted where it improves readability.
+ * - Multiple blank lines are used to structure the code where single blank lines are insufficient,
+ *   e.g., between differrent sections of the code.
+ *
+ *   @refsnippet{src/scip/heur_xyz.c,SnippetCodeStyleBlanks}
+ *
+ * @section CODENAMING  Naming:
+ *
+ * - Use assert() to show preconditions for the parameters, invariants, and postconditions.
+ * - Make all functions that are not used outside the module 'static'.
+ * - Naming should start with a lower case letter.
+ *
+ *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleStaticAsserts}
+ *
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPisFeasEQ().
- * - Make all functions that are not used outside the module 'static'. Naming should start with a lower case letter.
- * - Variable names should be all lower case.
+ *
+ *   @refsnippet{src/scip/scip_numerics.h,SnippetCodeStyleNaming}
+ *
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
+ *
+ *   @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
+ *
+ * @section CODEDOC Documentation:
+ *
  * - Document functions, parameters, and variables in a doxygen conformed way.
+ * - Do not leave code in comments that has been commented out; put the code within defines,
+ *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Todos need double stars to be registered by doxygen.
+ * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
+ *   The longer description starts capitalized and consists of complete sentences.
+ *   If the documentation consists of multiple lines, the comment end must be on a new line.
  *
- * As an example, have a look at tree.c and see the examples below. We also provide settings for
- * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
- *
- *
- * @section CODEEXAMPLES Examples
- *
- * In this section we state a few examples illustrating the \SCIP code style.
- *
- * @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
+ *   @refsnippet{src/scip/scip_datastructures.h,SnippetCodeStyleComment}
  *
  *
  * @section XEMACS Customize (x)emacs
@@ -842,7 +757,7 @@
  * gives some hints on what to do if the \ref COMPILERPROBLEMS "compilation throws an error". We give some comments on
  * how to install \SCIP under \ref WINDOWS "WINDOWS" and show \ref RUN "how to start \SCIP".
  *
- * If you experience any problems during the installation, you will find help in the \ref INSTALL "INSTALL" file.
+ * If you experience any problems during the installation, you will find help in the INSTALL file.
  *
  * \SCIP contains a makefile system, which allows the individual setting of several parameters. A detailed list of parameter settings
  * obtained by <code>make help</code>. For instance, the following settings are supported:
@@ -959,7 +874,7 @@
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
- * - If the soft-link query script does not work on your machine, read step 2 in the \ref INSTALL "INSTALL" file for
+ * - If the soft-link query script does not work on your machine, read step 2 in the INSTALL file for
  * instructions on manually creating the soft-links.
  *
  * - If you get an error message of the type\n
@@ -1063,32 +978,56 @@
  * for these kinds of projects.
  * Below, you find some hints of how to start such a project.
  *
- * - The example should be chosen
- *   depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
+ * @section START_CHOICE Choose an example project
+ *
+ *  The example should be chosen depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
  *   <br>
- *   We suggest the use one of the following examples:
- *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
+ *   We suggest the use of one of the following examples:
+ *     - The \ref VRP_MAIN "Vehicle Routing Problem Example" is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
- *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
+ *     - The \ref BINPACKING_MAIN "Binpacking Example"
+ *       and the \ref APPLICATIONS_COLORING "Coloring application" are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The \ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The \ref LOP_MAIN LOP-example
+ *     - The \ref LOP_MAIN "LOP example"
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
- *     .
+ *
+ * More examples can be found in the \ref EXAMPLES "list of Examples".
+ *
  * - Copy one of the examples in the <code>examples</code> directory (in the \SCIP root
  *   directory). For instance, type
  *   \verbatim
- > cp -r examples/Binpacking/ ../SCIPProject/ ; cd ../SCIPProject
+ cp -r examples/Binpacking/ ../SCIPProject/ ; cd ../SCIPProject
      \endverbatim
  *   from the \SCIP root directory for copying the content of the <code>Binpacking</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the \SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
+ *
+ * @section START_CMAKE Building with CMake
+ *
+ * It is recommended for all new users to use the CMake build system configuration, if available on their platform.
+ *
+ * - Open the <code>CMakeLists</code> (some examples projects have a subdirectory "check" for testing) via
+ *    \verbatim
+ kate CMakeLists.txt & kate check/CMakeLists.txt # if check/CMakeLists.txt is available
+     \endverbatim
+ *    and replace all instances of the copied project's name (e.g. <code>binpacking</code>) with your project name.
+ * - Create a new subdirectory, jump to the new directory and use cmake specifying your \SCIP directory. For instance, type
+ *    \verbatim
+ mkdir Release ; cd Release ; cmake .. -DSCIP_DIR=../scip/Release
+     \endverbatim
+ * and compile using the <code>make</code> command. For the CMake equivalents of all the flags that can be used in \SCIP, see \ref CMAKE.
+ *
+ *
+ * @section START_MAKE Building with the Makefile system
+ *
+ * If CMake should be unavailable on your targeted platform, try the classic Makefile system of SCIP.
+ *
  * - Open the <code>Makefile</code>  via
  *    \verbatim
- > kate Makefile
+ kate Makefile
      \endverbatim
  *    and edit the following variables at the top to have a compilable code:
  *
@@ -1104,6 +1043,258 @@
  *
  *
  */
+
+/**@page EXAMPLES Example projects
+ *
+ *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
+ *  in the source code distribution.
+ *
+ *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
+ *  - @subpage BRANCHANDPRICE Branch-and-price
+ *  - @subpage BENDERSDECOMP Benders' decomposition
+ *  - @subpage BRANCHANDCUT Branch-and-cut
+ *  - @subpage CALLABLELIBRARY Callable library
+ */
+
+/**@page BRANCHANDPRICE Branch-and-price
+ *
+ * <table>
+ *  <tr>
+ *  <td>
+ *  @subpage BINPACKING_MAIN "Binpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
+ *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage VRP_MAIN Vehicle Routing
+ *  </td>
+ *  <td>
+ *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
+ *  programming algorithm.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
+/**@page BENDERSDECOMP Benders' decomposition
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
+/**@page BRANCHANDCUT Branch-and-cut
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage LOP_MAIN "Linear Ordering"
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage TSP_MAIN "The TSP example"
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
+/**@page CALLABLELIBRARY Callable library
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage CALLABLELIBRARY_MAIN "Callable Library Example"
+ *  </td>
+ *  <td>
+ *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage MIPSOLVER_MAIN "MIP solver"
+ *  </td>
+ *  <td>
+ *  A minimal implementation for using \SCIP included into another source code
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
+ *  </td>
+ *  <td>
+ *  An example showing the use of \SCIP as callable library.
+ *  </td>
+ *  </tr>
+ *  </table>
+ */
+
+ /**@page OTHERPLUGINS Extending SCIP by custom plugins
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage EVENTHDLR_MAIN "Event handler"
+ *  </td>
+ *  <td>
+ *  A small example illustrating the use of an event handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage GMI_MAIN "Gomory mixed integer cut example"
+ *  </td>
+ *  <td>
+ *  An example about Gomory mixed-integer cuts.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage RELAXATOR_MAIN "Relaxator example"
+ *  </td>
+ *  <td>
+ *  An example about using custom relaxators.
+ *  </td>
+ *  </tr>
+ *  </table>
+ */
+
+/** @page APPLICATIONS_COLORING Coloring
+ *
+ * An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/Coloring"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_CYCLECLUSTERING Cycle Clustering
+ *
+ * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_MINIISC MinIISC
+ *
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *
+ * The documentation of this application can be accessed
+ * <a href="http://scip.zib.de/doc/applications/MinIISC"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_POLYSCIP PolySCIP
+ *
+ *  A solver for multi-objective optimization problems.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_SCHEDULER Scheduler
+ *
+ *  A solver for scheduling problems.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS_STP Steiner Tree Problem
+ *
+*  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
+ *
+ * The documentation of this application can be accessed
+ *  <a href="http://scip.zib.de/doc/applications/STP"><b>here</b></a>.
+ */
+
+/** @page APPLICATIONS Application projects
+ *
+ *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
+ *  in the source code distribution.
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_COLORING
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_CYCLECLUSTERING
+ *  </td>
+ *  <td>
+ *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_MINIISC
+ *  </td>
+ *  <td>
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_POLYSCIP
+ *  </td>
+ *  <td>
+ *  A solver for multi-objective optimization problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage RINGPACKING_MAIN "Ringpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the Ringpacking Problem. It includes a customized reader,
+ *  (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_SCHEDULER
+ *  </td>
+ *  <td>
+ *  A solver for scheduling problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage APPLICATIONS_STP
+ *  </td>
+ *  <td>
+ *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
 
 /**@page SHELL Tutorial: the interactive shell
  *
@@ -2581,12 +2772,12 @@
 
 /**@page SEPA How to add separators
  *
- * Separators are used to generate general purpose cutting planes.
- * Constraint based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and
+ * Separators are used to generate cutting planes that strengthen the LP relaxation of the problem formulation, but are
+ * not required for a completeness and correctness of the model.
+ * In contrast, constraint-based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and
  * CONSSEPASOL callback methods of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are
  * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
- * a single constraint class. In contrast, general purpose cuts do not require or exploit any knowledge about the
- * underlying problem structure but use only the current LP relaxation and the integrality conditions. See also
+ * a single constraint class. See also
  * "When should I implement a constraint handler, when should I implement a separator?" on \ref FAQ.
  * \n
  * A complete list of all separators contained in this release can be found \ref SEPARATORS "here".
@@ -5627,6 +5818,593 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page BENDER How to add custom Benders' decomposition implementations
+ *
+ * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
+ * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
+ * decomposition. Such problems are given by
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *         & \\
+ *         & \displaystyle & Tx & + & Hy & = & h \\
+ *         & \\
+ *         & & x & & & \in & \mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & & & & y & \in & \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * The variables \f$x\f$ and \f$y\f$ are described as the first and second stage variables respectively. In the
+ * classical use of Benders' decomposition, it is a requirement that the all second stage variables are continuous.
+ * Extensions to the classical Benders' decomposition approach have permitted the use of more general second stage
+ * problems.
+ *
+ * The application of Benders' decomposition to the above problem results in a subproblem, given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *         & \\
+ *         & & y \in \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * where \f$\bar{x}\f$ is a solution vector of the first stage variables. As such, the subproblem is a problem only in
+ * \f$y\f$. The dual solution to the subproblem, either an extreme point or extreme ray, is used to generate cuts that
+ * are added to the master problem. Let \f$\lambda\f$ be the vector of dual variables associated with the set of
+ * constraints from the subproblem. If, for a given \f$\bar{x}\f$, the subproblem is infeasible, then \f$\lambda\f$
+ * corresponds to a dual ray and is used to produce the cut
+ *
+ * \f[
+ *    0 \geq \lambda(h - Tx)
+ * \f]
+ *
+ * which eliminates \f$\bar{x}\f$ from the master problem. If, for a given \f$\bar{x}\f$, the subproblem is feasible,
+ * then \f$\lambda\f$ corresponds to a dual extreme point and is used to produce the cut
+ *
+ * \f[
+ *    \varphi \geq \lambda(h - Tx)
+ * \f]
+ *
+ * where \f$\varphi\f$ is an auxiliary variable added to the master problem as an underestimator of the optimal
+ * subproblem objective function value.
+ *
+ * Given \f$\Omega^{p}\f$ and \f$\Omega^{r}\f$ as the sets of dual extreme points and rays of the subproblem,
+ * respectively, the Benders' decomposition master problem is given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & c^{T}x + \varphi \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax = b \\
+ *         & \\
+ *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
+ *         & \\
+ *         & \displaystyle & 0 \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r} \\
+ *         & \\
+ *         & & x \in \mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & & \varphi \in \mathbb{R} \\
+ *  \end{array}
+ * \f]
+ *
+ * The Benders' decomposition framework of SCIP allows the user to provide a custom implementation of many aspects of
+ * the Benders' decomposition algorithm. It is possible to implement multiple Benders' decompositions that work in
+ * conjunction with each other. Such a situation is where you may have different formulations of the Benders'
+ * decomposition subproblem.
+ *
+ * The current list of all Benders' decomposition implementations available in this release can be found \ref BENDERS
+ * "here".
+ *
+ * We now explain how users can add their own Benders' decomposition implementations.
+ * Take the default Benders' decomposition implementation (src/scip/benders_default.c) as an example.  Same as all other
+ * default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjBenders wrapper base
+ * class and implement the scip_...() virtual methods instead of the SCIP_DECL_BENDERS... callback methods.
+ *
+ * Additional documentation for the callback methods of a Benders' decomposition implementation, in particular for the
+ * input parameters, can be found in the file type_benders.h.
+ *
+ * Here is what you have to do to implement a custom Benders' decomposition:
+ * -# Copy the template files src/scip/benders_xyz.c and src/scip/benders_xyz.h into files "benders_mybenders.c" and
+ *  "benders_mybenders.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeBendersMybenders() in order to include the Benders' decomposition into your SCIP instance, e.g., in
+ *  the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
+ * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
+ * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
+ * -# Implement the interface methods (see \ref BENDERS_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref BENDERS_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref BENDERS_ADDITIONALCALLBACKS).  This is optional.
+ *
+ *
+ * @section BENDERS_PROPERTIES Properties of a Benders' decomposition
+ *
+ * At the top of the new file "benders_mybenders.c", you can find the Benders' decomposition properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the Benders' decomposition properties by calling the constructor
+ * of the abstract base class scip::ObjBenders from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par BENDERS_NAME: the name of the Benders' decomposition.
+ * This name is used in the interactive shell to address the Benders' decomposition.
+ * Additionally, if you are searching for a Benders' decomposition with SCIPfindBenders(), this name is looked up.
+ * Names have to be unique: no two Benders' decompositions may have the same name.
+ *
+ * \par BENDERS_DESC: the description of the Benders' decomposition.
+ * This string is printed as a description of the Benders' decomposition in the interactive shell.
+ *
+ * \par BENDERS_PRIORITY: the priority of the Benders' decomposition.
+ * During the enforcement and checking of solutions in src/scip/cons_benders.c and src/scip/cons_benderslp.c, every
+ * active Benders' decompositions are called. The execution method of the Benders' decomposition calls each of the
+ * subproblems and generates cuts from their solutions.  So the active Benders' decompositions are called in order of
+ * priority until a cut is generated or feasibility is proven.
+ * \n
+ * The priority of the Benders' decomposition should be set according to the difficulty of solving the subproblems and
+ * the generation of cuts. However, it is possible to prioritise the Benders' decompositions with respect to the
+ * strength of the subproblem formulation and the resulting cuts.
+ *
+ * \par BENDERS_CUTLP: should Benders' decomposition cuts be generated during the enforcement of LP solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to idicate whether the
+ * enforcement of LP solutions should involve solving the Benders' decomposition subproblems. This should be set to TRUE
+ * to have an exact solution algorithm. In the presence of multiple Benders' decomposition, it may be desired to enforce
+ * the LP solutions for only a subset of those implemented.
+ *
+ * \par BENDERS_CUTRELAX: should Benders' decomposition cuts be generated during the enforcement of relaxation solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to idicate whether the
+ * enforcement of relaxation solutions should involve solving the Benders' decomposition subproblems. This should be
+ * set to TRUE to have an exact solution algorithm. In the presence of multiple Benders' decomposition, it may be desired
+ * to enforce the relaxation solutions for only a subset of those implemented. This parameter will only take effect if
+ * external relaxation have been implemented.
+ *
+ * \par BENDERS_CUTPSEUDO: should Benders' decomposition subproblems be solved during the enforcement of pseudo solutions.
+ * This is a flag that is used by src/scip/cons_benders.c and src/scip/cons_benderslp.c to indicate whether the
+ * enforcement of pseudo solutions should involve solving the Benders' decomposition subproblems. This should be set to
+ * TRUE, since not enforcing pseudo solutions could result in an error or suboptimal result. During the enforcement of
+ * pseudo solutions, no cuts are generated. Only a flag to indicate whether the solution is feasible or if the LP should
+ * be solved again is returned.
+ *
+ * \par BENDERS_SHAREAUXVARS: should this Benders' decomposition use the auxiliary variables from the highest priority
+ * Benders' decomposition.
+ * This parameter only takes effect if multiple Benders' decompositions are implemented. Consider the case that two Benders'
+ * decompositions are implemented with different formulations of the subproblem. Since the subproblems in each of the
+ * decomposition will have the same optimal solution, then it is useful to only have a single auxiliary variable for the
+ * two different subproblems. This means that when an optimality cut is generated in the lower priority Benders'
+ * decomposition, the auxiliary variable from the highest priority Benders' decomposition will be added to the right
+ * hand side.
+ *
+ * @section BENDERS_DATA Benders' decomposition Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_BendersData".
+ * In this data structure, you can store the data of your Benders' decomposition. For example, you should store the adjustable
+ * parameters of the Benders' decomposition in this data structure. In a Benders' decomposition, user parameters for the
+ * number of subproblems and an array to store the subproblem SCIP instances could be useful.
+ * \n
+ * Defining Benders' decomposition data is optional. You can leave the struct empty.
+ *
+ * @section BENDERS_INTERFACE Interface Methods
+ *
+ * At the bottom of "benders_mybenders.c", you can find the interface method SCIPincludeBendersMybenders(),
+ * which also appears in "benders_mybenders.h"
+ * SCIPincludeBendersMybenders() is called by the user, if (s)he wants to include the Benders' decomposition,
+ * i.e., if (s)he wants to use the Benders' decomposition in his/her application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the Benders' decomposition. For this, you can either call SCIPincludeBenders(),
+ * or SCIPincludeBendersBasic() since SCIP version 3.0. In the latter variant, \ref BENDERS_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetBendersCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for Benders' decompositions in order to compile.
+ *
+ * If you are using Benders' decomposition data, you have to allocate the memory
+ * for the data at this point. You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
+ * \endcode
+ * You also have to initialize the fields in "struct SCIP_BendersData" afterwards. For freeing the
+ * Benders' decomposition data, see \ref BENDERSFREE.
+ *
+ * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
+ * the method SCIPincludeBendersDefault() in src/scip/benders_default.c for an example.
+ *
+ * It is advised to disable presolving for the Benders' decomposition master problem by calling SCIPsetPresolving() with
+ * the parameter SCIP_PARAMSETTING_OFF. Presolving should be disabled because reductions on the master problem could be
+ * invalid since constraints have been transferred to the subproblems. It is not necessary to disable all presolving,
+ * but care must be taken when it is used for the Benders' decomposition master problem.
+ *
+ * The Benders' decomposition constraint handler, see src/scip/cons_benders.c, includes a presolver for tightening the
+ * bound on the auxiliary variables. This presolver can be enabled with by setting "presolving/maxround" to 1 and
+ * "constraints/benders/maxprerounds" to 1. This presolver solves the Benders' decomposition subproblems without fixing
+ * the master problem variables to find a lower bound for the auxiliary variable.
+ *
+ *
+ * @section BENDERS_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the Benders' decomposition itself to SCIP using SCIPincludeBenders() or SCIPincludeBendersBasic(),
+ * see @ref BENDERS_INTERFACE.
+ *
+ * Benders' decomposition plugins have two callbacks, @ref BENDERSGETVAR and @ref BENDERSCREATESUB that must be implemented.
+ *
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in type_benders.h.
+ *
+ * @subsection BENDERSGETVAR
+ *
+ * The BENDERSGETVAR callback provides a mapping between the master problem variables and their corresponding subproblem
+ * variables, and vice versa. The parameters of this function include the variable for which the mapped variable is
+ * desired and the problem number for the mapped variable. When requesting a subproblem variable for a given master
+ * problem variable, the master variable is input with the appropriate subproblem index. If a master problem variable is
+ * requested for a given subproblem variable, then the subproblem variable is input with the subproblem index given as
+ * -1.
+ *
+ * An example of how to implement the mapping between the master and subproblem variables is shown by
+ *
+ * @refsnippet{src/scip/benders_default.c,SnippetBendersGetvarDefault}
+ *
+ * In the above code snippet, the hashmaps providing the mapping between the master and subproblem variables are
+ * constructed in the <code>SCIP_STAGE_INIT</code> stage (see \ref BENDERSINIT).
+ *
+ * The requested variable is returned via the mappedvar parameter. There may not exist a corresponding master
+ * (subproblem) variable for every input subproblem (master) variable. In such cases were no corresponding variable
+ * exists, mappedvar must be returned as NULL.
+ *
+ * The mapped variables are retrieved by calling SCIPgetBendersMasterVar() and SCIPgetBendersSubproblemVar().
+ *
+ * The variable mapping must be created before <code>SCIP_STAGE_PRESOLVE</code> stage. This is because the variable
+ * mapping is required for checking solutions found by heuristics during presolving.
+ *
+ * @subsection BENDERSCREATESUB
+ *
+ * The BENDERSCREATESUB callback is executed during the <code>SCIP_STAGE_INIT</code> stage. In this function, the
+ * user must register the SCIP instances for each subproblem. The BENDERSCREATESUB callback is executed once for each
+ * subproblem. The user registers a subproblem by calling SCIPbendersAddSubproblem().
+ *
+ * It is possible to build the SCIP instance for the subproblem during the execution of this callback. However, it may
+ * be more convenient to build the subproblem instances during the problem creation stage of the master problem and
+ * store the subproblem SCIP instances in SCIP_BendersData. This approach is used in src/scip/benders_default.c.
+ *
+ * @section BENDERS_ADDITIONALCALLBACKS Additional Callback Methods of a Benders' decomposition implementation
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeBenders() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeBendersBasic(), see also @ref BENDERS_INTERFACE.
+ *
+ * @subsection BENDERSFREE
+ *
+ * If you are using Benders' decomposition data (see \ref BENDERS_DATA and \ref BENDERS_INTERFACE), you have to
+ * implement this method in order to free the Benders' decomposition data. This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/benders_default.c,SnippetBendersFreeDefault}
+ *
+ * If you have allocated memory for fields in your Benders' decomposition data, remember to free this memory
+ * before freeing the Benders' decomposition data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection BENDERSCOPY
+ *
+ * The BENDERSCOPY callback is executed when a SCIP instance is copied, e.g. to
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified
+ * separator for all copied SCIP instances. This may deteriorate the performance
+ * of primal heuristics using sub-SCIPs.
+ *
+ * If a user wishes to employ the Large Neighbourhood Benders' Search, it is necessary for the BENDERSCOPY callback to
+ * be implemented. This is required because the sub-SCIP instances of large neighbourhood search heuristics can only
+ * access the implemented Benders' decomposition if it is copied via the BENDERSCOPY callback.
+ *
+ * @subsection BENDERSINIT
+ *
+ * The BENDERSINIT callback is executed after the problem is transformed.
+ * The Benders' decomposition implementation may, e.g., use this call to initialize its Benders' decomposition data. In
+ * src/scip/benders_default.c BENDERSINIT is used to create the mapping between the master and subproblem variables.
+ * The difference between the original and the transformed problem is explained in
+ * "What is this thing with the original and the transformed problem about?" on \ref FAQ.
+ *
+ * @subsection BENDERSEXIT
+ *
+ * The BENDERSEXIT callback is executed before the transformed problem is freed.
+ * In this method, the Benders' decomposition implementation should free all resources that have been allocated for
+ * the solving process in BENDERSINIT.
+ *
+ * @subsection BENDERSINITPRE
+ *
+ * The BENDERSINITPRE callback is executed before the preprocessing is started, even if presolving is turned off.
+ * The Benders' decomposition may use this call to initialize its presolving data before the presolving process begins.
+ *
+ * @subsection BENDERSEXITPRE
+ *
+ * The BENDERSEXITPRE callback is executed after the preprocessing has been finished, even if presolving is turned off.
+ * The Benders' decomposition implementation may use this call, e.g., to clean up its presolving data.
+ * Besides clean up, no time consuming operations should be done.
+ *
+ * @subsection BENDERSINITSOL
+ *
+ * The BENDERSINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The Benders' decomposition implementation may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection BENDERSEXITSOL
+ *
+ * The BENDERSEXITSOL callback is executed before the branch-and-bound process is freed. The Benders' decomposition
+ * implementation should use this call to clean up its branch-and-bound data.
+ *
+ * @subsection BENDERSPRESUBSOLVE
+ *
+ * The BENDERSPRESUBSOLVE callback is provided to give the user an opportunity in each iteration to perform any setup
+ * operations prior to solving the subproblems. This callback also allows the user to skip the subproblem solve for the
+ * current iteration. In this case, the user must set the result parameter appropriately
+ *  - the subproblem was not solved in this iteration. Other decompositions will be checked (SCIP_DIDNOTRUN).
+ *  - a constraint has been added to the master problem. No other decompositions will be checked (SCIP_CONSADDED).
+ *  - a cut has been added to the master problem. No other decompositions will be checked (SCIP_SEPARATED).
+ *  - feasibility of the solution is reported to SCIP. Other decompositions will be checked (SCIP_FEASIBLE).
+ *  - infeasibility of the solution is reported to SCIP. No other decompositions will be checked (SCIP_INFEASIBLE).
+ *
+ * @subsection BENDERSSOLVESUBCONVEX
+ *
+ * Two different subproblem solving functions are provide in the Benders' decomposition framework, BENDERSSOLVESUBCONVEX
+ * and BENDERSSOLVESUB. These two solving functions are used in the two solving loops of the Benders' decomposition
+ * framework. The first solving loop solves convex subproblems and convex relaxations of CIPs. The BENDERSSOLVESUBCONVEX
+ * callback is executed only during the FIRST solving loop. Benders' cut generating methods suitable for convex
+ * subproblems are executed during this solving loop. If a cut is found, then the second solve loop is not executed. If
+ * your decomposition does not have any convex subproblems, then it is not necessary to implement the
+ * BENDERSSOLVESUBCONVEX callback. However, it may be computationally beneficial to solve the convex relaxation of CIP
+ * subproblems, such as the LP relaxation of a MIP subproblem.
+ *
+ * The second solve loop expects that the CIP subproblems are solved to optimality.
+ *
+ * If you implement the BENDERSSOLVESUBCONVEX callback, it is necessary to implement the BENDERSFREESUB callback.
+ *
+ * The objective function value after the subproblem solve and the result must be returned. The permissible results
+ * are:
+ *  - the subproblem was not solved in this iteration (SCIP_DIDNOTRUN)
+ *  - the subproblem is solved and is feasible (SCIP_FEASIBLE)
+ *  - the subproblem is solved and is infeasible (SCIP_INFEASIBLE)
+ *  - the subproblem is solved and is unbounded (SCIP_UNBOUNDED)
+ *
+ * @subsection BENDERSSOLVESUB
+ *
+ * The BENDERSSOLVESUB is executed only during the SECOND solve loop. This callback function is used to solve CIP
+ * subproblems. If your decomposition does not have any CIP subproblems, then it is not necessary to implement the
+ * BENDERSSOLVESUB callback.
+ *
+ * If you implement the BENDERSSOLVESUB callback, it is necessary to implement the BENDERSFREESUB callback.
+ *
+ * The objective function value after the subproblem solve and the result must be returned. The permissible results
+ * are:
+ *  - the subproblem was not solved in this iteration (SCIP_DIDNOTRUN)
+ *  - the subproblem is solved and is feasible (SCIP_FEASIBLE)
+ *  - the subproblem is solved and is infeasible (SCIP_INFEASIBLE)
+ *  - the subproblem is solved and is unbounded (SCIP_UNBOUNDED)
+ *
+ * @subsection BENDERSPOSTSOLVE
+ *
+ * The BENDERSPOSTSOLVE callback is executed after the subproblems have been solved and any required cuts have been
+ * generated, but before the subproblems are freed. This callback provides the user an opportunity to interact the
+ * subproblems at a global level. For example, the user is able to construct a solution to the original problem by
+ * combining the solutions from the master problem and all subproblems.
+ *
+ * Additionally, the user is able to merge subproblems into the master problem during the execution of this callback.
+ * The merging of subproblems into the master problem could be desired if it is too time consuming to satisfy the
+ * feasibility of a subproblem or the appropriate cutting methods are not available for the provided subproblem. A list
+ * of indicies of subproblems suitable for merging are given in the mergecands array. The first npriomergecands are the
+ * merge candidates that must be merged into the master problem. If they are not, then the solution process will
+ * terminate with an error. These merge candidates arise if a cut could not be generated due to numerical difficulties.
+ * The remaining nmergecands - npriomergecands are subproblems that could be merged into the master problem if desired
+ * by the user.
+ *
+ * @subsection BENDERSFREESUB
+ *
+ * The BENDERSFREESUB callback is executed to clean up the subproblems after the solving process and prepare them for
+ * the next iteration. Typically, SCIPfreeTransform() is called for each subproblem to free the transformed problem.
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page BENDERSCUT How to add custom Benders' decomposition cut generation methods
+ *
+ * The Benders' decomposition framework of SCIP allows the user to provide a custom implementation of cut generation
+ * methods. The Benders' decomposition cut methods are linked to the Benders' decomposition implementations, not the
+ * master problem SCIP instance. As such, you are able to have different Benders' decomposition cut methods for each
+ * included Benders' decomposition.
+ * The current list of all Benders' decomposition cut generation methods available in this release can be found
+ * \ref BENDERSCUTS "here".
+ *
+ * We now explain how users can add their own Benders' decomposition cut methods.  Take the default Benders'
+ * decomposition cut method (src/scip/benderscut_opt.c) as an example. This Benders' decomposition cut method generates
+ * a classical optimality cut from the optimal dual solution to the convex relaxation of the Benders' decomposition
+ * subproblem. Same as all other default plugins, it is written in C. C++ users can easily adapt the code by using the
+ * scip::ObjBenderscut wrapper base class and implement the scip_...() virtual methods instead of the
+ * SCIP_DECL_BENDERSCUT...  callback methods.
+ *
+ * Additional documentation for the callback methods of a Benders' decomposition cut methods, in particular for the
+ * input parameters, can be found in the file type_benderscut.h.
+ *
+ * Here is what you have to do to implement a custom Benders' decomposition cut method:
+ * -# Copy the template files src/scip/benderscut_xyz.c and src/scip/benderscut_xyz.h into files "benderscut_mybenderscut.c" and
+ *  "benderscut_mybenderscut.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeBenderscutMybenderscut() in order to include the Benders' decomposition cut method into your SCIP
+ *  instance, e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
+ * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
+ * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
+ * -# Implement the interface methods (see \ref BENDERSCUT_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref BENDERSCUT_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref BENDERSCUT_ADDITIONALCALLBACKS).  This is optional.
+ *
+ *
+ * @section BENDERSCUT_PROPERTIES Properties of a Benders' decomposition
+ *
+ * At the top of the new file "benderscut_mybenderscut.c", you can find the Benders' decomposition cut methods
+ * properties. These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the Benders' decomposition properties by calling the constructor
+ * of the abstract base class scip::ObjBenderscut from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par BENDERSCUT_NAME: the name of the Benders' decomposition cut method.
+ * This name is used in the interactive shell to address the Benders' decomposition cut method.
+ * Additionally, if you are searching for a Benders' decomposition cut method with SCIPfindBenderscut(), this name is
+ * looked up. Names have to be unique: no two Benders' decomposition cut methods linked to the same Benders'
+ * decomposition may have the same name.
+ *
+ * \par BENDERSCUT_DESC: the description of the Benders' decomposition cut method.
+ * This string is printed as a description of the Benders' decomposition cut method in the interactive shell.
+ *
+ * \par BENDERSCUT_PRIORITY: the priority of the Benders' decomposition cut method.
+ * In each of the Benders' decomposition subproblem solving loops, the included Benders' decomposition cut methods are
+ * called in order of priority. The priority is important because once a cut is generated for a subproblem, no other
+ * cuts are generated for that subproblem for that solving loop.
+ * \n
+ * The priority of the Benders' decomposition should be set according to the order in which the cut should be generated.
+ * For example, the priority of the included cuts attempt to generation feasibility cuts (src/scip/benderscut_feas.c
+ * and src/scip/benderscut_nogood.c) prior to attempting to generate optimality cuts.
+ *
+ * \par BENDERSCUT_LPCUT: Can this cut be applied to convex subproblems and convex relaxations of CIP subproblems?
+ * Since the Benders' decomposition framework executes two different solving loops, one for convex subproblems and the
+ * other for CIP subproblems, the Benders' decomposition cut methods must be partitioned by their suitability for each
+ * subproblem type. If BENDERSCUT_LPCUT is set to TRUE, then this cut is only applied to convex subproblems and convex
+ * relaxations of CIP subproblems.
+ *
+ * @section BENDERSCUT_DATA Benders' decomposition Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_BenderscutData".
+ * In this data structure, you can store the data of your Benders' decomposition. For example, you should store the adjustable
+ * parameters of the Benders' decomposition in this data structure. In a Benders' decomposition, user parameters for the
+ * number of subproblems and an array to store the subproblem SCIP instances could be useful.
+ * \n
+ * Defining Benders' decomposition data is optional. You can leave the struct empty.
+ *
+ * @section BENDERSCUT_INTERFACE Interface Methods
+ *
+ * At the bottom of "benderscut_mybenderscut.c", you can find the interface method SCIPincludeBenderscutMybenderscut(),
+ * which also appears in "benderscut_mybenderscut.h"
+ * SCIPincludeBenderscutMybenderscut() is called by the user, if (s)he wants to include the Benders' decomposition,
+ * i.e., if (s)he wants to use the Benders' decomposition in his/her application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the Benders' decomposition. For this, you can either call SCIPincludeBenderscut(),
+ * or SCIPincludeBenderscutBasic() since SCIP version 3.0. In the latter variant, \ref BENDERSCUT_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetBenderscutCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for Benders' decompositions in order to compile.
+ *
+ * If you are using Benders' decomposition cut data, you have to allocate the memory
+ * for the data at this point. You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
+ * \endcode
+ * You also have to initialize the fields in "struct SCIP_BenderscutData" afterwards. For freeing the
+ * Benders' decomposition cut data, see \ref BENDERSCUTFREE.
+ *
+ * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
+ * the method SCIPincludeBenderscutOpt() in src/scip/benderscut_opt.c for an example.
+ *
+ *
+ * @section BENDERSCUT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition cut method
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the Benders' decomposition itself to SCIP using SCIPincludeBenderscut() or SCIPincludeBenderscutBasic(),
+ * see @ref BENDERSCUT_INTERFACE.
+ *
+ * Benders' decomposition cut methods only one callback, @ref BENDERSCUTEXEC, that must be implemented.
+ *
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in type_benderscut.h.
+ *
+ * @subsection BENDERSCUTEXEC
+ *
+ * The BENDERSCUTEXEC callback is called during the cut generation process within the Benders' decomposition subproblem
+ * solving loop. This method must generate a cut for the given subproblem if the associated subsystem is not optimal
+ * with respect to the checked master problem solution.
+ *
+ * When generating cuts, it is possible to store these within the SCIP_BendersData of the associated Benders'
+ * decomposition. This is achieved by calling SCIPstoreBenderscutCons() (SCIPstoreBenderscutCut() if the Benders'
+ * decomposition cut is added as a cutting plane instead as a constraint). The storing of cuts can be useful when using
+ * the large neighbourhood Benders' search, where the cut generated in the sub-SCIP solve are transferred to the main
+ * SCIP instance.
+ *
+ * The BENDERSCUTEXEC callback must return the result of the cut generation. The permissable results are:
+ *  - if the Benders' cut was not run (SCIP_DIDNOTRUN).
+ *  - if the Benders' cut was run, but there was an error in generating the cut (SCIP_DIDNOTFIND).
+ *  - if the Benders' decomposition cut algorithm has not generated a constraint or cut (SCIP_FEASIBLE).
+ *  - an additional constraint for the Benders' decomposition cut was generated (SCIP_CONSADDED).
+ *  - a cutting plane representing the Benders' decomposition cut was generated (SCIP_SEPARATED).
+ *
+ * If the BENDERSCUTEXEC callback returns SCIP_DIDNOTFIND due to an error in the cut generation, if no other subproblems
+ * generate a cut during the same iteration of the Benders' decomposition algorithm, then this could result in an
+ * error. It is possible to avoid the error by merging the subproblem into the master problem (see \ref
+ * BENDERSPOSTSOLVE).
+ *
+ * @section BENDERSCUT_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeBenderscut() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeBenderscutBasic(), see also @ref BENDERSCUT_INTERFACE.
+ *
+ * @subsection BENDERSCUTFREE
+ *
+ * If you are using Benders' decomposition cut data (see \ref BENDERSCUT_DATA and \ref BENDERSCUT_INTERFACE), you have
+ * to implement this method in order to free the Benders' decomposition cut data.
+ *
+ * If you have allocated memory for fields in your Benders' decomposition cut data, remember to free this memory
+ * before freeing the Benders' decomposition data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection BENDERSCUTCOPY
+ *
+ * The BENDERSCUTCOPY callback is executed when a SCIP instance is copied, e.g. to
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified
+ * separator for all copied SCIP instances. This may deteriorate the performance
+ * of primal heuristics using sub-SCIPs.
+ *
+ * If the Benders' decomposition cuts are included by calling SCIPincludeBendersDefaultCuts() in the include method of
+ * the Benders' decomposition implementation, such as SCIPincludeBendersDefault(), then it is not necessary to implement
+ * BENDERSCUTCOPY. The copy method could be implemented to copy Benders' decomposition cut data from the original SCIP
+ * instance to the sub-SCIP.
+ *
+ *
+ * @subsection BENDERSCUTINIT
+ *
+ * The BENDERSCUTINIT callback is executed after the problem is transformed The Benders' decomposition cut method may,
+ * e.g., use this call to initialize its Benders' decomposition cut data. The difference between the original and the
+ * transformed problem is explained in "What is this thing with the original and the transformed problem about?" on \ref
+ * FAQ.
+ *
+ * @subsection BENDERSCUTEXIT
+ *
+ * The BENDERSCUTEXIT callback is executed before the transformed problem is freed.  In this method, the Benders'
+ * decomposition cut method should free all resources that have been allocated for the solving process in
+ * BENDERSCUTINIT.
+ *
+ * @subsection BENDERSCUTINITSOL
+ *
+ * The BENDERSCUTINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The Benders' decomposition implementation may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection BENDERSCUTEXITSOL
+ *
+ * The BENDERSCUTEXITSOL callback is executed before the branch-and-bound process is freed. The Benders' decomposition
+ * implementation should use this call to clean up its branch-and-bound data.
+ *
+ */
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CONF How to use conflict analysis
  *
  * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
@@ -5838,6 +6616,138 @@
  * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver <code>scip</code> is used
  * they should be named <code>scip-1</code>, <code>scip-2</code>, <code>scip-3</code>. When different types of concurrent solvers are used the counter
  * starts at one for each of them, e.g. <code>scip-1</code> and <code>scip-feas-1</code>.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page BENDDECF How to use the Benders' decomposition framework
+ *
+ * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
+ * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
+ * decomposition. Such problems are given by
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *         & \\
+ *         & \displaystyle & Tx & + & Hy & = & h \\
+ *         & \\
+ *         & & x & & & \in & \mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & & & & y & \in & \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * The variables \f$x\f$ and \f$y\f$ are described as the first and second stage variables respectively. In the
+ * classical use of Benders' decomposition, it is a requirement that the all second stage variables are continuous.
+ * Extensions to the classical Benders' decomposition approach have permitted the use of more general second stage
+ * problems.
+ *
+ * The application of Benders' decomposition to the above problem results in a subproblem, given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & d^{T}y \\
+ *         & \\
+ *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *         & \\
+ *         & & y \in \mathbb{R}^{m} \\
+ *  \end{array}
+ * \f]
+ *
+ * where \f$\bar{x}\f$ is a solution vector of the first stage variables. As such, the subproblem is a problem only in
+ * \f$y\f$. The dual solution to the subproblem, either an extreme point or extreme ray, is used to generate cuts that
+ * are added to the master problem. Let \f$\lambda\f$ be the vector of dual variables associated with the set of
+ * constraints from the subproblem. If, for a given \f$\bar{x}\f$, the subproblem is infeasible, then \f$\lambda\f$
+ * corresponds to a dual ray and is used to produce the cut
+ *
+ * \f[
+ *    0 \geq \lambda(h - Tx)
+ * \f]
+ *
+ * which eliminates \f$\bar{x}\f$ from the master problem. If, for a given \f$\bar{x}\f$, the subproblem is feasible,
+ * then \f$\lambda\f$ corresponds to a dual extreme point and is used to produce the cut
+ *
+ * \f[
+ *    \varphi \geq \lambda(h - Tx)
+ * \f]
+ *
+ * where \f$\varphi\f$ is an auxiliary variable added to the master problem as an underestimator of the optimal
+ * subproblem objective function value.
+ *
+ * Given \f$\Omega^{p}\f$ and \f$\Omega^{r}\f$ as the sets of dual extreme points and rays of the subproblem,
+ * respectively, the Benders' decomposition master problem is given by
+ *
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min & \displaystyle & c^{T}x + \varphi \\
+ *         & \\
+ *    subject \ to & \displaystyle & Ax = b \\
+ *         & \\
+ *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
+ *         & \\
+ *         & \displaystyle & 0 \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r} \\
+ *         & \\
+ *         & & x \in \mathbb{Z}^{p}\times\mathbb{R}^{n - p}  \\
+ *         & & \varphi \in \mathbb{R} \\
+ *  \end{array}
+ * \f]
+ *
+ * @section BENDERFRAMEWORK Overview
+ *
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
+ * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
+ * the Benders' decomposition mode of GCG.
+ * An overview of how to use each of these methods will be provided in this section.
+ *
+ * @section BENDERSSMPS Inputting an instance in the SMPS file format.
+ *
+ * As part of the Benders' decomposition framework development, a reader for instances in the SMPS file format has been
+ * implemented (see src/scip/reader_smps.c). The details regarding the SMPS file format can be found at:
+ *
+ * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
+ * A standard input format for multiperiod stochastic linear programs
+ * IIASA, Laxenburg, Austria, WP-87-118, 1987
+ *
+ * In brief, the SMPS file format involves three different files:
+ * - A core file (.cor): a problem instance in MPS format that is the core problem of a stochastic program.
+ * - A time file (.tim): partitions the variables and constraints into the different stages of the stochastic program
+ * - A stochastic file (.sto): describes the scenarios for each stage.
+ *
+ * The STO reader (see src/scip/reader_sto.c) constructs the stochastic program using the information from the core and
+ * time files. By default, the STO reader will construct the deterministic equivalent of the stochastic program. A
+ * parameter is provided "reading/sto/usebenders" that will inform the STO reader to apply Benders' decomposition to the
+ * input stochastic program.
+ *
+ * @section BENDERSDEFAULT Using the default Benders' decomposition plugin.
+ *
+ * A default implementation of a Benders' decomposition plugin has been included in \SCIP 6.0 (see
+ * src/scip/benders_default.c). In order to use the default plugin, the user must create SCIP instances of the master
+ * problem and subproblems. The subproblems must also contain a copy of the master problem variables, since these are
+ * fixed to the master problem solution values during the subproblem solving loop. These SCIP instances for the master
+ * and subproblems are passed to the default plugin by calling SCIPcreateBendersDefault().
+ *
+ * The mapping between the master and subproblem variables is performed automatically. The default solving and cut
+ * generation methods are applied to solve the input problem. It is important to note that the mapping between the
+ * master and subproblem variables relies on the variable names. The variables of the subproblem corresponding to
+ * master problem variables must have the same name in both problems.
+ *
+ * The CAP (stochastic capacitated facility location problem) example demonstrates the use of the default Benders'
+ * decomposition implementation within a project.
+ *
+ * @section BENDERSCUSTOM Implementing a custom Benders' decomposition implementation.
+ *
+ * A custom Benders' decomposition requires the implementation of a Benders' decomposition plugin. The key aspects for
+ * implementing a custom Benders' decomposition plugin are explained in \ref BENDER.
+ *
+ * @section BENDERSGCG Using the Benders' decomposition mode of GCG
+ *
+ * In GCG 3.0, a Benders' decomposition mode has been implemented. This mode takes the decomposition found by the
+ * detection schemes of GCG and applies Benders' decomposition. Using GCG it is possible to apply Benders' decomposition
+ * to general problem without having to manually construct the decompositions.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6486,997 +7396,6 @@
  *
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page CHG1 Interface changes between SCIP 0.9 and SCIP 1.0
- *
- *  @section CHGPARAM New parameters
- *
- * - All functions SCIP<datatype>Param() got a new parameter "isadvanced".
- *   \n
- *   This does not influence the performance of SCIP, but the position of the parameter in the settings menu.
- *   Hence, if you do not care about this, you can assign any value to it.
- *   You should add the corresponding flag to the SCIP<datatype>Param() calls in your own source code.
- *
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page CHG2 Interface changes between SCIP 1.0 and SCIP 1.1
- *
- * - SCIPcreateChild() has a new last parameter giving an estimate for value of best feasible solution in the subtree to
- *   be created. One possibility is to use SCIPgetLocalOrigEstimate() for this value.
- *
- * - The callback \ref CONSCHECK in the constraint handlers now has a new parameter <code>printreason</code> that tells
- *   a constraint handler to output the reason for a possible infeasibility of the solution to be checked using
- *   SCIPinfoMessage(). Have a look at one of the constraint handlers implemented in SCIP to see how it works. This
- *   methodology makes it possible to output the reason of a violation in human readable form, for instance, for the check
- *   at the end of a SCIP run, where the obtained best solution is checked against the original formulation.\n This change
- *   often has little effect on C-implementations, since this parameter can be safely ignored with respect to the
- *   correctness of the code. The corresponding C++ method scip::ObjConshdlr::scip_check(), however, has to be extended
- *   and will not compile otherwise.
- *
- * - SCIPcheckSolOrig() is restructured. The last two parameters have changed. They are now bools indicating
- *   whether the reason for the violation should be printed to the standard output and whether all violations should be
- *   printed. This reflects the changes in the constraint handlers above, which allow the automation of the feasibility
- *   test. The pointers to store the constraint handler or constraint are not needed anymore.
- *
- * - New parameters "extension" and "genericnames" in SCIPprintTransProblem(), SCIPprintOrigProblem(),
- *   SCIPwriteOrigProblem(), and SCIPwriteTransProblem() defining the requested format or NULL for default CIP format
- *   and using generic names for the variables and constraints. Examples are
- *   - <code>SCIPprintTransProblem(scip, NULL, NULL, TRUE)</code> displays the transformed problem in CIP format with
- *     generic variables and constraint names
- *   - <code>SCIPprintOrigProblem(scip, NULL, "lp", FALSE)</code> displays the original problem in LP format with
- *     original variables and constraint names.
- *
- * - New callback method SCIP_DECL_READERWRITE(x) in type_reader.h; this method is called to write a problem to file
- *   stream in the format the reader stands for; useful for writing the transformed problem in LP or MPS format. Hence,
- *   also SCIPincludeReader() has changed.
- *
- * - New parameter "conshdlrname" in SCIPincludeLinconsUpgrade().
- *
- * - Added user pointer to callback methods of hash table, see pub_misc.h.
- *
- * - New parameter "extension" in SCIPreadProb(),    defining a desired file format or NULL if file extension should be used.
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
- *
- *
- * @section CHGCALLBACKS New and changed callbacks
- *
- * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters:
- *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
- *    - A pointer for providing a lower bound.
- *
- * - The \ref CONS "constraint handlers" have two new callback methods (see type_cons.h for more details).
- *    - SCIP_DECL_CONSCOPY(x) - this method can be used to copy a constraint.
- *    - SCIP_DECL_CONSPARSE(x) - this method can be used to parse a constraint in CIP format.
- *
- *  @section CHGINTERFUNC New parameters in interface methods
- *
- * - SCIPcalcMIR() in scip.h has two new parameter "mksetcoefsvalid" and "sol". The parameter "mksetcoefsvalid" stores
- *   whether the coefficients of the mixed knapsack set ("mksetcoefs") computed in SCIPlpCalcMIR() are valid. If the mixed knapsack constraint obtained after aggregating LP rows
- *   is empty or contains too many nonzero elements the generation of the <b>c-MIR cut</b> is aborted in SCIPlpCalcMIR() and "mksetcoefs" is not valid.
- *   The input parameter "sol" can be used to separate a solution different from the LP solution.
- *
- * - SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() in scip.h have a new parameter "sol". It can be used to obtain the <b>closest variable bound</b> w.r.t. a solution different from the LP solution.
- *
- *  @section MISCELLANEOUS Miscellaneous
- *
- * - A significant change for <b>C++ users</b> is that all include files of SCIP
- *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
- *
- * For further release notes we refer to the \ref RELEASENOTES "Release notes".
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page CHG4 Interface changes between SCIP 1.2 and SCIP 2.0
- *
- *
- * @section CHGCALLBACKS4 New and changed callbacks
- *
- *
- * - <b>Copying a SCIP instance</b>:
- *      <br>
- *      <br>
- *    - All plugins, like \ref BRANCH "branching rules" and \ref HEUR "primal heuristics", have a new callback method (see, e.g.,
- *      type_branch.h and type_heur.h for more details):
- *       - SCIP_DECL_BRANCHCOPY(x), SCIP_DECL_HEURCOPY(x) etc.
- *       - When copying a SCIP instance, these methods are called to copy the plugins.
- *      <br>
- *      <br>
- *    - Constraint handlers have two new callback methods. One for copying the constraint handler plugins
- *      SCIP_DECL_CONSHDLRCOPY() and the other for copying a constraint itself, SCIP_DECL_CONSCOPY().
- *      <br>
- *      <br>
- *    - Variables have a new callback method (see type_var.h for more details):
- *       - SCIP_DECL_VARCOPY(x) - When copying a SCIP instance, this method is called to copy the variables' data.
- *      <br>
- *      <br>
- *    - The main problem has a new callback method (see type_prob.h for more details):
- *       - SCIP_DECL_PROBCOPY(x) - When copying a SCIP instance, this method is called to copy the problem's data.
- *      <br>
- *      <br>
- *    - The argument success in SCIP_DECL_CONSCOPY has been renamed to valid.
- *
- * - <b>Branching on externally given candidates</b>:
- *      <br>
- *      <br>
- *    - The \ref BRANCH "branching rules" have a second new callback method (see type_branch.h for more details):
- *       - SCIP_DECL_BRANCHEXECEXT(x) - This method can be used to branch on external branching candidates,
- *         which can be added by a user's "relaxation handler" or "constraint handler" plugin, calling <code>SCIPaddExternBranchCand()</code>.
- *
- * - <b>Restarts</b>:
- *      <br>
- *      <br>
- *    - The callback SCIP_DECL_PROBEXITSOL(x) in the main problem has one new parameter (see type_prob.h for more details):
- *       - The parameter <code>restart</code> is <code>TRUE</code> if the callback method was triggered by a restart.
- *
- *
- * <br>
- * @section CHGINTERFUNC4 Changed interface methods
- *
- * - <b>Copying a SCIP instance</b>:
- *      <br>
- *      <br>
- *    - Every new callback method resulted in a new parameter of the include function for the corresponding plugin,
- *      e.g., SCIPincludeBranchrule() has two new parameters <code>SCIP_DECL_BRANCHCOPY((*branchcopy))</code> and
- *      <code>SCIP_DECL_BRANCHEXECREL((*branchexecrel))</code>.  In the same fashion, the new callbacks
- *      SCIP_DECL_VARCOPY and SCIP_DECL_PROBCOPY led to new parameters in SCIPcreateVar() and SCIPcreateProb() in
- *      scip.c, respectively.
- *      <br><br>
- *    - SCIPincludeHeur() and SCIPincludeSepa() in \ref scip.h, as well as scip::ObjSepa() and scip::ObjHeur(), have a new parameter:
- *       - <code>usessubscip</code> - It can be used to inform SCIP that the heuristic/separator to be included uses a secondary SCIP instance.
- *      <br><br>
- *    - SCIPapplyRens() in \ref heur_rens.h has a new parameter <code>uselprows</code>. It can be used to switch from LP rows
- *      to constraints as basis of the sub-SCIP constructed in the RENS heuristic.
- *      <br>
- *      <br>
- *    - W.r.t. to copy and the C++ wrapper classes there are two new classes. These are <code>ObjCloneable</code> and
- *      <code>ObjProbCloneable</code>. The constraint handlers and variables pricers are derived from
- *      <code>ObjProbCloneable</code> and all other plugin are derived from <code>ObjCloneable</code>. Both
- *      classes implement the function <code>iscloneable()</code> which return whether a plugin is clone
- *      able or not. Besides that
- *      each class has a function named <code>clone()</code> which differ in their signature.
- *      See objcloneable.h, objprobcloneable.h, and the TSP example for more details.
- *
- * - <b>Branching</b>:
- *      <br><br>
- *    - The method SCIPgetVarStrongbranch() has been replaced by two methods SCIPgetVarStrongbranchFrac() and
- *      SCIPgetVarStrongbranchInt().
- *      <br><br>
- *    - The methods SCIPgetVarPseudocost() and SCIPgetVarPseudocostCurrentRun() in \ref scip.h now return the pseudocost value of
- *      one branching direction, scaled to a unit interval. The former versions of SCIPgetVarPseudocost() and
- *      SCIPgetVarPseudocostCurrentRun() are now called SCIPgetVarPseudocostVal() and SCIPgetVarPseudocostValCurrentRun(), respectively.
- *      <br>
- *      <br>
- *    - The methods SCIPgetVarConflictScore() and SCIPgetVarConflictScoreCurrentRun() in \ref scip.h are now called
- *      SCIPgetVarVSIDS() and SCIPgetVarVSIDSCurrentRun(), respectively.
- *      <br><br>
- *    - The methods SCIPvarGetNInferences(), SCIPvarGetNInferencesCurrentRun(), SCIPvarGetNCutoffs(), and
- *      SCIPvarGetNCutoffsCurrentRun() are now called SCIPvarGetInferenceSum(), SCIPvarGetInferenceSumCurrentRun(),
- *      SCIPvarGetCutoffSum(), and SCIPvarGetCutoffSumCurrentRun(), respectively. Furthermore, they now return
- *      <code>SCIP_Real</code> instead of <code>SCIP_Longint</code> values.
- *
- * - <b>Others</b>:
- *      <br><br>
- *    - SCIPcutGenerationHeuristicCmir() in sepa_cmir.h has three new parameters:
- *        - <code>maxmksetcoefs</code> - If the mixed knapsack constraint obtained after aggregating LP rows contains more
- *          than <code>maxmksetcoefs</code> nonzero coefficients the generation of the <b>c-MIR cut</b> is aborted.
- *        - <code>delta</code> - It can be used to obtain the scaling factor which leads to the best c-MIR cut found within
- *          the cut generation heuristic. If a <code>NULL</code> pointer is passed, the corresponding c-MIR cut will already be
- *          added to SCIP by SCIPcutGenerationHeuristicCmir(). Otherwise, the user can generate the cut and add it to SCIP
- *          on demand afterwards.
- *        - <code>deltavalid</code> - In case, the user wants to know the best scaling factor, i.e., <code>delta</code> passed is not <code>NULL</code>,
- *          <code>deltavalid</code> will be <code>TRUE</code> if the stored scaling factor <code>delta</code> will lead to a violated c-MIR cut.
- *      <br>
- *      <br>
- *    - All functions for setting <b>user parameters</b> of different types like SCIPparamSetBool(), SCIPparamSetChar(),
- *      SCIPparamSetInt(), SCIPparamSetLongint(), and SCIPparamSetString() in pub_paramset.h have a new parameter:
- *        - <code>quiet</code> - It prevents any output during the assign to a new value.
- *
- * <br>
- * @section MISCELLANEOUS4 Miscellaneous
- *
- * - The NLPI library is now a separate library that is required when linking against the SCIP library.
- *   This requires changes to Makefiles that use SCIP, see the \ref RELEASENOTES "Release notes" for more details.
- *
- * - We do not distinguish between <b>block memory</b> for the original and the transformed problem anymore. The same
- *   block memory is now used in both problem stages.
- *
- * - The usage of <b>strong branching</b> changed. Now, SCIPstartStrongbranch() and SCIPendStrongbranch() must be
- *   called before and after strong branching, respectively.
- *
- * - All <b>C++</b> objects and constructors have a SCIP pointer, now.
- *
- * - The <b>predefined setting files</b> like "settings/cuts/off.set,aggressive.set,fast.set" have been replaced by
- *   interface methods like SCIPsetHeuristics(), SCIPsetPresolving(), SCIPsetSeparating(), and SCIPsetEmphasis() in
- *   \ref scip.h and by user dialogs in the interactive shell like
- *   <br>
- *   <br>
- *   <code>SCIP&gt; set {heuristics|presolving|separating} emphasis {aggressive|fast|off}</code>
- *   <br>
- *   <br>
- *   or
- *   <br>
- *   <br>
- *   <code>SCIP&gt; set emphasis {counter|cpsolver|easycip|feasibility|hardlp|optimality}</code>
- *
- *
- * <br>
- * For further release notes we refer to the \ref RELEASENOTES "Release notes".
- */
-
-/* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
- *
- * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see \ref cons_quadratic.h.
- *
- * - There are LP-interfaces to QSopt and Gurobi (rudimentary).
- *
- * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see \ref cons_indicator.h.
- *
- * - One can now do "early branching" useful for column generation.
- *
- * - Can now run a black-box lexicographic dual simplex algorithm.
- */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG5 Interface changes between SCIP 2.0 and SCIP 2.1
-  *
-  *
-  * @section CHGCALLBACKS5 New and changed callbacks
-  *
-  * - <b>Presolving</b>:
-  *      <br>
-  *      <br>
-  *    - The new parameters "nnewaddconss" and "naddconss" were added to the constraint handler callback method SCIP_DECL_CONSPRESOL()
-  *      and the presolver callback method SCIP_DECL_PRESOLEXEC(). These parameters were also added to corresponding C++ wrapper class methods.
-  *    - Propagators are now also called in during presolving, this is supported by the new callback methods SCIP_DECL_PROPINITPRE(),
-  *      SCIP_DECL_PROPEXITPRE(), and SCIP_DECL_PROPPRESOL().
-  *    - New parameters "isunbounded" and "isinfeasible" for presolving initialization (SCIP_DECL_CONSINITPRE(),
-  *      SCIP_DECL_PRESOLINITPRE(), SCIP_DECL_PROPINITPRE()) and presolving deinitialization (SCIP_DECL_CONSEXITPRE(),
-  *      SCIP_DECL_PRESOLEXITPRE(), SCIP_DECL_PROPEXITPRE()) callbacks of presolvers,
-  *      constraint handlers and propagators, telling the callback whether the problem was already declared to be
-  *      unbounded or infeasible.  This allows to avoid expensive steps in these methods in case the problem is already
-  *      solved, anyway.
-  *      <br>
-  *      <br>
-  *      <DIV class="note">
-  *      Note, that the C++ methods
-  *      - scip::ObjConshdlr::scip_presol() corresponding to SCIP_DECL_CONSPRESOL()
-  *      - scip::ObjConshdlr::scip_initpre() corresponding to  SCIP_DECL_CONSINITPRE()
-  *      - scip::ObjPresol::scip_initpre() corresponding to SCIP_DECL_PRESOLINITPRE()
-  *      - scip::ObjProp::scip_initpre() corresponding to SCIP_DECL_PROPINITPRE()
-  *      - scip::ObjConshdlr::scip_exitpre() corresponding to SCIP_DECL_CONSEXITPRE()
-  *      - scip::ObjPresol::scip_exitpre() corresponding to SCIP_DECL_PRESOLEXITPRE()
-  *      -  scip::ObjProp::scip_exitpre() corresponding to  and SCIP_DECL_PROPEXITPRE()
-  *      .
-  *      are virtual functions. That means, if you are not adding the new parameters, your code will still compile, but these methods are not executed.
-  *      </DIV>
-  *
-  * - <b>Constraint Handler</b>:
-  *     <br>
-  *     <br>
-  *   - The new constraint handler callback SCIP_DECL_CONSDELVARS() is called after variables were marked for deletion.
-  *     This method is optional and only of interest if you are using SCIP as a branch-and-price framework. That means,
-  *     you are generating new variables during the search. If you are not doing that just define the function pointer
-  *     to be NULL.
-  *     <br>
-  *     If this method gets implemented you should iterate over all constraints of the constraint handler and delete all
-  *     variables that were marked for deletion by SCIPdelVar().
-  *
-  * - <b>Problem Data</b>:
-  *     <br>
-  *     <br>
-  *   - The method SCIPcopyProb() and the callback SCIP_DECL_PROBCOPY() got a new parameter "global" to indicate whether the global problem or a local version is copied.
-  *
-  * - <b>Conflict Analysis</b>:
-  *     <br>
-  *     <br>
-  *   - Added parameter "separate" to conflict handler callback method SCIP_DECL_CONFLICTEXEC() that defines whether the conflict constraint should be separated or not.
-  *
-  * - <b>NLP Solver Interface</b>:
-  *     <br>
-  *     <br>
-  *   - The callbacks SCIP_DECL_NLPIGETSOLUTION() and SCIP_DECL_NLPISETINITIALGUESS() got new parameters to get/set values of dual variables.
-  *   - The callback SCIP_DECL_NLPICOPY() now passes the block memory of the target SCIP as an additional parameter.
-  *
-  * <br>
-  * @section CHGINTERFUNC5 Changed interface methods
-  *
-  * - <b>Writing and Parsing constraints</b>:
-  *      <br>
-  *      <br>
-  *    - The methods SCIPwriteVarName(), SCIPwriteVarsList(), and SCIPwriteVarsLinearsum() got a new boolean parameter "type"
-  *      that indicates whether the variable type should be written or not.
-  *    - The method SCIPwriteVarsList() got additionally a new parameter "delimiter" that defines the character which is used for delimitation.
-  *    - The methods SCIPparseVarName() and SCIPparseVarsList() got a new output parameter "endptr" that is filled with the position where the parsing stopped.
-  *
-  * - <b>Plugin management</b>:
-  *      <br>
-  *      <br>
-  *    - SCIPincludeProp() got additional parameters to set the timing mask of the propagator and the new callbacks and parameters related to calling the propagator in presolving.
-  *    - SCIPincludeConshdlr() got additional parameters to set the variable deletion callback function and the timing mask for propagation.
-  *
-  * - <b>Constraint Handlers</b>:
-  *      <br>
-  *      <br>
-  *    - Method SCIPseparateRelaxedKnapsack() in knapsack constraint handler got new parameter "cutoff", which is a pointer to store whether a cutoff was found.
-  *    - Method SCIPincludeQuadconsUpgrade() of quadratic constraint handler got new parameter "active" to indicate whether the upgrading method is active by default.
-  *
-  * - <b>Nonlinear expressions, relaxation, and solver interface</b>:
-  *      <br>
-  *      <br>
-  *    - The methods SCIPexprtreeEvalSol(), SCIPexprtreeEvalIntLocalBounds(), and SCIPexprtreeEvalIntGlobalBounds() have been renamed to SCIPevalExprtreeSol(),
-  *      SCIPevalExprtreeLocalBounds(), and SCIPevalExprtreeGlobalBounds() and are now located in scip.h.
-  *    - Various types and functions dealing with polynomial expressions have been renamed to use the proper terms "monomial" and "polynomial".
-  *    - The methods SCIPnlpGetObjective(), SCIPnlpGetSolVals(), and SCIPnlpGetVarSolVal() have been removed, use SCIPgetNLPObjval(), SCIPvarGetNLPSol()
-  *      and SCIPcreateNLPSol() to retrieve NLP solution values instead.
-  *    - Removed methods SCIPmarkRequireNLP() and SCIPisNLPRequired(), because the NLP is now always constructed if nonlinearities are present.
-  *    - SCIPgetNLP() has been removed and NLP-methods from pub_nlp.h have been moved to scip.h, which resulted in some renamings, too.
-  *    - The functions SCIPnlpiGetSolution() and SCIPnlpiSetInitialGuess() got additional arguments to get/set dual values.
-  *    - The method SCIPgetNLPI() got a new parameter "nlpiproblem", which is a pointer to store the NLP solver interface problem.
-  *
-  * - <b>Others</b>:
-  *      <br>
-  *      <br>
-  *    - SCIPgetVarCopy() got a new parameter "success" that will be FALSE if method is called after problem creation stage and no hash map is given or no image for
-  *      the given variable is contained in the given hash map.
-  *    - Removed method SCIPreadSol(); call solution reading via SCIPreadProb() which calls the solution reader for .sol files.
-  *    - SCIPchgVarType() got an extra boolean parameter to store if infeasibility is recognized while upgrading a variable from continuous type to an integer type.
-  *    - SCIPdelVar() got a new parameter "deleted", which stores whether the variable was successfully marked to be deleted.
-  *    - SCIPcalcNodeselPriority() got a new parameter "branchdir", which defines the type of branching that was performed: upwards, downwards, or fixed.
-  *    - The parameters "timelimit" and "memorylimit" were removed from SCIPapplyRens().
-  *
-  * <br>
-  * @section MISCELLANEOUS5 Miscellaneous
-  *
-  *  - The result value SCIP_NEWROUND has been added, it allows a separator/constraint handler to start a new separation round
-  *    (without previous calls to other separators/conshdlrs).
-  *  - All timing flags are now defined type_timing.h.
-  *  - The variable deletion event is now a variable specific event and not global, anymore.
-  *  - The emphasis setting types now distinguish between plugin-type specific parameter settings (default, aggressive, fast, off), which are changed by
-  *    SCIPsetHeuristics/Presolving/Separating(), and global emphasis settings (default, cpsolver, easycip, feasibility, hardlp, optimality, counter),
-  *    which can be set using SCIPsetEmphasis().
-  *
-  * <br>
-  * For further release notes we refer to the \ref RELEASENOTES "Release notes".
-  */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG6 Interface changes between SCIP 2.1 and SCIP 3.0
-  *
-  *
-  * @section CHGCALLBACKS6 New and changed callbacks
-  *
-  * - <b>Conflict Analysis</b>:
-  *     <br>
-  *     <br>
-  *   - Added parameter "relaxedbds" to conflict handler callback method SCIP_DECL_CONFLICTEXEC(). This array contains
-  *     bounds which are sufficient to create a valid conflict
-  *
-  * - <b>Constraint Handler</b>:
-  *     <br>
-  *     <br>
-  *   - New optional callback methods in constraint handlers: SCIP_DECL_CONSGETVARS and SCIP_DECL_CONSGETNVARS.
-  *     These callbacks, if implemented, should return an array of all variables and the number of all variables used
-  *     by the given constraint, respectively. (This method might, e.g., be called by a presolver)
-  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_CONSPROP(), giving the current timing at which
-  *     this method is called
-  *   - Added a parameter 'restart' to the SCIP_DECL_CONSEXITSOL() callback method, indicating whether this call was
-  *     triggered by a restart.
-  *   - Added a parameter 'relaxedbd' to SCIP_DECL_CONSRESPROP() callback method. If explaining a given bound change
-  *     (index), it is sufficient to explain the reason for reaching the 'relaxedbd' value, see above
-  *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_CONSINITPRE() and
-  *     SCIP_DECL_CONSEXITPRE() callback methods. It is not allowed to determine unboundedness or infeasibility in
-  *     these callbacks, anymore.
-  *
-  * - <b>Message Handler</b>:
-  *      <br>
-  *      <br>
-  *   - New callback method SCIP_DECL_MESSAGEHDLRFREE() which is called when the message handler is freed.
-  *   - The old callback method SCIP_DECL_MESSAGEERROR() was replaced by the callback method SCIP_DECL_ERRORPRINTING().
-  *
-  * - <b>Presolving</b>:
-  *      <br>
-  *      <br>
-  *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_PRESOLINITPRE() and
-  *     SCIP_DECL_PRESOLSEXITPRE(). It is not allowed to determine unboundedness or infeasibility in these
-  *     callbacks, anymore.
-  *
-  * - <b>Propagator</b>:
-  *     <br>
-  *     <br>
-  *   - Added a propagation timing parameter "proptiming" to SCIP_DECL_PROPEXEC(), giving the
-  *     current timing at which this method is called.
-  *   - Added a parameter 'restart' to SCIP_DECL_PROPEXITSOL() callback method, indicating whether this call was
-  *     triggered by a restart.
-  *   - Added a parameter 'relaxedbd' to SCIP_DECL_PROPRESPROP() callback method. If explaining a given bound change
-  *     (index), it is sufficient to explain the reason for reaching the 'relaxedbd' value.
-  *   - Removed parameters "isunbounded", "isinfeasible" and "result" from SCIP_DECL_PROPINITPRE() and
-  *     SCIP_DECL_PROPEXITPRE() callback methods. It is not allowed to determined unboundedness or infeasibility in
-  *     these callbacks, anymore.
-  *
-  * - <b>NLP Solver Interface</b>:
-  *     <br>
-  *     <br>
-  *   - New NLPI callback SCIP_DECL_NLPISETMESSAGEHDLR() to set message handler in NLP solver interfaces.
-  *
-  * <br>
-  * @section CHGINTERFUNC6 Changed interface methods
-  *
-  * - <b>Plugin management</b>:
-  *      <br>
-  *      <br>
-  *   - Added basic include methods for almost all plugin types, e.g., SCIPincludeConshdlrBasic();
-  *     these methods should make the usage easier, sparing out optional callbacks and parameters.
-  *   - To extend the basic functionalities, there are setter method to add
-  *     optional callbacks. For example SCIPsetConshdlrParse(), SCIPsetPropCopy() or SCIPsetHeurInitsol().
-  *
-  * - <b>Constraint Handlers</b>:
-  *      <br>
-  *      <br>
-  *   - Added basic creation methods for all constraints types, e.g., SCIPcreateConsBasicLinear(); these methods should make the usage easier,
-  *      sparing out optional callbacks and parameters.
-  *   - New methods SCIPgetConsVars() and SCIPgetConsNVars() (corresponding callbacks need to be implemented, see above)
-  *
-  * - <b>Problem</b>:
-  *      <br>
-  *      <br>
-  *   - Added basic creation methods SCIPcreateVarBasic() and SCIPcreateProbBasic() and setter functions
-  *   - Added method SCIPisPresolveFinished() which returns whether the presolving process would be stopped after the
-  *     current presolving round, given no further reductions will be found.
-  *   - Forbid problem modifications in SCIP_STAGE_{INIT,EXIT}PRESOLVE (see pre-conditions for corresponding methods in scip.h).
-  *
-  * - <b>Variable usage</b>:
-  *      <br>
-  *      <br>
-  *   - Renamed SCIPvarGetBestBound() to SCIPvarGetBestBoundLocal(), SCIPvarGetWorstBound() to
-  *     SCIPvarGetWorstBoundLocal() and added new methods SCIPvarGetBestBoundGlobal() and SCIPvarGetWorstBoundGlobal().
-  *   - Method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead.
-  *   - Replaced method SCIPvarGetRootRedcost() by SCIPvarGetBestRootRedcost().
-  *
-  * - <b>Message Handler</b>:
-  *      <br>
-  *      <br>
-  *   - Changed the message handler system within SCIP heavily such that it is thread-safe. SCIPcreateMessagehdlr() in
-  *     scip.{c,h} was replaced by SCIPmessagehdlrCreate() in pub_message.h/message.c with a changed parameter list.
-  *   - Error messages (SCIPerrorMessage()) are not handled via the message handler anymore; per default the error
-  *     message is written to stderr.
-  *
-  * - <b>Separation</b>:
-  *      <br>
-  *      <br>
-  *   - New functions SCIPcreateEmptyRowCons(), SCIPcreateEmptyRowSepa(), SCIPcreateRowCons(), and SCIPcreateRowSepa()
-  *     that allow to set the originating constraint handler or separator of a row respectively; this is, for instance,
-  *     needed for statistics on the number of applied cuts. If rows are created outside a constraint handler or separator
-  *     use SCIPcreateRowUnspec() and SCIPcreateEmptyRowUnspec(). The use of SCIPcreateEmptyRow() and SCIPcreateRow() is
-  *     deprecated.
-  *   - New functions SCIProwGetOrigintype(), SCIProwGetOriginCons(), and SCIProwGetOriginSepa() to obtain the originator
-  *     that created a row.
-  *
-  * - <b>LP interface</b>:
-  *      <br>
-  *      <br>
-  *   - SCIPlpiCreate() got a new parameter 'messagehdlr'.
-  *   - SoPlex LPI supports setting of SCIP_LPPAR_DUALFEASTOL when using SoPlex version 1.6.0.5 and higher.
-  *
-  * - <b>Nonlinear expressions, relaxation, and solver interface</b>:
-  *      <br>
-  *      <br>
-  *   - Renamed SCIPmarkNonlinearitiesPresent() to SCIPenableNLP() and SCIPhasNonlinearitiesPresent() to
-  *     SCIPisNLPEnabled().
-  *   - Method SCIPexprtreeRemoveFixedVars() is not public anymore.
-  *
-  * - <b>Counting</b>:
-  *      <br>
-  *      <br>
-  *   - Changed the counting system within SCIP heavily. SPARSESOLUTION was renamed to SCIP_SPARSESOL. New method for
-  *     SCIP_SPARSESOL usage, SCIPsparseSolCreate(), SCIPsparseSolFree(), SCIPsparseSolGetVars(),
-  *     SCIPsparseSolGetNVars(), SCIPsparseSolGetLbs(), SCIPsparseSolGetUbs() in (pub_)misc.{c,h}.
-  *   - Renamed SCIPgetCountedSparseSolutions() to SCIPgetCountedSparseSols() in cons_countsols.{c,h}.
-  *
-  * <br>
-  * @section MISCELLANEOUS6 Miscellaneous
-  *
-  *   - Replaced SCIPparamSet*() by SCIPchg*Param() (where * is either Bool, Int, Longint, Real, Char, or String).
-  *   - New parameter in SCIPcopy() and SCIPcopyPlugins() to indicate whether the message handler from the source SCIP
-  *     should be passed to the target SCIP (only the pointer is copied and the usage counter of the message handler is
-  *     increased).
-  *   - SCIPprintCons() does not print termination symbol ";\n" anymore; if wanted, use SCIPinfoMessage() to print
-  *     ";\n" manually
-  *   - All objscip *.h file now use the default SCIP interface macros.
-  *   - The methods SCIPsortedvecInsert*() have an additional parameter which can be used to receive the position where
-  *     the new element was inserted.
-  *   - New macro SCIPdebugPrintCons() to print constraint only if SCIP_DEBUG flag is set.
-  *
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG7 Interface changes between SCIP 3.0 and SCIP 3.1
-  *
-  *
-  * @section CHGCALLBACKS7 New and changed callbacks
-  *
-  * - <b>Branching Rules</b>:
-  *     <br>
-  *     <br>
-  *   - new possible return value "SCIP_DIDNOTFIND" for SCIP_DECL_BRANCHEXECLP(), SCIP_DECL_BRANCHEXECPS(), and
-  *     SCIP_DECL_BRANCHEXECEXT() callbacks to state that the branching rule searched, but did not find a branching.
-  *
-  * - <b>Domain Propagation</b>:
-  *     <br>
-  *     <br>
-  *   - added parameter "nmarkedconss" to SCIP_DECL_CONSPROP() callback which gives the number of constraints marked
-  *     for propagation (these constraints are listed first in the conss array given as parameter).
-  *
-  * - <b>Message Handler</b>:
-  *      <br>
-  *      <br>
-  *   - New generic messagehandler output callback method SCIP_DECL_MESSAGEOUTPUTFUNC().
-  *   - Removed parameter "msglength" from callback method SCIP_DECL_ERRORPRINTING().
-  *
-  * - <b>Variable Pricers</b>:
-  *      <br>
-  *      <br>
-  *   - Added parameter "stopearly" to callback method SCIP_DECL_PRICERREDCOST(). This boolean pointer should be used
-  *     by the pricer to state whether early branching should be performed, even if new variables were added in the
-  *     current pricing round.
-  *
-  * - <b>Primal Heuristics</b>:
-  *     <br>
-  *     <br>
-  *   - Added parameter "nodeinfeasible" to SCIP_DECL_HEUREXEC() callback which states whether the current subproblem
-  *     was already detected to be infeasible. In this case, the current LP solution might not respect local bounds,
-  *     and the heuristic must not assume that it does.
-  *
-  *
-  * <br>
-  * @section CHGINTERFUNC7 Changed interface methods
-  *
-  * - <b>Branching Rules</b>:
-  *      <br>
-  *      <br>
-  *   - Added parameter "nfracimplvars" to SCIPgetLPBranchCands()
-  *
-  * - <b>Constraint Handlers</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPconshdlrGetStrongBranchPropTime() which returns the time used for domain propagation methods
-  *     of the constraint handler during strong branching.
-  *   - New method SCIPconsIsMarkedPropagate() which returns whether a constraint is marked for propagation.
-  *   - New methods SCIPconsAddUpgradeLocks() and SCIPconsGetNUpgradeLocks() to increase or get the number of upgrade
-  *     locks of a constraint.
-  *
-  * - <b>Domain Propagation</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPpropGetStrongBranchPropTime() which returns the time spent by a domain propagator during strong
-  *     branching.
-  *   - New methods SCIPmarkConsPropagate() and SCIPunmarkConsPropagate to (un)mark a constraint for propagation.
-  *
-  * - <b>LP and Cutting Planes</b>:
-  *      <br>
-  *      <br>
-  *   - New methods SCIProwChgRank() and SCIProwGetRank() to change and get the rank of a cutting plane, respectively.
-  *   - Added parameter "sidetypes" to SCIPcalcMIR() to specify the specify row side type to be used.
-  *   - Added parameter "cutrank" to SCIPcalcMIR() and SCIPcalcStrongCG() which stores the rank of the returned cut.
-  *   - New method SCIPisCutApplicable() which returns whether a cut is good enough to be applied.
-  *   - Added parameter "infeasible" to SCIPaddCut() which is a pointer to store whether the cut is infeasible for the
-  *     local bounds.
-  *   - delayed cutpool
-  *   - New methods SCIPchgRowLhsDive() and SCIPchgRowRhsDive() to change left and right hand side of a row during diving.
-  *   - Added parameter "cutoff" to SCIPsolveDiveLP(), SCIPsolveProbingLP(), and SCIPsolveProbingLPWithPricing()
-  *     which is a pointer to store whether the diving/probing LP was infeasible or the objective limit was reached.
-  *
-  * - <b>Message Handler</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPmessageVPrintError() to print an error message.
-  *   - Removed method SCIPmessagePrintWarningHeader().
-  *
-  * - <b>Parameters</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPparamGetCharAllowedValues() to get the allowed values for a char parameter.
-  *
-  * - <b>Variables</b>:
-  *      <br>
-  *      <br>
-  *   - New structure to store value-based branching and inference history (see pub_history.h).
-  *   - New method SCIPvarGetValuehistory() to get the value-based history of a variable.
-  *
-  * - <b>Data structures</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPgmlWriteNodeWeight() to write a node section including weight to a .gml graph file.
-  *   - New methods SCIPsparseSolGetFirstSol() and SCIPsparseSolGetNextSol() to get the first sparse solution
-  *     or iterate over the sparse solutions, respectively.
-  *   - New methods in pub_misc.h to handle a (circular) queue, e.g., SCIPqueueCreate(), SCIPqueueFree(),
-  *     SCIPqueueInsert(), ...
-  *   - New methods for hash tables: SCIPhashtableRemoveAll(), SCIPhashtableGetNElements(), SCIPhashtableGetLoad()
-  *   - New methods in pub_misc.h to handle a resource activity, e.g., SCIPactivityCreate(), SCIPactivityFree(),
-  *     SCIPactivityGetVar(), SCIPactivityGetDemand() ...
-  *   - New methods for digraphs: SCIPdigraphResize() to resize the graph and SCIPdigraphSetNodeDatas() and
-  *     SCIPdigraphGetNodeDatas() to set and get the data attached to the nodes.
-  *
-  * - <b>Misc</b>:
-  *      <br>
-  *      <br>
-  *   - New method SCIPcopyOrig() to copy the original problem. Analoguosly, use SCIPcopyOrigProb(), SCIPcopyOrigVars(),
-  *     and SCIPcopyOrigConss() to copy original problem data, variables, or constraints, respectively.
-  *   - New method SCIPcopyImplicationsCliques() to copy implications and cliques to a copied SCIP instance.
-  *   - New method SCIPgetParam() to get the parameter with a given name.
-  *   - New method SCIPaddOrigObjoffset() to add an offset to the objective function.
-  *   - New method SCIPgetNCheckConss() which returns the number of checked constraints.
-  *   - Added parameter "endptr" to SCIPparseVar() which stores the final string position after parsing.
-  *   - Added parameter "enablepropagation" to SCIPstartStrongbranch(), which can be used to enable strong branching
-  *     with domain propagation.
-  *   - New method SCIPgetVarStrongbranchWithPropagation() which performs strong branching with propagation on a variable.
-  *   - New method SCIPwriteCliqueGraph() to write the clique graph.
-  *   - New method SCIPdoNotMultaggr() which returns whether multi-aggregation was disabled.
-  *   - Added parameter "lazyconss" to SCIPwriteMIP() to swith writing removable rows as lazy constraints.
-  *   - New method SCIPcreateFiniteSolCopy() to create a copy of a solution with infinite fixings removed.
-  *   - New method SCIPadjustImplicitSolVals() which sets implicit integer variables to an integer value in the given
-  *     solution without deteriorating its objective value.
-  *   - New method SCIPprintDualSol() which prints the dual solution for a pure LP (works only with preprocessing disabled).
-  *   - New method SCIPgetOpenNodesData() which returns all unprocessed nodes.
-  *   - New method SCIPgetFirstLPTime() and SCIPgetNRootFirstLPIterations() to return time and iterations for the first
-  *     LP solve and SCIPgetFirstLPDualboundRoot() and SCIPgetFirstLPLowerboundRoot() to return the first root LP dual and
-  *     lower bound.
-  *   - New method SCIPgetNLimSolsFound() returning the number of feasible primal solution respecting the objective limit.
-  *   - Added parameter "endline" to SCIPprintDisplayLine() to switch printing a newline symbol at the end of the line.
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
-  *   - Moved LP solver interfaces to subdirectory src/lpi.
-  *
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG8 Interface changes between SCIP 3.1 and SCIP 3.2
-  *
-  *
-  * @section CHGCALLBACKS8 New and changed callbacks
-  *
-  * - <b>Branching Rules</b>:
-  *   - Added parameter "forcestrongbranch" to SCIPselectVarStrongBranching()
-  *   - Added parameter "executebranching" SCIPexecRelpscostBranching()
-  *   - Added parameter "presoltiming" to SCIPpropCumulativeCondition()
-  *
-  *   <br>
-  * - <b>Domain Propagation</b>:
-  *
-  *   <br>
-  * - <b>Message Handler</b>:
-  *
-  *   <br>
-  * - <b>Variable Pricers</b>:
-  *
-  *   <br>
-  * - <b>Primal Heuristics</b>:
-  *   - Added parameter "freesubscip" to SCIPapplyProximity()
-  *
-  * <br>
-  * @section CHGINTERFUNC8 Changed interface methods
-  *
-  *   <br>
-  * - <b>Branching Rules</b>:
-  *
-  *   <br>
-  * - <b>Constraint Handlers</b>:
-  *   - Removed method SCIPconshdlrIsPresolvingDelayed()
-  *   - Removed method SCIPconshdlrWasPresolvingDelayed()
-  *   - Renamed method SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming()
-  *
-  *   <br>
-  * - <b>Domain Propagation</b>:
-  *
-  *   <br>
-  * - <b>LP and Cutting Planes</b>:
-  *   - Added parameter "inds" to SCIPgetLPBInvRow()
-  *   - Added parameter "ninds" to SCIPgetLPBInvRow()
-  *   - Added parameter "inds" to SCIPgetLPBInvCol()
-  *   - Added parameter "ninds" to SCIPgetLPBInvCol()
-  *   - Added parameter "inds" to SCIPgetLPBInvARow()
-  *   - Added parameter "ninds" to SCIPgetLPBInvARow()
-  *   - Added parameter "inds" to SCIPgetLPBInvACol()
-  *   - Added parameter "ninds" to SCIPgetLPBInvACol()
-  *   - Added parameter "maxweight" to SCIPcalcMIR()
-  *   - Added parameter "weightinds" to SCIPcalcMIR()
-  *   - Added parameter "nweightinds" to SCIPcalcMIR()
-  *   - Added parameter "rowlensum" to SCIPcalcMIR()
-  *   - Added parameter "inds" to SCIPcalcStrongCG()
-  *   - Added parameter "ninds" to SCIPcalcStrongCG()
-  *
-  *   <br>
-  * - <b>Message Handler</b>:
-  *
-  *   <br>
-  * - <b>Parameters</b>:
-  *
-  *   <br>
-  * - <b>Variables</b>:
-  *   - Removed method SCIPvarGetNBinImpls()
-  *
-  *   <br>
-  * - <b>Data structures</b>:
-  *   - Renamed method SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData()
-  *   - Renamed method SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
-  *   - Renamed method SCIPdigraphGetSuccessorsDatas() to SCIPdigraphGetSuccessorsData()
-  *
-  *   <br>
-  * - <b>Misc</b>:
-  *   - Removed parameter "delaypos" from SCIPincludeConshdlr()
-  *   - Added parameter "presoltiming" to SCIPincludeConshdlr()
-  *   - Added parameter "consgetdivebdchgs" to SCIPincludeConshdlr()
-  *   - Removed parameter "delaypos" from SCIPsetConshdlrPresol()
-  *   - Added parameter "presoltiming" to SCIPsetConshdlrPresol()
-  *   - Removed parameter "delaypos" from SCIPincludePresol()
-  *   - Added parameter "presoltiming" to SCIPincludePresol()
-  *   - Removed parameter "delaypos" from SCIPincludePresolBasic()
-  *   - Added parameter "presoltiming" to SCIPincludePresolBasic()
-  *   - Removed parameter "presoldelay" from SCIPincludePresol()
-  *   - Removed parameter "presoltiming" from SCIPincludePresol()
-  *   - Removed parameter "presoldelay" from SCIPsetPropPresol()
-  *   - Removed parameter "presoltiming" from SCIPsetPropPresol()
-  *   - Added parameter "ndomredsdown" to SCIPgetVarStrongbranchWithPropagation()
-  *   - Added parameter "ndomredsup" to SCIPgetVarStrongbranchWithPropagation()
-  *   - Added parameter "isequation" to SCIPaddClique()
-  *   - Removed parameter "writeimplications" from SCIPwriteCliqueGraph()
-  *   - Removed method SCIPallocBufferSize()
-  *   - Removed method SCIPduplicateBufferSize()
-  *   - Removed method SCIPreallocBufferSize()
-  *   - Removed method SCIPfreeBufferSize()
-  *   - Removed method callback SCIPdialogExecConflictgraph()
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG9 Interface changes between SCIP 3.2 and SCIP 4.0
-  *
-  *
-  * @section CHGCALLBACKS9 New and changed callbacks
-  *
-  * - <b>Constraint Handlers</b>:
-  *    - new optional callback CONSENFORELAX to enforce a relaxation solution, see \ref CONS
-  *    - added argument "infeasible" to CONSINITLP
-  *
-  *   <br>
-  * - <b>Concurrent SCIP</b>:
-  *    - extended interface to support concurrent solving mode
-  *
-  *   <br>
-  * - <b>Message Handler</b>:
-  *
-  *   <br>
-  * - <b>Variable Pricers</b>:
-  *
-  *   <br>
-  * - <b>Primal Heuristics</b>:
-  *
-  * <br>
-  * @section CHGINTERFUNC9 Changed interface methods
-  *
-  *   <br>
-  * - <b>Copying</b>:
-  *   - added arguments "fixedvars", "fixedvals", "nfixedvars" to SCIPcopyVars()
-  *   - added arguments "fixedvars", "fixedvals", "nfixedvars" to SCIPcopyOrigVars()
-  *   - renamed argument "success" to valid in SCIPgetConsCopy()
-  *
-  *   <br>
-  * - <b>Parameters</b>:
-  *   - renamed method SCIPcheckBoolParam() to SCIPisBoolParamValid()
-  *   - renamed method SCIPcheckLongintParam() to SCIPisLongintParamValid()
-  *   - renamed method SCIPcheckRealParam() to SCIPisRealParamValid()
-  *   - renamed method SCIPcheckCharParam() to SCIPisCharParamValid()
-  *   - renamed method SCIPcheckStringParam() to SCIPisStringParamValid()
-  *
-  *   <br>
-  * - <b>Relaxators</b>:
-  *   - added argument "includeslp" to SCIPincludeRelax() and SCIPincludeRelaxBasic()
-  *
-  *   <br>
-  * - <b>Primal Heuristics</b>:
-  *   - introduced new type SCIP_HEURTIMING for primal heuristic timing masks
-  *   - changed type of argument "timingmask" from unsigned int to SCIP_HEURTIMING in SCIPincludeHeur(), SCIPincludeHeurBasic()
-  *   - added argument "initialseed" to SCIPcreateDiveset()
-  *   <br>
-  * - <b>Reoptimization</b>:
-  *   - renamed function SCIPgetReopSolsRun() to SCIPgetReoptSolsRun()
-  *
-  *   <br>
-  * - <b>Variables</b>:
-  *   - Removed method SCIPvarGetNBinImpls()
-  *
-  *   <br>
-  * - <b>Conflict Analysis</b>:
-  *   - added arguments "conftype" and "iscutoffinvolved" to SCIPinitConflictAnalysis()
-  *
-  *   <br>
-  * - <b>Constraint Handlers</b>:
-  *   - added argument "infeasible" to SCIPinitlpCons()
-  *
-  *   <br>
-  * - <b>Nonlinear Relaxation</b>:
-  *   - added argument "curvature" to SCIPcreateNlRow()
-  *
-  *   <br>
-  * - <b>Solutions</b>:
-  *   - added argument "completely" to SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
-  *
-  * - <b>Hashmap and Hashtable</b>:
-  *   - removed function SCIPcalcHashtableSize() since not required anymore for SCIP_HASHTABLE and SCIP_HASHMAP
-  *   - based on the initial size SCIP_HASHTABLE and SCIP_HASHMAP choose an appropriate size internally to allow insertion of that many elements without resizing
-  *   - SCIP_MULTIHASH behaves like the old SCIP_HASHTABLE and SCIPcalcMultihashSize() should be used as replacement for SCIPcalcHashtableSize()
-  *
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- /**@page CHG10 Interface changes between SCIP 4.0 and SCIP 5.0
-  *
-  *
-  * @section CHGCALLBACKS10 New and changed callbacks
-  *
-  * - <b>New types</b>:
-  *   - added new abstract selection algorithm SCIP_BANDIT together with callbacks
-  *   - added new type SCIP_TABLE together with callbacks to output SCIP statistics
-  *   - added new types for symmetry handling
-  *
-  * - <b>Separation callbacks</b>:
-  *   - added parameter "allowlocal" to SCIP_DECL_SEPAEXECLP and SCIP_DECL_SEPAEXECSOL
-  *
-  * - <b>NLP callbacks</b>
-  *   - added parameter "dstatssize" to SCIP_DECL_NLPIDELVARSET and SCIP_DECL_NLPIDELCONSSET
-  *   - added parameter "objval" to SCIP_DECL_NLPIGETSOLUTION
-  *
-  *
-  * <br>
-  * @section CHGINTERFUNC10 Changed interface methods
-  *
-  * <br>
-  * - <b>Cutting plane separation methods</b>:
-  *   - changed function signature of SCIPcalcMIR()
-  *   - changed function signature of SCIPcalcStrongCG()
-  *   - added parameter "allowlocal" to SCIPseparateSol()
-  *   - new method SCIPaddRow() to replace deprecated SCIPaddCut()
-  *   - removed parameter "scaling" from SCIPgetRowprepViolation()
-  *
-  * <br>
-  * - <b>Relaxator methods</b>:
-  *   - removed parameter "includeslp" from SCIPincludeRelax()
-  *   - added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
-  *   - removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
-  *   - replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
-  *
-  * <br>
-  * - <b>LP interface</b>:
-  *   - replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM
-  *
-  * <br>
-  * - <b>Branching rules</b>:
-  *   - removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
-  *     SCIPincludeBranchruleRelpscost()
-  *
-  * <br>
-  * - <b>Primal heuristics</b>:
-  *   - SCIPheurPassIndicator() has a new parameter which allows to pass the objective of the solution
-  *
-  * <br>
-  * - <b>Constraint Handlers</b>:
-  *   - generalized SCIPcreateConsOrbitope() and SCIPcreateConsBasicOrbitope() method to three orbitope types (full, partitioning, packing)
-  *
-  * <br>
-  * - <b>NLP interface</b>:
-  *   - added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
-  *   - added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
-  *   - added parameter "objval" to SCIPnlpiGetSolution()
-  *   - added argument "varnameslength" to SCIPexprParse()
-  *   - dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
-  *   - SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to the block memory as argument
-  *
-  * <br>
-  * - <b>Data structures</b>:
-  *   - methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
-  *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively (the new methods respect
-  *     the global parameter "randomization/randomseedshift" automatically)
-  *   - methods SCIPdigraphCreate() and SCIPdigraphCopy() are no longer public and should be replaced
-  *     by SCIPcreateDigraph() and SCIPcopyDigraph(), respectively, which receive a \SCIP argument
-  *     and are more robust towards future interface changes
-  *
-  * <br>
-  * - <b>Misc</b>:
-  *   - added parameter "copytables" to SCIPcopyPlugins()
-  *   - allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
-  *   - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
-  *   - changed return type of SCIPcliqueGetId() from "int" to "unsigned int"
-  *   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information
-  *     of the clique table is now stored as a SCIP_DISJOINTSET member of the clique table
-  *     and cannot be publicly accessed
-  *
-  * <br>
-  * @section CHGPARAMS10 Changed parameters
-  *
-  * - fixed typo: "heuristics/completesol/maxunkownrate" has changed to "heuristics/completesol/maxunknownrate"
-  * - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
-  * - replaced "constraints/quadratic/disaggregate" by "constraints/quadratic/maxdisaggrsize" to bound
-  *   the total number of created constraints when disaggregating a quadratic constraint
-  * - removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
-  *   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and "constraints/soc/minefficacy"
-  * - removed parameters "conflict/usemir" and "conflict/prefermir"
-  * - removed parameter "separating/feastolfac"
-  * - removed parameter "separating/orthofac"
-  * - parameter "separating/maxstallrounds" only applies to nodes in the tree (not the root node, anymore); use the new
-  *   parameter "separating/maxstallroundsroot" for the root node
-  * - removed parameters "heuristics/clique/{multiplier,initseed}"
-  * - replaced parameter "heuristics/{clique,vbounds}/minfixingrate" by "heuristics/{clique,vbounds}/minintfixingrate" and
-  *   "heuristics/{clique,vbounds}/minmipfixingrate", which check the fixing rate before LP solving and after sub-MIP presolve
-  * - removed parameter "separating/cgmip/allowlocal" (use parameter passed to separation callback instead)
-  * - removed parameter "separating/{gomory,strongcg}/maxweightrange"
-  * - changed and removed several parameters for zerohalf separator
-  * - moved parameters for flowcover and cmir separators to "separating/aggregation"
-  *
-  *
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CHG11 Interface changes between SCIP 5.0 and SCIP 5.1
-  *
-  *
-  * @section CHGCALLBACKS11 New and changed callbacks
-  *
-  *
-  * <br>
-  * @section CHGINTERFUNC11 Changed interface methods
-  *
-  *   <b>Data structures</b>
-  *    - additional arguments "preferrecent", "decayfactor", and "avglim" to SCIPcreateBanditEpsgreedy() to choose between
-  *      weights that are simple averages or higher weights for more recent observations (the previous default).
-  *      The last two parameters are used for a finer control of the exponential decay.
-  *    - Functions SCIPintervalSolveUnivariateQuadExpression(), SCIPintervalSolveUnivariateQuadExpressionPositive(), and
-  *      and SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() require additional argument to specify already
-  *      existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
-  *
-  *   <b>Symmetry</b>
-  *    - removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries
-  *      independent of other components anymore
-
-  *
-  * <br>
-  *
-  *   <b>SCIP Status</b>
-  *   - new SCIP_STATUS code "SCIP_STATUS_TERMINATE" and methods SCIPtryTerminate() and
-  *     SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
-  *
-  * <br>
-  * @section CHGPARAMS11 Changed parameters
-  *
-  *   <b>Removed parameters</b>
-  *    - removed parameter "heuristics/alns/stallnodefactor" as the stall nodes are now controlled
-  *      directly by the target node limit within the heuristic.
-  *    - removed parameter "presolving/symmetry/computepresolved" since this presolver does not
-  *      compute symmetries independent of other components anymore
-  *
-  * <br>
-  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
-  */
-
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
@@ -7592,62 +7511,8 @@
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
- * \htmlinclude faq.inc
+ * \htmlinclude faq/faq.inc
  */
-
-/**@page INSTALL Installation information
- * \verbinclude INSTALL
- */
-
-/**@page RELEASENOTES Release notes
- *
- * Please consult the <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6629">release report</a> for version 5.0 that explains many of the new features in detail.
- *
- * \verbinclude SCIP-release-notes-5.0.1
- *
- * \verbinclude SCIP-release-notes-5.0
- *
- * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
- *
- * \verbinclude SCIP-release-notes-4.0.1
- *
- * \verbinclude SCIP-release-notes-4.0
- *
- * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> for version 3.2 that explains many of the new features in detail.
- *
- * \verbinclude SCIP-release-notes-3.2.1
- *
- * \verbinclude SCIP-release-notes-3.2
- *
- * \verbinclude SCIP-release-notes-3.1
- *
- * \verbinclude SCIP-release-notes-3.0.2
- *
- * \verbinclude SCIP-release-notes-3.0.1
- *
- * \verbinclude SCIP-release-notes-3.0
- *
- * \verbinclude SCIP-release-notes-2.1.1
- *
- * \verbinclude SCIP-release-notes-2.1
- *
- * \verbinclude SCIP-release-notes-2.0.2
- *
- * \verbinclude SCIP-release-notes-2.0.1
- *
- * \verbinclude SCIP-release-notes-2.0
- *
- * \verbinclude SCIP-release-notes-1.2
- *
- * \verbinclude SCIP-release-notes-1.1
- */
-
-/**@page CHANGELOG CHANGELOG
- *
- * \verbinclude CHANGELOG
- *
- */
-
 
 
 /**@page PARAMETERS List of all SCIP parameters
@@ -7849,7 +7714,7 @@
 
 /**@defgroup PublicRowMethods LP Row
  * @ingroup PublicLPMethods
- * @brief methods for LP rows
+ * @brief public methods for LP rows
  */
 
 /**@defgroup PublicCutMethods Cuts and Cutpools
@@ -7860,6 +7725,11 @@
 /**@defgroup PublicLPDivingMethods LP Diving
  * @ingroup PublicLPMethods
  * @brief methods to initiate and conduct LP diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicNLPMethods NLP Relaxation
@@ -7931,6 +7801,11 @@
  *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
 
+/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
+ * @ingroup DataStructures
+ * @brief methods for the creation and access of dynamic arrays
+ */
+
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
@@ -7941,6 +7816,11 @@
  * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
+ */
+
+/**@defgroup PublicValidationMethods Validation
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for validating the correctness of a solving process
  */
 
 /**@defgroup PublicMemoryMethods Memory Management
@@ -7983,6 +7863,16 @@
  *
  */
 
+/**@defgroup PublicBendersMethods Benders' decomposition
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition plugins
+ */
+
+/**@defgroup PublicBenderscutsMethods Benders' decomposition cuts
+ * @ingroup PluginManagementMethods
+ * @brief  methods for Benders' decomposition cuts plugins
+ */
+
 /**@defgroup PublicBranchRuleMethods Branching Rules
  * @ingroup PluginManagementMethods
  * @brief  methods for branching rule plugins
@@ -7993,9 +7883,9 @@
  * @brief  public methods for tree compressions
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
+/**@defgroup PublicConflicthdlrMethods Conflict Analysis
  * @ingroup PluginManagementMethods
- * @brief public methods related to conflict analysis
+ * @brief public methods for conflict handlers
  */
 
 /**@defgroup PublicConshdlrMethods Constraint handlers
@@ -8109,6 +7999,48 @@
   * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
   *
   */
+
+/**@defgroup BENDERS Benders' decomposition implementations
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default Benders' decomposition implementations of \SCIP
+ *
+ * A detailed description what a Benders' decomposition implementation does and how to add a Benders' decomposition
+ * implementations to SCIP can be found
+ * \ref BENDER "here".
+ */
+
+/**@defgroup BendersIncludes Inclusion methods
+ * @ingroup BENDERS
+ * @brief methods to include specific Benders' decomposition implementations into \SCIP
+ *
+ * This module contains methods to include specific Benders' decomposition implementations into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all Benders' decomposition implementations) using
+ * SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup BENDERSCUTS Benders' decomposition cut method
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default Benders' decomposition cut method of \SCIP
+ *
+ * A detailed description what a Benders' decomposition cut method does and how to add a Benders' decomposition
+ * cut method to SCIP can be found
+ * \ref BENDERSCUT "here".
+ */
+
+/**@defgroup BenderscutIncludes Inclusion methods
+ * @ingroup BENDERSCUTS
+ * @brief methods to include specific Benders' decomposition cut methods into \SCIP
+ *
+ * This module contains methods to include specific Benders' decomposition cut methods into \SCIP.
+ *
+ * @note The Benders' decomposition cut methods are linked to each Benders' decomposition implementation. Thus, the
+ * default Benders' decomposition implementations automatically include the necessary Benders' decomposition cut
+ * methods. For custom Benders' decomposition implementations, you can call SCIPincludeDefaultBendersCuts() in the
+ * SCIPincludeBendersMybenders() include function.
+ *
+ */
 
 /**@defgroup BRANCHINGRULES Branching Rules
  * @ingroup PUBLICPLUGINAPI

@@ -1,0 +1,5 @@
+# SCIP version 5.0.1.4
+
+# frequency for calling primal heuristic <conflictdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
+heuristics/conflictdiving/freq = 10

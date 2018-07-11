@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -74,6 +74,15 @@ using CppAD::SCIPInterval;
 #define CPPAD_MAX_NUM_THREADS 64
 #else
 #define CPPAD_MAX_NUM_THREADS 1
+#endif
+#endif
+
+/* disable -Wshadow warnings for upcoming includes of CppAD if using some old GCC
+ * -Wshadow was too strict with some versions of GCC 4 (https://stackoverflow.com/questions/2958457/gcc-wshadow-is-too-strict)
+ */
+#ifdef __GNUC__
+#if __GNUC__ == 4
+#pragma GCC diagnostic ignored "-Wshadow"
 #endif
 #endif
 

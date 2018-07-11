@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1481,7 +1481,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
  * Callback methods of reader
  */
 
-#if 0 /* TODO: implement, if one finds use for it */
+#if SCIP_DISABLED_CODE /* TODO: implement, if one finds use for it */
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_READERCOPY(readerCopyNl)

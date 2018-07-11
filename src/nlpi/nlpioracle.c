@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -557,7 +557,7 @@ void updateVariableDegreesCons(
    int j;
 
    assert(oracle != NULL);
-   assert(oracle->vardegrees != NULL);
+   assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
    assert(cons != NULL);
 
    for( j = 0; j < cons->nlinidxs; ++j )

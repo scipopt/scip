@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -4141,7 +4141,6 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-
    /* create subroot data */
    SCIP_CALL( subrootCreate(&subroot, blkmem, set, transprob, tree, lp) );
 
@@ -5671,7 +5670,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
          *upchild = node;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -6891,7 +6889,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
     * during resolving right above
     */
-   assert(!tree->probinglpwassolved || lp->solved || lp->resolvelperror);
+   assert(!tree->probinglpwassolved || !tree->probinglpwasflushed || lp->solved || lp->resolvelperror);
 
    /* if the LP was not solved before probing it should be marked unsolved now; this can occur if a probing LP was
     * solved in between

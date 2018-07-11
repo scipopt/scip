@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,7 +20,7 @@
  * @author Tobias Achterberg
  * @author Michael Winkler
  *
- * This LPI is beta! It only works with Gurobi versions >= 7.0.2.
+ * This LPI only works with Gurobi versions >= 7.0.2.
  *
  * @todo Try quad-precision and concurrent runs.
  *
@@ -44,9 +44,6 @@
 #if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
-
-/* store whether we have already warned about the beta status of this interface */
-static unsigned char warnedbeta = 0;
 
 /* define infinity value of Gurobi */
 #define GRB_INFBOUND 1e+20
@@ -1381,12 +1378,6 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int) (*lpi)->pricing) );
 
-   if( !warnedbeta )
-   {
-      warnedbeta = 1;
-      SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
-   }
-
    checkRangeInfo(*lpi);
 
    return SCIP_OKAY;
@@ -2013,7 +2004,8 @@ SCIP_RETCODE SCIPlpiClear(
       SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols-1) );
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* the following seems to be slower */
    CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
    CHECK_ZERO( lpi->messagehdlr, GRBnewmodel(lpi->grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
@@ -3596,11 +3588,20 @@ SCIP_Bool SCIPlpiWasSolved(
    return (lpi->solstat != -1);
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    assert( lpi != NULL );
@@ -3875,7 +3876,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == GRB_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -4081,7 +4088,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -5352,11 +5363,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if 0
+#ifdef SCIP_DEBUG
    if( error )
-   {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
-   }
 #else
    (void)error;
 #endif
@@ -5366,11 +5375,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if 0
+#ifdef SCIP_DEBUG
    if( error )
-   {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
-   }
 #else
    (void)error;
 #endif
