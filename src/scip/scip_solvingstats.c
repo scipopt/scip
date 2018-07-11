@@ -3038,7 +3038,7 @@ void SCIPprintHeuristicStatistics(
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]),
          SCIPheurGetNBestSolsFound(scip->set->heurs[i]));
-         
+
       /* count heuristics that use diving; needed to determine output later */
       ndivesets += SCIPheurGetNDivesets(scip->set->heurs[i]);
    }

@@ -87,6 +87,7 @@ static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
 #define DEBUG_PRINT_STAT             0
+#define DEBUG_PARAM_SETTING          0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
 #define DEBUG_DO_INTPNT_FEAS_CHECK   0
@@ -4773,8 +4774,8 @@ static const char* paramname[] = {
    "SCIP_LPPAR_DUALFEASTOL",                 /* feasibility tolerance for dual variables and reduced costs */
    "SCIP_LPPAR_BARRIERCONVTOL",              /* convergence tolerance used in barrier algorithm */
    "SCIP_LPPAR_OBJLIM",                      /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit */
-   "SCIP_LPPAR_LPTILIM",                     /* LP time limit */
+   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit, greater than or equal 0 */
+   "SCIP_LPPAR_LPTILIM",                     /* LP time limit, positive */
    "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
    "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
                                               * if number of rows divided by number of columns exceeds this value */
@@ -4803,8 +4804,8 @@ const char* paramty2str(
    assert(SCIP_LPPAR_DUALFEASTOL == 7);      /* feasibility tolerance for dual variables and reduced costs */
    assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /* convergence tolerance used in barrier algorithm */
    assert(SCIP_LPPAR_OBJLIM == 9);           /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit */
-   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit */
+   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit, greater than or equal 0 */
+   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit, positive */
    assert(SCIP_LPPAR_MARKOWITZ == 12);       /* Markowitz tolerance */
    assert(SCIP_LPPAR_ROWREPSWITCH == 13);    /* row representation switch */
    assert(SCIP_LPPAR_THREADS == 14);         /* number of threads used to solve the LP */
@@ -4962,6 +4963,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->lpinfo = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
+#if DEBUG_PARAM_SETTING
+      if( ival )
+      {
+         SCIPdebugMessage("Setting max iter to : %d\n", ival);
+      }
+#endif
+      /* 0 <= ival, 0 stopping immediately */
+      assert( ival >= 0 );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
@@ -5047,23 +5056,32 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch (type)
    {
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
-      if (dval < 1e-9)
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= inf */
+      if( dval < 1e-9 )
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
-      if (dval < 1e-9)
-         return SCIP_PARAMETERUNKNOWN;
-      /*         dval = 1e-9; */
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= inf */
+      if( dval < 1e-9 )
+         dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
+      /* 1e-14 <= dval <= inf */
+      assert( dval >= 0.0 );
+      if( dval < 1e-14 )
+         dval = 1e-14;
+
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
+      /* no restriction on dval */
       MSKobjsensee objsen;
       MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
       if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
@@ -5077,6 +5095,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
+      assert( dval > 0.0 );
+      /* mosek requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */
