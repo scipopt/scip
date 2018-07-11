@@ -4387,8 +4387,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* 0 < dval < DEFAULT_INFINITY (= 1e100), -1 means unlimited */
       assert( dval > 0.0 );
+      /* soplex requires 0 < dval < DEFAULT_INFINITY (= 1e100), -1 means unlimited */
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:

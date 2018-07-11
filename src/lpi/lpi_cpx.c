@@ -4540,7 +4540,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
    case SCIP_LPPAR_OBJLIM:
-      /* no restriction on dval */
+      /* Cplex poses no restriction on dval */
       if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
          setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
       else
@@ -4548,7 +4548,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       assert( dval > 0.0 );
-      /* dval non-negative */
+      /* Cplex requires dval non-negative
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:

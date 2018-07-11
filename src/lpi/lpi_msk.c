@@ -5030,8 +5030,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
-      /* 0 <= dval */
       assert( dval > 0.0 );
+      /* mosek requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */

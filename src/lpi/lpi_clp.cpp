@@ -3798,8 +3798,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       assert( dval > 0.0 );
-      /* no restrictions on dval
-       * (clp handles the case dval < 0 internally and sets param to -1 meaning no time limit.) */
+      /* clp poses no restrictions on dval
+       * (it handles the case dval < 0 internally and sets param to -1 meaning no time limit.)
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
 
       lpi->clp->setMaximumSeconds(dval);
       break;

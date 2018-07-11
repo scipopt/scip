@@ -5661,8 +5661,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* 0 <= dval */
       assert( dval > 0.0 );
+      /* gurobi requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
 
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;

@@ -3600,7 +3600,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
-      *dval = (double) ictrlval;
+      /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
+      *dval = (double) -ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3646,18 +3647,21 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      /* no restriction on dval */
       assert( dval >= 0.0 );
+      /* Xpress poses no restriction on dval
+       * However for consistency we assert it to be nonnegative.
+       */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
-     /* dval>0   If an integer solution has been found, stop MIP search after dval seconds, otherwise continue until an integer solution is finally found.
+     /* From the Xpress documentation:
+      * dval>0   If an integer solution has been found, stop MIP search after dval seconds,
+      *   otherwise continue until an integer solution is finally found.
       * dval<0   Stop in LP or MIP search after dval seconds.
       * dval=0   No time limit
-      * if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit.
       */
       assert( dval > 0.0 );
       ival = (int) -floor(dval);

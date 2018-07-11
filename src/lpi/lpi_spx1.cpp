@@ -5322,8 +5322,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
          lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      /* 0 <= dval */
       assert( dval > 0.0 );
+      /* soplex requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       lpi->spx->setTerminationTime(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:

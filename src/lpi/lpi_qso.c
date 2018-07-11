@@ -3605,8 +3605,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_LPTILIM:
-      /* 0 <= dval */
-      assert( 0.0 < dval );
+      assert( dval > 0.0 );
+
+      /* qso requires dval >= 0
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
