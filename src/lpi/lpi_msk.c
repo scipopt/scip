@@ -87,6 +87,7 @@ static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
 #define DEBUG_PRINT_STAT             0
+#define DEBUG_PARAM_SETTING          0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
 #define DEBUG_DO_INTPNT_FEAS_CHECK   0
