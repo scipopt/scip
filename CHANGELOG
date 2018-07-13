@@ -23,6 +23,11 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- LPI:
+  + now for all lp interfaces consistent requirements on SCIP_LPPAR:
+    LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
+  + now projecting SCIP_LPPAR values on feasible values for each lp interface
+
 ### New API functions
 
 ### Command line interface
