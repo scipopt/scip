@@ -2420,6 +2420,10 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             maxbrpoint = set->branch_clamp * lb + (1.0 - set->branch_clamp) * ub;
             maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set)*scale, maxbrpoint);  /*lint !e666*/
 
+            /* push branching point candidate towards middle of domain */
+            if( set->branch_midpull > 0.0 )
+               branchpoint = set->branch_midpull * (lb+ub) / 2.0 + (1.0 - set->branch_midpull) * branchpoint;
+
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
 
