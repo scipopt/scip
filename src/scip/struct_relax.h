@@ -55,6 +55,7 @@ struct SCIP_Relax
    SCIP_RELAXDATA*       relaxdata;          /**< relaxators local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this relaxator for the next stages */
    SCIP_CLOCK*           relaxclock;         /**< relaxation time */
+   SCIP_Real             imprtime;           /**< time spend for executing relaxator when improving bound (or cutoff) */
    int                   priority;           /**< priority of the relaxator */
    int                   freq;               /**< frequency for calling relaxator */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
