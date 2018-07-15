@@ -3595,6 +3595,13 @@ GENERALUPG:
    for( i = 0; i < nquadvars; ++i )
    {
       term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
+
+      /* skip upgrade if fixed (or (multi)aggregated) variables and still in fast presolving
+       * probably cons_quadratic did not yet had the chance to remove/replace this variable (see also #2352)
+       */
+      if( !SCIPvarIsActive(term->var) && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
+         goto cleanup;
+
       a[i*nquadvars + i] = term->sqrcoef;
       quadvars[i] = term->var;
    }

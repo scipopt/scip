@@ -28,7 +28,7 @@ fi
 cd ..
 
 # build a fresh version of SCIP
-make -j clean
+# make -j clean
 make -j ZIMPL=false
 
 # run scip with some commands for the shell tutorial
@@ -64,6 +64,5 @@ bin/scip -c "read doc/inc/simpleinstance/simple.lp optimize quit" > doc/inc/simp
 cd doc
 
 ### FINISHED FAQ GENERATION
-
 # finally build the scip documentation
 doxygen $DOXYFILE
