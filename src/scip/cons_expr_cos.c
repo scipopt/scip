@@ -6,7 +6,7 @@
 /*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  CIP is distributed under the terms of the ZIB Academic License.         */
+/*  CIP is distributed under the terms of the ZIB Academic License.          */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
@@ -257,8 +257,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    /* compute underestimating cuts */
    if( underestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, TRUE) );
+      SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, TRUE) );
 
       for( i = 0; i < 5; ++i )
       {
@@ -285,8 +285,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    /* compute overestimating cuts */
    if( overestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, FALSE) );
+      SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, FALSE) );
 
       for( i = 0; i < 5; ++i )
       {

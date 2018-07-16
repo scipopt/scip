@@ -640,19 +640,16 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 
 }
 
-/** helper function to create cuts for sine and cosine separation
+/** helper function to create initial cuts for sine and cosine separation
  *
- *  The following 6 cuts can be generated:
+ *  The following 5 cuts can be generated:
  *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
  *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
  *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
- *  - soltangent: tangent at specified refpoint
-
- *  All except soltangent are independent of a specific solution and use only the bounds of the child variable.
- *  If their pointers are passed with NULL, the respective computation is not performed at all. If one of the
- *  computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
+ *
+ *  If one of the computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
-SCIP_RETCODE SCIPcomputeCutsTrig(
+SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
@@ -661,8 +658,6 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
    SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
    SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROWPREP**        soltangent,         /**< pointer to store the solution tangent */
-   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
    SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
@@ -684,6 +679,12 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
+   assert(secant != NULL);
+   assert(ltangent != NULL);
+   assert(rtangent != NULL);
+   assert(lmidtangent != NULL);
+   assert(rmidtangent != NULL);
+
    /* caller must ensure that variable is not already fixed */
    assert(!SCIPisEQ(scip, childlb, childub));
 
@@ -702,11 +703,10 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    {
       childlb += M_PI_2;
       childub += M_PI_2;
-      refpoint += M_PI_2;
    }
 
    /*
-    * Compute all cuts that where specified upon call.
+    * Compute all initial cuts
     * For each linear equation z = a*x + b with bounds [lb,ub] the parameters can be computed by:
     *
     * a = cos(x^)    and     b = sin(x^) - a * x^        where x^ is any known point in [lb,ub]
@@ -715,78 +715,52 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
     */
 
    /* compute secant between lower and upper bound */
-   if( secant != NULL )
+   *secant = NULL;
+
+   if( underestimate )
+      success = computeSecantSin(scip, &lincoef, &linconst, childlb, childub);
+   else
+      success = computeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
+
+   if( success )
    {
-      *secant = NULL;
-
-      if( underestimate )
-         success = computeSecantSin(scip, &lincoef, &linconst, childlb, childub);
-      else
-         success = computeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
-
-      if( success )
-      {
-         SCIP_CALL( assembleRowprep(scip, secant, "secant", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-      }
+      SCIP_CALL( assembleRowprep(scip, secant, "secant", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
    }
 
    /* compute tangent at lower bound */
-   if( ltangent != NULL )
+   *ltangent = NULL;
+
+   if( underestimate )
+      success = computeLeftTangentSin(scip, &lincoef, &linconst, childlb);
+   else
+      success = computeRightTangentSin(scip, &lincoef, &linconst, -childlb);
+
+   if( success )
    {
-      *ltangent = NULL;
-
-      if( underestimate )
-         success = computeLeftTangentSin(scip, &lincoef, &linconst, childlb);
-      else
-         success = computeRightTangentSin(scip, &lincoef, &linconst, -childlb);
-
-      if( success )
-      {
-         SCIP_CALL( assembleRowprep(scip, ltangent, "ltangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-      }
+      SCIP_CALL( assembleRowprep(scip, ltangent, "ltangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
    }
 
    /* compute tangent at upper bound */
-   if( rtangent != NULL )
+   *rtangent = NULL;
+
+   if( underestimate )
+      success = computeRightTangentSin(scip, &lincoef, &linconst, childub);
+   else
+      success = computeLeftTangentSin(scip, &lincoef, &linconst, -childub);
+
+   if( success )
    {
-      *rtangent = NULL;
-
-      if( underestimate )
-         success = computeRightTangentSin(scip, &lincoef, &linconst, childub);
-      else
-         success = computeLeftTangentSin(scip, &lincoef, &linconst, -childub);
-
-      if( success )
-      {
-         SCIP_CALL( assembleRowprep(scip, rtangent, "rtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-      }
+      SCIP_CALL( assembleRowprep(scip, rtangent, "rtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
    }
-
-   /* compute tangent at solution point */
-   if( soltangent != NULL )
-   {
-      *soltangent = NULL;
-
-      if( underestimate )
-         success = computeSolTangentSin(scip, &lincoef, &linconst, childlb, childub, refpoint);
-      else
-         success = computeSolTangentSin(scip, &lincoef, &linconst, -childub, -childlb, -refpoint);
-
-      if( success )
-      {
-         SCIP_CALL( assembleRowprep(scip, soltangent, "soltangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-      }
-   }
-
 
    /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb))
-    * if secant or soltangent are feasible, this cut can never beat them
+    * if secant is feasible, this cut can never beat it so don't compute it
     */
-   if( lmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
+   *lmidtangent = NULL;
+
+   if( secant == NULL )
    {
       SCIP_Bool issecant;
-
-      *lmidtangent = NULL;
 
       if( underestimate )
          success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
@@ -796,20 +770,18 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
       if( success )
       {
          /* if the cut connects bounds, it is stored in secant */
-         SCIP_CALL( assembleRowprep(scip, (issecant && secant != NULL) ? secant : lmidtangent, "lmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
+         SCIP_CALL( assembleRowprep(scip, issecant ? secant : lmidtangent, "lmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
       }
    }
-   else if( lmidtangent != NULL )
-      *lmidtangent = NULL;
 
    /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub))
     * if secant or soltangent are feasible, this cut can never beat them
     */
-   if( rmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
+   *rmidtangent = NULL;
+
+   if( secant == NULL )
    {
       SCIP_Bool issecant;
-
-      *rmidtangent = NULL;
 
       if( underestimate )
          success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
@@ -819,11 +791,9 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
       if( success )
       {
          /* if the cut connects bounds, it is stored in secant */
-         SCIP_CALL( assembleRowprep(scip, (issecant && secant != NULL) ? secant : rmidtangent, "rmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
+         SCIP_CALL( assembleRowprep(scip, issecant ? secant : rmidtangent, "rmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
       }
    }
-   else if( rmidtangent != NULL )
-      *rmidtangent = NULL;
 
    return SCIP_OKAY;
 }
@@ -1086,8 +1056,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    /* compute underestimating cuts */
    if( underestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, TRUE) );
+      SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, TRUE) );
 
       for( i = 0; i < 5; ++i)
       {
@@ -1114,8 +1084,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    /* compute overestimating cuts */
    if( overestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, FALSE) );
+      SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, FALSE) );
 
       for( i = 0; i < 5; ++i )
       {

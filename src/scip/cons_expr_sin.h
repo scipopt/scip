@@ -83,20 +83,17 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
 );
 
-/** helper function to create cuts for sine and cosine separation
+/** helper function to create initial cuts for sine and cosine separation
  *
- *  The following 6 cuts can be generated:
+ *  The following 5 cuts can be generated:
  *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
  *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
  *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
- *  - soltangent: tangent at specified refpoint
-
- *  All except soltangent are independent of a specific solution and use only the bounds of the child variable.
- *  If their pointers are passed with NULL, the respective computation is not performed at all. If one of the
- *  computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
+ *
+ *  If one of the computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
 EXTERN
-SCIP_RETCODE SCIPcomputeCutsTrig(
+SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
@@ -105,8 +102,6 @@ SCIP_RETCODE SCIPcomputeCutsTrig(
    SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
    SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
    SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROWPREP**        soltangent,         /**< pointer to store the solution tangent */
-   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
    SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
