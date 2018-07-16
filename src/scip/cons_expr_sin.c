@@ -553,6 +553,89 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    return SCIP_OKAY;
 }
 
+/** helper function to compute coefficients and constant term of a linear extimator at a given point
+ *
+ *  The function will try to compute the following estimators in that order:
+ *  - soltangent: tangent at specified refpoint
+ *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
+ *  - lmidtangent: tangent at some other point that goes through (lb,sin(lb))
+ *  - rmidtangent: tangent at some other point that goes through (ub,sin(ub))
+ *
+ *  They are ordered such that a successfull computation for one of them cannot be beaten by consequent ones in terms
+ *  of violation at the reference point
+ */
+SCIP_Bool SCIPcomputeEstimatorsTrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
+   SCIP_Real*            linconst,           /**< buffer to store the constant term */
+   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
+   SCIP_Real             childlb,            /**< lower bound of child variable */
+   SCIP_Real             childub,            /**< upper bound of child variable */
+   SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
+   )
+{
+   SCIP_Real tmp;
+   SCIP_Bool success;
+   SCIP_Bool iscos;
+   SCIP_Bool issecant;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
+   assert(SCIPisLE(scip, childlb, childub));
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
+      return FALSE;
+
+   iscos = strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0;
+
+   /* for cos expressions, the bounds have to be shifted before and after computation */
+   if( iscos )
+   {
+      childlb += M_PI_2;
+      childub += M_PI_2;
+      refpoint += M_PI_2;
+   }
+
+   if( !underestimate )
+   {
+      tmp = childlb;
+      childlb = -childub;
+      childub = -tmp;
+      refpoint *= -1;
+   }
+
+   /* try out tangent at solution point */
+   success = computeSolTangentSin(scip, lincoef, linconst, childlb, childub, refpoint);
+
+   /* otherwise, try out secant */
+   if( !success )
+      success = computeSecantSin(scip, lincoef, linconst, childlb, childub);
+
+   /* otherwise, try left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
+   if( !success )
+      success = computeLeftMidTangentSin(scip, lincoef, linconst, &issecant, childlb, childub);
+
+   /* otherwise, try right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
+   if( !success )
+      success = computeRightMidTangentSin(scip, lincoef, linconst, &issecant, childlb, childub);
+
+   if( !success )
+      return FALSE;
+
+   if( iscos )
+      *linconst += (underestimate ? (*lincoef) * M_PI_2 : -(*lincoef) * M_PI_2);
+
+   return TRUE;
+
+}
+
 /** helper function to create cuts for sine and cosine separation
  *
  *  The following 6 cuts can be generated:
@@ -1138,6 +1221,36 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    return SCIP_OKAY;
 }
 
+/** expression estimator callback */
+static
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
+
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   *success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, coefs, constant, SCIPgetSolVal(scip, sol, childvar),
+      SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), !overestimate);
+   *islocal = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
@@ -1267,7 +1380,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, sepaSin, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, sepaSin, estimateSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
