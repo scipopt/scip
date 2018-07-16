@@ -629,8 +629,12 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    if( !success )
       return FALSE;
 
+   if( !underestimate )
+      (*linconst) *= -1.0;
+
+   /* for cos expressions, shift back */
    if( iscos )
-      *linconst += (underestimate ? (*lincoef) * M_PI_2 : -(*lincoef) * M_PI_2);
+      (*linconst) -= (*lincoef) * M_PI_2;
 
    return TRUE;
 
@@ -1138,89 +1142,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* childvar;
-   SCIP_ROWPREP* cuts[4] = {NULL, NULL, NULL, NULL};
-   SCIP_Real refpoint;
-   SCIP_Real childlb;
-   SCIP_Real childub;
-   SCIP_Bool infeasible;
-   SCIP_Bool success;
-   int i;
-
-   /* get expression data */
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
-
-   infeasible = FALSE;
-   *ncuts = 0;
-   *result = SCIP_DIDNOTFIND;
-
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-   childlb = SCIPgetConsExprExprInterval(child).inf;
-   childub = SCIPgetConsExprExprInterval(child).sup;
-
-   /* no need for cut if child is fixed */
-   if( SCIPisRelEQ(scip, childlb, childub) )
-      return SCIP_OKAY;
-
-   /* compute all possible inequalities; the resulting cuts are stored in the cuts array
-    *
-    *  - cuts[0] = secant
-    *  - cuts[1] = secant connecting (lb,sin(lbx)) with left tangent point
-    *  - cuts[1] = secant connecting (ub,sin(ubx)) with right tangent point
-    *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
-    */
-   SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
-         refpoint, childlb, childub, !overestimate) );
-
-   for( i = 0; i < 4; ++i )
-   {
-      if( cuts[i] == NULL )
-         continue;
-
-      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-      if( success )
-      {
-         /* make a SCIP_ROW and add to LP */
-         SCIP_ROW* row;
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-         if( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            break;
-         }
-         else
-         {
-            *result = SCIP_SEPARATED;
-            ++*ncuts;
-         }
-      }
-
-      SCIPfreeRowprep(scip, &cuts[i]);
-   }
-
-   /* if we stopped due to infeasibility, free remaining cuts */
-   for( ; i < 4; ++i )
-   {
-      if( cuts[i] != NULL )
-         SCIPfreeRowprep(scip, &cuts[i]);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression estimator callback */
 static
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
@@ -1380,7 +1301,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, sepaSin, estimateSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, NULL, estimateSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
