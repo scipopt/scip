@@ -136,6 +136,7 @@ SCIP_RETCODE doRelaxCreate(
    (*relax)->ncalls = 0;
    (*relax)->ncutoffs = 0;
    (*relax)->nimprbounds = 0;
+   (*relax)->imprtime = 0.0;
    (*relax)->naddedconss = 0;
    (*relax)->nreduceddom = 0;
    (*relax)->nseparated = 0;
@@ -237,6 +238,7 @@ SCIP_RETCODE SCIPrelaxInit(
       relax->ncalls = 0;
       relax->ncutoffs = 0;
       relax->nimprbounds = 0;
+      relax->imprtime = 0.0;
       relax->naddedconss = 0;
       relax->nreduceddom = 0;
       relax->nseparated = 0;
@@ -365,9 +367,12 @@ SCIP_RETCODE SCIPrelaxExec(
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
+      SCIP_Real starttime;
+
       SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
 
       /* start timing */
+      starttime = SCIPclockGetTime(relax->relaxclock);
       SCIPclockStart(relax->relaxclock, set);
 
       /* call external relaxation method */
@@ -396,7 +401,10 @@ SCIP_RETCODE SCIPrelaxExec(
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
          else if( *result == SCIP_CUTOFF || SCIPsetIsInfinity(set, *lowerbound) )
+         {
             ++relax->ncutoffs;
+            relax->imprtime += SCIPclockGetTime(relax->relaxclock) - starttime;
+         }
          else
          {
             SCIP_NODE* node;
@@ -409,7 +417,10 @@ SCIP_RETCODE SCIPrelaxExec(
                oldlowerbound = -SCIPsetInfinity(set);
 
             if( !SCIPsetIsInfinity(set, -*lowerbound) && SCIPsetIsRelGT(set, *lowerbound, oldlowerbound) )
+            {
                ++relax->nimprbounds;
+               relax->imprtime += SCIPclockGetTime(relax->relaxclock) - starttime;
+            }
 
             if( *result == SCIP_CONSADDED )
                ++relax->naddedconss;
@@ -635,6 +646,16 @@ SCIP_Longint SCIPrelaxGetNAddedConss(
    assert(relax != NULL);
 
    return relax->naddedconss;
+}
+
+/** gets the time in seconds spent for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
+SCIP_Real SCIPrelaxGetImprovedLowerboundTime(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->imprtime;
 }
 
 /** gets the total number of times the relaxation handler reduced variable domains */
