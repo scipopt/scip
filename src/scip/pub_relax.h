@@ -115,7 +115,7 @@ SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/** gets the time in seconds spends for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
+/** gets the time in seconds spent for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
 EXTERN
 SCIP_Real SCIPrelaxGetImprovedLowerboundTime(
    SCIP_RELAX*           relax               /**< relaxation handler */

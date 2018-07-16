@@ -53,9 +53,9 @@ struct SCIP_Relax
    SCIP_DECL_RELAXEXITSOL((*relaxexitsol));  /**< solving process deinitialization method of relaxator */
    SCIP_DECL_RELAXEXEC   ((*relaxexec));     /**< execution method of relaxator */
    SCIP_RELAXDATA*       relaxdata;          /**< relaxators local data */
-   SCIP_CLOCK*           setuptime;          /**< time spend for setting up this relaxator for the next stages */
+   SCIP_CLOCK*           setuptime;          /**< time spent for setting up this relaxator for the next stages */
    SCIP_CLOCK*           relaxclock;         /**< relaxation time */
-   SCIP_Real             imprtime;           /**< time spend for executing relaxator when improving bound (or cutoff) */
+   SCIP_Real             imprtime;           /**< time spent for executing relaxator when improving bound (or cutoff) */
    int                   priority;           /**< priority of the relaxator */
    int                   freq;               /**< frequency for calling relaxator */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
