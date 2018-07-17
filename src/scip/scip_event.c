@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -155,8 +155,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    }
 
    SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, scip->set, name, desc,
-         eventcopy,
-         eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
+         eventcopy, eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
 
@@ -208,11 +207,11 @@ SCIP_RETCODE SCIPsetEventhdlrCopy(
    SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback of the event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetCopy(eventhdlr, eventcopy);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetCopy(eventhdlr, eventcopy);
+   return SCIP_OKAY;
 }
 
 /** sets deinitialization callback of the event handler */
@@ -222,11 +221,11 @@ SCIP_RETCODE SCIPsetEventhdlrFree(
    SCIP_DECL_EVENTFREE   ((*eventfree))      /**< deinitialization callback of the event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetFree(eventhdlr, eventfree);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetFree(eventhdlr, eventfree);
+   return SCIP_OKAY;
 }
 
 /** sets initialization callback of the event handler */
@@ -236,11 +235,11 @@ SCIP_RETCODE SCIPsetEventhdlrInit(
    SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialize event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetInit(eventhdlr, eventinit);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetInit(eventhdlr, eventinit);
+   return SCIP_OKAY;
 }
 
 /** sets deinitialization callback of the event handler */
@@ -250,11 +249,11 @@ SCIP_RETCODE SCIPsetEventhdlrExit(
    SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialize event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetExit(eventhdlr, eventexit);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetExit(eventhdlr, eventexit);
+   return SCIP_OKAY;
 }
 
 /** sets solving process initialization callback of the event handler */
@@ -264,11 +263,11 @@ SCIP_RETCODE SCIPsetEventhdlrInitsol(
    SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetInitsol(eventhdlr, eventinitsol);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetInitsol(eventhdlr, eventinitsol);
+   return SCIP_OKAY;
 }
 
 /** sets solving process deinitialization callback of the event handler */
@@ -278,11 +277,11 @@ SCIP_RETCODE SCIPsetEventhdlrExitsol(
    SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetExitsol(eventhdlr, eventexitsol);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetExitsol(eventhdlr, eventexitsol);
+   return SCIP_OKAY;
 }
 
 /** sets callback of the event handler to free specific event data */
@@ -292,11 +291,11 @@ SCIP_RETCODE SCIPsetEventhdlrDelete(
    SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< free specific event data */
    )
 {
-        assert(scip != NULL);
-        SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   assert(scip != NULL);
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetEventhdlrDelete", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-        SCIPeventhdlrSetDelete(eventhdlr, eventdelete);
-        return SCIP_OKAY;
+   SCIPeventhdlrSetDelete(eventhdlr, eventdelete);
+   return SCIP_OKAY;
 }
 
 /** returns the event handler of the given name, or NULL if not existing */

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,14 +21,39 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "nlpi/nlpi.h"
 #include "scip/heur_nlpdiving.h"
-#include "scip/heur_subnlp.h" /* for NLP initialization */
-#include "scip/heur_undercover.h" /* for cover computation */
-#include "nlpi/nlpi.h" /* for NLP statistics, currently */
-
+#include "scip/heur_subnlp.h"
+#include "scip/heur_undercover.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "nlpdiving"
 #define HEUR_DESC             "NLP diving heuristic that chooses fixings w.r.t. the fractionalities"
@@ -1110,12 +1135,12 @@ SCIP_RETCODE chooseDoubleVar(
       nlpsolceil =  SCIPfeasCeil(scip, nlpsol);
       floorval = MIN(lpsolfloor,nlpsolfloor);
       ceilval =  MAX(lpsolceil,nlpsolceil);
+
       /* if both values are in the same interval, find out which integer is (in sum) the closer one, this will be the
        * new bound. The minima and maxima are necessary since one or both values with be integer
        */
       if( SCIPvarIsBinary(var) || ceilval-floorval < 1.5 )
       {
-
          frac = 0.33*(lpsol-floorval) + 0.67*(nlpsol-floorval);
          if( frac < 0.5 )
          {
@@ -1383,9 +1408,7 @@ SCIP_RETCODE solveSubMIP(
    )
 {
    SCIP* subscip;
-
    SCIP_RETCODE retcode;
-
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );

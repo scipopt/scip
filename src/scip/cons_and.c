@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,18 +31,39 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "nlpi/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_setppc.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_setppc.h"
 #include "scip/cons_pseudoboolean.h"
-#include "scip/pub_misc.h"
+#include "scip/cons_setppc.h"
 #include "scip/debug.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 
 /* constraint handler properties */
@@ -472,7 +493,6 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -544,7 +564,6 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
    SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->resvar)) );
-
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -2115,7 +2134,6 @@ SCIP_RETCODE dualPresolve(
                if( fixed )
                   ++(*nfixedvars);
 
-
                for( v = nvars - 1; v >= 0 && !(*cutoff); --v )
                {
                   SCIP_CALL( SCIPfixVar(scip, vars[v], 1.0, &infeasible, &fixed) );
@@ -2796,7 +2814,6 @@ SCIP_RETCODE cliquePresolve(
 	    *cutoff = *cutoff || infeasible;
 	    if( fixed )
 	       ++(*nfixedvars);
-
 
 	    /* create clique constraint which lead to the last fixing */
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq", SCIPconsGetName(cons), v2);
@@ -3946,7 +3963,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                      !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-
                /* add constraint */
                SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
@@ -4646,7 +4662,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSPRINT(consPrintAnd)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

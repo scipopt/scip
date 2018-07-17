@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,6 +21,8 @@
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
+ * @todo influence output by SCIP verblevel, too, e.g., print strong warnings if SCIP verblevel is full; but currently we have no access to SCIP verblevel
+ * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
  *
  * This file can only be compiled if Ipopt is available.
  * Otherwise, to resolve public functions, use nlpi_ipopt_dummy.c.
@@ -71,7 +73,7 @@ using namespace Ipopt;
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
 #else
-#define DEFAULT_PRINTLEVEL J_STRONGWARNING   /**< default print level of Ipopt */
+#define DEFAULT_PRINTLEVEL J_ERROR           /**< default print level of Ipopt */
 #endif
 #define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
@@ -1384,7 +1386,7 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
    {
       int printlevel;
       problem->ipopt->Options()->GetIntegerValue("print_level", printlevel, "");
-      if( printlevel <= J_STRONGWARNING )
+      if( printlevel <= J_ERROR )
          *ival = 0;
       else if( printlevel >= J_DETAILED )
          *ival = printlevel - J_ITERSUMMARY + 1;
@@ -1492,7 +1494,7 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       switch( ival )
       {
       case 0:
-         problem->ipopt->Options()->SetIntegerValue("print_level", J_STRONGWARNING);
+         problem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
          break;
       case 1:
          problem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
@@ -2177,8 +2179,8 @@ bool ScipNLP::get_bounds_info(
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
    assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
 
-   assert(SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle) != NULL);
-   assert(SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle) != NULL);
+   assert(SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle) != NULL || n == 0);
+   assert(SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle) != NULL || n == 0);
 
    BMScopyMemoryArray(x_l, SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle), n);
    BMScopyMemoryArray(x_u, SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle), n);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -81,7 +81,8 @@ static
 SCIP_RETCODE constructValidSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -110,11 +111,26 @@ SCIP_RETCODE constructValidSolution(
    /* if the solution is NULL, then we create the solution from the LP sol */
    if( sol != NULL )
    {
+      assert(type == SCIP_BENDERSENFOTYPE_CHECK);
       SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+      switch( type )
+      {
+         case SCIP_BENDERSENFOTYPE_LP:
+            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+            break;
+         case SCIP_BENDERSENFOTYPE_PSEUDO:
+            SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
+            break;
+         case SCIP_BENDERSENFOTYPE_RELAX:
+            SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
+            break;
+         default:
+            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+            break;
+      }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
 
@@ -130,7 +146,7 @@ SCIP_RETCODE constructValidSolution(
       {
          SCIP_Real objval;
 
-         objval = SCIPbendersGetSubprobObjval(benders[i], j);
+         objval = SCIPbendersGetSubproblemObjval(benders[i], j);
 
          if( SCIPvarGetStatus(auxiliaryvars[j]) == SCIP_VARSTATUS_FIXED
             && !SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, auxiliaryvars[j]), objval) )
@@ -271,13 +287,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
        * still need to be updated. This is done by constructing a valid solution. */
       if( (*result) == SCIP_FEASIBLE && auxviol )
       {
-         if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
-         {
-            if( !SCIPsolIsOriginal(sol) )
-            {
-               SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
-            }
-         }
+         SCIP_CALL( constructValidSolution(scip, conshdlr, sol, type) );
 
          (*result) = SCIP_INFEASIBLE;
       }
@@ -465,7 +475,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    infeasible = FALSE;
    auxviol = FALSE;
 
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    /* if the constraint handler is active, then the check must be performed.  */
@@ -510,7 +519,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
             {
                if( !SCIPsolIsOriginal(sol) )
                {
-                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol, SCIP_BENDERSENFOTYPE_CHECK) );
                }
 
                if( printreason )
@@ -610,7 +619,7 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
             }
 
             /* stores the lower bound for the subproblem */
-            SCIPbendersUpdateSubprobLowerbound(benders[i], j, lowerbound);
+            SCIPbendersUpdateSubproblemLowerbound(benders[i], j, lowerbound);
          }
 
          if( (*result) == SCIP_CUTOFF )
@@ -625,7 +634,6 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 

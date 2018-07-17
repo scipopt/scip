@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -167,8 +167,7 @@ SCIP_RETCODE SCIPincludeProp(
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq, delay, timingmask, presolpriority, presolmaxrounds, presoltiming,
-         propcopy,
-         propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
+         propcopy, propfree, propinit, propexit, propinitpre, propexitpre, propinitsol, propexitsol,
          proppresol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
 

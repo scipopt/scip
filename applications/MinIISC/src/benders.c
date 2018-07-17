@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -183,7 +183,7 @@ SCIP_RETCODE printLongStatistics(
    else
       SCIPinfoMessage(masterscip, NULL, "  Gap              : %10.2f %%\n", 100.0 * gap);
 
-#if 0
+#ifdef SCIP_OUTPUT
    SCIPinfoMessage(masterscip, NULL, "\nTotal used time:\t %f\n", SCIPgetClockTime(masterscip, totaltimeclock));
    SCIPinfoMessage(masterscip, NULL, "Oracle time:\t\t %f\n", SCIPgetClockTime(masterscip, oracletimeclock));
    SCIPinfoMessage(masterscip, NULL, "Master problem time:\t %f\n", SCIPgetClockTime(masterscip, mastertimeclock));

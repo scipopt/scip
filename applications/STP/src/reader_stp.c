@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -96,14 +96,11 @@ SCIP_DECL_READERREAD(readerReadStp)
    SCIP_CALL( retcode );
 
    probdata = SCIPgetProbData(scip);
-   if( SCIPgetStage(scip) == SCIP_STAGE_INIT ||  probdata == NULL )
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT || probdata == NULL )
       return SCIP_READERROR;
    else if(SCIPprobdataGetGraph(probdata) != NULL && mode == 'p')
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "activate pricer\n");
-#if 0
-      SCIP_CALL( SCIPsetBoolParam(scip, "propagating/pseudoobj/force", TRUE) );
-#endif
       SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "stp")) );
    }
 
@@ -139,25 +136,11 @@ SCIP_DECL_READERWRITE(readerWriteStp)
  * @{
  */
 
-/** includes the stp file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderStp(
+/** include user parameters */
+SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
-   SCIP_READERDATA* readerdata;
-   SCIP_READER* reader;
-
-   /* create reader data */
-   readerdata = NULL;
-
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-   assert(reader != NULL);
-
-   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyStp) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
-
    /* include user parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/compcentral",
@@ -208,23 +191,46 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "print the graph before and after the presolving", NULL, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip,
-	 "stp/mode",
+    "stp/mode",
          "Solving mode: 'c'ut, 'f'low ,'p'rice",
          NULL, FALSE, 'c', STP_MODES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip,
          "stp/logfile",
-         "log file in DIMACS challenge format",
+         "log file in DIMACS challenge format; use_probname for using problem name",
          NULL, FALSE, "",
          NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip,
          "stp/intlogfile",
-         "log file in DIMACS challenge format for intermediate solutions",
+         "log file for intermediate solutions; use_probname for using problem name",
          NULL, FALSE, "",
          NULL, NULL) );
 
+   return SCIP_OKAY;
+}
 
+
+/** includes the stp file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderStp(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
+
+   /* create reader data */
+   readerdata = NULL;
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   assert(reader != NULL);
+
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyStp) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadStp) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteStp) );
+
+   SCIP_CALL( SCIPStpReaderIncludeParams(scip) );
 
    return SCIP_OKAY;
 }

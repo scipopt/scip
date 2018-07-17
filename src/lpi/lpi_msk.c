@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -862,6 +862,9 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
+
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG, MSK_OFF) );
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG_SIM, MSK_OFF) );
 
    return SCIP_OKAY;
 }
@@ -3912,15 +3915,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_OFF) );
-#endif
-
    SCIP_CALL( handle_singular(lpi, bind, MSK_initbasissolve(lpi->task, bind)) );
-
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
-#endif
 
    for (i = 0; i < nrows; i++ )
    {

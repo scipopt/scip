@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,18 +21,31 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
-#include "scip/scipdefplugins.h"
-#include "scip/reader_cor.h"
-#include "scip/reader_tim.h"
-#include "scip/reader_sto.h"
-#include "scip/pub_misc.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_benders.h"
+#include "blockmemshell/memory.h"
 #include "scip/benders_default.h"
+#include "scip/cons_linear.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_cor.h"
+#include "scip/reader_sto.h"
+#include "scip/reader_tim.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_debug.h"
+#include "scip/scipdefplugins.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 
 #define READER_NAME             "storeader"
 #define READER_DESC             "file reader for stochastic information of stochastic programs in the SMPS file format"
@@ -207,7 +220,6 @@ SCIP_RETCODE freeScenarioTree(
    if( (*scenariotree)->nsubproblems > 0 )
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
 
-
    SCIPfreeBlockMemory(scip, scenariotree);
 
    return SCIP_OKAY;
@@ -239,7 +251,7 @@ SCIP* getScenarioScip(
 
 /** creates the subproblem array. This array will be the same size as the number of children */
 static
-SCIP_RETCODE createScenarioSubprobArray(
+SCIP_RETCODE createScenarioSubproblemArray(
    SCIP*                 scip,               /**< the SCIP data structure */
    STOSCENARIO*          scenario            /**< the scenario */
    )
@@ -270,7 +282,7 @@ void addScenarioSubproblem(
 
 /** returns the subproblem array for the scenario */
 static
-SCIP** getScenarioSubprobArray(
+SCIP** getScenarioSubproblemArray(
    STOSCENARIO*          scenario            /**< the scenario */
    )
 {
@@ -575,7 +587,6 @@ SCIP_RETCODE copyScenario(
    probability = getScenarioProbability(scip, sourcescenario);
    SCIP_CALL( setScenarioProbability(scip, (*targetscenario), probability) );
 
-
    return SCIP_OKAY;
 }
 
@@ -604,7 +615,6 @@ SCIP_RETCODE mergeScenarios(
    /* setting the scenario probability */
    probability = getScenarioProbability(scip, scenario1)*getScenarioProbability(scip, (*mergedscenario));
    SCIP_CALL( setScenarioProbability(scip, (*mergedscenario), probability) );
-
 
    return SCIP_OKAY;
 }
@@ -670,7 +680,6 @@ SCIP_RETCODE buildScenarioTree(
    {
       /* adding child to the scenario tree */
       SCIP_CALL( scenarioAddChild(scip, scenariotree, scenarios[stageindex][i]) );
-
 
       /* building the tree below the recently added child */
       if( stage < numstages - 1 )
@@ -848,7 +857,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
       SCIP_CALL( setScenarioNum(scip, (*scenarios)[(*numscenarios)], (*numscenarios)) );
       SCIP_CALL( setScenarioStageNum(scip, (*scenarios)[(*numscenarios)], stagenum) );
 
-
       /* if there is only a single block for the scenario, then we simply copy the block.
        * Otherwise, the blocks are merged into a single scenario */
       if( (*numblocksforscen) == 1 )
@@ -862,8 +870,6 @@ SCIP_RETCODE buildScenariosFromBlocks(
 
       (*numscenarios)++;
    }
-
-
 
    return SCIP_OKAY;
 }
@@ -908,7 +914,6 @@ SCIP_RETCODE createScenariosFromBlocks(
    SCIP_CALL( SCIPallocBufferArray(scip, &blocksforscen, numblocks) );
 
    (void) SCIPsnprintf(periods, SCIP_MAXSTRLEN, "");
-
 
    stagenum = 0;
    for( i = 0; i < numblocks; i++ )
@@ -1167,7 +1172,7 @@ void stoinputSetProbname(
 static
 void stoinputSetStochtype(
    STOINPUT*             stoi,               /**< sto input structure */
-   const char*           stochtype            /**< name of the scenario type */
+   const char*           stochtype           /**< name of the scenario type */
    )
 {
    assert(stoi != NULL);
@@ -1364,7 +1369,6 @@ SCIP_RETCODE readStoch(
       return SCIP_OKAY;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -1459,7 +1463,6 @@ SCIP_RETCODE readBlocks(
                foundblock = TRUE;
                break;
             }
-
          }
          blocknum = i;
 
@@ -1709,7 +1712,6 @@ SCIP_RETCODE readIndep(
 
    while( stoinputReadLine(stoi) )
    {
-
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "INDEP") )
@@ -1761,7 +1763,6 @@ SCIP_RETCODE readIndep(
             foundblock = TRUE;
             break;
          }
-
       }
       blocknum = i;
 
@@ -2008,7 +2009,6 @@ SCIP_RETCODE getScenarioDecompVar(
          getScenarioEntityName(varname, SCIPvarGetName(consvar), getScenarioStageNum(scip, checkscen),
             getScenarioNum(scip, checkscen));
 
-
       /* first checking whether the variable is included in the scenario */
       searchvar = SCIPfindVar(scip, varname);
       if( searchvar != NULL )
@@ -2111,7 +2111,7 @@ SCIP_RETCODE addScenarioConsToProb(
    return SCIP_OKAY;
 }
 
-
+/** add variables and constraint to problem */
 static
 SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure of master problem */
@@ -2167,7 +2167,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
-         SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
+         SCIP_CALL( createScenarioSubproblemArray(scenarioscip, scenario) );
    }
    else
       scenarioscip = scip;
@@ -2181,7 +2181,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    /* adding the constraints to the scenario */
    SCIP_CALL( addScenarioConsToProb(scenarioscip, scenario, conss, nconss, decomp) );
 
-
    /* add the variables and constraints of the child scenarios */
    for( i = 0; i < getScenarioNChildren(scenario); i++ )
    {
@@ -2194,7 +2193,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
    /* adding the Benders' decomposition */
    if( decomp && getScenarioNChildren(scenario) > 0 )
-      SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
+      SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubproblemArray(scenario), getScenarioNChildren(scenario)) );
 
    /* computing the probability for the scenario */
    probability = computeScenarioProbability(scenarioscip, scenario);
@@ -2254,12 +2253,10 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             var = SCIPfindVar(scenarioscip, name);
          }
 
-
          /* changing the coefficient for the variable */
          SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
       }
    }
-
 
    return SCIP_OKAY;
 }
@@ -2326,7 +2323,6 @@ SCIP_RETCODE buildFullProblem(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-
    /* adding all variables and constraints for stages below the first stage.
     * The first stage is covered by the original problem. */
    for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
@@ -2334,8 +2330,6 @@ SCIP_RETCODE buildFullProblem(
 
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
-
-
 
    return SCIP_OKAY;
 }
@@ -2353,7 +2347,7 @@ SCIP_RETCODE buildDecompProblem(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   SCIP_CALL( createScenarioSubprobArray(scip, readerdata->scenariotree) );
+   SCIP_CALL( createScenarioSubproblemArray(scip, readerdata->scenariotree) );
 
    /* activating the Benders' constraint handler. The two-phase method is activated by default. If the user desires not
     * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
@@ -2372,7 +2366,7 @@ SCIP_RETCODE buildDecompProblem(
    }
 
    /* creating the Benders' decomposition */
-   SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubprobArray(readerdata->scenariotree),
+   SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubproblemArray(readerdata->scenariotree),
          getScenarioNChildren(readerdata->scenariotree)) );
 
    /* removing the variable and constraints that were included as part of the core file */
@@ -2459,7 +2453,6 @@ SCIP_RETCODE readSto(
 
    if( !unsupported && stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
-
 
    error = stoinputHasError(stoi);
 
@@ -2584,7 +2577,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
    readerdata->scenariotree = NULL;
    readerdata->numscenarios = 0;
-
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

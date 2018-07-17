@@ -9,40 +9,34 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_feas.c
  * @brief  Standard feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
- *
- * The classical Benders' decomposition feasibility cuts arise from an infeasible instance of the Benders' decomposition
- * subproblem.
- * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
- * \f[
- * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
- * \f]
- * If the subproblem is infeasible as a result of the solution \f$\bar{x}\f$, then the Benders' decomposition
- * feasibility cut can be generated from the dual ray. Let \f$w\f$ be the vector corresponding to the dual ray of the
- * Benders' decomposition subproblem. The resulting cut is:
- * \f[
- * 0 \geq w^{T}(h - Hx)
- * \f]
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/benderscut_feas.h"
-#include "scip/pub_benders.h"
-#include "scip/pub_benderscut.h"
-#include "scip/pub_misc_linear.h"
-
 #include "scip/cons_linear.h"
-
+#include "scip/pub_benderscut.h"
+#include "scip/pub_benders.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_linear.h"
+#include "scip/pub_var.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
 
 #define BENDERSCUT_NAME             "feas"
 #define BENDERSCUT_DESC             "Standard feasibility cuts for Benders' decomposition"

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -4141,7 +4141,6 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-
    /* create subroot data */
    SCIP_CALL( subrootCreate(&subroot, blkmem, set, transprob, tree, lp) );
 
@@ -5670,7 +5669,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
       if( upchild != NULL )
          *upchild = node;
    }
-
 
    return SCIP_OKAY;
 }

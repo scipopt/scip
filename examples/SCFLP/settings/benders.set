@@ -1,0 +1,7 @@
+# Should Benders' decomposition be used to solve the problem?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/scflpreader/usebenders = TRUE
+
+# the number of scenarios that will be randomly generated
+# [type: int, advanced: FALSE, range: [1,2147483647], default: 250]
+reading/scflpreader/numscenarios = 5

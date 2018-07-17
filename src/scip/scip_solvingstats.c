@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3557,17 +3557,17 @@ void SCIPprintConcsolverStatistics(
       for( i = 0; i < nconcsolvers; ++i )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11i %11i %11" SCIP_LONGINT_FORMAT " %14" SCIP_LONGINT_FORMAT "\n",
-                               winner == i ? '*' : ' ',
-                               SCIPconcsolverGetName(concsolvers[i]),
-                               SCIPconcsolverGetSolvingTime(concsolvers[i]),
-                               SCIPconcsolverGetSyncTime(concsolvers[i]),
-                               SCIPconcsolverGetNNodes(concsolvers[i]),
-                               SCIPconcsolverGetNLPIterations(concsolvers[i]),
-                               SCIPconcsolverGetNSolsShared(concsolvers[i]),
-                               SCIPconcsolverGetNSolsRecvd(concsolvers[i]),
-                               SCIPconcsolverGetNTighterBnds(concsolvers[i]),
-                               SCIPconcsolverGetNTighterIntBnds(concsolvers[i])
-                              );
+            winner == i ? '*' : ' ',
+            SCIPconcsolverGetName(concsolvers[i]),
+            SCIPconcsolverGetSolvingTime(concsolvers[i]),
+            SCIPconcsolverGetSyncTime(concsolvers[i]),
+            SCIPconcsolverGetNNodes(concsolvers[i]),
+            SCIPconcsolverGetNLPIterations(concsolvers[i]),
+            SCIPconcsolverGetNSolsShared(concsolvers[i]),
+            SCIPconcsolverGetNSolsRecvd(concsolvers[i]),
+            SCIPconcsolverGetNTighterBnds(concsolvers[i]),
+            SCIPconcsolverGetNTighterIntBnds(concsolvers[i])
+            );
       }
    }
 }

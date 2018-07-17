@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,13 +22,33 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/branch_relpscost.h"
 #include "scip/treemodel.h"
 #include "scip/cons_and.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -118,6 +138,8 @@ struct SCIP_BranchruleData
  * local methods
  */
 
+/**! [SnippetCodeStyleStaticAsserts] */
+
 /** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if multiaggregated) */
 static
 SCIP_RETCODE binvarGetActiveProbindex(
@@ -130,6 +152,8 @@ SCIP_RETCODE binvarGetActiveProbindex(
    assert(var != NULL);
    assert(SCIPvarIsBinary(var));
    assert(probindex != NULL);
+
+/**! [SnippetCodeStyleStaticAsserts] */
 
    *probindex = SCIPvarGetProbindex(var);
 
@@ -152,6 +176,8 @@ SCIP_RETCODE binvarGetActiveProbindex(
    return SCIP_OKAY;
 }
 
+/**! [SnippetCodeStyleDeclaration] */
+
 /** counts number of nonlinear constraints in which each variable appears */
 static
 SCIP_RETCODE countNonlinearities(
@@ -165,6 +191,8 @@ SCIP_RETCODE countNonlinearities(
    SCIP_VAR** vars;
    int nvars;
    int i;
+
+/**! [SnippetCodeStyleDeclaration] */
 
    assert(scip != NULL);
    assert(nlcount != NULL);
@@ -206,6 +234,9 @@ SCIP_RETCODE countNonlinearities(
          andres = SCIPgetResultantAnd(scip, andcons);
 
          probindex = -1;
+
+         /**! [SnippetCodeStyleIfFor] */
+
          for( v = 0; v < nandvars; v++ )
          {
             /* don't rely on the and conshdlr removing fixed variables
@@ -218,6 +249,8 @@ SCIP_RETCODE countNonlinearities(
                   nlcount[probindex]++;
             }
          }
+
+         /**! [SnippetCodeStyleIfFor] */
 
          SCIP_CALL( binvarGetActiveProbindex(scip, andres, &probindex) );
          if( probindex >= 0 )
@@ -1763,10 +1796,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
          &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+/**! [SnippetCodeStyleParenIndent] */
+
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
          &branchruledata->storesemiinitcosts, TRUE, DEFAULT_STORESEMIINITCOSTS,
          NULL, NULL) );
+
+/**! [SnippetCodeStyleParenIndent] */
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesblocalinfo",
          "should the scoring function use only local cutoff and inference information obtained for strong branching candidates?",

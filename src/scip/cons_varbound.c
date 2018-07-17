@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -34,14 +34,34 @@
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-#include <ctype.h>
-
-#include "scip/cons_varbound.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 
 /**@name Constraint handler properties
@@ -443,7 +463,6 @@ SCIP_Bool checkCons(
 
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
-
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
@@ -2138,7 +2157,6 @@ SCIP_RETCODE preprocessConstraintPairs(
                   }
                }
             }
-
 
             /* lower bounds for consdata1->var */
             if ( ! SCIPisInfinity(scip, -consdata1->lhs) )
@@ -4636,6 +4654,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsVarbound)
 {  /*lint --e{715}*/
+   assert( success != NULL );
 
    if( varssize < 2 )
       (*success) = FALSE;

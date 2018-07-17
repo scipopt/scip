@@ -3,55 +3,77 @@
 import clang.cindex
 import sys
 import clang
-from clang.cindex import CursorKind, TokenKind, StorageClass
+import os.path
+from clang.cindex import CursorKind, TokenKind, TypeKind, StorageClass
 
 clang.cindex.Config.set_library_file("/usr/lib/llvm-5.0/lib/libclang.so.1")
-human_readable=False
-
-def fully_qualified(c):
-    if c is None:
-        return ''
-    elif c.kind == CursorKind.TRANSLATION_UNIT:
-        return ''
-    else:
-        res = fully_qualified(c.semantic_parent)
-        if res != '':
-            return res + '::' + c.spelling
-    return c.spelling
-
-def output(name, start, end):
-    if human_readable:
-        print "{} {} {}".format(name, start, end)
-    else:
-        print "{},{}p".format(start,end)
+includedirs = ['../../src/','newfiles/']
 
 def remove_prefix(p,s):
     if s.startswith(p):
         return s[len(p):]
     return s
 
-if __name__ == "__main__":
+def get_headerset(file):
     idx = clang.cindex.Index.create()
-    includedirs = ['../../src/','newfiles/']
-    tu = idx.parse(sys.argv[1], args= map(lambda x: '-I' + x, includedirs) + ['-DWITH_ZLIB'])
+    tu = idx.parse(file, args= map(lambda x: '-I' + x, includedirs) + ['-DWITH_ZLIB'])
 
     headers = set()
     for idx, c in enumerate(tu.cursor.walk_preorder()):
+        if str(c.location.file) != file:
+            continue
 
+        referenced = None
 
-        if c.kind == CursorKind.CALL_EXPR and c.referenced.get_definition() is None and c.referenced.storage_class is not StorageClass.STATIC:
+        if c.kind == CursorKind.PARM_DECL:
+            thetype = c.type
+            while thetype == TypeKind.POINTER:
+                thetype = thetype.get_pointee()
+            if thetype.kind == TypeKind.TYPEDEF:
+                referenced = thetype.get_declaration()
+        elif c.kind == CursorKind.FUNCTION_DECL:
+            thetype = c.result_type
+            while thetype == TypeKind.POINTER:
+                thetype = thetype.get_pointee()
+            if thetype.kind == TypeKind.TYPEDEF:
+                referenced = thetype.get_declaration()
+        elif c.kind == CursorKind.CALL_EXPR or c.kind == CursorKind.TYPE_REF or CursorKind.MEMBER_REF_EXPR or CursorKind.DECL_REF_EXPR:
+            referenced = c.referenced
+
+        if referenced is not None:
             #print("\n".join(dir(c)))
             #sys.exit(0)
-            headerfile = str(c.referenced.location.file)
+            headerfile = str(referenced.location.file)
 
             if not headerfile.endswith("c"):
                 for p in includedirs:
                     headerfile = remove_prefix(p, headerfile)
 
                 headers.add(headerfile)
+    return headers
 
-    includelist = ['#include "scip/def.h"']
-    for h in headers:
+if __name__ == "__main__":
+    inclset = get_headerset(sys.argv[1])
+    includelist = []
+    if sys.argv[1].endswith(".c"):
+        headerfile = sys.argv[1][:-1] + 'h'
+        if os.path.isfile(headerfile):
+            headerinclset = get_headerset(headerfile)
+        else:
+            headerinclset = set()
+
+        for p in includedirs:
+            headerfile = remove_prefix(p, headerfile)
+
+        for f in headerinclset:
+            if f in inclset:
+                inclset.remove(f)
+
+        inclset.add(headerfile)
+    else:
+        includelist.append('#include "scip/def.h"')
+
+    for h in inclset:
         # for system headers only add them if they are not included by scip/def.h and also handle
         # that math functions are defined in mathcalls.h on our linux systems
         if h.startswith("/usr/include/"):
@@ -59,9 +81,7 @@ if __name__ == "__main__":
                 h = "math.h"
             else:
                 h = remove_prefix("/usr/include/", h)
-            if h == "string.h":
-                includelist.append('#include <string.h>\n#if defined(_WIN32) || defined(_WIN64)\n#else\n#include <strings.h> /*lint --e{766}*/\n#endif')
-            elif h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
+            if h not in ["stdio.h", "stdint.h", "math.h", "limits.h", "float.h", "assert.h"]:
                 includelist.append("#include <{}>".format(remove_prefix("/usr/include/", h)))
         else:
             includelist.append('#include "{}"'.format(h))

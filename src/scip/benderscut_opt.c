@@ -9,55 +9,45 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_opt.c
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
- *
- * The classical Benders' decomposition optimality cuts arise from a feasible instance of the Benders' decomposition
- * subproblem. The optimality cuts are an underestimator of the subproblem objective function value. Auxiliary
- * variables, \f$\varphi\f$ are added to the master problem to compute the lower bound on the subproblem objective
- * fucntion value.
- *
- * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
- * \f[
- * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
- * \f]
- * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
- * optimal) then the Benders' decomposition optimality cut can be generated from the optimal dual solution of the
- * subproblem. Let \f$w\f$ be the vector corresponding to the optimal dual solution of the Benders' decomposition
- * subproblem. The resulting cut is:
- * \f[
- * \varphi \geq w^{T}(h - Hx)
- * \f]
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/benderscut_opt.h"
-#include "scip/pub_benders.h"
-#include "scip/pub_benderscut.h"
-#include "scip/pub_misc_linear.h"
-
 #include "scip/cons_linear.h"
+#include "scip/pub_benderscut.h"
+#include "scip/pub_benders.h"
 #include "scip/pub_lp.h"
-
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_linear.h"
+#include "scip/pub_var.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
 #define BENDERSCUT_PRIORITY      5000
 #define BENDERSCUT_LPCUT            TRUE
 
-
-
-#define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
 /*
@@ -67,7 +57,6 @@
 /** Benders' decomposition cuts data */
 struct SCIP_BenderscutData
 {
-   SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
 };
 
@@ -75,6 +64,38 @@ struct SCIP_BenderscutData
 /*
  * Local methods
  */
+
+/** in the case of numerical troubles, the LP is resolved with solution polishing activated */
+static
+SCIP_RETCODE polishSolution(
+   SCIP*                 subproblem,         /**< the SCIP data structure */
+   SCIP_Bool*            success             /**< TRUE is the resolving of the LP was successful */
+   )
+{
+   int oldpolishing;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+
+   assert(subproblem != NULL);
+   assert(SCIPinProbing(subproblem));
+
+   (*success) = FALSE;
+
+   /* setting the solution polishing parameter */
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/solutionpolishing", &oldpolishing) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/solutionpolishing", 2) );
+
+   /* resolving the probing LP */
+   SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+   if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+      (*success) = TRUE;
+
+   /* resetting the solution polishing parameter */
+   SCIP_CALL( SCIPsetIntParam(subproblem, "lp/solutionpolishing", oldpolishing) );
+
+   return SCIP_OKAY;
+}
 
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
@@ -101,10 +122,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP_Real rhs;
    int i;
 
-#ifndef NDEBUG
    SCIP_Real verifyobj = 0;
    SCIP_Real checkobj = 0;
-#endif
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -121,7 +140,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
    nconss = SCIPgetNConss(subproblem);
    conss = SCIPgetConss(subproblem);
-
 
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
@@ -146,7 +164,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
          lhs = SCIProwGetLhs(row);
       else
          lhs = SCIPgetLhsLinear(masterprob, cons);
-
 
       if( SCIPisPositive(subproblem, dualsol) )
          addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
@@ -189,7 +206,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       SCIP_VAR* mastervar;
       SCIP_Real redcost;
 
-
       if( i < nvars )
          var = vars[i];
       else
@@ -200,9 +216,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
       redcost = SCIPgetVarRedcost(subproblem, var);
 
-#ifndef NDEBUG
       checkobj += SCIPvarGetUnchangedObj(var)*SCIPvarGetSol(var, TRUE);
-#endif
 
       /* checking whether the subproblem variable has a corresponding master variable. */
       if( mastervar != NULL )
@@ -276,7 +290,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
       return SCIP_OKAY;
    }
 
-#ifndef NDEBUG
    if( addcut )
       lhs = SCIProwGetLhs(row);
    else
@@ -287,9 +300,21 @@ SCIP_RETCODE computeStandardOptimalityCut(
       verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
    else
       verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
-#endif
 
-   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj));
+   /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
+    * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
+    * that the Benders' cut could not find a valid cut.
+    */
+   if( !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
+   {
+      (*success) = FALSE;
+      SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
+         verifyobj);
+#ifdef SCIP_DEBUG
+      SCIPABORT();
+#endif
+      return SCIP_OKAY;
+   }
 
    (*success) = TRUE;
 
@@ -381,7 +406,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem */
-   SCIP_CALL( SCIPcheckBendersSubprobOptimality(masterprob, benders, sol, probnumber, &optimal) );
+   SCIP_CALL( SCIPcheckBendersSubproblemOptimality(masterprob, benders, sol, probnumber, &optimal) );
 
    if( optimal )
    {
@@ -517,6 +542,26 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
             sol, probnumber, type, result) );
+
+      /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
+       * resolved and the generation of the cut is reattempted
+       */
+      if( (*result) == SCIP_DIDNOTFIND )
+      {
+         SCIP_Bool success;
+
+         SCIPinfoMessage(scip, NULL, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
+            "polish the LP solution to find an alternative dual extreme point.\n", probnumber);
+
+         SCIP_CALL( polishSolution(subproblem, &success) );
+
+         /* only attempt to generate a cut if the solution polishing was successful */
+         if( success )
+         {
+            SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
+                  sol, probnumber, type, result) );
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -541,7 +586,6 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 
    /* create opt Benders' decomposition cuts data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
-   benderscutdata->soltol = 1e-04;
 
    benderscut = NULL;
 
@@ -555,12 +599,6 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP_CALL( SCIPsetBenderscutFree(scip, benderscut, benderscutFreeOpt) );
 
    /* add opt Benders' decomposition cuts parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/solutiontol",
-      SCIPbendersGetName(benders), BENDERSCUT_NAME);
-   SCIP_CALL( SCIPaddRealParam(scip, paramname,
-         "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
-         &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
-
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/addcuts",
       SCIPbendersGetName(benders), BENDERSCUT_NAME);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,

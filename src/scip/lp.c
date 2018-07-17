@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,25 +31,31 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include <assert.h>
-#include <math.h>
-#include <limits.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/intervalarith.h"
+#include "lpi/lpi.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
+#include "scip/cons.h"
+#include "scip/event.h"
+#include "scip/intervalarith.h"
 #include "scip/lp.h"
-#include "scip/var.h"
+#include "scip/misc.h"
 #include "scip/prob.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
-#include "scip/event.h"
-#include "scip/pub_message.h"
-#include "lpi/lpi.h"
+#include "scip/stat.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/var.h"
+#include <string.h>
 
 
 
@@ -4317,7 +4323,6 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
             retcode = SCIPlpiStrongbranchFrac(lp->lpi, col->lpipos, col->primsol, itlim, down == NULL ? NULL : &sbdown, up == NULL ? NULL :  &sbup, &sbdownvalid, &sbupvalid, &iter);
          }
 
-
          /* check return code for errors */
          if( retcode == SCIP_LPERROR )
          {
@@ -4969,7 +4974,6 @@ SCIP_RETCODE rowScale(
             c--;
             oldlen = row->len;
          }
-
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
@@ -6666,9 +6670,8 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
 
    if( lp->validsoldirlp != stat->lpcount || lp->validsoldirsol != sol )
    {
-      SCIP_Real scale;
+      SCIP_Real scale = 0.0;
 
-      scale = 0.0;
       lp->validsoldirlp = stat->lpcount;
       lp->validsoldirsol = sol;
 
@@ -6681,20 +6684,25 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
          scale += SQR(lp->soldirection[k]);
       }
 
-      assert(scale > 0.0);
-      scale = 1.0 / SQRT(scale);
-
-      for( k = 0; k < lp->ncols; ++k )
+      if( scale > 0.0 )
       {
-         lp->soldirection[k] *= scale;
+         scale = 1.0 / SQRT(scale);
+
+         for( k = 0; k < lp->ncols; ++k )
+            lp->soldirection[k] *= scale;
       }
    }
 
    solcutoffdist = 0.0;
-   for( k = 0; k < row->len; ++k )
-   {
+   for( k = 0; k < row->nlpcols; ++k )
       solcutoffdist += row->vals[k] * lp->soldirection[row->cols[k]->lppos];
+
+   for( k = row->nlpcols; k < row->len; ++k )
+   {
+      if( row->cols[k]->lppos >= 0 )
+         solcutoffdist += row->vals[k] * lp->soldirection[row->cols[k]->lppos];
    }
+
    if( SCIPsetIsSumZero(set, solcutoffdist) )
       solcutoffdist = COPYSIGN(set->num_sumepsilon, solcutoffdist);
 
@@ -12817,7 +12825,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
                   }
-
                }
 
                assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
@@ -13271,7 +13278,6 @@ void getObjvalDeltaObj(
          else
             (*deltaval) = -lb * oldobj;
       }
-
    }
    else if( SCIPsetIsNegative(set, oldobj) )
    {
@@ -13692,7 +13698,6 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
 
       /* update the root pseudo objective values */
       lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
-
    }
 
    return SCIP_OKAY;
@@ -14666,7 +14671,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_COL** lpicols;
    SCIP_ROW** lpirows;
    SCIP_Real* dualfarkas;
-   SCIP_Real* dualsol;
    SCIP_Real* farkascoefs;
    SCIP_Real farkaslhs;
    SCIP_Real maxactivity;
@@ -14700,7 +14704,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
 
    if( checkfarkas )
    {
@@ -14710,7 +14713,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
 
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
-   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, NULL, dualsol, NULL, NULL) );
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -14723,7 +14725,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    {
       SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
       lpirows[r]->dualfarkas = dualfarkas[r];
-      lpirows[r]->dualsol = dualsol[r];
+      lpirows[r]->dualsol = SCIP_INVALID;
       lpirows[r]->activity = 0.0;
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
@@ -14826,7 +14828,6 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    if( checkfarkas )
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
-   SCIPsetFreeBufferArray(set, &dualsol);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,8 +22,6 @@
 
 #ifndef __SCIP_BENDERSDEFCUTS_H__
 #define __SCIP_BENDERSDEFCUTS_H__
-
-#include "scip/scip.h"
 
 /* include header files here, such that the user only has to include bendersdefcuts.h */
 #include "scip/benderscut_feas.h"

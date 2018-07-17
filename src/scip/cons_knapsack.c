@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,17 +24,41 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-#include <stdio.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_select.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
@@ -805,7 +829,6 @@ void consdataChgWeight(
    weightdiff = newweight - oldweight;
    consdata->weights[item] = newweight;
 
-
    /* update weight sums for all and fixed variables */
    updateWeightSums(consdata, consdata->vars[item], weightdiff);
 
@@ -981,7 +1004,6 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
-
    }
 
    return SCIP_OKAY;
@@ -1575,7 +1597,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
       realweights[j] = (SCIP_Real)weights[j];
-
    }
 
    /* partially sort indices such that all elements that are larger than the break item appear first */
@@ -1961,7 +1982,6 @@ SCIP_RETCODE GUBsetCreate(
       /* already updated status of variable in GUB constraint if it exceeds the capacity of the knapsack */
       if( weights[i] > capacity )
          (*gubset)->gubconss[(*gubset)->gubconssidx[i]]->gubvarsstatus[(*gubset)->gubvarsidx[i]] = GUBVARSTATUS_CAPACITYEXCEEDED;
-
    }
 
    return SCIP_OKAY;
@@ -2985,7 +3005,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
 #endif
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
-
 
    /* to get the GUB lifting sequence, we first sort all variables in F, C2, and R
     * - F:      non-increasing x*_j and non-increasing a_j in case of equality
@@ -8208,7 +8227,6 @@ SCIP_RETCODE detectRedundantVars(
       int* clqpart;
       int cliquenum;
 
-
       sumfront = 0;
       maxactduetoclqfront = 0;
 
@@ -9198,7 +9216,6 @@ SCIP_RETCODE dualWeightsTightening(
          }
       }
    }
-
 
  TERMINATE:
    /* correct capacity */
@@ -11213,7 +11230,6 @@ SCIP_RETCODE greedyCliqueAlgorithm(
             compareweightidx--;
             ncliquevars --;
          }
-
       }
 
       SCIPfreeBufferArray(scip, &cliquevars);
@@ -12468,7 +12484,6 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
 
       /* unmark the constraint to be propagated */
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-
    }
 
    /* adjust result code */
@@ -13274,7 +13289,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
          else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
             (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(SCIPvarGetNegatedVar(var)) == SCIP_VARSTATUS_AGGREGATED) )
             consdata->merged = FALSE;
-
       }
       /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */

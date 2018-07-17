@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -421,7 +421,6 @@
                                                  *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement in local nodes (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXINCROUNDS       20 /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
@@ -628,7 +627,6 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 {  /*lint --e{715}*/
-
    SCIPmarkLimitChanged(scip);
    return SCIP_OKAY;
 }
@@ -667,9 +665,10 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
 
    return SCIP_OKAY;
@@ -679,6 +678,8 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 static
 SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( param != NULL );
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
@@ -910,7 +911,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all relaxator plugins */
    if( copyrelaxators && sourceset->relaxs != NULL )
    {
@@ -919,7 +919,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
       }
    }
-
 
    /* copy all separator plugins */
    if( copyseparators && sourceset->sepas != NULL )
@@ -958,7 +957,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all node selector plugins */
    if( copynodeselectors && sourceset->nodesels != NULL )
    {
@@ -977,7 +975,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-
    /* copy all display plugins */
    if( copydisplays && sourceset->disps != NULL )
    {
@@ -986,7 +983,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
       }
    }
-
 
    /* copy all dialog plugins */
    if( copydialogs && sourceset->dialogs != NULL )
@@ -1967,7 +1963,6 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->random_permutevars, TRUE, SCIP_DEFAULT_RANDOM_PERMUTEVARS,
          NULL, NULL) );
 
-
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/lpseed",
          "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
@@ -2094,7 +2089,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should aggregation of variables be forbidden?",
          &(*set)->presol_donotaggr, TRUE, SCIP_DEFAULT_PRESOL_DONOTAGGR,
          NULL, NULL) );
-
 
    /* pricing parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2320,7 +2314,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/efficacyfac",
-         "factor to scale directed cutoff distance of cut in score calculation",
+         "factor to scale efficacy of cut in score calculation",
          &(*set)->sepa_efficacyfac, TRUE, SCIP_DEFAULT_SEPA_EFFICACYFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2387,11 +2381,6 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/maxstallroundsroot",
          "maximal number of consecutive separation rounds without objective or integrality improvement in the root node (-1: no additional restriction)",
          &(*set)->sepa_maxstallroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "separating/maxincrounds",
-         "maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited)",
-         &(*set)->sepa_maxincrounds, FALSE, SCIP_DEFAULT_SEPA_MAXINCROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxcuts",
@@ -2756,7 +2745,6 @@ SCIP_RETCODE SCIPsetFree(
       SCIPconcsolverTypeFree(&(*set)->concsolvertypes[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->concsolvertypes);
-
 
    /* free information on external codes */
    for( i = 0; i < (*set)->nextcodes; ++i )
@@ -3775,13 +3763,11 @@ void SCIPsetReinsertConshdlrSepaPrio(
          }
          set->conshdlrs_sepa[newpos] = conshdlr;
       }
-
    }
    else if( newpriority < oldpriority )
    {
       i = set->nconshdlrs - 1;
-      while( i >= 0 &&
-                  strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
+      while( i >= 0 && strcmp(SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetName(conshdlr)) != 0 )
       {
          int priorityatpos;
 

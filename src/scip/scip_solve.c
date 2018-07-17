@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -894,7 +894,6 @@ SCIP_RETCODE presolveRound(
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
-
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same
@@ -1327,7 +1326,6 @@ SCIP_RETCODE presolve(
    nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
-
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
 
@@ -1379,7 +1377,7 @@ SCIP_RETCODE presolve(
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1) || scip->set->nactivebenders > 0;
+         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -2089,7 +2087,6 @@ SCIP_RETCODE freeTransform(
        * freed in SCIPfreeProb().
        */
       SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
-
    }
 
    /* free transformed problem data structures */

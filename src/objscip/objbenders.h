@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -40,8 +40,8 @@ namespace scip
  *  are pure virtual functions (these have to be implemented). These functions are: benders_exec(), benders_createsub(),
  *  benders_getvar().
  *
- *  - \ref BENDERS "Instructions for implementing a Benders' decomposition plugin"
- *  - \ref BENDERSDECOMP "List of available Benders' decomposition plugins"
+ *  - \ref BENDER "Instructions for implementing a Benders' decomposition plugin"
+ *  - \ref BENDERS "List of available Benders' decomposition plugins"
  *  - \ref type_benders.h "Corresponding C interface"
  */
 class ObjBenders : public ObjCloneable

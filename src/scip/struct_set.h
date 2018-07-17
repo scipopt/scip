@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -518,7 +518,6 @@ struct SCIP_Set
                                               *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
-   int                   sepa_maxincrounds;  /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

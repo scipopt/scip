@@ -9,7 +9,7 @@
 
 #include "mpsinput.h"
 #include "model.h"
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -289,13 +289,13 @@ void MpsInput::readName()
    /* This has to be the Line with the NAME section. */
    if( !readLine() || (f0 == NULL) || strcmp(f0, "NAME") )
       throw SyntaxError(buf, lineno);
-   
+
    /* Sometimes the name is omitted. */
    if( f1 == 0)
       model->modelName = "_MPS_";
    else
       model->modelName = std::string(f1);
-   
+
    /* This has to be a new section */
    if( !readLine() || (f0 == NULL) )
       throw SyntaxError(buf, lineno);
@@ -310,6 +310,8 @@ void MpsInput::readName()
       section = MPS_OBJSEN;
    else if( !strncmp(f0, "OBJNAME", 7) )
       section = MPS_OBJNAME;
+   else if( !strncmp(f0, "INDICATORS", 10) )
+      section = MPS_INDICATORS;
    else
       throw SyntaxError(buf, lineno);
 }
@@ -357,7 +359,7 @@ void MpsInput::readObjname()
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
    if( !readLine() || f0 == NULL )
       throw SyntaxError(buf, lineno);
-   
+
    if( !strcmp(f0, "ROWS") )
       section = MPS_ROWS;
    else if( !strcmp(f0, "USERCUTS") )
@@ -418,7 +420,7 @@ void MpsInput::readRows()
          default :
             throw SyntaxError(buf, lineno);
          }
-         
+
          model->pushCons(new LinearConstraint(f2, ctype, clb, cub, redundant));
       }
    }
@@ -458,7 +460,7 @@ void MpsInput::readCols()
             model->pushVar(new Var(colname, Var::CONTINUOUS, 0.0, INFBOUND, 0.0));
          }
       }
-   
+
       Var* var = model->getVar(colname);
       assert( var != NULL );
       Rational val;
@@ -507,6 +509,8 @@ void MpsInput::readRhs()
             section = MPS_RANGES;
          else if( !strcmp(f0, "BOUNDS") )
             section = MPS_BOUNDS;
+         else if( !strcmp(f0, "INDICATORS") )
+            section = MPS_INDICATORS;
          else if( !strcmp(f0, "SOS") )
             section = MPS_SOS;
          else if( !strcmp(f0, "ENDATA") )
@@ -583,6 +587,8 @@ void MpsInput::readRanges()
       {
          if( !strcmp(f0, "BOUNDS") )
             section = MPS_BOUNDS;
+         else if( !strcmp(f0, "INDICATORS") )
+            section = MPS_INDICATORS;
          else if( !strcmp(f0, "SOS") )
             section = MPS_SOS;
          else if( !strcmp(f0, "ENDATA") )
@@ -679,7 +685,9 @@ void MpsInput::readBounds()
    {
       if( f0 != 0 )
       {
-         if( !strcmp(f0, "SOS") )
+         if( !strcmp(f0, "INDICATORS") )
+            section = MPS_INDICATORS;
+         else if( !strcmp(f0, "SOS") )
             section = MPS_SOS;
          else if( !strcmp(f0, "ENDATA") )
             section = MPS_ENDATA;
@@ -687,9 +695,9 @@ void MpsInput::readBounds()
             break;
          return;
       }
-      
+
       shifted = false;
-      
+
       /* Is the value field used ? */
       if( !strcmp(f1, "LO")  /* lower bound given in field 4 */
          || !strcmp(f1, "UP")  /* upper bound given in field 4 */
@@ -722,7 +730,7 @@ void MpsInput::readBounds()
       }
       else
          throw SyntaxError(buf, lineno);
-      
+
       if( f1 == NULL || f2 == NULL || f3 == NULL )
          break;
 
@@ -798,7 +806,7 @@ void MpsInput::readBounds()
          assert(*bndname != '\0');
          if( strcmp(bndname, f3) == 0 && shifted )
             throw SyntaxError(buf, lineno);
-         
+
          std::cerr << "Warning line " << lineno << ": bound " << f2 << " for variable <" << f3 << "> ignored" << std::endl;
       }
    }
@@ -810,18 +818,20 @@ void MpsInput::readSOS()
 {
    char sosname[MPS_MAX_NAMELEN] = { '\0' };
    int cnt = 0;
-	
+
    while( readLine() )
    {
       if( f0 != NULL )
       {
-         if( !strcmp(f0, "ENDATA") )
+         if( !strcmp(f0, "INDICATORS") )
+            section = MPS_INDICATORS;
+         else if( !strcmp(f0, "ENDATA") )
             section = MPS_ENDATA;
          else
             break;
          return;
       }
-      
+
       if( f1 == NULL && f2 == NULL )
          break;
 
@@ -831,7 +841,7 @@ void MpsInput::readSOS()
          type = 1;
       if( !strcmp(f1, "S2") )
          type = 2;
-      
+
       if( type > 0 )
       {
          assert( type == 1 || type == 2 );
@@ -854,6 +864,49 @@ void MpsInput::readSOS()
          assert( var != NULL );
          cons->push(var);
       }
+   }
+   throw SyntaxError(buf, lineno);
+}
+
+/* Process INDICATORS section. */
+void MpsInput::readIndicators()
+{
+   Rational ifval;
+   Rational zero;
+   Rational one(1);
+
+   while( readLine() )
+   {
+      if( f0 != 0 )
+      {
+         if( !strcmp(f0, "SOS") )
+            section = MPS_SOS;
+         else if( !strcmp(f0, "ENDATA") )
+            section = MPS_ENDATA;
+         else
+            break;
+         return;
+      }
+
+      /* All indicator rows start with 'IF' */
+      if (strcmp(f1, "IF")) throw SyntaxError(buf, lineno);
+
+      /* These fields are mandatory */
+      if( f2 == NULL || f3 == NULL || f4 == NULL ) throw SyntaxError(buf, lineno);
+
+      /* Get indicator data */
+      Var* ifvar = model->getVar(f3);
+      assert( ifvar != NULL );
+      ifval.fromString(f4);
+      Constraint* thencons = model->getCons(f2);
+      assert( thencons != NULL );
+      assert( ifval == one || ifval == zero );
+
+      /* Remove old constraint named 'f2' */
+      model->removeCons(f2);
+
+      /* Add indicator constraint */
+      model->pushCons(new IndicatorConstraint(f2, ifvar, ifval == one, thencons));
    }
    throw SyntaxError(buf, lineno);
 }
@@ -903,9 +956,9 @@ bool MpsInput::readMps(
       }
    }
    assert( fp != NULL || gzfp != NULL );
-   
+
    model = _model;
-   
+
    bool hasError = false;
 
    try
@@ -932,6 +985,8 @@ bool MpsInput::readMps(
          readBounds();
       if( section == MPS_SOS )
          readSOS();
+      if( section == MPS_INDICATORS )
+         readIndicators();
       if( section != MPS_ENDATA )
          throw SyntaxError(buf, lineno);
    }
@@ -941,9 +996,9 @@ bool MpsInput::readMps(
       hasError = true;
       section = MPS_ENDATA;
    }
-   
+
    model = NULL;
-   
+
    if( isZipped )
    {
       gzclose(gzfp);
@@ -955,6 +1010,6 @@ bool MpsInput::readMps(
       fp = NULL;
    }
    isZipped = false;
-   
+
    return (!hasError);
 }

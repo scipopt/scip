@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -77,15 +77,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
 #include "scip/cons_and.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
@@ -94,9 +87,30 @@
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include "scip/pub_misc.h"
-#include "scip/reader_opb.h"
 #include "scip/debug.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_opb.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
+#endif
 
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
@@ -1308,7 +1322,6 @@ SCIP_RETCODE setObjective(
             SCIP_CALL( SCIPdebugAddSolVal(scip, var, artval) );
          }
 #endif
-
 
          /* create artificial objection function constraint containing the artificial integer variable */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");
@@ -2701,7 +2714,6 @@ SCIP_RETCODE printNonLinearCons(
             nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
 
-
       if( !SCIPisInfinity(scip, rhs) )
       {
          mult *= -1;
@@ -3164,7 +3176,6 @@ SCIP_RETCODE printPseudobooleanCons(
             ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
    }
-
 
    /* free buffers for non-linear arrays */
    if( ntermvals > 0 )
@@ -3920,7 +3931,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
             /* add variable to the hashmap */
             SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
-
          }
       }
    }
@@ -3988,7 +3998,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          if( cont )
             continue;
       }
-
 
       /* print and with fixed or aggregated and-resultant */
       /* rhslhs equals to 0 means the and constraint is relevant due to it's not clear on which values the and variables are
@@ -4082,7 +4091,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          writeBuffer(scip, file, linebuffer, &linecnt);
-
       }
    }
 

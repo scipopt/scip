@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -510,7 +510,6 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
 
    /* the last character in the buffer must be a '\0' */
    dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
-
 
    /* skip leading spaces: find start of first word */
    while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )

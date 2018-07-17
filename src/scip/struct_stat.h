@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -215,7 +215,6 @@ struct SCIP_Stat
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
    int                   npricerounds;       /**< number of pricing rounds performed in current node */
    int                   nseparounds;        /**< number of separation rounds performed in current node */
-   int                   nincseparounds;     /**< number of separation rounds performed in current node that increased the maximum number of rows in the LP */
    int                   ndisplines;         /**< number of displayed information lines */
    int                   maxdepth;           /**< maximal depth of all processed nodes in current run */
    int                   maxtotaldepth;      /**< maximal depth of all processed nodes over all runs */

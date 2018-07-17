@@ -1,9 +1,22 @@
 include(CTest)
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure --schedule-random
+#
+# add a custom SCIP check target 'scip_check'
+#
+add_custom_target(scip_check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
                 DEPENDS scip
                 )
+
+#
+# add a phony target check, if it has not been defined in a different SCIP Optimization Suite project, yet
+# and add 'scip_check' as a dependency.
+#
+if (NOT TARGET check)
+    add_custom_target(check)
+endif()
+
+add_dependencies(check scip_check)
 
 #
 # define the instance sets
@@ -688,16 +701,18 @@ endforeach()
 # is only available on Linux, that is available on MAC OS as "gtimeout" after installing
 # the 'coreutils' package
 #
+if (TEST_SIGNAL_HANDLING)
 if (UNIX)
     if (APPLE)
         set(timeoutcommand "gtimeout")
     else ()
         set(timeoutcommand "timeout")
     endif (APPLE)
-    add_test(NAME signal-handling-sigterm-blend2
-            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -f ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/blend2.mps
+    configure_file(interactiveshell/signal-handling-sigterm.bat.in interactiveshell/signal-handling-sigterm.bat)
+    add_test(NAME signal-handling-sigterm
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -b interactiveshell/signal-handling-sigterm.bat
             )
-    set_tests_properties(signal-handling-sigterm-blend2
+    set_tests_properties(signal-handling-sigterm
                         PROPERTIES
                             DEPENDS scip-build
                             PASS_REGULAR_EXPRESSION "termination signal received"
@@ -706,3 +721,4 @@ if (UNIX)
                             #
                             )
 endif (UNIX)
+endif()

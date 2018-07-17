@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,18 +24,19 @@
 #ifndef __SCIP_BENDERS_H__
 #define __SCIP_BENDERS_H__
 
-
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_set.h"
-#include "scip/type_lp.h"
-#include "scip/type_prob.h"
-#include "scip/type_pricestore.h"
+#include "scip/def.h"
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
-#include "scip/pub_benders.h"
+#include "scip/type_message.h"
+#include "scip/type_misc.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_stat.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -222,7 +223,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
 extern
-SCIP_RETCODE SCIPbendersCheckSubprobOptimality(
+SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -262,7 +263,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
  *  is added as an underestimator constraint.
  */
 extern
-SCIP_RETCODE SCIPbendersMergeSubprobIntoMaster(
+SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of subproblem variables corresponding
@@ -394,7 +395,7 @@ void SCIPbendersRemoveSubproblems(
 
 /** sets the subproblem setup flag */
 extern
-void SCIPbendersSetSubprobIsSetup(
+void SCIPbendersSetSubproblemIsSetup(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
@@ -402,22 +403,7 @@ void SCIPbendersSetSubprobIsSetup(
 
 /** returns the subproblem setup flag */
 extern
-SCIP_Bool SCIPbendersSubprobIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   );
-
-/** sets the independent subproblem flag */
-extern
-void SCIPbendersSetSubprobIsIndependent(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             isindep             /**< flag to indicate whether the subproblem is independent */
-   );
-
-/** returns whether the subproblem is independent */
-extern
-SCIP_Bool SCIPbendersSubprobIsIndependent(
+SCIP_Bool SCIPbendersSubproblemIsSetup(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
@@ -426,7 +412,7 @@ SCIP_Bool SCIPbendersSubprobIsIndependent(
  *  problem.
  */
 extern
-void SCIPbendersSetSubprobEnabled(
+void SCIPbendersSetSubproblemEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */

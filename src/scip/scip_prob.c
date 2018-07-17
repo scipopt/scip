@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -536,7 +536,7 @@ SCIP_RETCODE SCIPreadProb(
    return retcode;
 }
 
-/* write original or transformed problem */
+/** write original or transformed problem */
 static
 SCIP_RETCODE writeProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -822,7 +822,6 @@ SCIP_RETCODE SCIPfreeProb(
 
    return SCIP_OKAY;
 }
-
 
 /** permutes parts of the problem data structure
  *
@@ -2648,7 +2647,6 @@ int SCIPgetNTotalVars(
       SCIPABORT();
       return 0; /*lint !e527*/
    }  /*lint !e788*/
-
 }
 
 
@@ -3260,7 +3258,6 @@ int SCIPgetNCheckConss(
    }
 
    return ncheckconss;
-
 }
 
 /*

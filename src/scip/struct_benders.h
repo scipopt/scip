@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -69,12 +69,12 @@ struct SCIP_Benders
    SCIP_Bool             shareauxvars;       /**< should this Benders' share the highest priority Benders' auxiliary vars */
 
    /* additional Benders' decomposition parameters */
-   SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
-   SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
-   int                   lnsmaxdepth;        /**< The maximum depth at which the LNS check is performed */
-   SCIP_Bool             cutsasconss;        /**< Should the transferred cuts be added as constraints? */
-   int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
-   SCIP_Real             subprobfrac;        /**< the fraction of subproblems that are solved in each iteration */
+   SCIP_Bool             transfercuts;       /**< should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+   SCIP_Bool             lnscheck;           /**< should Benders' decomposition be used in LNS heuristics? */
+   int                   lnsmaxdepth;        /**< maximum depth at which the LNS check is performed */
+   SCIP_Bool             cutsasconss;        /**< should the transferred cuts be added as constraints? */
+   SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
+   SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -98,8 +98,12 @@ struct SCIP_Benders
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
    SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
+   int                   nactivesubprobs;    /**< the number of active subproblems */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
+
+   /* solving process information */
+   int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
@@ -111,8 +115,10 @@ struct SCIP_Benders
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
  *  and reset after the solving loop. */
-struct SCIP_SubprobParams
+struct SCIP_SubproblemParams
 {
+   SCIP_Real limits_memory;
+   SCIP_Real limits_time;
    int cons_linear_propfreq;
    int lp_disablecutoff;
    int lp_scaling;
@@ -125,7 +131,7 @@ struct SCIP_SubprobParams
    SCIP_Bool misc_catchctrlc;
    SCIP_Bool misc_scaleobj;
 };
-typedef struct SCIP_SubprobParams SCIP_SUBPROBPARAMS;
+typedef struct SCIP_SubproblemParams SCIP_SUBPROBPARAMS;
 
 #ifdef __cplusplus
 }

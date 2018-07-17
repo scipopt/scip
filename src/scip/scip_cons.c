@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -124,6 +124,14 @@
 #ifndef NDEBUG
 #include "scip/struct_scip.h"
 #endif
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPmarkConsPropagate
 
 /** creates a constraint handler and includes it in SCIP.
  *
@@ -1120,7 +1128,6 @@ SCIP_RETCODE SCIPparseCons(
 
    SCIP_CALL( SCIPconsParse(cons, scip->set, scip->messagehdlr, str,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
-
 
    return SCIP_OKAY;
 }

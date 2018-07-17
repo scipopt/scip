@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,46 +32,14 @@
 #define __SCIP_SCIP_NONLINEAR_H__
 
 
-#include <stdio.h>
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_clock.h"
-#include "scip/type_misc.h"
-#include "scip/type_timing.h"
-#include "scip/type_paramset.h"
-#include "scip/type_event.h"
-#include "scip/type_lp.h"
-#include "scip/type_nlp.h"
-#include "scip/type_var.h"
-#include "scip/type_prob.h"
-#include "scip/type_tree.h"
-#include "scip/type_scip.h"
-
-#include "scip/type_bandit.h"
-#include "scip/type_branch.h"
-#include "scip/type_conflict.h"
-#include "scip/type_cons.h"
-#include "scip/type_dialog.h"
-#include "scip/type_disp.h"
-#include "scip/type_heur.h"
-#include "scip/type_compr.h"
-#include "scip/type_history.h"
-#include "scip/type_nodesel.h"
-#include "scip/type_presol.h"
-#include "scip/type_pricer.h"
-#include "scip/type_reader.h"
-#include "scip/type_relax.h"
-#include "scip/type_sepa.h"
-#include "scip/type_table.h"
-#include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
-#include "scip/type_concsolver.h"
-#include "scip/type_syncstore.h"
-#include "scip/type_benders.h"
-#include "scip/type_benderscut.h"
+#include "scip/def.h"
+#include "scip/type_lp.h"
+#include "scip/type_misc.h"
+#include "scip/type_nlp.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.

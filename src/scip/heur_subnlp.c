@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,17 +22,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_subnlp.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_varbound.h"
+#include "scip/heur_subnlp.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
@@ -1276,7 +1301,6 @@ SCIP_RETCODE solveSubNLP(
 
    /* set verbosity of NLP solver */
    SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
-
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);

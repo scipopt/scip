@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2131,7 +2131,6 @@ SCIP_RETCODE printDualSol(
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
          }
       }
-
    }
 
    return SCIP_OKAY;
@@ -3434,7 +3433,6 @@ SCIP_SOL** SCIPgetPartialSols(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPartialSols", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprimal->partialsols;
-
 }
 
 /** returns number of partial solutions

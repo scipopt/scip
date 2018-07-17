@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1869,7 +1869,6 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
    /* get basic indices for the basic matrix B */
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
-
 
    /* loop over the columns of B */
    for( k = 0; k < nrows; ++k )

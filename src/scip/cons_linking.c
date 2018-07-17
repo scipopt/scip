@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,13 +37,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "linking"
@@ -1749,7 +1771,6 @@ SCIP_RETCODE separateCons(
       else
          addcut = !checkCons(scip, cons, sol);
 
-
       if( !addcut )
       {
          /* constraint was feasible -> increase age */
@@ -2694,7 +2715,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinking)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR* intvar;
    int v;
@@ -2759,7 +2779,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
-
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
    }
@@ -3430,7 +3449,6 @@ SCIP_VAR* SCIPgetIntvarLinking(
    assert(consdata != NULL);
 
    return consdata->intvar;
-
 }
 
 /** returns the binary variables of the linking constraint */

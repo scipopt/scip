@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,13 +21,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_feaspump.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/heur_feaspump.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/scipdefplugins.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "feaspump"
 #define HEUR_DESC             "objective feasibility pump 2.0"
@@ -707,7 +729,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP* probingscip;         /* copied SCIP structure, used for round-and-propagate loop of feasibility pump 2.0 */
    SCIP_HASHMAP* varmapfw;    /* mapping of SCIP variables to sub-SCIP variables */
 
-
    SCIP_VAR** vars;
    SCIP_VAR** pseudocands;
    SCIP_VAR** tmppseudocands;
@@ -1062,7 +1083,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* check whether the variable is one of the most fractionals and label if so */
          if( SCIPisFeasPositive(scip, frac) )
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
-
       }
 
       if( heurdata->usefp20 )

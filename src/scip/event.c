@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,15 +23,20 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/def.h"
-#include "scip/set.h"
+#include "scip/branch.h"
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/var.h"
 #include "scip/primal.h"
-#include "scip/branch.h"
+#include "scip/pub_event.h"
 #include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_set.h"
+#include "scip/struct_var.h"
+#include "scip/var.h"
 
 /* timing the execution methods for event handling takes a lot of time, so it is disabled */
 /* #define TIMEEVENTEXEC */

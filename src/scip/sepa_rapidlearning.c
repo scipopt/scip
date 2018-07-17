@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,13 +32,13 @@
 #define SEPA_NAME              "rapidlearning"
 #define SEPA_DESC               "rapid learning heuristic and separator"
 #define SEPA_PRIORITY          -1200000
-#define SEPA_FREQ                    -1 
+#define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP?                 */
-#define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?   
+#define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?
                                          *   apply only if conflicts and incumbent solution will be copied too
                                          */
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
@@ -112,8 +112,8 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */ 
-   assert(nvars <= SCIPgetNOrigVars(subscip));   
+    */
+   assert(nvars <= SCIPgetNOrigVars(subscip));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
@@ -181,7 +181,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 {
    SCIP_VAR** vars;                          /* original problem's variables                   */
    SCIP_VAR** subvars;                       /* subproblem's variables                         */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_HASHMAP* varmapbw = NULL;            /* mapping of sub-SCIP variables to SCIP variables */
 
    SCIP_CONSHDLR** conshdlrs = NULL;         /* array of constraint handler's that might that might obtain conflicts */
@@ -191,7 +191,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    int nconshdlrs;                           /* size of conshdlr and oldnconss array                      */
    int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
-   int nvars;                                /* number of variables                                       */           
+   int nvars;                                /* number of variables                                       */
    int restartnum;                           /* maximal number of conflicts that should be created        */
    int i;                                    /* counter                                                   */
 
@@ -206,10 +206,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_Bool dualboundchg;                  /* statistic: was a new dual bound found?         */
    SCIP_Bool disabledualreductions;         /* TRUE, if dual reductions in sub-SCIP are not valid for original SCIP,
                                              * e.g., because a constraint could not be copied or a primal solution
-                                             * could not be copied back 
+                                             * could not be copied back
                                              */
    SCIP_Bool valid;
-
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -620,10 +619,20 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     SCIPfreeBufferArray(scip, &conshdlrs);
     SCIPhashmapFree(&varmapbw);
 
- TERMINATE:
+  TERMINATE:
 
-    /* free subproblem */
-    SCIPfreeBufferArray(scip, &subvars);
+   /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
+   SCIP_CALL( SCIPfreeTransform(subscip) );
+
+   /* remove all locks that were added to avoid dual presolving */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
+   }
+
+   /* free subproblem */
+   SCIPfreeBufferArray(scip, &subvars);
+
    return SCIP_OKAY;
 }
 

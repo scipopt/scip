@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,25 +31,58 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h> /* for strcmp */ 
-#include <ctype.h>  /* for isspace */
-#include <math.h>
-
 #define SCIP_PRIVATE_ROWPREP
 
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_and.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_bounddisjunction.h"
-#include "scip/intervalarith.h"
-#include "scip/heur_subnlp.h"
-#include "scip/heur_trysol.h"
-#include "scip/debug.h"
+#include "blockmemshell/memory.h"
+#include <ctype.h>
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/pub_expr.h"
+#include "nlpi/type_expr.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_varbound.h"
+#include "scip/debug.h"
+#include "scip/heur_subnlp.h"
+#include "scip/heur_trysol.h"
+#include "scip/intervalarith.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -6255,7 +6288,6 @@ SCIP_RETCODE generateCutFactorable(
             }
          }
       }
-
    }
 
    /* write violated constraints as multleft * factorleft * factorright <= rhs */
@@ -10724,7 +10756,6 @@ void propagateBoundsGetQuadActivity(
             quadactcontr[i].inf = bnd;
          }
       }
-
    }
 
    SCIPintervalSetBounds(&consdata->quadactivitybounds,
@@ -11350,7 +11381,6 @@ SCIP_RETCODE propagateBounds(
             }
          }
       }
-
    }
    while( success && *result != SCIP_CUTOFF && roundnr < maxproprounds );
 
@@ -14005,7 +14035,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          consEnfolpQuadratic, consEnfopsQuadratic, consCheckQuadratic, consLockQuadratic,
          conshdlrdata) );
    assert(conshdlr != NULL);
-
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyQuadratic, consCopyQuadratic) );

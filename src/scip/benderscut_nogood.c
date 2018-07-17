@@ -9,39 +9,37 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_nogood.c
  * @brief  Generates a no good cut for integer solutions that are infeasible for the subproblems
  * @author Stephen J. Maher
- *
- * The no-good cut is generated for the Benders' decomposition master problem if an integer solution is identified as
- * infeasible in at least one CIP subproblems. The no-good cut is required, because the classical Benders' decomposition
- * feasibility cuts (see benderscut_feas.c) will only cut off the solution \f$\bar{x}\f$ if the LP relaxation of the CIP
- * is infeasible.
- *
- * Consider a Benders' decomposition subproblem that is a CIP and it infeasible. Let \f$S_{r}\f$ be the set of indices
- * for master problem variables that are 1 in \f$\bar{x}\f$. The no-good cut is given by
- *
- * \f[
- * 1 \leq \sum_{i \in S_{r}}(1 - x_{i}) + \sum_{i \notin S_{r}}x_{i}
- * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/benderscut_nogood.h"
-#include "scip/pub_benders.h"
-#include "scip/pub_benderscut.h"
-
 #include "scip/cons_linear.h"
+#include "scip/pub_benderscut.h"
+#include "scip/pub_benders.h"
 #include "scip/pub_lp.h"
-
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include <string.h>
 
 #define BENDERSCUT_NAME             "nogood"
 #define BENDERSCUT_DESC             "no good Benders' decomposition integer cut"
@@ -143,7 +141,6 @@ SCIP_RETCODE computeNogoodCut(
    {
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
    }
-
 
 #ifndef NDEBUG
    if( addcut )

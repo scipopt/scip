@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -162,8 +162,7 @@ SCIP_RETCODE SCIPincludeSepa(
 
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, freq, maxbounddist, usessubscip, delay,
-         sepacopy,
-         sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
+         sepacopy, sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
 
    return SCIP_OKAY;

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,19 +25,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/set.h"
-#include "scip/prob.h"
-#include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/visual.h"
-#include "scip/mem.h"
-#include "scip/var.h"
 #include "scip/history.h"
-#include "scip/concsolver.h"
+#include "scip/mem.h"
+#include "scip/prob.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
+#include "scip/visual.h"
 
 
 
@@ -301,7 +301,6 @@ void SCIPstatReset(
    stat->ninitconssadded = 0;
    stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
-   stat->nincseparounds = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -559,7 +558,6 @@ void SCIPstatResetCurrentRun(
       stat->referencebound = SCIPprobInternObjval(transprob, origprob, set, SCIPsetGetReferencevalue(set));
    else
       stat->referencebound = SCIPsetInfinity(set);
-
 
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;

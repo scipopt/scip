@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,81 +32,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
+#include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
 #include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
-#include "scip/compr.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
 #include "scip/conflict.h"
-#include "scip/conflictstore.h"
-#include "scip/cons.h"
-#include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
-#include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
 #include "scip/history.h"
 #include "scip/implics.h"
-#include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
-#include "scip/pricestore.h"
-#include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
 #include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -118,24 +61,23 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-
-#include "scip/pub_cons.h"
-#include "scip/pub_implics.h"
-#include "scip/pub_lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_tree.h"
-#include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/solve.h"
+#include "scip/stat.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_tree.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include <ctype.h>
+
 
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
@@ -2768,7 +2710,6 @@ SCIP_RETCODE SCIPstartStrongbranch(
 
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
-
    }
    else
    {
@@ -3314,7 +3255,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 #endif
    }
 
-
    /* if the subproblem was feasible, we store the local bounds of the variables after propagation and (possibly)
     * conflict analysis
     * @todo do this after propagation? should be able to get valid bounds more often, but they might be weaker
@@ -3650,7 +3590,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    }
    while( !firstchild );
 
-
    /* set strong branching information in column */
    if( *lperror )
    {
@@ -3978,7 +3917,6 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
             SCIP_CALL( analyzeStrongbranch(scip, vars[j], (downinf != NULL) ? (&(downinf[j])) : NULL,
                   (upinf != NULL) ? (&(upinf[j])) : NULL, (downconflict != NULL) ? (&(downconflict[j])) : NULL,
                   (upconflict != NULL) ? (&(upconflict[j])) : NULL) );
-
          }
       }
    }
@@ -4089,7 +4027,7 @@ SCIP_RETCODE SCIPtryStrongbranchLPSol(
    assert(foundsol != NULL);
    assert(cutoff != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetVarStrongbranchData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtryStrongbranchLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->set->branch_checksbsol )
    {
@@ -7112,8 +7050,6 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    int maxncliquevarscomp;
    int ncliquevars;
 
-
-
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
@@ -7259,7 +7195,6 @@ SCIP_RETCODE SCIPcalcCliquePartition(
 
       return SCIP_OKAY;
    }
-
 
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
@@ -7648,7 +7583,6 @@ SCIP_Bool SCIPhaveVarsCommonClique(
    return (SCIPvarGetNCliques(var1, value1) + SCIPvarGetNCliques(var2, value2) > SCIPcliquetableGetNCliques(scip->cliquetable)
       || SCIPvarsHaveCommonClique(var1, value1, var2, value2, regardimplics));
 }
-
 
 /** writes the clique graph to a gml file
  *
@@ -8558,17 +8492,6 @@ SCIP_Bool SCIPallowObjProp(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
-}
-
-/** modifies an initial seed value with the global shift of random seeds */
-unsigned int SCIPinitializeRandomSeed(
-   SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int          initialseedvalue    /**< initial seed value to be modified */
-   )
-{
-   assert(scip != NULL);
-
-   return SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
 }
 
 /** marks the variable that it must not be multi-aggregated

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -179,4 +179,15 @@ void SCIPsetRandomSeed(
    modifiedseed = SCIPinitializeRandomSeed(scip, seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
+}
+
+/** modifies an initial seed value with the global shift of random seeds */
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          initialseedvalue    /**< initial seed value to be modified */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPsetInitializeRandomSeed(scip->set, initialseedvalue);
 }

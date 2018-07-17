@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2004,7 +2004,8 @@ SCIP_RETCODE SCIPlpiClear(
       SCIP_CALL( SCIPlpiDelCols(lpi, 0, ncols-1) );
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* the following seems to be slower */
    CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
    CHECK_ZERO( lpi->messagehdlr, GRBnewmodel(lpi->grbenv, &(lpi->grbmodel), "", 0, NULL, NULL, NULL, NULL, NULL) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
@@ -5362,11 +5363,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if 0
+#ifdef SCIP_DEBUG
    if( error )
-   {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
-   }
 #else
    (void)error;
 #endif
@@ -5376,11 +5375,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
     * this can happen if flushing an LP did not change anything and
     * therefore no basis was set, as a result Gurobi has no extra user
     * warmstart information and cannot set norms */
-#if 0
+#ifdef SCIP_DEBUG
    if( error )
-   {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
-   }
 #else
    (void)error;
 #endif

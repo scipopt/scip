@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,11 +28,31 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/prop_pseudoobj.h"
-
+#include "scip/pub_event.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
@@ -1802,7 +1822,6 @@ SCIP_RETCODE propdataInit(
    else
       propdata->addedvars = NULL;
 
-
    return SCIP_OKAY;
 }
 
@@ -3464,7 +3483,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
 static
 SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 {  /*lint --e{715}*/
-
    SCIP_PROPDATA* propdata;
    SCIP_VAR** vars;
    SCIP_Real cutoffbound;
@@ -3683,7 +3701,6 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 {
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
-
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );

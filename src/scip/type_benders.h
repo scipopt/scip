@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -157,7 +157,7 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must specify whether the
  *  subproblem is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts.
  *  The classical Benders' optimality and feasibility cuts require that the subproblems are convex. If the subproblem is
- *  convex, then the user must call SCIPbendersSetSubprobIsConvex()
+ *  convex, then the user must call SCIPbendersSetSubproblemIsConvex()
  *
  *  If the user does NOT implement a subproblem solving method, then the convexity of the problem is determined
  *  internally.
@@ -185,9 +185,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_DIDNOTRUN  : the subproblem was not solved in this iteration. Other decompositions will be checked.
  *  - SCIP_CONSADDED  : a constraint has been added to the master problem. No other decompositions will be checked.
- *  - SCIP_SEPARATED  : a cut has been added to the master proble. No other decompositions will be checked.
- *  - SCIP_FEASIBLE   : feasibility of the solution is reported to SCIP. FEASIBLE can be returned if you can guarantee
- *                      that this solution will never be optimal. Other decompositions will be checked.
+ *  - SCIP_SEPARATED  : a cut has been added to the master problem. No other decompositions will be checked.
+ *  - SCIP_FEASIBLE   : feasibility of the solution is reported to SCIP. Other decompositions will be checked.
  *  - SCIP_INFEASIBLE : infeasibility of the solution is reported to SCIP. No other decompositions will be checked.
  */
 #define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
@@ -282,7 +281,7 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  * the master problem in the method.
  * Additionally, if there are any subproblems that are infeasibility and this can not be resolved, then the it is
  * possible to merge these subproblems into the master problem. The subproblem indices are given in the mergecands
- * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubprobIntoMaster. If a
+ * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubproblemIntoMaster. If a
  * subproblem was merged into the master problem, then the merged flag must be set to TRUE.
  *
  *  input:

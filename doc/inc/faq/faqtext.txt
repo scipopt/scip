@@ -305,6 +305,9 @@ SECTION: General Questions about SCIP
             in ps and pdf format. It is written in Ruby and requires dot (graphviz).
         </li>
         <li>
+            <a href="https://www.uni-due.de/~si203go/vbctool/zimplTblConverter.rb">zimplTblConverter</a> is a small Ruby-script that converts a scip solution file to a file where all names are replaced according to a zimpl tbl-file output.
+        </li>
+        <li>
             <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>
             is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
         </li>
