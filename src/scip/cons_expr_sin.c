@@ -670,6 +670,7 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP_Real linconst;
    SCIP_Bool success;
    SCIP_Bool iscos;
+   SCIP_Bool issecant;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -758,10 +759,8 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
     */
    *lmidtangent = NULL;
 
-   if( secant == NULL )
+   if( *secant == NULL )
    {
-      SCIP_Bool issecant;
-
       if( underestimate )
          success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
       else
@@ -779,10 +778,8 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
     */
    *rmidtangent = NULL;
 
-   if( secant == NULL )
+   if( *secant == NULL )
    {
-      SCIP_Bool issecant;
-
       if( underestimate )
          success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
       else
