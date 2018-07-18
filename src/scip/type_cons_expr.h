@@ -933,6 +933,8 @@ typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< 
 
 /** @} */
 
+#define SCIP_DECL_VERTEXPOLYFUN(x) SCIP_Real x (SCIP_Real* point, int npoint, void* params)
+
 #ifdef __cplusplus
 }
 #endif

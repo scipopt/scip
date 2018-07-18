@@ -5433,6 +5433,112 @@ void printConshdlrStatistics(
    SCIPinfoMessage(scip, file, "\n");
 }
 
+
+/*
+ * vertex polyhdral separation
+ */
+
+static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+
+/** the given facet might not be a valid under(over)estimator, because of numerics and bad fixings; we compute \f$
+ * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ are the
+ * vertices of the domain, see separatePointProduct
+ */
+static
+SCIP_Real computeMaxFacetError(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners */
+   SCIP_VAR**            vars,               /**< variables \f$ x_i \f$ */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             overestimate,       /**< whether we check for an over or underestimator */
+   SCIP_Real             midval,             /**< coefficient representing \f$ mid(y) \f$ */
+   SCIP_INTERVAL         fixedinterval,      /**< interval evaluation of the fixed variables, \f$ \Pi_j y_j \f$ */
+   SCIP_Real*            facetcoefs,         /**< current facet candidate's coefficients */
+   SCIP_Real             facetconstant       /**< current facet candidate's constant */
+   )
+{
+   SCIP_Real maxerror;
+   SCIP_Real facetval;
+   SCIP_Real funval;
+   SCIP_Real error;
+   unsigned int i;
+   unsigned int ncorners;
+   unsigned int prev;
+
+   assert(scip != NULL);
+   assert(funvals != NULL);
+   assert(facetcoefs != NULL);
+
+   ncorners = (unsigned int) poweroftwo[nvars];
+   maxerror = 0.0;
+
+   /* check the origin */
+   facetval = facetconstant;
+   for( i = 0; i < (unsigned int) nvars; ++i )
+      facetval += facetcoefs[i] * SCIPvarGetLbLocal(vars[i]);
+
+   /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
+   funval = funvals[0] / midval;
+   if( overestimate )
+   {
+      funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
+      error = funval - facetval;
+   }
+   else
+   {
+      funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
+      error = facetval - funval;
+   }
+
+   /* update maximum error */
+   maxerror = MAX(error, maxerror);
+
+   prev = 0;
+   for( i = 1; i < ncorners; ++i )
+   {
+      unsigned int gray;
+      unsigned int diff;
+      unsigned int pos;
+
+      gray = i ^ (i >> 1);
+      diff = gray ^ prev;
+
+      /* compute position of unique 1 of diff */
+      pos = 0;
+      while( (diff >>= 1) != 0 )
+         ++pos;
+
+      if( gray > prev )
+         facetval += facetcoefs[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
+      else
+         facetval -= facetcoefs[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
+
+
+      /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
+      funval = funvals[gray] / midval;
+      if( overestimate )
+      {
+         funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
+         error = funval - facetval;
+      }
+      else
+      {
+         funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
+         error = facetval - funval;
+      }
+
+      /* update  maximum error */
+      maxerror = MAX(error, maxerror);
+
+      prev = gray;
+   }
+
+   SCIPdebugMsg(scip, "maximum error of facet: %2.8e\n", maxerror);
+
+   return maxerror;
+}
+
+
 /** @} */
 
 /*
@@ -11139,6 +11245,303 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 
    if( *success )
       ++nlhdlr->nbranchscores;
+
+   return SCIP_OKAY;
+}
+
+#define MAXPERTURBATION            1e-3 /**< maximum perturbation */
+#define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
+static
+SCIP_Real SCIPcomputeFacetVertexPolyhedral(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_DECL_VERTEXPOLYFUN((*function)),     /**< pointer to vertex polyhedral function */
+   void*                 fundata,            /**< data for function evaluation (can be NULL) */
+   SCIP_Real*            xstar,              /**< point to be separated */
+   SCIP_Real*            box,                /**< box where to compute facet: should be lb_1, ub_1, lb_2, ub_2... */
+   int                   nallvars            /**< half of the length of box */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_RANDNUMGEN* randnumgen; /* random number generator for perturbation */
+   SCIP_LPI* lp;
+   SCIP_Real* funvals;
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_Real* aux; /* used to transform x^* and then to store LP solution */
+   int* inds;
+   int* nonfixedpos;
+   int ncorners;
+   int ncols;
+   int nrows;
+   int i;
+   int nvars; /* number of nonfixed variables */
+   SCIP_Real* corner;
+
+   /* identify fixed variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonfixedpos, nallvars) );
+   nvars = 0;
+   for( i = 0; i < nallvars; ++i )
+   {
+      if( SCIPisFeasEQ(scip, box[2 * i], box[2 * i + 1]) )
+         continue;
+      nonfixedpos[i] = nvars;
+      nvars++;
+   }
+   // check whether number of points too large
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   // get lp, get randnumgen
+   assert(lp != NULL);
+
+   /* get number of cols and rows of separation lp */
+   SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
+
+   /* allocate necessary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aux, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, ncols) );
+
+   /*
+    * 1. compute f(v^i) for each corner v^i of [l,u]
+    * 2. set up the described LP on the transformed space
+    */
+
+   /* get number of corners: 2^nvars */
+   ncorners = poweroftwo[nvars];
+
+   /* evaluate function at all corners of non-fixed variables; set value of fixed variables to midpoint */
+   SCIP_CALL( SCIPallocBufferArray(scip, &corner, nallvars) );
+   for( i = 0; i < nallvars; ++i )
+   {
+      if( SCIPisFeasEQ(scip, box[2 * i], box[2 * i + 1]) )
+         corner[i] = (box[2 * i] + box[2 * i + 1]) / 2.0;
+   }
+   for( i = 0; i < ncols; ++i )
+   {
+      int j;
+
+      for( j = 0; j < nvars; ++j )
+      {
+         int varpos = nonfixedpos[j];
+         /* if j'th bit of row index i is set, then take upper bound on var j, otherwise lower bound var j
+          * we check this by shifting i for j positions to the right and checking whether the j'th bit is set */
+         if( ((unsigned int)i >> j) & 0x1 )
+            corner[varpos] = box[2 * varpos + 1]; /* ub of var */
+         else
+            corner[varpos] = box[2 * varpos ]; /* lb of var */
+         SCIPdebugMsgPrint(scip, "%g, ", corner[varpos]);
+         assert(!SCIPisInfinity(scip, REALABS(corner[varpos])));
+      }
+
+      funvals[i] = i < ncorners ? function(corner, nvars, fundata) : 0.0;
+      inds[i] = i;
+
+      /* update bounds; variables that are not in the LP are get fixed to 0 */
+      lbs[i] = 0.0;
+      ubs[i] = i < ncorners ? 1.0 : 0.0;
+
+      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lbs[i], ubs[i], funvals[i]);
+
+      if( SCIPisInfinity(scip, REALABS(funvals[i])) )
+      {
+         SCIPdebugMsg(scip, "cannot compute underestimator; function value at corner is too large %g\n", funvals[i]);
+         goto CLEANUP;
+      }
+   }
+
+   /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
+   for( i = 0; i < nrows; ++i )
+   {
+      if( i < nvars )
+      {
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         int varpos;
+
+         varpos = nonfixedpos[i];
+         lb = box[2 * varpos];
+         ub = box[2 * varpos + 1];
+         solval = xstar[varpos];
+
+         /* explicitly handle solution which violate bounds of variables (this can happen because of tolerances) */
+         if( solval < lb )
+            aux[i] = 0.0;
+         else if( solval > ub )
+            aux[i] = 1.0;
+         else
+            aux[i] = (solval - lb) / (ub - lb);
+
+         /* perturb point to hopefuly obtain a facet of the convex envelope */
+         if( aux[i] == 1.0 )
+            aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+         else if( aux[i] == 0.0 )
+            aux[i] += SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+         else
+         {
+            SCIP_Real perturbation;
+
+            perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
+            perturbation = MIN( perturbation, MAXPERTURBATION );
+            aux[i] += SCIPrandomGetReal(randnumgen, -perturbation, perturbation);
+         }
+         assert(0.0 < aux[i] && aux[i] < 1.0);
+      }
+      else
+      {
+         /* lp constraints between nvars and nrows - 2 should be 0 == 0; last row corresponds to sum_{j} \lambda_j = 1 */
+         aux[i] = (i == nrows - 1) ? 1.0 : 0.0;
+      }
+
+      SCIPdebugMsg(scip, "LP row %d in [%e, %e]\n", i, aux[i], aux[i]);
+   }
+
+   /* update LP */
+   SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
+   SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lbs, ubs) );
+   SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
+   SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
+   /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
+
+   /*
+    * 3. solve the LP and store the resulting facet for the transformed space
+    */
+   if( USEDUALSIMPLEX ) /*lint !e774 !e506*/
+   {
+      SCIP_CALL( SCIPlpiSolveDual(lp) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpiSolvePrimal(lp) );
+   }
+   assert(SCIPlpiIsOptimal(lp));
+   /* @todo: check solution status */
+
+   /* get dual solution (facet of convex envelope); again, we have to be careful since the LP can have more rows and
+    * columns than needed, in particular, \bar \beta is the last dual multiplier
+    */
+   SCIP_CALL( SCIPlpiGetSol(lp, NULL, NULL, aux, NULL, NULL) );
+
+   for( i = 0; i < nvars; ++i )
+      facetcoefs[nonfixedpos[i]] = aux[i];
+   /* last dual multiplier is the constant */
+   *facetconstant = aux[nrows - 1];
+
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "facet for the transformed problem: ");
+   for( i = 0; i < nallvars; ++i )
+   {
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facetcoefs[i], SCIPvarGetName(vars[i]));
+   }
+   SCIPdebugMsgPrint(scip, "%3.4e\n", *facetconstant);
+#endif
+
+   /*
+    *  4. transform the facet to original space and compute value at x^*, i.e., \alpha x + \beta
+    */
+
+   SCIPdebugMsg(scip, "facet in orig. space: ");
+
+   facetvalue = 0.0;
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int varpos;
+
+      varpos = nonfixedpos[i];
+      lb = box[2 * varpos];
+      ub = box[2 * varpos + 1];
+      assert(!SCIPisEQ(scip, lb, ub));
+
+      /* \alpha_i := \bar \alpha_i / (ub_i - lb_i) */
+      facetcoefs[varpos] = facetcoefs[varpos] / (ub - lb);
+
+      /* \beta = \bar \beta - \sum_i \alpha_i * lb_i */
+      *facetconstant -= facetcoefs[varpos] * lb;
+
+      /* evaluate */
+      facetvalue += facetcoefs[varpos] * xstar[varpos];
+
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facetcoefs[varpos], SCIPvarGetName(vars[varpos]));
+   }
+   SCIPdebugMsgPrint(scip, "%3.4e ", *facetconstant);
+
+   /* add \beta to the facetvalue: at this point in the code, facetvalue = g(x^*) */
+   facetvalue += *facetconstant;
+
+   SCIPdebugMsgPrint(scip, "has value %g, target = %g\n", facetvalue, targetvalue);
+
+    /* if overestimate, then we want facetvalue < targetvalue
+    * if underestimate, then we want facetvalue > targetvalue
+    * if none holds, give up
+    * TODO: if it separates, |facetvalue - targetvalue| is the violation
+    * so maybe here we should check against the minimal violation
+    */
+   if( overestimate == (facetvalue > targetvalue) )
+   {
+      SCIPdebugMsg(scip, "missed the target\n");
+      goto CLEANUP;
+   }
+
+   assert(!SCIPisZero(scip, midval));
+
+   /*
+    *  5. check and adjust facet with the algorithm of Rikun et al.
+    */
+
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, nvars, overestimate, midval, fixedinterval, facetcoefs, *facetconstant);
+
+   /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
+   if( maxfaceterror > 0 )
+   {
+      SCIPdebugMsgPrint(scip, "maximum facet error %g, adjust constant to make cut valid!\n", maxfaceterror);
+
+      /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
+      if( maxfaceterror > ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
+      {
+         SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g.\n", maxfaceterror);
+         goto CLEANUP;
+      }
+
+      if( overestimate )
+      {
+         *facetconstant += maxfaceterror;
+         facetvalue += maxfaceterror;
+      }
+      else
+      {
+         *facetconstant -= maxfaceterror;
+         facetvalue -= maxfaceterror;
+      }
+
+      /* repeat check against targetvalue */
+      if( overestimate == (facetvalue > targetvalue) )
+         goto CLEANUP;
+   }
+
+   /* if we made it until here, then we have a nice facet */
+   *success = TRUE;
+
+CLEANUP:
+
+   /* free allocated memory */
+   SCIPfreeBufferArray(scip, &corner);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &inds);
+
+   SCIPfreeBufferArray(scip, &aux);
+   SCIPfreeBufferArray(scip, &funvals);
 
    return SCIP_OKAY;
 }
