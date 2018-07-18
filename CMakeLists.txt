@@ -13,7 +13,7 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
+set(SCIP_VERSION_PATCH 1)
 set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 33)
 
@@ -465,6 +465,13 @@ add_subdirectory(examples)
 #
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+
+#
+# add AMPL interface
+#
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
+add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()

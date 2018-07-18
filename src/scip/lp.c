@@ -6670,9 +6670,8 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
 
    if( lp->validsoldirlp != stat->lpcount || lp->validsoldirsol != sol )
    {
-      SCIP_Real scale;
+      SCIP_Real scale = 0.0;
 
-      scale = 0.0;
       lp->validsoldirlp = stat->lpcount;
       lp->validsoldirsol = sol;
 
@@ -6685,20 +6684,25 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
          scale += SQR(lp->soldirection[k]);
       }
 
-      assert(scale > 0.0);
-      scale = 1.0 / SQRT(scale);
-
-      for( k = 0; k < lp->ncols; ++k )
+      if( scale > 0.0 )
       {
-         lp->soldirection[k] *= scale;
+         scale = 1.0 / SQRT(scale);
+
+         for( k = 0; k < lp->ncols; ++k )
+            lp->soldirection[k] *= scale;
       }
    }
 
    solcutoffdist = 0.0;
-   for( k = 0; k < row->len; ++k )
-   {
+   for( k = 0; k < row->nlpcols; ++k )
       solcutoffdist += row->vals[k] * lp->soldirection[row->cols[k]->lppos];
+
+   for( k = row->nlpcols; k < row->len; ++k )
+   {
+      if( row->cols[k]->lppos >= 0 )
+         solcutoffdist += row->vals[k] * lp->soldirection[row->cols[k]->lppos];
    }
+
    if( SCIPsetIsSumZero(set, solcutoffdist) )
       solcutoffdist = COPYSIGN(set->num_sumepsilon, solcutoffdist);
 

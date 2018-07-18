@@ -170,7 +170,7 @@ typedef struct shortest_path
 #define Is_gterm(a)  ((a) == -2 || (a) >= 0 )
 #define Edge_anti(a) ((((a) % 2) > 0) ? (a) - 1 : (a) + 1)
 
-#define VERSION_SCIPJACK "1.2"
+#define VERSION_SCIPJACK "1.3"
 #define STP_MAGIC       0x33d32945
 #define VERSION_MAJOR   1
 #define VERSION_MINOR   0

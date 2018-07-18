@@ -3,8 +3,6 @@ MINLP/instances/minlplib/osil/arki0006.osil.gz
 MINLP/instances/minlplib/osil/arki0019.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern25-13.osil.gz
 MINLP/instances/minlplib/osil/bayes2_50.osil.gz
-MINLP/instances/minlplib/osil/blend852.osil.gz
-MINLP/instances/minlplib/osil/cecil_13.osil.gz
 MINLP/instances/minlplib/osil/chp_shorttermplan1b.osil.gz
 MINLP/instances/minlplib/osil/chp_shorttermplan2b.osil.gz
 MINLP/instances/minlplib/osil/gancns.osil.gz
@@ -15,7 +13,6 @@ MINLP/instances/minlplib/osil/genpooling_meyer04.osil.gz
 MINLP/instances/minlplib/osil/ghg_3veh.osil.gz
 MINLP/instances/minlplib/osil/glider100.osil.gz
 MINLP/instances/minlplib/osil/graphpart_3pm-0444-0444.osil.gz
-MINLP/instances/minlplib/osil/kall_circlespolygons_c1p12.osil.gz
 MINLP/instances/minlplib/osil/o9_ar4_1.osil.gz
 MINLP/instances/minlplib/osil/oil.osil.gz
 MINLP/instances/minlplib/osil/pooling_epa2.osil.gz

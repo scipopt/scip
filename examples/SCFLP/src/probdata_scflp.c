@@ -785,6 +785,9 @@ SCIP_RETCODE SCIPprobdataCreate(
       /* activating the Benders' decomposition constraint handlers */
       SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benders/active", TRUE) );
       SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benderslp/active", TRUE) );
+
+      SCIP_CALL( SCIPsetIntParam(scip, "constraints/benders/maxprerounds", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 1) );
    }
    else
    {

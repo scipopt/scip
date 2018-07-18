@@ -65,7 +65,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict an variable locks */
+#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict and variable locks */
 #define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MINCONFLICTLOCKS      5 /**< threshold for penalizing the score */
@@ -236,7 +236,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
        */
       if( mayrounddown && mayroundup )
       {
-         assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
 
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
@@ -261,7 +261,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
             candsfrac = 1.0 - candsfrac;
             break;
          case SCIP_DIVETYPE_SOS1VARIABLE:
-            if ( SCIPisFeasPositive(scip, candsol) )
+            if( SCIPisFeasPositive(scip, candsol) )
                candsfrac = 1.0 - candsfrac;
             break;
          default:
@@ -275,7 +275,7 @@ SCIP_RETCODE getScoreLikeCoefdiving(
    }
    else
    {
-      if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
       /* add some noise to avoid ties */
@@ -359,7 +359,7 @@ SCIP_RETCODE getScore(
        */
       if( mayrounddown && mayroundup )
       {
-         assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
 
          /* try to avoid variability; decide randomly if the LP solution can contain some noise */
          if( SCIPisEQ(scip, candsfrac, 0.5) )
@@ -399,7 +399,7 @@ SCIP_RETCODE getScore(
             candsfrac = 1.0 - candsfrac;
             break;
          case SCIP_DIVETYPE_SOS1VARIABLE:
-            if ( SCIPisFeasPositive(scip, candsol) )
+            if( SCIPisFeasPositive(scip, candsol) )
                candsfrac = 1.0 - candsfrac;
             break;
          default:
@@ -413,7 +413,7 @@ SCIP_RETCODE getScore(
    }
    else
    {
-      if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
       /* add some noise to avoid ties */
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
          &heurdata->minconflictlocks, TRUE, DEFAULT_MINCONFLICTLOCKS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lockweight",
-         "weight used in a convex combination of conflict an variable locks",
+         "weight used in a convex combination of conflict and variable locks",
          &heurdata->lockweight, TRUE, DEFAULT_LOCKWEIGHT, 0.0, 1.0, NULL, NULL) );
 
 

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="6.0.0"
+VERSION="6.0.1"
 NAME="scip-$VERSION"
 if test ! -e release
 then
@@ -49,6 +49,7 @@ check/check_count.awk \
 check/check_count.sh \
 check/check_coverage.sh \
 check/evalcheck_count.sh \
+check/evalcheck_cluster.sh \
 check/testset/short.test \
 check/testset/short.solu \
 check/testset/coverage.test \

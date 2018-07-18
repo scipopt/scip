@@ -14,18 +14,17 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
-We provide two different systems to compile the code. It's recommended to use the
-new CMake system. The traditional Makefile system is still supported for backwards
-compatibility but might be discontinued in the future.
-Be aware that generated libraries and binaries of both systems might be different.
-For further information please refer to the online documentation of SCIP.
+We provide two different systems to compile the code: the traditional Makefile
+system and the newer CMake build system. Be aware that generated libraries and
+binaries of both systems might be different and incompatible.  For further
+information please refer to the online documentation of SCIP.
 
 Installation description using CMake
 ====================================
 
-The easiest way to install SCIP is to use the SCIP Optimization Suite which
+The easiest way to install SCIP is to use the SCIP Optimization Suite, which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
-the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
+the SCIP Optimization Suite (in case of the SCIP Optimization Suite there is
 no need to specify any directories, the compiling process is fully
 automated).
 
@@ -33,7 +32,7 @@ Compiling SCIP directly can be done as follows:
 
 1) unpack the tarball:        "tar xvzf scip-x.y.z.tgz"
 2) change into the directory: "cd scip-x.y.z"
-3) create a new directory:    "build"
+3) create a new directory:    "mkdir build"
 4) change directories:        "cd build"
 4) configure the build:       "cmake .."
 5) start compiling SCIP:      "make"
@@ -52,7 +51,7 @@ to cmake. The existing configuration will be updated or extended.
 To specify a custom path to a library you may specify "-D<name>_DIR=<path>",
 e.g., "cmake .. -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>".
 
-Refer to the online documentation and the FAQ section for further information.
+Please refer to the online documentation and the FAQ section for further information.
 
 
 Windows instructions
@@ -63,16 +62,20 @@ and the desired location for the build. Available options are listed and can
 be modified to suit your needs. After the configuration step is done, open
 the generated Visual Studio solution file and compile it.
 
-Alternatively you may use the command line to build SCIP in an already-generated
-configuration directory: "cmake --build <path>"
+Alternatively, you may use the command line to configure and build SCIP:
+
+  1) create a "build" directory:    "cmake -H. -Bbuild"
+  2) build a configuration:         "cmake --build build --config Release [Debug]"
 
 
 Installation description with Makefile
 =======================================
 
 For Linux and Mac, reading the section "Brief installation description"
-should usually be enough. If this is not the case you find "Detailed
+should usually be enough. If this is not the case, you can find the "Detailed
 installation description" below as well as some examples.
+
+We recommend gcc version 4.8 or later.
 
 
 Content
@@ -86,7 +89,7 @@ III  Examples
 I Brief installation description
 --------------------------------
 
-The easiest way to install SCIP is to use the SCIP Optimization Suite which
+The easiest way to install SCIP is to use the SCIP Optimization Suite, which
 contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
 the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
 no need to specify any directories, the compiling process is fully
@@ -115,7 +118,7 @@ You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
 The most common compiling issue is that some libraries are missing on
-your system or that they are outdated. SCIP per default requires the
+your system or that they are outdated. SCIP by default requires the
 following packages (with usual names for Linux systems in
 parentheses):
 
@@ -193,7 +196,6 @@ Here is what you have to do to get SCIP running:
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
-   - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
    - "LPS=spx"         to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
    - "LPS=spx1"        to use SoPlex as LP solver (based on the old interface for versions >= 1.4)
@@ -621,7 +623,7 @@ make[1]: Leaving directory `/sw/scip'
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------
 
-To build your own Windows binaries under Windows, we recommend using the MinGW-Compiler with MSYS from mingw.org
+To build your own Windows binaries under Windows, we recommend using the MinGW-Compiler with MSYS from mingw.org.
 
 First install MSYS, then MinGW to the mingw folder inside the msys folder.
 Now you need to install the following packages to the mingw folder:

@@ -120,9 +120,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );   // todo tune
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) ); // todo tune
 
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
