@@ -6,7 +6,7 @@
 /*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  CIP is distributed under the terms of the ZIB Academic License.         */
+/*  CIP is distributed under the terms of the ZIB Academic License.          */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
@@ -257,8 +257,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    /* compute underestimating cuts */
    if( underestimate )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, TRUE) );
+      SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, TRUE) );
 
       for( i = 0; i < 5; ++i )
       {
@@ -283,10 +283,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    }
 
    /* compute overestimating cuts */
-   if( overestimate )
+   if( overestimate && *infeasible )
    {
-      SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-            SCIP_INVALID, childlb, childub, FALSE) );
+      SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
+            childlb, childub, FALSE) );
 
       for( i = 0; i < 5; ++i )
       {
@@ -313,19 +313,22 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    return SCIP_OKAY;
 }
 
-/** expression separation callback */
+/** expression estimator callback */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateCos)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
-   SCIP_ROWPREP* cuts[4] = {NULL, NULL, NULL, NULL};
-   SCIP_Real refpoint;
-   SCIP_Real childlb;
-   SCIP_Real childub;
-   SCIP_Bool infeasible;
-   SCIP_Bool success;
-   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
 
    /* get expression data */
    child = SCIPgetConsExprExprChildren(expr)[0];
@@ -333,65 +336,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
    childvar = SCIPgetConsExprExprAuxVar(child);
    assert(childvar != NULL);
 
-   infeasible = FALSE;
-   *ncuts = 0;
-   *result = SCIP_DIDNOTFIND;
-
-   refpoint = SCIPgetSolVal(scip, sol, childvar);
-   childlb = SCIPgetConsExprExprInterval(child).inf;
-   childub = SCIPgetConsExprExprInterval(child).sup;
-
-   /* no need for cut if child is fixed */
-   if( SCIPisRelEQ(scip, childlb, childub) )
-      return SCIP_OKAY;
-
-   /* compute all possible inequalities; the resulting cuts are stored in the cuts array
-    *
-    *  - cuts[0] = secant
-    *  - cuts[1] = secant connecting (lb,cos(lbx)) with left tangent point
-    *  - cuts[1] = secant connecting (ub,cos(ubx)) with right tangent point
-    *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
-    */
-   SCIP_CALL( SCIPcomputeCutsTrig(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
-         refpoint, childlb, childub, !overestimate) );
-
-   for( i = 0; i < 4; ++i )
-   {
-      if( cuts[i] == NULL )
-         continue;
-
-      SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
-
-      if( success )
-      {
-         /* make a SCIP_ROW and add to LP */
-         SCIP_ROW* row;
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-         if( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            break;
-         }
-         else
-         {
-            *result = SCIP_SEPARATED;
-            ++*ncuts;
-         }
-      }
-
-      SCIPfreeRowprep(scip, &cuts[i]);
-   }
-
-   /* if we stopped due to infeasibilility, free remaining cuts */
-   for( ; i < 4; ++i )
-   {
-      if( cuts[i] != NULL )
-         SCIPfreeRowprep(scip, &cuts[i]);
-   }
+   *success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, coefs, constant, SCIPgetSolVal(scip, sol, childvar),
+                                        SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), !overestimate);
+   *islocal = TRUE;
 
    return SCIP_OKAY;
 }
@@ -533,7 +480,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalCos) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaCos, NULL, sepaCos, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaCos, NULL, NULL, estimateCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffCos) );

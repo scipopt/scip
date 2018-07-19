@@ -59,30 +59,49 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    SCIP_INTERVAL*        newbounds           /**< buffer to store new child bounds */
 );
 
-/** helper function to create cuts for sine and cosine separation
+/** helper function to compute coefficients and constant term of a linear estimator at a given point
  *
- *  The following 6 cuts can be generated:
+ *  The function will try to compute the following estimators in that order:
+ *  - soltangent: tangent at specified refpoint
+ *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
+ *  - lmidtangent: tangent at some other point that goes through (lb,sin(lb))
+ *  - rmidtangent: tangent at some other point that goes through (ub,sin(ub))
+ *
+ *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
+ *  of value at the reference point
+ */
+EXTERN
+SCIP_Bool SCIPcomputeEstimatorsTrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
+   SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
+   SCIP_Real*            linconst,           /**< buffer to store the constant term */
+   SCIP_Real             refpoint,           /**< point at which to underestimate (can be SCIP_INVALID) */
+   SCIP_Real             childlb,            /**< lower bound of child variable */
+   SCIP_Real             childub,            /**< upper bound of child variable */
+   SCIP_Bool             underestimate       /**< whether the estimator should be underestimating */
+);
+
+/** helper function to create initial cuts for sine and cosine separation
+ *
+ *  The following 5 cuts can be generated:
  *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
  *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
  *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
- *  - soltangent: tangent at specified refpoint
-
- *  All except soltangent are independent of a specific solution and use only the bounds of the child variable.
- *  If their pointers are passed with NULL, the respective computation is not performed at all. If one of the
- *  computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
+ *
+ *  If one of the computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
 EXTERN
-SCIP_RETCODE SCIPcomputeCutsTrig(
+SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
    SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
    SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
    SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
    SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
    SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROWPREP**        soltangent,         /**< pointer to store the solution tangent */
-   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
    SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
