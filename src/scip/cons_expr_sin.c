@@ -16,6 +16,24 @@
 /**@file   cons_expr_sin.c
  * @brief  handler for sine expressions
  * @author Fabian Wegscheider
+ *
+ * The estimator/separator code always computes underestimators for sin(x).
+ * For overestimator or cos(x), we first reduce to underestimators of sin(x).
+ *
+ * Overestimator for sin(x):
+ *   Assume that a*y+b <= sin(y) for y in [-ub,-lb].
+ *   Then we have a*(-y)-b >= -sin(y) = sin(-y) for y in [-ub,-lb].
+ *   Thus, a*x-b >= sin(x) for x in [lb,ub].
+ *
+ * Underestimator for cos(x):
+ *   Assume that a*y+b <= sin(y) for y in [lb+pi/2,ub+pi/2].
+ *   Then we have a*(x+pi/2) + b <= sin(x+pi/2) = cos(x) for x in [lb,ub].
+ *   Thus, a*x + (b+a*pi/2) <= cos(x) for x in [lb,ub].
+ *
+ * Overestimator for cos(x):
+ *   Assume that a*z+b <= sin(z) for z in [-(ub+pi/2),-(lb+pi/2)].
+ *   Then, a*y-b >= sin(y) for y in [lb+pi/2,ub+pi/2].
+ *   Then, a*x-b+a*pi/2 >= cos(x) for x in [lb,ub].
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -147,7 +165,7 @@ SCIP_Bool computeLeftTangentSin(
    assert(lincoef != NULL);
    assert(linconst != NULL);
 
-   if( SCIPisInfinity(scip, lb) )
+   if( SCIPisInfinity(scip, -lb) )
       return FALSE;
 
    /* left tangent is only underestimating in [pi, 1.5*pi) *2kpi */
@@ -286,7 +304,7 @@ SCIP_Bool computeLeftMidTangentSin(
 
    *issecant = FALSE;
 
-   if( SCIPisInfinity(scip, lb) )
+   if( SCIPisInfinity(scip, -lb) )
       return FALSE;
 
    /* compute shifted bounds for case evaluation */
@@ -339,9 +357,11 @@ SCIP_Bool computeLeftMidTangentSin(
    *lincoef = (SIN(tangentpoint) - SIN(lb)) / (tangentpoint - lb);
    *linconst = SIN(lb) - (*lincoef) * lb;
 
-   /* if the bounds are to close to eachother, it's possible that the underestimator is not valid */
+   /* if the bounds are to close to each other, it's possible that the underestimator is not valid */
    if( *lincoef >= COS(lb) )
       return FALSE;
+
+   SCIPdebugMsg(scip, "leftmidtangent: %g + %g*x <= sin(x) on [%g,%g]\n", *linconst, *lincoef, lb, ub);
 
    return TRUE;
 }
@@ -449,14 +469,18 @@ SCIP_RETCODE assembleRowprep(
    assert(childvar != NULL);
    assert(auxvar != NULL);
 
+   /* for overestimators, mirror back */
+   if( !underestimate )
+      linconst *= -1.0;
+
+   /* further, for cos expressions, the estimator needs to be shifted back to match original bounds */
+   if( iscos )
+      linconst += lincoef * M_PI_2;
+
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
    (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s", iscos ? "cos" : "sin", name, SCIPvarGetName(childvar)); /* todo make cutname unique, e.g., add LP number */
 
-   SCIPaddRowprepSide(*rowprep, underestimate ? -linconst : linconst);
-
-   /* for cos expressions, the cut is shifted back to match original bounds */
-   if( iscos )
-      SCIPaddRowprepConstant(*rowprep, lincoef * M_PI_2);
+   SCIPaddRowprepConstant(*rowprep, linconst);
 
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, 2) );
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
@@ -574,7 +598,6 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP_Bool             underestimate       /**< whether the estimator should be underestimating */
    )
 {
-   SCIP_Real tmp;
    SCIP_Bool success;
    SCIP_Bool iscos;
    SCIP_Bool issecant;
@@ -603,7 +626,7 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 
    if( !underestimate )
    {
-      tmp = childlb;
+      SCIP_Real tmp = childlb;
       childlb = -childub;
       childub = -tmp;
       refpoint *= -1;
@@ -627,12 +650,13 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    if( !success )
       return FALSE;
 
+   /* for overestimators, mirror back */
    if( !underestimate )
       (*linconst) *= -1.0;
 
    /* for cos expressions, shift back */
    if( iscos )
-      (*linconst) -= (*lincoef) * M_PI_2;
+      (*linconst) += (*lincoef) * M_PI_2;
 
    return TRUE;
 }
