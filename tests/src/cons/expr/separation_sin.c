@@ -19,7 +19,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_sin.c"
+#include "scip/cons_expr_sin.h"
 #include "separation.h"
 
 static
@@ -155,7 +155,6 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    cr_expect_eq(linconst, -4.8 * COS(4.8) + SIN(4.8));
    cr_expect_eq(lincoef, COS(4.8));
 
-#if 0 /* FIXME this test stopped working after we moved from computing all cuts to compute only the best estimator */
    /*
     * test point where solution tangent is not feasible
     */
@@ -166,9 +165,8 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
 
    /* check lmidtangent */
    newtonpoint = 4.6845658560;
-   cr_expect_eq(linconst, COS(newtonpoint) + SIN(-1));
-   cr_expect_eq(lincoef, COS(newtonpoint));
-#endif
+   cr_expect_float_eq(linconst, COS(newtonpoint) + SIN(-1), 1e-10);
+   cr_expect_float_eq(lincoef, COS(newtonpoint), 1e-10);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -270,7 +268,6 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    cr_expect_eq(linconst, -SIN(-6) + 2.0 * SIN(-3));
    cr_expect_eq(lincoef, (SIN(-3) - SIN(-6)) / 3.0);
 
-#if 0 /* FIXME this test stopped working after we moved from computing all cuts to compute only the best estimator */
    /*
     * test point where solution tangent is not underestimating
     */
@@ -281,9 +278,8 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
 
    /* check rmidtangent */
    newtonpoint = -3.2123712333;
-   cr_expect_eq(linconst, 3 * COS(newtonpoint) + SIN(-3));
-   cr_expect_eq(lincoef, COS(newtonpoint));
-#endif
+   cr_expect_float_eq(linconst, 3 * COS(newtonpoint) + SIN(-3), 1e-11);
+   cr_expect_float_eq(lincoef, COS(newtonpoint), 1e-11);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
