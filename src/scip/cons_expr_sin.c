@@ -918,32 +918,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
    return SCIP_OKAY;
 }
 
-/** expression data copy callback */
-static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSin)
-{  /*lint --e{715}*/
-   assert(targetscip != NULL);
-   assert(targetexprdata != NULL);
-   assert(targetexprdata != NULL);
-   assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
-
-   *targetexprdata = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** expression data free callback */
-static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSin)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPsetConsExprExprData(expr, NULL);
-
-   return SCIP_OKAY;
-}
-
 /** expression print callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
@@ -1284,7 +1258,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSin, freedataSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
