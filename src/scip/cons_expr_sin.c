@@ -16,8 +16,6 @@
 /**@file   cons_expr_sin.c
  * @brief  handler for sine expressions
  * @author Fabian Wegscheider
- *
- * @todo replace sepaSin by estimateSin
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -103,8 +101,8 @@ SCIP_DECL_NEWTONEVAL(derivative2)
    return (point - params[0]) * SIN(point);
 }
 
-/** helper function to compute the secant if it is a feasible underestimating cut
- *  returns true if the cut was computed successfully
+/** helper function to compute the secant if it is a valid underestimator
+ *  returns true if the estimator was computed successfully
  */
 static
 SCIP_Bool computeSecantSin(
@@ -120,11 +118,11 @@ SCIP_Bool computeSecantSin(
    assert(linconst != NULL);
    assert(lb < ub);
 
-   /* if range is too big, secant is infeasible */
+   /* if range is too big, secant is not underestimating */
    if( ub - lb >= M_PI )
       return FALSE;
 
-   /* if bounds are not within positive bay, cut is infeasible or not underestimating */
+   /* if bounds are not within positive bay, secant is not underestimating */
    if( SIN(lb) < 0.0 || SIN(ub) < 0.0  || (SIN(lb) == 0.0 && COS(lb) < 0.0) )
       return FALSE;
 
@@ -134,14 +132,14 @@ SCIP_Bool computeSecantSin(
    return TRUE;
 }
 
-/** helper function to compute the tangent at lower bound if it is a feasible underestimating cut
- *  returns true if the cut was computed successfully
+/** helper function to compute the tangent at lower bound if it is underestimating
+ *  returns true if the underestimator was computed successfully
  */
 static
 SCIP_Bool computeLeftTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
-   SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
+   SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
    SCIP_Real             lb                  /**< lower bound of argument variable */
    )
 {
@@ -152,7 +150,7 @@ SCIP_Bool computeLeftTangentSin(
    if( SCIPisInfinity(scip, lb) )
       return FALSE;
 
-   /* left tangent is only feasible and underestimating in [pi, 1.5*pi) *2kpi */
+   /* left tangent is only underestimating in [pi, 1.5*pi) *2kpi */
    if( SIN(lb) > 0.0 || COS(lb) >= 0.0 )
       return FALSE;
 
@@ -162,14 +160,14 @@ SCIP_Bool computeLeftTangentSin(
    return TRUE;
 }
 
-/** helper function to compute the tangent at upper bound if it is a feasible underestimating cut
- *  returns true if the cut was computed successfully
+/** helper function to compute the tangent at upper bound if it is an underestimator
+ *  returns true if the underestimator was computed successfully
  */
 static
 SCIP_Bool computeRightTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
-   SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
+   SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
 {
@@ -180,7 +178,7 @@ SCIP_Bool computeRightTangentSin(
    if( SCIPisInfinity(scip, ub) )
       return FALSE;
 
-   /* left tangent is only feasible and underestimating in (1.5*pi, 2*pi] *2kpi */
+   /* left tangent is only underestimating in (1.5*pi, 2*pi] *2kpi */
    if( SIN(ub) > 0.0 || COS(ub) <= 0.0 )
       return FALSE;
 
@@ -190,14 +188,14 @@ SCIP_Bool computeRightTangentSin(
    return TRUE;
 }
 
-/** helper function to compute the tangent at solution point if it is a feasible underestimating cut
- *  returns true if the cut was computed successfully
+/** helper function to compute the tangent at solution point if it is an underestimator
+ *  returns true if the underestimator was computed successfully
  */
 static
 SCIP_Bool computeSolTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
-   SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
+   SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub,                 /**< upper bound of argument variable */
    SCIP_Real             solpoint            /**< solution point to be separated */
@@ -222,8 +220,7 @@ SCIP_Bool computeSolTangentSin(
    if( solpoint < 0.0 )
       solpointmodpi += M_PI;
 
-
-   /* if the point is too far away from the bounds or is at a multiple of pi, the tangent is infeasible */
+   /* if the point is too far away from the bounds or is at a multiple of pi, then tangent is not underestimating */
    if( SCIPisGE(scip, solpoint - lb, 2*M_PI) || SCIPisGE(scip, ub - solpoint, 2*M_PI)
       || SCIPisZero(scip, solpointmodpi) )
       return FALSE;
@@ -231,7 +228,7 @@ SCIP_Bool computeSolTangentSin(
    params[0] = COS(solpoint);
    params[1] = SIN(solpoint) - params[0] * solpoint;
 
-   /* choose starting points for newton procedure */
+   /* choose starting points for Newton procedure */
    if( SCIPisGT(scip, solpointmodpi, M_PI_2) )
    {
       startingpoints[0] = solpoint + (M_PI - solpointmodpi) + M_PI_2;
@@ -245,7 +242,7 @@ SCIP_Bool computeSolTangentSin(
       startingpoints[2] = startingpoints[1] - M_PI_2;
    }
 
-   /* use newton procedure to test if cut is valid */
+   /* use Newton procedure to test if cut is valid */
    for( i = 0; i < 3; ++i )
    {
       intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
@@ -255,7 +252,7 @@ SCIP_Bool computeSolTangentSin(
          break;
    }
 
-   /* if newton failed or intersection point lies within bounds, cut is not feasible */
+   /* if Newton failed or intersection point lies within bounds, underestimator is not valid */
    if( intersection == SCIP_INVALID || (intersection >= lb && intersection <= ub) ) /*lint !e777*/
       return FALSE;
 
@@ -266,14 +263,14 @@ SCIP_Bool computeSolTangentSin(
 }
 
 /** helper function to compute the tangent at some other point that goes through (lb,sin(lb)) and is underestimating
- *  returns true if the cut was computed successfully
+ *  returns true if the underestimator was computed successfully
  */
 static
 SCIP_Bool computeLeftMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
-   SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
-   SCIP_Bool*            issecant,           /**< buffer to store whether cut is actually a secant */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
+   SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
+   SCIP_Bool*            issecant,           /**< buffer to store whether underestimator is actually a secant */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
@@ -297,7 +294,7 @@ SCIP_Bool computeLeftMidTangentSin(
    if( lb < 0.0 )
       lbmodpi += M_PI;
 
-   /* choose starting point for newton procedure */
+   /* choose starting point for Newton procedure */
    if( COS(lb) < 0.0 )
    {
       /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
@@ -315,11 +312,11 @@ SCIP_Bool computeLeftMidTangentSin(
          startingpoint = lb + 1.25*M_PI - lbmodpi;
    }
 
-   /* use newton procedure to find the point where the tangent intersects sine at lower bound */
+   /* use Newton procedure to find the point where the tangent intersects sine at lower bound */
    tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &lb, 1, startingpoint, NEWTON_PRECISION,
       NEWTON_NITERATIONS);
 
-   /* if newton procedure failed, no cut is added */
+   /* if Newton procedure failed, no cut is added */
    if( tangentpoint == SCIP_INVALID ) /*lint !e777*/
       return FALSE;
 
@@ -328,7 +325,7 @@ SCIP_Bool computeLeftMidTangentSin(
    {
       tangentpoint = ub;
 
-      /* check whether cut is still underestimating */
+      /* check whether affine function is still underestimating */
       if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
          return FALSE;
 
@@ -342,7 +339,7 @@ SCIP_Bool computeLeftMidTangentSin(
    *lincoef = (SIN(tangentpoint) - SIN(lb)) / (tangentpoint - lb);
    *linconst = SIN(lb) - (*lincoef) * lb;
 
-   /* if the bounds are to close to eachother, it's possible that the cut is invalid */
+   /* if the bounds are to close to eachother, it's possible that the underestimator is not valid */
    if( *lincoef >= COS(lb) )
       return FALSE;
 
@@ -350,14 +347,14 @@ SCIP_Bool computeLeftMidTangentSin(
 }
 
 /** helper function to compute the tangent at some other point that goes through (ub,sin(ub)) and is underestimating
- *  returns true if the cut was computed successfully
+ *  returns true if the underestimator was computed successfully
  */
 static
 SCIP_Bool computeRightMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
-   SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
-   SCIP_Bool*            issecant,           /**< buffer to store whether cut is actually a secant */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
+   SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
+   SCIP_Bool*            issecant,           /**< buffer to store whether underestimator is actually a secant */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
@@ -381,7 +378,7 @@ SCIP_Bool computeRightMidTangentSin(
    if( ub < 0.0 )
       ubmodpi += M_PI;
 
-   /* choose starting point for newton procedure */
+   /* choose starting point for Newton procedure */
    if( COS(ub) > 0.0 )
    {
       /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
@@ -399,11 +396,11 @@ SCIP_Bool computeRightMidTangentSin(
          startingpoint = ub - M_PI_4 - ubmodpi;
    }
 
-   /* use newton procedure to find the point where the tangent intersects sine at lower bound */
+   /* use Newton procedure to find the point where the tangent intersects sine at lower bound */
    tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &ub, 1, startingpoint, NEWTON_PRECISION,
       NEWTON_NITERATIONS);
 
-   /* if newton procedure failed, no cut is added */
+   /* if Newton procedure failed, no underestimator is found */
    if( tangentpoint == SCIP_INVALID ) /*lint !e777*/
       return FALSE;
 
@@ -412,7 +409,7 @@ SCIP_Bool computeRightMidTangentSin(
    {
       tangentpoint = lb;
 
-      /* check whether cut is still underestimating */
+      /* check whether affine function is still underestimating */
       if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
          return FALSE;
 
@@ -426,13 +423,14 @@ SCIP_Bool computeRightMidTangentSin(
    *lincoef = (SIN(tangentpoint) - SIN(ub)) / (tangentpoint - ub);
    *linconst = SIN(ub) - (*lincoef) * ub;
 
-   /* if the bounds are to close to eachother, it's possible that the cut is invalid */
+   /* if the bounds are to close to each other, it's possible that the underestimator is not valid */
    if( *lincoef <= COS(lb) )
       return FALSE;
 
    return TRUE;
 }
 
+/** sets up a rowprep from given data */
 static
 SCIP_RETCODE assembleRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -553,7 +551,7 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    return SCIP_OKAY;
 }
 
-/** helper function to compute coefficients and constant term of a linear extimator at a given point
+/** helper function to compute coefficients and constant term of a linear estimator at a given point
  *
  *  The function will try to compute the following estimators in that order:
  *  - soltangent: tangent at specified refpoint
@@ -561,19 +559,19 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  *  - lmidtangent: tangent at some other point that goes through (lb,sin(lb))
  *  - rmidtangent: tangent at some other point that goes through (ub,sin(ub))
  *
- *  They are ordered such that a successfull computation for one of them cannot be beaten by consequent ones in terms
- *  of violation at the reference point
+ *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
+ *  of value at the reference point
  */
 SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
    SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
    SCIP_Real*            linconst,           /**< buffer to store the constant term */
-   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
+   SCIP_Real             refpoint,           /**< point at which to underestimate (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
-   SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
+   SCIP_Bool             underestimate       /**< whether the estimator should be underestimating */
    )
 {
    SCIP_Real tmp;
@@ -589,7 +587,7 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
-   /* if child is essentially constant, then there should be no point in separation */
+   /* if child is essentially constant, then there should be no point in estimation */
    if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
       return FALSE;
 
@@ -637,7 +635,6 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
       (*linconst) -= (*lincoef) * M_PI_2;
 
    return TRUE;
-
 }
 
 /** helper function to create initial cuts for sine and cosine separation
@@ -652,7 +649,7 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
    SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
    SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
    SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
@@ -1079,7 +1076,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    }
 
    /* compute overestimating cuts */
-   if( overestimate )
+   if( overestimate && !*infeasible )
    {
       SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
             childlb, childub, FALSE) );

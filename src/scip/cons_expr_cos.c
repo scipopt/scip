@@ -283,7 +283,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    }
 
    /* compute overestimating cuts */
-   if( overestimate )
+   if( overestimate && *infeasible )
    {
       SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
             childlb, childub, FALSE) );

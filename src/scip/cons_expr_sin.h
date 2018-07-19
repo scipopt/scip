@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    SCIP_INTERVAL*        newbounds           /**< buffer to store new child bounds */
 );
 
-/** helper function to compute coefficients and constant term of a linear extimator at a given point
+/** helper function to compute coefficients and constant term of a linear estimator at a given point
  *
  *  The function will try to compute the following estimators in that order:
  *  - soltangent: tangent at specified refpoint
@@ -67,20 +67,20 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  *  - lmidtangent: tangent at some other point that goes through (lb,sin(lb))
  *  - rmidtangent: tangent at some other point that goes through (ub,sin(ub))
  *
- *  They are ordered such that a successfull computation for one of them cannot be beaten by consequent ones in terms
- *  of violation at the reference point
+ *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
+ *  of value at the reference point
  */
 EXTERN
 SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
    SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
    SCIP_Real*            linconst,           /**< buffer to store the constant term */
-   SCIP_Real             refpoint,           /**< point that is to be seperated (can be SCIP_INVALID) */
+   SCIP_Real             refpoint,           /**< point at which to underestimate (can be SCIP_INVALID) */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
-   SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
+   SCIP_Bool             underestimate       /**< whether the estimator should be underestimating */
 );
 
 /** helper function to create initial cuts for sine and cosine separation
@@ -96,7 +96,7 @@ EXTERN
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
    SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
    SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
    SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
