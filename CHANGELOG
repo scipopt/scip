@@ -46,6 +46,8 @@ Build system
 
 ### Cmake
 
+- add missing GMP dependency when compiling with SYM=bliss
+
 ### Makefile
 
 Fixed bugs
