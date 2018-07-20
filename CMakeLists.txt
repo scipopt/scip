@@ -324,7 +324,7 @@ endif()
 #search the selected symmetry computation program
 if(SYM STREQUAL "bliss")
     find_package(BLISS)
-    if(BLISS_FOUND)
+    if(BLISS_FOUND AND GMP_FOUND)
         include_directories(${BLISS_INCLUDE_DIRS})
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
