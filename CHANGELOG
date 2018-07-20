@@ -46,6 +46,8 @@ Build system
 
 ### Cmake
 
+- add DL library when linking to CPLEX to avoid linker errors
+
 ### Makefile
 
 Fixed bugs
