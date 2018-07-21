@@ -1,37 +1,37 @@
-Building and installing the STP application (SCIP-Jack)               {#INSTALL}
-===========================================
+Building and installing the PolySCIP application               {#INSTALL}
+======================================================
 
-SCIP-Jack may be built in two ways, either by using Cmake
-or by using SCIPs own Makefile system. The choice of the
+The PolySCIP application may be built in two ways, either by using Cmake
+or by using SCIP's own Makefile system. The choice of the
 build system depends on the desired target platform and the availability
 of those tools there, as well as your personal preferences.
-For most users we recommend to use the CMake system, especially on
-non-Unix platforms.
+For most users, we recommend to use the CMake system, especially on
+non Unix platforms.
 
 
 Installation information using CMake
 ------------------------------------
 
 Please compile SCIP first,
-see the INSTALL in the main SCIP directory for instructions,
+see the INSTALL_CMAKE in the main SCIP directory for instructions,
 or refer to the online documentation of SCIP.
-SCIP-Jack can be compiled within the same build directory
-as SCIP. If the build directory of SCIP is named "build",
+The PolySCIP application can be compiled within the same build directory
+as SCIP. Assuming that the build directory of SCIP was named "build",
 simply execute
 
 ```
 cd build
-make stp
+make polyscip
 ```
 
-The STP application is part of the SCIP applications. To build all
+The PolySCIP application is part of the SCIP applications. To build all
 applications at once, use
 
 ```
 make applications
 ```
 
-It is also possible to build SCIP-Jack in a stand-alone
+It is also possible to build the PolySCIP application in a stand-alone
 build directory. Therefore, it is necessary to create the
 stand-alone build directory first and generate the Makefile using
 CMake. It might be necessary to specify the SCIP build directory
@@ -50,7 +50,7 @@ configuration options for this application, and available tests.
 
 
 
-Installation information for SCIPs custom Makefile system on Linux
+Installation information for SCIP's custom Makefile system on Linux
 -------------------------------------------------------------------
 
 In the following, some of the names depend on your machine and your
@@ -91,18 +91,18 @@ as LP solver, you would have the following names:
 - "OPT"    = dbg
 - "LPS"    = spx
 
-Here is what you have to do to get SCIP-Jack
+Here is what you have to do to get the polyscip example project
 using SCIP as a library running:
 
-1. Install and compile SCIP as described in the INSTALL file of SCIP's main 
-   directory, and make sure to create the necessary softlinks in SCIP's lib 
+1. Install and compile SCIP as described in the INSTALL file of SCIP's main
+   directory, and make sure to create the necessary softlinks in SCIP's lib
    directory
 
-2. In the directory STP edit the variable SCIPDIR if necessary - it should
+2. In the directory PolySCIP edit the variable SCIPDIR if necessary - it should
    point to the directory that contains SCIP.
 
-3. Compile the stp example project:
-   In the main directory STP, enter "make OPT=<...> LPS=<...> COMP=<...>"
+3. Compile the polyscip example project:
+   In the main directory PolySCIP, enter "make OPT=<...> LPS=<...> COMP=<...>"
    with the following options:
    - "OPT=opt"       to use optimized compilation mode (default)
    - "OPT=dbg"       to use debug compilation mode
@@ -116,8 +116,8 @@ using SCIP as a library running:
    - "COMP=gnu"      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-4. To run the program enter "bin/stp.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
-   (e.g. "bin/stp.linux.x86.gnu.opt.spx") or "bin/stp" which is a link
+4. To run the program enter "bin/polyscip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/polyscip.linux.x86.gnu.opt.spx") or "bin/polyscip" which is a link
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed, and

@@ -3021,14 +3021,17 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
    roundmode = SCIPintervalGetRoundingMode();
 
-   SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+   /* this should actually be round_upwards, but unless lincoeff is min_double,
+    * there shouldn't be any rounding happening when dividing by 2, i.e., shifting exponent,
+    * so it is ok to not change the rounding mode here
+    */
    b = lincoeff / 2.0;
 
    if( lincoeff >= 0.0 )
    { /* b >= 0.0 */
-      /*SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS); */
       if( rhs > 0.0 )
       { /* b >= 0.0 and c > 0.0 */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
          delta = b*b + sqrcoeff*rhs;
          if( delta < 0.0 )
          {
@@ -3049,6 +3052,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       { /* b >= 0.0 and c <= 0.0 */
          if( sqrcoeff < 0.0 )
          {
+            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
             z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
@@ -3067,7 +3071,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             z += negate(b);
             resultant->inf = z / sqrcoeff;
@@ -3079,15 +3083,19 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
       }
       else
       { /* b < 0.0 and c <= 0.0 */
-         /* SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS); */
+         SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
          delta = b*b + sqrcoeff * rhs;
          if( delta >= 0.0 )
          {
             /* let resultant = [0,-c/z] for now */
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
-            SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MIN);
+            /* continue with downward rounding, because we want z (>= 0) to be small,
+             * because -rhs/z needs to be large (-rhs >= 0)
+             */
+            SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             z += negate(b);
+            /* also now compute rhs/z with downward rounding, so that -(rhs/z) becomes large */
             resultant->sup = negate(rhs/z);
 
             if( sqrcoeff > 0.0 )
@@ -3097,7 +3105,6 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
                 */
                SCIP_Real zdiva;
 
-               SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
                zdiva = z/sqrcoeff;
 
                if( xbnds.sup < zdiva )
@@ -3171,7 +3178,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    if( xbnds.sup >= 0 )
    {
       SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs, xbnds);
-      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%g,%g]\n",
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.20g,%.20g]\n",
          sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, MAX(xbnds.inf, 0.0), xbnds.sup, xpos.inf, xpos.sup);
    }
    else

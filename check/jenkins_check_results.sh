@@ -13,6 +13,7 @@
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
 echo "This is jenkins_check_results.sh running."
+export PSMESSAGE=$PSMESSAGE
 
 # set up environment for jenkins_failcheck.sh
 export TESTSET=$1

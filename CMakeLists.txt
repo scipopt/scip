@@ -13,8 +13,8 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_SUB 1)
+set(SCIP_VERSION_PATCH 1)
+set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 33)
 
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
@@ -324,7 +324,7 @@ endif()
 #search the selected symmetry computation program
 if(SYM STREQUAL "bliss")
     find_package(BLISS)
-    if(BLISS_FOUND)
+    if(BLISS_FOUND AND GMP_FOUND)
         include_directories(${BLISS_INCLUDE_DIRS})
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
@@ -465,6 +465,13 @@ add_subdirectory(examples)
 #
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+
+#
+# add AMPL interface
+#
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
+add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()

@@ -29,9 +29,16 @@ doc/inc/parameters.set
 doc/**/*.tmp
 .cproject
 .project
+.vscode/
 .settings/
 hooks/
 build/
+examples/*/check/results/
+examples/*/check/*.sh
+examples/*/check/*.awk
+applications/*/check/results/
+applications/*/check/*.sh
+applications/*/check/*.awk
 
 ###############################
 ## files created by `make lint`

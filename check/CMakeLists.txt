@@ -698,6 +698,7 @@ endforeach()
 # is only available on Linux, that is available on MAC OS as "gtimeout" after installing
 # the 'coreutils' package
 #
+if (TEST_SIGNAL_HANDLING)
 if (UNIX)
     if (APPLE)
         set(timeoutcommand "gtimeout")
@@ -717,3 +718,4 @@ if (UNIX)
                             #
                             )
 endif (UNIX)
+endif()
