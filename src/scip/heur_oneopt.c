@@ -280,7 +280,7 @@ static
 SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_HEUR*            heur,               /**< oneopt heuristic */
    SCIP_VAR**            vars,               /**< SCIP variables */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
    SCIP_SOL*             bestsol,            /**< incumbent solution */
