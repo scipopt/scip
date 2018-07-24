@@ -140,6 +140,11 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       *lowerbound = relaxval;
       *result = SCIP_SUCCESS;
    }
+   else if( SCIPgetStatus(relaxscip) == SCIP_STATUS_INFEASIBLE )
+   {
+      SCIPdebugMsg(scip, "cutting off node\n");
+      *result = SCIP_CUTOFF;
+   }
 
    /* free memory */
    SCIPhashmapFree(&varmap);
