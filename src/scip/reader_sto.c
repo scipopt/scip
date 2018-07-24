@@ -2205,6 +2205,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR* var;
       char RHS[] = "RHS";
+      char rhs[] = "rhs";
       char RIGHT[] = "RIGHT";
       char MINI[] = "MINI";
       char obj[] = "obj";
@@ -2215,7 +2216,9 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
-      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
+      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 ||
+         strncmp(getScenarioEntryCol(scenario, i), rhs, 3) == 0 ||
+         strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
          if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
