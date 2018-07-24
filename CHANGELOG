@@ -55,6 +55,7 @@ Fixed bugs
 ----------
 
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
+- the STO reader is capable of handling scenarios defined using lower case "rhs"
 
 Miscellaneous
 -------------
