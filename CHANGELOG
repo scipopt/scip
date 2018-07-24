@@ -38,6 +38,9 @@ Interface changes
 
 ### New parameters
 
+- the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
+  behavior is controlled with an additional parameter in the Benders' decomposition framework.
+
 ### Data structures
 
 Deleted files
