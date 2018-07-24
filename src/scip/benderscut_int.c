@@ -152,8 +152,9 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
-   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g\n", probnumber,
-      SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol));
+   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol),
+      cutconstant);
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
