@@ -12558,14 +12558,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
          assert(!lpCutoffDisabled(set));
-         /* if we do branch-and-price, make sure that a dual feasible solution exists, that exceeds the objective limit;
-          * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
-          * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without
+         /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
+          * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
+          * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
-          * FASTMIP and solve again.
-          */
-         if( !SCIPprobAllColsInLP(prob, set, lp) && fastmip )
+          * FASTMIP and solve again. */
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12835,10 +12834,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
             }
-         }
-         else if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
-         {
-            SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          }
          SCIPsetDebugMsg(set, " -> LP objective limit reached\n");
          break;
