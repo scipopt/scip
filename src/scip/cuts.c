@@ -319,7 +319,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
-/** safely remove all coefficients below the given value; returns TRUE if the cut became redundant */
+/** safely remove all items with a_ix_i below the given value; returns TRUE if the cut became redundant */
 static
 SCIP_Bool removeZerosQuad(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -339,27 +339,25 @@ SCIP_Bool removeZerosQuad(
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real QUAD(val);
-
       int v = cutinds[i];
       QUAD_ARRAY_LOAD(val, cutcoefs, v);
-
-		SCIP_Real lb;
-		SCIP_Real ub;
-		SCIP_Bool isfix;
-		if( cutislocal )
-		{
-			lb = SCIPvarGetLbLocal(vars[v]);
-			ub = SCIPvarGetUbLocal(vars[v]);
-		}
-		else
-		{
-			lb = SCIPvarGetLbGlobal(vars[v]);
-			ub = SCIPvarGetUbGlobal(vars[v]);
-		}
-		if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisZero(scip, ub-lb) )
-			isfix = TRUE;
-		else
-			isfix = FALSE;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Bool isfix;
+      if( cutislocal )
+      {
+         lb = SCIPvarGetLbLocal(vars[v]);
+         ub = SCIPvarGetUbLocal(vars[v]);
+      }
+      else
+      {
+         lb = SCIPvarGetLbGlobal(vars[v]);
+         ub = SCIPvarGetUbGlobal(vars[v]);
+      }
+      if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisZero(scip, ub-lb) )
+         isfix = TRUE;
+      else
+         isfix = FALSE;
 
       if( EPSZ(QUAD_TO_DBL(val), minval) || isfix )
       {
