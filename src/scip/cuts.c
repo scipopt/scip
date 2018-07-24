@@ -319,7 +319,9 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
-/** safely remove all items with a_ix_i below the given value; returns TRUE if the cut became redundant */
+/** safely remove all items with |a_i(u_i - l_i)| below the given value; returns TRUE if the cut became redundant
+ *  if it is a local cut, use local bounds, otherwise, using global bounds
+ * */
 static
 SCIP_Bool removeZerosQuad(
    SCIP*                 scip,               /**< SCIP data structure */
