@@ -614,9 +614,16 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
+         SCIP_VARTYPE vartype;
+
+         if( SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
+            vartype = SCIP_VARTYPE_IMPLINT;
+         else
+            vartype = SCIP_VARTYPE_CONTINUOUS;
+
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
+               1.0, vartype) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
