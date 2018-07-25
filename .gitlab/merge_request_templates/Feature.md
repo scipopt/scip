@@ -27,5 +27,4 @@
 * [ ] Look for a satisfactory solution that ensures backwards compatibility.
 * [ ] Document interface changes in the CHANGELOG.
 * [ ] Increase SCIP_APIVERSION after the merge.
-* [ ] Interface changes must be documented in doc/xternal.c and the CHANGELOG.
 * [ ] Tag this MR with the label 'default parameter' and inform one of the developers responsible for SAP (default: Jakob) if a parameter was added/deleted/changed.
