@@ -2335,13 +2335,26 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
-       * otherwise, if the value in the LP or pseudosolution is large (here 1e+12), use 0.0
-       * in both cases, project onto bounds of course
-       */
+      /* if no point is suggested, try the LP or pseudo solution */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+
       if( REALABS(branchpoint) > 1e+12 )
+      {
+         /* if the value in the LP or pseudosolution is large (here 1e+12), use 0.0 (will be projected onto bounds below) */
          branchpoint = 0.0;
+      }
+      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+      {
+         /* if the value is from the LP and midpull is activated, then push towards middle of domain */
+         SCIP_Real midpull = set->branch_midpull;
+
+         assert(SCIPtreeGetCurrentDepth(tree) >= 0);
+         midpull /= SCIPtreeGetCurrentDepth(tree) + 1.0;
+
+         branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
+      }
+
+      /* make sure branchpoint is on interval, below we make sure that it is within bounds for continuous vars */
       branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
 
@@ -2419,17 +2432,6 @@ SCIP_Real SCIPbranchGetBranchingPoint(
              */
             maxbrpoint = set->branch_clamp * lb + (1.0 - set->branch_clamp) * ub;
             maxbrpoint = MIN(ub - 1.01*SCIPsetEpsilon(set)*scale, maxbrpoint);  /*lint !e666*/
-
-            /* push branching point candidate towards middle of domain, do so less depper down in the tree */
-            if( set->branch_midpull > 0.0 )
-            {
-               SCIP_Real midpull = set->branch_midpull;
-
-               assert(SCIPtreeGetCurrentDepth(tree) >= 0);
-               midpull /= SCIPtreeGetCurrentDepth(tree) + 1.0;
-
-               branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
-            }
 
             /* project branchpoint into [minbrpoint, maxbrpoint] */
             branchpoint = MAX(minbrpoint, MIN(branchpoint, maxbrpoint));
