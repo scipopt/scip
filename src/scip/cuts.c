@@ -341,11 +341,12 @@ SCIP_Bool removeZerosQuad(
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real QUAD(val);
-      int v = cutinds[i];
-      QUAD_ARRAY_LOAD(val, cutcoefs, v);
       SCIP_Real lb;
       SCIP_Real ub;
+      int v;
       SCIP_Bool isfixed;
+      v = cutinds[i];
+      QUAD_ARRAY_LOAD(val, cutcoefs, v);
       if( cutislocal )
       {
          lb = SCIPvarGetLbLocal(vars[v]);
