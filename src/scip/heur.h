@@ -42,7 +42,7 @@ extern "C" {
 /** create a set of diving heuristic settings */
 extern
 SCIP_RETCODE SCIPdivesetCreate(
-   SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
+   SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -66,7 +66,8 @@ SCIP_RETCODE SCIPdivesetCreate(
                                               *   more general constraint handler diving variable selection? */
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    );
 
 /** resets diving settings counters */
@@ -101,6 +102,14 @@ SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
    SCIP_Real*            candscore,          /**< pointer to store the candidate score */
    SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
+   );
+
+/** check specific preconditions for diving, e.g., if an incumbent solution is available */
+extern
+SCIP_RETCODE SCIPdivesetIsAvailable(
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
    );
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */

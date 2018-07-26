@@ -43,7 +43,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
-#define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
+#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
@@ -183,7 +183,8 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 /** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
-SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreFracdiving)
+static
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 {
    SCIP_Real obj;
    SCIP_Real objnorm;
@@ -261,6 +262,8 @@ SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreFracdiving)
    return SCIP_OKAY;
 }
 
+#define divesetAvailableFracdiving NULL
+
 /*
  * heuristic specific interface methods
  */
@@ -293,7 +296,8 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES, SCIPdivesetGetScoreFracdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreFracdiving, divesetAvailableFracdiving) );
 
    return SCIP_OKAY;
 }

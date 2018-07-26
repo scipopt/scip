@@ -49,10 +49,6 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns a score for the given candidate -- the best candidate maximizes the diving score */
-EXTERN
-SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScorePscostdiving);
-
 #ifdef __cplusplus
 }
 #endif

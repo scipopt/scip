@@ -47,10 +47,6 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** calculate score and preferred rounding direction for the candidate variable */
-EXTERN
-SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreVeclendiving);
-
 #ifdef __cplusplus
 }
 #endif

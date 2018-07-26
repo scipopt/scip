@@ -209,7 +209,8 @@ SCIP_RETCODE SCIPdivesetCreate(
                                               *   more general constraint handler diving variable selection? */
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -238,14 +239,17 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&diveset->name, divesetname, strlen(divesetname)+1) );
    diveset->heur = NULL;
 
-   /* copy callbacks */
+   /* scoring callbacks */
    diveset->divesetgetscore = divesetgetscore;
+   diveset->divesetavailable = divesetavailable;
 
    SCIP_CALL( heurAddDiveset(heur, diveset) );
    diveset->sol = NULL;
    diveset->divetypemask = divetypemask;
+   diveset->ispublic = ispublic;
 
    SCIP_CALL( SCIPdivesetReset(diveset, set) );
+
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
@@ -687,6 +691,29 @@ SCIP_RETCODE SCIPdivesetGetScore(
 
    SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac,
          candscore, roundup) );
+
+   return SCIP_OKAY;
+}
+
+/** check specific preconditions for diving, e.g., if an incumbent solution is available */
+SCIP_RETCODE SCIPdivesetIsAvailable(
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
+   )
+{
+   assert(set != NULL);
+   assert(diveset != NULL);
+   assert(available != NULL);
+
+
+   if( diveset->divesetavailable == NULL )
+      *available = TRUE;
+   else
+   {
+      *available = FALSE;
+      SCIP_CALL( diveset->divesetavailable(set->scip, diveset, available) );
+   }
 
    return SCIP_OKAY;
 }

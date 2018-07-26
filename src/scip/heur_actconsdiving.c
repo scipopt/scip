@@ -46,7 +46,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
-#define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
+#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 /*
  * Default parameter settings
@@ -294,7 +294,8 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
 /** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
-SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreActconsdiving)
+static
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
 {
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
@@ -350,6 +351,8 @@ SCIP_DECL_DIVESETGETSCORE(SCIPdivesetGetScoreActconsdiving)
    return SCIP_OKAY;
 }
 
+#define divesetAvailableActconsdiving NULL
+
 /*
  * heuristic specific interface methods
  */
@@ -382,7 +385,8 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES, SCIPdivesetGetScoreActconsdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreActconsdiving, divesetAvailableActconsdiving) );
 
    return SCIP_OKAY;
 }
