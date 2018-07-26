@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_allinonediving.c
  * @brief  diving heuristic that selects adaptively between the existing, public divesets
  * @author Gregor Hendel
@@ -287,6 +287,27 @@ SCIP_Longint getLPIterlimit(
    return lpiterlimit;
 }
 
+#ifdef SCIP_DEBUG
+/** print array for debug purpose */
+static
+char* printRealArray(
+   char*                 strbuf,             /**< string buffer array */
+   SCIP_Real*            elems,              /**< array elements */
+   int                   nelems              /**< number of elements */
+   )
+{
+   int c;
+   char* pos = strbuf;
+
+   for( c = 0; c < nelems; ++c )
+   {
+      pos += sprintf(pos, "%.4f ", elems[c]);
+   }
+
+   return strbuf;
+}
+#endif
+
 /** sample from a distribution defined by weights */
 static
 int sampleWeighted(
@@ -300,6 +321,10 @@ int sampleWeighted(
    SCIP_Real randomnr;
    int w;
    int selection;
+#ifdef SCIP_DEBUG
+   char strbuf[SCIP_MAXSTRLEN];
+   SCIPdebugMsg(scip, "Weights: %s\n", printRealArray(strbuf, weights, nweights));
+#endif
 
    weightsum = 0.0;
    /* collect sum of weights */
@@ -498,7 +523,15 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
 
    diveset = divesets[selection];
    assert(diveset != NULL);
+
+   SCIPdebugMsg(scip, "Selected diveset %s\n", SCIPdivesetGetName(diveset));
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, lpiterlimit) );
+
+   if( *result == SCIP_FOUNDSOL )
+   {
+      SCIPdebugMsg(scip, "Solution found by diveset %s\n", SCIPdivesetGetName(diveset));
+   }
 
    return SCIP_OKAY;
 }
