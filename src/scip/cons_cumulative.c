@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -189,7 +189,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             localcuts;          /**< should cuts be added only locally? */
    SCIP_Bool             usecovercuts;       /**< should covering cuts be added? */
    SCIP_Bool             sepaold;            /**< shall old sepa algo be applied? */
-
 
    SCIP_Bool             fillbranchcands;    /**< should branching candidates be added to storage? */
 
@@ -720,7 +719,6 @@ void createSortedEventpoints(
          endtimes[j] = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(var)) + durations[j];
 
       endindices[j] = j;
-
    }
 
    /* sort the arrays not-decreasing according to startsolvalues and endsolvalues (and sort the indices in the same way) */
@@ -760,7 +758,6 @@ void createSortedEventpointsSol(
 
       endtimes[j] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var)) + durations[j];
       endindices[j] = j;
-
    }
 
    /* sort the arrays not-decreasing according to startsolvalues and endsolvalues (and sort the indices in the same way) */
@@ -806,7 +803,6 @@ void createSelectedSortedEventpointsSol(
          if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, var))
             || !SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var)) )
             continue;
-
 
          starttimes[*nvars] = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, var));
          startindices[*nvars] = j;
@@ -1126,7 +1122,6 @@ SCIP_RETCODE evaluateCumulativeness(
 
       ntimepoints = 0;
       minfreecapacity = INT_MAX;
-
 
       SCIP_CALL( computeRelevantEnergyIntervals(scip, nvars, consdata->vars,
             consdata->durations, consdata->demands,
@@ -2171,7 +2166,6 @@ SCIP_RETCODE consdataDeletePos(
 
    SCIPdebugMsg(scip, "remove variable <%s>[%g,%g] from cumulative constraint <%s>\n",
       SCIPvarGetName(consdata->vars[pos]), SCIPvarGetLbGlobal(consdata->vars[pos]), SCIPvarGetUbGlobal(consdata->vars[pos]), SCIPconsGetName(cons));
-
 
    /* in case the we did not remove the variable in the last slot of the arrays we move the current last to this
     * position
@@ -3338,7 +3332,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
 
       objval = SCIPvarGetObj(var);
 
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] && !SCIPisNegative(scip, objval) )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == downlocks[v] && !SCIPisNegative(scip, objval) )
       {
          int ub;
 
@@ -3356,7 +3350,7 @@ SCIP_RETCODE applyAlternativeBoundsBranching(
          }
       }
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] && !SCIPisPositive(scip, objval) )
+      if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == uplocks[v] && !SCIPisPositive(scip, objval) )
       {
          int lb;
 
@@ -3390,7 +3384,6 @@ void subtractStartingJobDemands(
    int                   nvars               /**< number of vars in array of starttimes and startindices */
    )
 {
-
 #if defined SCIP_DEBUG && !defined NDEBUG
    int oldidx;
 
@@ -3705,7 +3698,8 @@ SCIP_Bool isConsIndependently(
       var = vars[v];
       assert(var != NULL);
 
-      if( SCIPvarGetNLocksDown(var) > (int)downlocks[v] || SCIPvarGetNLocksUp(var) > (int)uplocks[v] )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)downlocks[v]
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)uplocks[v] )
          return FALSE;
    }
 
@@ -5441,7 +5435,6 @@ SCIP_RETCODE propagateTTEF(
          SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbTTEF++ );
       }
 
-
       SCIP_CALL( SCIPinferVarUbCons(scip, vars[v], (SCIP_Real)newubs[v], cons, ubinferinfos[v], TRUE, &infeasible, &tightened) );
 
       /* since upper bound was compute w.r.t. the "old" bound the previous lower bound update together with this upper
@@ -5913,7 +5906,6 @@ SCIP_RETCODE deleteLambdaLeaf(
       SCIPbtSetRoot(tree, sibling);
    }
 
-
    SCIPbtnodeFree(tree, &parent);
 
    return SCIP_OKAY;
@@ -6223,7 +6215,6 @@ void traceThetaEnvelop(
 
       nodedata = (SCIP_NODEDATA*)SCIPbtnodeGetData(node);
       assert(nodedata != NULL);
-
 
       left = SCIPbtnodeGetLeftchild(node);
       assert(left != NULL);
@@ -7152,7 +7143,6 @@ SCIP_RETCODE consCheckRedundancy(
    SCIP_Bool*            redundant           /**< pointer to store whether this constraint is redundant */
    )
 {
-
    SCIP_VAR* var;
    int* starttimes;              /* stores when each job is starting */
    int* endtimes;                /* stores when each job ends */
@@ -7745,8 +7735,7 @@ SCIP_RETCODE computeAlternativeBounds(
       if( local )
       {
          SCIP_PROFILE* profile;
-
-         SCIP_RETCODE retcode = SCIP_OKAY;
+         SCIP_RETCODE retcode;
 
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
@@ -7789,7 +7778,6 @@ SCIP_RETCODE computeAlternativeBounds(
          /* ignore variable locally fixed variables */
          if( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) < 0.5 )
             continue;
-
 
          SCIP_CALL( getActiveVar(scip, &var, &scalar, &constant) );
          idx = SCIPvarGetProbindex(var);
@@ -7894,8 +7882,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-
-      if( SCIPvarGetNLocksDown(var) == downlocks[v] )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == downlocks[v] )
       {
          SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
 
@@ -7930,7 +7917,6 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
                {
                   SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nallconsdualfixs++ );
                }
-
             }
          }
       }
@@ -7942,7 +7928,7 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       if( ub - lb <= 0 )
          continue;
 
-      if( SCIPvarGetNLocksUp(var) == uplocks[v] )
+      if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == uplocks[v] )
       {
          SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
 
@@ -8421,7 +8407,6 @@ SCIP_RETCODE createCoverCuts(
        *     j        - points to the last job that has been released
        */
 
-
       /* check freecapacity to be smaller than zero
        * then we will add cover constraints to the MIP
        */
@@ -8443,10 +8428,8 @@ SCIP_RETCODE createCoverCuts(
 
             /* create covering constraint */
             SCIP_CALL( createCoverCutsTimepoint(scip, cons, startvalues, t)  );
-
          }
       } /* end if freecapacity > 0 */
-
    } /*lint --e{850}*/
 
    consdata->covercuts = TRUE;
@@ -8987,7 +8970,6 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nstarted-nfinished) );
 
    SCIP_CALL( collectIntVars(scip, consdata, &activevars, startindices, curtime, nstarted, nfinished, lower, &lhs ) );
@@ -9037,7 +9019,6 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
    )
 {
-
    SCIP_CONSDATA* consdata;
 
    int* starttimes;         /* stores when each job is starting */
@@ -9455,7 +9436,7 @@ SCIP_RETCODE fixIntegerVariableUb(
    assert((int)TRUE == 1);
    assert((int)FALSE == 0);
 
-   if( SCIPvarGetNLocksUp(var) > (int)(uplock) )
+   if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)(uplock) )
       return SCIP_OKAY;
 
    SCIP_CALL( varMayRoundUp(scip, var, &roundable) );
@@ -9507,7 +9488,7 @@ SCIP_RETCODE fixIntegerVariableLb(
    assert((int)TRUE == 1);
    assert((int)FALSE == 0);
 
-   if( SCIPvarGetNLocksDown(var) > (int)(downlock) )
+   if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)(downlock) )
       return SCIP_OKAY;
 
    SCIP_CALL( varMayRoundDown(scip, var, &roundable) );
@@ -10076,7 +10057,7 @@ SCIP_RETCODE presolveConsEst(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksDown(var) == (int)(downlocks[v]) )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == (int)(downlocks[v]) )
          {
             SCIP_Bool roundable;
 
@@ -10356,7 +10337,7 @@ SCIP_RETCODE presolveConsLct(
          /* check if the cumulative constraint is the only one looking this variable down and if the objective function
           * is in favor of rounding the variable down
           */
-         if( SCIPvarGetNLocksUp(var) == (int)(uplocks[v]) )
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == (int)(uplocks[v]) )
          {
             SCIP_Bool roundable;
 
@@ -10860,7 +10841,6 @@ SCIP_RETCODE tightenCoefs(
          consdata->demands[j] = consdata->capacity;
          (*nchgcoefs)++;
       }
-
    }
 
    if( (*nchgcoefs) > oldnchgcoefs )
@@ -11643,7 +11623,6 @@ SCIP_RETCODE constraintNonOverlappingGraph(
 
                tcliquegraph->demandmatrix[idx1][idx2] = TRUE;
                tcliquegraph->demandmatrix[idx2][idx1] = TRUE;
-
             }
          }
       }
@@ -13311,6 +13290,7 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13323,15 +13303,15 @@ SCIP_DECL_CONSLOCK(consLockCumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlocksneg, nlockspos) );
       }
    }
 
@@ -13778,7 +13758,6 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
          initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {

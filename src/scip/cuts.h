@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,9 +27,14 @@
 #define __SCIP_CUTS_H__
 
 #include "scip/def.h"
-#include "scip/set.h"
-#include "scip/type_cuts.h"
 #include "scip/struct_cuts.h"
+#include "scip/type_cuts.h"
+#include "scip/type_lp.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -264,7 +269,7 @@ SCIP_Real SCIPaggrRowGetRhs(
 /** gets the number of row aggregations */
 EXTERN
 int SCIPaggrRowGetNRows(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
 
 /** perform a cut selection algorithm for the given array of cuts; the array is partitioned

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,6 +36,7 @@
 #include "scip/reopt.h"
 #include "scip/disp.h"
 #include "scip/pub_message.h"
+#include "scip/pub_var.h"
 
 
 /*
@@ -772,7 +773,6 @@ SCIP_RETCODE primalAddSol(
 
       SCIPsetDebugMsg(set, "original solution %p was successfully transferred to the transformed problem space\n",
          (void*)sol);
-
    }
 
    return SCIP_OKAY;

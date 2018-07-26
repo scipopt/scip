@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -367,7 +367,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
-
    /* allocate buffer storage for previous candidates and their branching values for pseudo cost updates */
    lpsolvefreq = SCIPdivesetGetLPSolveFreq(diveset);
    previouscandssize = MAX(1, lpsolvefreq);
@@ -429,7 +428,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       SCIPdebugMsg(scip, "%s heuristic continues diving at depth %d, %d candidates left\n",
          SCIPdivesetGetName(diveset), lastlpdepth, nlpcands);
-
 
       /* loop over candidates and determine if they are roundable */
       allroundable = TRUE;
@@ -517,7 +515,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          lpcandsscoressize = nlpcands;
       }
 
-
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
       SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
@@ -592,7 +589,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                assert(bdchgvar != NULL);
                lblocal = SCIPvarGetLbLocal(bdchgvar);
                ublocal = SCIPvarGetUbLocal(bdchgvar);
-
 
                SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
@@ -745,7 +741,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
 
-
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
                {
@@ -767,7 +762,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       assert(cutoff || (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE &&
             (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
-
 
       /* check new LP candidates and use the LP Objective gain to update pseudo cost information */
       if( ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )

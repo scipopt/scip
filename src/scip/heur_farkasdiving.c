@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,10 +28,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/heur_farkasdiving.h"
+#include "scip/heuristics.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include <string.h>
 
 #define HEUR_NAME             "farkasdiving"
 #define HEUR_DESC             "LP diving heuristic that tries to construct a Farkas-proof"
@@ -42,7 +58,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 
 
 /*
@@ -51,7 +67,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.10 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
@@ -67,12 +83,12 @@
 #define DEFAULT_RANDSEED            151 /**< initial seed for random number generation */
 
 #define DEFAULT_MAXOBJOCC           1.0 /**< maximal occurance factor of an objective coefficient */
-#define DEFAULT_OBJDYN              0.0 /**< minimal objective dynamism (log) */
+#define DEFAULT_OBJDYN           0.0001 /**< minimal objective dynamism (log) */
 #define DEFAULT_CHECKCANDS        FALSE /**< should diving candidates be checked before running? */
 #define DEFAULT_SCALESCORE         TRUE /**< should the score be scaled? */
-#define DEFAULT_ROOTSUCCESS       FALSE /**< should the heuristic only run within the tree if at least one solution
+#define DEFAULT_ROOTSUCCESS        TRUE /**< should the heuristic only run within the tree if at least one solution
                                          *   was found at the root node? */
-#define DEFAULT_SCALETYPE           'f' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
+#define DEFAULT_SCALETYPE           'i' /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -86,98 +102,35 @@ struct SCIP_HeurData
    SCIP_Bool             scalescore;         /**< should score be scaled by fractionality */
    SCIP_Bool             rootsuccess;        /**< run if successfull at root */
    SCIP_Bool             foundrootsol;       /**< was a solution found at the root node? */
-   int                   nbinobjvars;        /**< number of binary variables in the objective function */
-   int                   nintobjvars;        /**< number of integer variables in the objective function */
    char                  scaletype;          /**< scale score by [f]ractionality or [i]mpact on farkasproof */
 };
 
-
-/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
-static
-void checkGlobalProperties(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Bool nzobjs;
-   int nbinvars;
-   int nintvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-
-   vars = SCIPgetVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
-   nzobjs = FALSE;
-
-   /* we can skip looping over all binary and integer variables otherwise */
-   if( SCIPgetNObjVars(scip) > 0 )
-   {
-      for( i = 0; i < nbinvars + nintvars && !nzobjs; i++ )
-      {
-         if( SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
-            continue;
-
-         nzobjs = TRUE;
-      }
-   }
-
-   /* disable farkasdiving if no nonzero objectve coefficient is present, e.g., if there are no integer variables.
-    *
-    * note: SOS1 variables may be present
-    */
-   if( !nzobjs )
-   {
-      SCIPdebugMsg(scip, " ---> disable farkasdiving (only zero obj coefficients)\n");
-      heurdata->disabled = TRUE;
-   }
-
-   heurdata->glbchecked = TRUE;
-}
 
 /** check whether the diving candidates fulfill requirements */
 static
 SCIP_RETCODE checkDivingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_VAR**            divecandvars,       /**< diving candidates to check */
+   int                   ndivecands,         /**< number of diving candidates */
    SCIP_Bool*            success             /**< pointer to store whether the check was successfull */
    )
 {
-   SCIP_VAR** divecandvars;
    SCIP_Real* objcoefs;
    SCIP_Real lastobjcoef;
    SCIP_Real objdynamism;
    int maxfreq;
    int nnzobjcoefs;
+#ifdef SCIP_DEBUG
    int ndiffnnzobjs;
-   int ndivecands;
+#endif
    int i;
 
    *success = TRUE;
 
-   divecandvars = NULL;
-   ndivecands = 0;
-
-   /* we can only access the branching candidates if the LP is solved to optimality */
-   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
+   assert(heurdata != NULL);
    assert(divecandvars != NULL);
    assert(ndivecands >= 0);
-
-   /*
-    * check diving candidates w.r.t. objective function in detail
-    */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
 
@@ -185,23 +138,40 @@ SCIP_RETCODE checkDivingCandidates(
     * and implicit integer in the objective function
     */
    nnzobjcoefs = 0;
-   for( i = 0; i < ndivecands; i++ )
+
+   if( SCIPgetNObjVars(scip) > 0 )
    {
-      SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
+      for( i = 0; i < ndivecands; i++ )
+      {
+         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
 
-      if( SCIPisZero(scip, obj) )
-         continue;
+         if( SCIPisZero(scip, obj) )
+            continue;
 
-      objcoefs[nnzobjcoefs] = REALABS(obj);
-      ++nnzobjcoefs;
+         objcoefs[nnzobjcoefs] = REALABS(obj);
+         ++nnzobjcoefs;
+      }
    }
+
+   if( nnzobjcoefs == 0 )
+   {
+      *success = FALSE;
+      goto TERMINATE;
+   }
+   assert(nnzobjcoefs > 0);
+
+   /* skip here if we are cheching the global properties and want to check the local candidates, too */
+   if( !heurdata->glbchecked && heurdata->checkcands )
+      goto TERMINATE;
 
    /* sort in increasing order */
    SCIPsortReal(objcoefs, nnzobjcoefs);
    assert(!SCIPisZero(scip, objcoefs[0]));
 
    lastobjcoef = objcoefs[0];
+#ifdef SCIP_DEBUG
    ndiffnnzobjs = 1;
+#endif
 
    objdynamism = log10(objcoefs[nnzobjcoefs-1] / objcoefs[0]);
 
@@ -221,8 +191,7 @@ SCIP_RETCODE checkDivingCandidates(
    {
       int tmpmaxfreq;
 
-      /* init with number of zero coefficients */
-      tmpmaxfreq = ndivecands - nnzobjcoefs;
+      tmpmaxfreq = 0;
       maxfreq = 0;
 
       /* count number of different absolute objective values */
@@ -235,7 +204,9 @@ SCIP_RETCODE checkDivingCandidates(
             tmpmaxfreq = 0;
 
             lastobjcoef = objcoefs[i];
+#ifdef SCIP_DEBUG
             ++ndiffnnzobjs;
+#endif
          }
          else
          {
@@ -243,20 +214,54 @@ SCIP_RETCODE checkDivingCandidates(
          }
       }
 
+#ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "%d divecands; %d nnzobjs; %d diffnnzobjs; %d maxfreq\n", ndivecands, nnzobjcoefs, ndiffnnzobjs,
-         maxfreq, heurdata->maxobjocc * ndivecands);
+         maxfreq, heurdata->maxobjocc * nnzobjcoefs);
+#endif
 
-      if( maxfreq > heurdata->maxobjocc * ndivecands )
+      if( maxfreq > heurdata->maxobjocc * nnzobjcoefs )
       {
          SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
          *success = FALSE;
-         goto TERMINATE;
       }
    }
 
   TERMINATE:
    SCIPfreeBufferArray(scip, &objcoefs);
+
+   return SCIP_OKAY;
+}
+
+
+/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
+static
+SCIP_RETCODE checkGlobalProperties(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool success;
+   int nbinvars;
+   int nintvars;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+
+   vars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+
+   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nbinvars+nintvars, &success) );
+
+   if( !success )
+   {
+      SCIPdebugMsg(scip, " ---> disable farkasdiving (at least one global property is violated)\n");
+      heurdata->disabled = TRUE;
+   }
+
+   heurdata->glbchecked = TRUE;
 
    return SCIP_OKAY;
 }
@@ -355,10 +360,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolFarkasdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   heurdata->glbchecked = FALSE;
    heurdata->disabled = FALSE;
    heurdata->foundrootsol = FALSE;
-   heurdata->nbinobjvars = -1;
-   heurdata->nintobjvars = -1;
 
    return SCIP_OKAY;
 }
@@ -382,7 +386,9 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    /* check some simple global properties that are needed to run this heuristic */
    if( !heurdata->glbchecked )
-      checkGlobalProperties(scip, heurdata);
+   {
+      SCIP_CALL( checkGlobalProperties(scip, heurdata) );
+   }
 
    /* terminate if the heuristic has been disabled */
    if( heurdata->disabled )
@@ -394,19 +400,30 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
       return SCIP_OKAY;
    }
 
+   success = TRUE;
+
    /* check diving candidates in detail */
    if( heurdata->checkcands )
    {
-      SCIP_CALL( checkDivingCandidates(scip, heurdata, &success) );
-   }
-   else
-   {
-      success = TRUE;
+      SCIP_VAR** divecandvars;
+      int ndivecands;
+
+      /* we can only access the branching candidates if the LP is solved to optimality */
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &divecandvars, NULL, NULL, &ndivecands, NULL, NULL) );
+
+         SCIP_CALL( checkDivingCandidates(scip, heurdata, divecandvars, ndivecands, &success) );
+      }
+      else
+      {
+         success = FALSE;
+      }
    }
 
    if( success )
    {
-      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1) );
+      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L) );
 
       if( heurdata->rootsuccess && SCIPgetDepth(scip) == 0 && SCIPdivesetGetNSols(diveset) > 0 )
          heurdata->foundrootsol = TRUE;
@@ -539,7 +556,7 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          &heurdata->maxobjocc, TRUE, DEFAULT_MAXOBJOCC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/objdynamism",
-         "minimal objective dynamism (log)",
+         "minimal objective dynamism (log) to run",
          &heurdata->objdynamism, TRUE, DEFAULT_OBJDYN, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scaletype",

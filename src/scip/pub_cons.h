@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -745,6 +745,41 @@ int SCIPconsGetNLocksNeg(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+EXTERN
+SCIP_Bool SCIPconsIsLockedTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   );
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint are locked */
+EXTERN
+SCIP_Bool SCIPconsIsLockedTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   );
+
+/** returns TRUE iff roundings of the given locktype for variables in constraint or in constraint's negation are locked */
+EXTERN
+SCIP_Bool SCIPconsIsLockedType(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   );
+
+/** get number of times the roundings of given locktype for variables in constraint are locked */
+EXTERN
+int SCIPconsGetNLocksTypePos(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   );
+
+/** get number of times the roundings of given locktype for variables in constraint's negation are locked */
+EXTERN
+int SCIPconsGetNLocksTypeNeg(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_LOCKTYPE         locktype            /**< variable lock type */
+   );
+
 /** returns if the constraint was already added to a SCIP instance */
 EXTERN
 SCIP_Bool SCIPconsIsAdded(
@@ -805,11 +840,16 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original
-#define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos > 0)
-#define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg > 0)
-#define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
-#define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
-#define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
+#define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsIsLocked(cons)          ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL] > 0 || (cons)->nlocksneg[SCIP_LOCKTYPE_MODEL] > 0)
+#define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos[SCIP_LOCKTYPE_MODEL])
+#define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg[SCIP_LOCKTYPE_MODEL])
+#define SCIPconsIsLockedTypePos(cons, locktype)  ((cons)->nlockspos[locktype] > 0)
+#define SCIPconsIsLockedTypeNeg(cons, locktype)  ((cons)->nlocksneg[locktype] > 0)
+#define SCIPconsIsLockedType(cons, locktype)     ((cons)->nlockspos[locktype] > 0 || (cons)->nlocksneg[locktype] > 0)
+#define SCIPconsGetNLocksTypePos(cons, locktype) ((cons)->nlockspos[locktype])
+#define SCIPconsGetNLocksTypeNeg(cons, locktype) ((cons)->nlocksneg[locktype])
 #define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
@@ -827,50 +867,50 @@ int SCIPconsGetNUpgradeLocks(
 /** create linear constraint statistics */
 EXTERN
 SCIP_RETCODE SCIPlinConsStatsCreate(
-   SCIP*                scip,                /**< scip data structure */
-   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
    );
 
 /** free linear constraint statistics */
 EXTERN
 void SCIPlinConsStatsFree(
-   SCIP*                scip,                /**< scip data structure */
-   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
    );
 
 /** resets linear constraint statistics */
 EXTERN
 void SCIPlinConsStatsReset(
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    );
 
 /** returns the number of occurrences of a specific type of linear constraint */
 EXTERN
 int SCIPlinConsStatsGetTypeCount(
-   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
-   SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype         /**< linear constraint type */
    );
 
 /** returns the total number of classified constraints */
 EXTERN
 int SCIPlinConsStatsGetSum(
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    );
 
 /** increases the number of occurrences of a specific type of linear constraint */
 EXTERN
 void SCIPlinConsStatsIncTypeCount(
-   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
-   SCIP_LINCONSTYPE     linconstype,         /**< linear constraint type */
-   int                  increment            /**< positive increment */
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype,        /**< linear constraint type */
+   int                   increment           /**< positive increment */
    );
 
 /** print linear constraint classification statistics */
 EXTERN
 void SCIPprintLinConsStats(
-   SCIP*                scip,                /**< scip data structure */
-   FILE*                file,                /**< file handle or NULL to print to standard out */
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   FILE*                 file,               /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    );
 
 /* @} */

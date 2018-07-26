@@ -24,20 +24,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/struct_matrix.h"
-#include "scip/pub_matrix.h"
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include <scip/cons_linking.h>
-
+#include "scip/pub_matrix.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include "scip/struct_matrix.h"
+#include <string.h>
 
 /*
  * private functions
@@ -418,7 +424,6 @@ SCIP_RETCODE calcActivityBounds(
 
       if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
          matrix->minactivity[row] = -SCIPinfinity(scip);
-
    }
 
    return SCIP_OKAY;
@@ -534,8 +539,8 @@ SCIP_RETCODE SCIPmatrixCreate(
     */
    for( i = nvars - 1; i >= 0; --i )
    {
-      nnonzstmp += SCIPvarGetNLocksDown(vars[i]);
-      nnonzstmp += SCIPvarGetNLocksUp(vars[i]);
+      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
+      nnonzstmp += SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
    }
 
    /* do nothing if we have no entries */
@@ -790,7 +795,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
             {
-
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
@@ -1620,7 +1624,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1632,5 +1636,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
 }

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -79,7 +79,7 @@ void setup(void)
    cr_assert( heursubnlp != NULL );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777, TRUE) );
 }
 
 static

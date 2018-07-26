@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,11 +20,17 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/heur_trivial.h"
-
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME             "trivial"
 #define HEUR_DESC             "start heuristic which tries some trivial solutions"
@@ -140,11 +146,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       }
 
       /* set variables to the bound with fewer locks, if tie choose an average value */
-      if( SCIPvarGetNLocksDown(vars[i]) >  SCIPvarGetNLocksUp(vars[i]) )
+      if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], ub) );
       }
-      else if( SCIPvarGetNLocksDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) )
+      else if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
       }

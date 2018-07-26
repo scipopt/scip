@@ -28,6 +28,8 @@
 #include "scip/branch_distribution.h"
 #include "scip/scipdefplugins.h"
 
+#include "scip/heur_fracdiving.h"
+
 #define HEUR_NAME             "allinonediving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
 #define HEUR_DISPCHAR         'a'

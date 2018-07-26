@@ -1,21 +1,21 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
-#*            This file is part of the test engine for MIPLIB2010            *
+#*            This file is part of the test engine for MIPLIB2017            *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 # $Id$
 
 VERBOSE		=	false
-CXX		=	g++
+CXX		=	clang++
 CXX_o		=	-o # the trailing space is important
-LINKCXX		=	g++
+LINKCXX		=	clang++
 LINKCXX_L	=	-L
 LINKCXX_l	=	-l
 LINKCXX_o	=	-o # the trailing space is important
 FLAGS		=	
 OFLAGS		=	
-CXXFLAGS	=	
-LDFLAGS		=	
+CXXFLAGS	=	-I/usr/local/include
+LDFLAGS		=	-L/usr/local/lib
 
 DOXY		=	doxygen
 

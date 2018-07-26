@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,11 +20,22 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/heur_rounding.h"
-
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME             "rounding"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering"
@@ -247,7 +258,7 @@ SCIP_RETCODE selectRounding(
             if( direction * val < 0.0 )
             {
                /* rounding down */
-               nlocks = SCIPvarGetNLocksDown(var);
+               nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
                if( nlocks <= minnlocks )
                {
                   roundval = SCIPfeasFloor(scip, solval);
@@ -266,7 +277,7 @@ SCIP_RETCODE selectRounding(
             {
                /* rounding up */
                assert(direction * val > 0.0);
-               nlocks = SCIPvarGetNLocksUp(var);
+               nlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
                if( nlocks <= minnlocks )
                {
                   roundval = SCIPfeasCeil(scip, solval);
@@ -364,7 +375,7 @@ SCIP_RETCODE selectEssentialRounding(
          obj = SCIPvarGetObj(var);
 
          /* rounding down */
-         nlocks = SCIPvarGetNLocksUp(var);
+         nlocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             roundval = SCIPfeasFloor(scip, solval);
@@ -380,7 +391,7 @@ SCIP_RETCODE selectEssentialRounding(
          }
 
          /* rounding up */
-         nlocks = SCIPvarGetNLocksDown(var);
+         nlocks = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL);
          if( nlocks >= maxnlocks )
          {
             roundval = SCIPfeasCeil(scip, solval);

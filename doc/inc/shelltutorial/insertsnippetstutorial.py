@@ -48,12 +48,12 @@ def main():
     with open("inc/shelltutorial/shelltutorialannotated.tmp", "w") as annotated_file:
         with open("inc/shelltutorial/shelltutorialraw.tmp", "r") as raw_file:
             snippet_iterator = iter(snippet_list)
-            current_snippet = snippet_iterator.next()
+            current_snippet = next(snippet_iterator)
             for line in raw_file:
 
                 while handle_line(line, current_snippet, annotated_file):
                     try:
-                        current_snippet = snippet_iterator.next()
+                        current_snippet = next(snippet_iterator)
                     except StopIteration:
                         current_snippet = none_snippet
 

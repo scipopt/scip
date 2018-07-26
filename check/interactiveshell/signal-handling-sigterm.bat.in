@@ -1,0 +1,8 @@
+read ${CMAKE_CURRENT_SOURCE_DIR}/instances/MIP/vpm2.fzn
+set separating emph aggressive
+set heuristics emph aggressive
+set presolving emph aggressive
+set branch lookahead priority 1000000
+set nodesel breadth stdprio 1000000
+optimize
+quit

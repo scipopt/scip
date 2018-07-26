@@ -44,7 +44,6 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/clock.h"
-#include "scip/heur_reoptsols.h"
 #include "scip/history.h"
 #include "blockmemshell/memory.h"
 
@@ -1314,7 +1313,6 @@ SCIP_RETCODE checkMemGlbCons(
 
          for( c = 0; c < reopt->allocmemglbconss; c++ )
             reopt->glbconss[c] = NULL;
-
       }
       else if( reopt->allocmemglbconss < mem )
       {
@@ -5103,8 +5101,8 @@ SCIP_RETCODE SCIPreoptCreate(
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL, eventInitsolReopt,
-         eventExitsolReopt, NULL, eventExecReopt, NULL) );
+   SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, set, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL, NULL, NULL,
+      eventInitsolReopt, eventExitsolReopt, NULL, eventExecReopt, NULL) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
    assert(eventhdlr != NULL);
 
@@ -5220,7 +5218,6 @@ SCIP_RETCODE SCIPreoptFree(
             BMSfreeBlockMemory(blkmem, &(*reopt)->glbconss[c]); /*lint !e866*/
             --(*reopt)->nglbconss;
          }
-
       }
       assert((*reopt)->nglbconss == 0);
 
@@ -6167,7 +6164,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
          /* if the node was created by branch_nodereopt, nothing happens */
          SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
-
       }
       break;
 

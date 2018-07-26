@@ -20,13 +20,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/cons_linear.h"
+#include "blockmemshell/memory.h"
+#include "scip/heuristics.h"
 #include "scip/heur_mutation.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
@@ -449,7 +466,7 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -656,7 +673,6 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

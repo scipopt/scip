@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,12 +31,31 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/cons_or.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_and.h"
+#include "scip/cons_or.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 
 /* constraint handler properties */
@@ -118,6 +137,8 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -132,6 +153,8 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -1785,16 +1808,18 @@ SCIP_DECL_CONSLOCK(consLockOr)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock resultant variable */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->resvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* lock all operand variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -1805,7 +1830,6 @@ SCIP_DECL_CONSLOCK(consLockOr)
 static
 SCIP_DECL_CONSPRINT(consPrintOr)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <iomanip>
 
 void usage()
 {
@@ -29,27 +30,28 @@ int main (int argc, char const *argv[])
    // read model
    Model* model = new Model;
    MpsInput* mpsi = new MpsInput;
-   
+
    bool success = mpsi->readMps(argv[1], model);
    std::cout << "Read MPS: " << success << std::endl;
    if( !success ) return -1;
-   
+
    std::cout << "MIP has " << model->numVars() << " vars and " << model->numConss() << " constraints" << std::endl;
 
    // read solution
    success = model->readSol(argv[2]);
    std::cout << "Read SOL: " << success << std::endl;
    if( !success ) return -1;
-   if( model->hasObjectiveValue ) std::cout << "Objective value computed by solver: " << model->objectiveValue.toDouble() << std::endl;
+   if( model->hasObjectiveValue ) std::cout << "Objective value computed by solver: "
+                                            << std::setprecision(16) << model->objectiveValue.toDouble() << std::endl;
    std::cout << std::endl;
-   
+
    // read tolerances and other arguments
-   Rational linearTolerance(1, 10000);
+   Rational linearTolerance(1, 100000);
    Rational intTolerance(linearTolerance);
    std::string solverStatus("unknown");
    std::string exactStatus("unknown");
    Rational exactObjVal;
-   
+
    int posArg = 0;
    for( int k = 3; k < argc; k++)
    {
@@ -89,17 +91,17 @@ int main (int argc, char const *argv[])
    //std::cout << "ExactStatus: " << exactStatus << std::endl;
    //std::cout << "ExactObjVal: " << exactObjVal.toString() << std::endl;
    //std::cout << std::endl;
-   
+
    // check!
    bool intFeas;
    bool linFeas;
    bool obj;
    model->check(intTolerance, linearTolerance, intFeas, linFeas, obj);
-   
-   std::cout << "Check SOL: Integrality " << intFeas 
+
+   std::cout << "Check SOL: Integrality " << intFeas
       << " Constraints " << linFeas
       << " Objective " << obj << std::endl;
-   
+
    // stats on violations
    Rational intViol;
    Rational linearViol;
@@ -108,14 +110,14 @@ int main (int argc, char const *argv[])
    std::cout << "Maximum violations: Integrality " << intViol.toDouble()
       << " Constraints " << linearViol.toDouble()
       << " Objective " << objViol.toDouble() << std::endl;
-   
+
    // check w.r.t exact solver
    //bool exactFeas;
    //bool exactObj;
    //model->checkWrtExact(solverStatus, exactStatus, exactObjVal, linearTolerance, exactFeas, exactObj);
    //std::cout << "Check w.r.t. exact information: Feasibility " << exactFeas
    //   << " Objective " << exactObj << std::endl;
-   
+
    // clean up
    delete mpsi;
    delete model;

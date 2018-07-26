@@ -10,8 +10,8 @@
 # - List lines where tabs occur.
 #   [checktabs, default: false, -t option, "-o" to only output tabs]
 #
-# - List lines in which the brackets seem to be at the wrong place
-#   [checkbrackets, default: false, -b option].
+# - List lines in which the braces seem to be at the wrong place
+#   [checkbraces, default: false, -b option].
 #
 # - List occurences of printf's.
 #   [checkothers, default: true]
@@ -34,6 +34,12 @@
 #   bad style
 #   [checkcomments, default: false]
 #
+# - Check for empty lines after "{" in the next line or before "}"
+#   [checkemptylines, default: true]
+#
+# - Check for spaces around operators; non-strict setting allows operators with numbers like "a+1"
+#   [checkoperspaces, default: false]
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -45,25 +51,30 @@ my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )
 {
-   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] <files>\n");
-   printf("-t: output if tabs are present.\n");
-   printf("-b: output possible positions of badly placed brackets.\n");
-   printf("-n: warn about missing newlines in debug messages.\n");
-   printf("-o: warn about SCIP_CALL_ABORT and printfs.\n");
+   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] [-s] [-a] <files>\n");
+   printf("-t: output if tabs are present;\n");
+   printf("-b: output possible positions of badly placed braces;\n");
+   printf("-n: warn about missing newlines in debug messages;\n");
+   printf("-o: other warnings: SCIP_CALL_ABORT and printfs;\n");
+   printf("-s: spaces around operators;\n");
+   printf("-a: all checks on.\n");
    exit(1);
 }
 
 # determine which part to check
 my $checktabs = 0;       # check whether tabs are present
-my $checkbrackets = 0;   # check whether brackets are badly placed
+my $checkbraces = 0;     # check whether braces are badly placed
 my $checkdebug = 0;      # check whether debug messages contain a newline at end
 my $checkothers = 0;     # check for SCIP_CALL_ABORT and printfs
 my $checkcomments = 0;   # check for two comments in a line
+my $checkoperspaces = 0; # check for spaces around operators
+my $checkoperstrict = 0; # check strict rules for operators
 
 my $checkindent = 1;     # check for correct indentation
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
 my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
 my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
+my $checkemptylines = 1; # check for empty lines after "{" in the next line or before "}"
 
 my $nfiles = 0;
 
@@ -80,7 +91,7 @@ for (my $i = 0; $i < $narg; ++$i)
    # check for tab option
    if ( $ARGV[$i] eq "-b" )
    {
-      $checkbrackets = 1;
+      $checkbraces = 1;
       next;
    }
 
@@ -95,6 +106,24 @@ for (my $i = 0; $i < $narg; ++$i)
    if ( $ARGV[$i] eq "-o" )
    {
       $checkothers = 1;
+      next;
+   }
+
+   # check for checkoperspaces
+   if ( $ARGV[$i] eq "-s" )
+   {
+      $checkoperspaces = 1;
+      next;
+   }
+
+   # check for all
+   if ( $ARGV[$i] eq "-a" )
+   {
+      $checkothers = 1;
+      $checktabs = 1;
+      $checkbraces = 1;
+      $checkdebug = 1;
+      $checkoperspaces = 1;
       next;
    }
 
@@ -118,6 +147,9 @@ for (my $i = 0; $i < $narg; ++$i)
    my $documentationpos = -1;
    my $foundexternc = 0;
    my $inenumstruct = 0;
+   my $emptyline = 0;
+   my $lastemptyline = -1;
+   my $openbraceprev = 0;
 
    while(<FILE>)
    {
@@ -126,25 +158,120 @@ for (my $i = 0; $i < $narg; ++$i)
       my $str = $_;
       $documentationpos = -1;
 
+      # check for empty lines in functions
+      if ( $depth > $foundexternc && $checkemptylines == 1 )
+      {
+	 # check for empty lines
+	 if ( length($str) == 0 )
+	 {
+	    ++$emptyline;
+	    $lastemptyline = $line;
+
+	    # check for empty lines following an opening block
+	    if ( $openbraceprev > 0 )
+	    {
+	       # directly warn within a function
+	       if ( $depth > $foundexternc + 1 )
+	       {
+		  printf("%d: empty line following an opening block.\n", $line);
+	       }
+	       else
+	       {
+		  # we do not want to warn if the first line after the
+		  # empty line is a SCIP_CALL at the beginning of a
+		  # function. Thus, we read the next line and check.
+		  $str = <FILE>;
+		  chomp($str);
+		  ++$line;
+
+		  # do not warn if we directly call another function
+		  if ( $str !~ /SCIP\_CALL\(/ )
+		  {
+		     printf("%d: empty line following an opening block.\n", $line);
+		  }
+		  else
+		  {
+		     # we now have to update the empty line status
+		     if ( length($str) == 0 )
+		     {
+			++$emptyline;
+			$lastemptyline = $line;
+		     }
+		     else
+		     {
+			$emptyline = 0;
+		     }
+		  }
+	       }
+	    }
+	 }
+	 else
+	 {
+	    if ( $emptyline >= 2 )
+	    {
+	       printf("%d: %d consecutive empty lines in code.\n", $line - 1, $emptyline);
+	    }
+	    $emptyline = 0;
+	 }
+      }
+      $openbraceprev = 0;
+
+      # ----------------------------------------
+      # check for SCIPdebugMessage without "\n"
+      if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
+      {
+	 my $s = $str;
+
+	 # remove "SCIP_LONGINT_FORMAT"
+	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
+
+	 my $debpos = index($s, "SCIPdebugMessage");
+	 my $enddebpos = index($s, "\",", $debpos + 18);
+	 if ( $enddebpos >= 0 )
+	 {
+	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
+	    {
+	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
+	    }
+	 }
+      }
+
+      # ----------------------------------------
+      # check checkStage function (only for scip_*.c)
+      if ( $checkstage == 1 && $str =~ /checkStage\(scip/ )
+      {
+	 my @str1 = split(/checkStage/, $str);
+	 my @str2 = split(/,/, $str1[1]);
+	 my $s = $str2[1];
+
+	 # strip quotes
+	 $s =~ s/\"//g;
+	 # strip spaces
+	 $s =~ s/\s//g;
+
+	 if ( $s ne $functionname )
+	 {
+	    printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
+	 }
+      }
+
+      # ---------------------------------------------------------
+      # handle strings (must be executed after the functions above that need strings)
+
+      # remove everything within a string
+      if ( $str =~ /\".*\"/ )
+      {
+	 # remove minimal occurence of string
+	 $str =~ s/\".*?\"//g;
+      }
+
       # ---------------------------------------------------------
       # handle comments
-
-      # remove comments within string constants: to only consider "\*"
-      # within string, the first '"' should appear without a '"'
-      # appearing before (by excluding [^\"]).
-      if ( $str =~ /^[^\"]*\"[^\"]*\/\*/ )
-      {
-         printf("%d: removing comment within string:<%s>\n", $line, $str);
-         $str =~ s/\/\*//g;
-      }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
       {
-	 if ( $str =~ /\*lint/ )
-	 {
-	 }
-	 else
+	 if ( $str !~ /\*lint/ )
 	 {
 	    # simply warn, but continue (parsing might not be correct, however)
 	    printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
@@ -239,7 +366,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # calculate depth
 
       # determine whether we are in an enum or struct (assume it is at the beginning of the line)
-      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /\s*union/ )
+      if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /^typedef struct/ || $str =~ /^typedef enum/ || $str =~ /\s*union/ )
       {
 	 ++($inenumstruct);
       }
@@ -247,6 +374,12 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for opening blocks
       if ( $str =~ /\{/ && $str !~ /'\{'/ && $incomment == 0 )
       {
+	 # mark beginning of block if block is not closing on same line
+	 if ( $str !~ /\{(.*)\}/ )
+	 {
+	    $openbraceprev = 1;
+	 }
+
 	 if ( $str =~ /\@\{/ )
 	 {
 	    printf("%d: '\@{' within non-comment line:\n%s\n\n", $line, $_);
@@ -275,6 +408,12 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for closing blocks
       if ( $str =~ /\}/ && $str !~ /'\}'/ && $incomment == 0 )
       {
+	 # check for empty lines preceeding a closeing block
+	 if ( $lastemptyline == $line - 1 && $depth > $foundexternc && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
+	 {
+	    printf("%d: empty line preceeding closing block.\n", $line);
+	 }
+
 	 --($inenumstruct);
 	 if ( $inenumstruct < 0 )
 	 {
@@ -297,7 +436,7 @@ for (my $i = 0; $i < $narg; ++$i)
 		  --$depth;
 		  if ( $depth + $foundexternc < 0 )
 		  {
-		     printf("Warning: bracket count wrong!\n");
+		     printf("Warning: brace count wrong!\n");
 		     $depth = 0;
 		  }
 	       }
@@ -308,7 +447,27 @@ for (my $i = 0; $i < $narg; ++$i)
 
       # printf("%d: %d (%d %d): %s\n", $line, $depth, $foundexternc, $inenumstruct, $str);
 
-      # --------------------------------------------
+      # -----------------------------------------------------------
+      # try to determine function names (needed for checking stage)
+      if ( $checkstage == 1 )
+      {
+	 # try to determine function name
+	 if ( $afterdocumentation == 1 )
+	 {
+	    # check for parenthesis
+	    if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
+	    {
+	       my @mystr = split(/\(/, $str);
+	       my @s = split(/\s+/, $mystr[0]);
+
+	       # guess function name
+	       $functionname = $s[$#s];
+	       $afterdocumentation = 0;
+	    }
+	 }
+      }
+
+      # -----------------------------------------------------------
       # check for tabs
       if ( $checktabs )
       {
@@ -336,14 +495,14 @@ for (my $i = 0; $i < $narg; ++$i)
       }
 
       # ----------------------------------------
-      # check brackets
-      if ( $checkbrackets && $incomment == 0 )
+      # check braces
+      if ( $checkbraces && $incomment == 0 )
       {
 	 # ignore 'extern "C"{'
 	 my $s = $str;
 	 $s =~ s/(extern \"C\" \{)//g;
 
-	 # check for brackets
+	 # check for braces
 	 if ( $s =~ /\{/ || $s =~ /\}/ )
 	 {
 	    # strip spaces:
@@ -354,47 +513,9 @@ for (my $i = 0; $i < $narg; ++$i)
 
 	    if ( length($s) > 1 )
 	    {
-	       printf("%d: bracket: %s\n\n", $line, $_);
+	       printf("%d: brace: %s\n\n", $line, $_);
 	    }
          }
-      }
-
-      # ----------------------------------------
-      # try to determine function names
-      if ( $checkstage == 1 )
-      {
-	 # try to determine function name
-	 if ( $afterdocumentation == 1 )
-	 {
-	    # check for parenthesis
-	    if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
-	    {
-	       my @mystr = split(/\(/, $str);
-	       my @s = split(/\s+/, $mystr[0]);
-
-	       # guess function name
-	       $functionname = $s[$#s];
-	       $afterdocumentation = 0;
-	    }
-	 }
-
-	 # check checkStage function (only for scip.c)
-	 if ( $str =~ /checkStage\(scip/ )
-	 {
-	    my @str1 = split(/checkStage/, $str);
-	    my @str2 = split(/,/, $str1[1]);
-	    my $s = $str2[1];
-
-	    # strip quotes
-	    $s =~ s/\"//g;
-	    # strip spaces
-	    $s =~ s/\s//g;
-
-	    if ( $s ne $functionname )
-	    {
-	       printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
-	    }
-	 }
       }
 
       # ------------------------------------------------------------
@@ -497,6 +618,26 @@ for (my $i = 0; $i < $narg; ++$i)
       }
 
       # ----------------------------------------
+      # check spaces around operators
+      if ( $checkoperspaces == 1 )
+      {
+	 if ( $checkoperstrict == 1 )
+	 {
+	    if ( $str =~ /\w[\+\*\%\-]\w/ )
+	    {
+	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
+	    }
+	 }
+	 else
+	 {
+	    if ( $str =~ /[a-zA-Z][\+\*\%\-][a-zA-Z]/ )
+	    {
+	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
+	    }
+	 }
+      }
+
+      # ----------------------------------------
       # check other stuff
       if ( $checkothers )
       {
@@ -513,26 +654,6 @@ for (my $i = 0; $i < $narg; ++$i)
 	    if ( ! ($_ =~ /SCIP\_CALL\_ABORT\( checkStage/) )
 	    {
 	       printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
-	    }
-	 }
-      }
-
-      # ----------------------------------------
-      # check for SCIPdebugMessage without "\n"
-      if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
-      {
-	 my $s = $str;
-
-	 # remove "SCIP_LONGINT_FORMAT"
-	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
-
-	 my $debpos = index($s, "SCIPdebugMessage");
-	 my $enddebpos = index($s, "\",", $debpos + 18);
-	 if ( $enddebpos >= 0 )
-	 {
-	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
-	    {
-	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
 	    }
 	 }
       }

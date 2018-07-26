@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,6 +35,7 @@
 #define SCIP_DECL_OBJPROBCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
 #define SCIP_DECL_CONSHDLRCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
 #define SCIP_DECL_PRICERCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
+#define SCIP_DECL_BENDERSCLONE(x) x (SCIP* scip, SCIP_Bool* valid) const
 
 /** returns whether the plugin object is copyable
  *
@@ -43,5 +44,6 @@
 #define SCIP_DECL_OBJPROBISCLONEABLE(x) SCIP_Bool x (void) const
 #define SCIP_DECL_CONSHDLRISCLONEABLE(x) SCIP_Bool x (void) const
 #define SCIP_DECL_PRICERISCLONEABLE(x) SCIP_Bool x (void) const
+#define SCIP_DECL_BENDERSISCLONEABLE(x) SCIP_Bool x (void) const
 
 #endif

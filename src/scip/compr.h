@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -55,7 +55,8 @@ SCIP_RETCODE SCIPcomprCreate(
    const char*           desc,               /**< description of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   minnnodes,          /**< minimal number of nodes for calling compression */
-   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy
+                                              *   your plugin into sub-SCIPs */
    SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
    SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
    SCIP_DECL_COMPREXIT   ((*comprexit)),     /**< deinitialize tree compression */

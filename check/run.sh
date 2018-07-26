@@ -103,6 +103,7 @@ then
     # indicate that an instance is infeasible.
     sed ' /solution status:/d;
             s/objective value:/=obj=/g;
+            s/infinity/1e+20/g;
             s/no solution available//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
     

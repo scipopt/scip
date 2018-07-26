@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -39,13 +39,26 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbisack"
@@ -72,7 +85,7 @@
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
 
-#define DEFAULT_PPORBISACK        TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
+#define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
 #define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 
@@ -88,6 +101,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
+   int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
 };
 
 /** constraint data for orbisack constraints */
@@ -1096,7 +1110,6 @@ SCIP_DECL_CONSINITLP(consInitlpOrbisack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
-      /* get data of constraint */
       assert( conss[c] != 0 );
 
       SCIPdebugMsg(scip, "Generating initial orbisack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
@@ -1106,6 +1119,42 @@ SCIP_DECL_CONSINITLP(consInitlpOrbisack)
          break;
 
       SCIPdebugMsg(scip, "Generated initial orbisack cut.\n");
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolOrbisack)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   /* determine maximum number of rows in an orbisack constraint */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   conshdlrdata->maxnrows = 0;
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss[c] != NULL );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* update conshdlrdata if necessary */
+      if ( consdata->nrows > conshdlrdata->maxnrows )
+         conshdlrdata->maxnrows = consdata->nrows;
    }
 
    return SCIP_OKAY;
@@ -1133,7 +1182,19 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
    /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int nvals;
+
       *result = SCIP_DIDNOTFIND;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1143,9 +1204,6 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
          consdata = SCIPconsGetData(conss[c]);
 
          /* get solution */
-         SCIP_CALL( SCIPallocBufferArray(scip, &vals1, consdata->nrows) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &vals2, consdata->nrows) );
-
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
@@ -1153,12 +1211,12 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
 
          SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
 
-         SCIPfreeBufferArray(scip, &vals2);
-         SCIPfreeBufferArray(scip, &vals1);
-
          if ( *result == SCIP_CUTOFF )
             break;
       }
+
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
@@ -1185,9 +1243,15 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1246,9 +1310,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1360,9 +1430,15 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
 
    if ( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       int nvals;
 
-      nvals = SCIPgetNVars(scip)/2;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      nvals = conshdlrdata->maxnrows;
+      assert( nvals > 0 );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
@@ -1603,9 +1679,9 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
  *  We assume we have only one global (void) constraint and lock all variables.
  *
  * - Orbisack constraints may get violated if the variables of the first column
- *   are rounded down, we therefor call SCIPaddVarLocks(..., nlockspos, nlocksneg).
+ *   are rounded down, we therefor call SCIPaddVarLocksType(..., nlockspos, nlocksneg).
  * - Orbisack constraints may get violated if the variables of the second column
- *   are rounded up , we therefor call SCIPaddVarLocks(..., nlocksneg, nlockspo ).
+ *   are rounded up , we therefor call SCIPaddVarLocksType(..., nlocksneg, nlockspo ).
  */
 static
 SCIP_DECL_CONSLOCK(consLockOrbisack)
@@ -1636,8 +1712,8 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 
    for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, vars1[i], nlockspos, nlocksneg) );
-      SCIP_CALL( SCIPaddVarLocks(scip, vars2[i], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars1[i], locktype, nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars2[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -1845,7 +1921,6 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIPfreeBufferArray(scip, &coeff1);
 
    return SCIP_OKAY;
-
 }
 
 
@@ -1930,6 +2005,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbisack, consSepasolOrbisack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbisack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolOrbisack) );
 
    /* separation methods */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/coverseparation",
