@@ -35,6 +35,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_result.h"
 #include "scip/type_timing.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -207,6 +207,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
@@ -622,6 +623,16 @@ SCIP_Bool SCIPdivesetSupportsType(
    assert(diveset != NULL);
 
    return (divetype & diveset->divetypemask);
+}
+
+/** is this dive set publicly available (ie., can be used by other primal heuristics?) */
+SCIP_Bool SCIPdivesetIsPublic(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->ispublic;
 }
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */

@@ -384,6 +384,12 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** is this dive set publicly available (ie., can be used by other primal heuristics?) */
+EXTERN
+SCIP_Bool SCIPdivesetIsPublic(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /* @} */
 
 /**@defgroup PublicVariableGraphMethods Public Variable Graph Methods

@@ -54,6 +54,7 @@
 #define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
 #define EVENTHDLR_NAME        "eventhdlr_distributiondiving"
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 #define SQUARED(x) ((x) * (x))
 /*
@@ -1089,7 +1090,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES,
          divesetGetScoreDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
