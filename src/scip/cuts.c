@@ -345,7 +345,7 @@ SCIP_Bool removeZerosQuad(
       QUAD_ARRAY_LOAD(val, cutcoefs, v);
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Bool isfix;
+      SCIP_Bool isfixed;
       if( cutislocal )
       {
          lb = SCIPvarGetLbLocal(vars[v]);
@@ -357,18 +357,17 @@ SCIP_Bool removeZerosQuad(
          ub = SCIPvarGetUbGlobal(vars[v]);
       }
       if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisZero(scip, ub-lb) )
-         isfix = TRUE;
+         isfixed = TRUE;
       else
-         isfix = FALSE;
+         isfixed = FALSE;
 
-      if( EPSZ(QUAD_TO_DBL(val), minval) || isfix )
+      if( EPSZ(QUAD_TO_DBL(val), minval) || isfixed )
       {
          if( REALABS(QUAD_TO_DBL(val)) > QUAD_EPSILON )
          {
             /* adjust left and right hand sides with max contribution */
             if( QUAD_TO_DBL(val) < 0.0 )
             {
-               SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
                if( SCIPisInfinity(scip, ub) )
                   return TRUE;
                else
@@ -379,7 +378,6 @@ SCIP_Bool removeZerosQuad(
             }
             else
             {
-               SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
                if( SCIPisInfinity(scip, -lb) )
                   return TRUE;
                else
