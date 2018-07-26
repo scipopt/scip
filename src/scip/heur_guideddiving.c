@@ -261,6 +261,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
 }
 
 /** callback to check preconditions for diving, e.g., if an incumbent solution is available */
+static
 SCIP_DECL_DIVESETAVAILABLE(divesetAvailableGuideddiving)
 {
    /* don't dive with guided diving if no feasible solutions exists or

@@ -259,7 +259,6 @@ SCIP_Longint getLPIterlimit(
    )
 {
    SCIP_Longint nsolsfound = SCIPheurGetNSolsFound(heur);
-   SCIP_Longint nbestsolsfound = SCIPheurGetNBestSolsFound(heur);
    SCIP_Longint nlpiterations = SCIPgetNNodeLPIterations(scip);
    SCIP_Longint ncalls = SCIPheurGetNCalls(heur);
 
@@ -320,7 +319,6 @@ int sampleWeighted(
    SCIP_Real weightsum;
    SCIP_Real randomnr;
    int w;
-   int selection;
 #ifdef SCIP_DEBUG
    char strbuf[SCIP_MAXSTRLEN];
    SCIPdebugMsg(scip, "Weights: %s\n", printRealArray(strbuf, weights, nweights));
@@ -362,7 +360,6 @@ SCIP_RETCODE selectDiving(
 {
    SCIP_Bool* methodunavailable;
    SCIP_DIVESET** divesets;
-   int nlprows;
    int ndivesets;
    int d;
    SCIP_RANDNUMGEN* rng;
@@ -447,7 +444,10 @@ SCIP_RETCODE selectDiving(
          heurdata->lastselection = *selection;
       break;
    default:
-      break;
+      *selection = -1;
+      SCIPerrorMessage("Error: Unknown selection method %c\n", heurdata->seltype);
+
+      return SCIP_INVALIDDATA;
    }
 
    assert(*selection >= 0 && *selection < ndivesets);
