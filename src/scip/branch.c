@@ -2343,13 +2343,32 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          /* if the value in the LP or pseudosolution is large (here 1e+12), use 0.0 (will be projected onto bounds below) */
          branchpoint = 0.0;
       }
-      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
       {
          /* if the value is from the LP and midpull is activated, then push towards middle of domain */
          SCIP_Real midpull = set->branch_midpull;
+         SCIP_Real glb;
+         SCIP_Real gub;
 
-         assert(SCIPtreeGetCurrentDepth(tree) >= 0);
-         midpull /= SCIPtreeGetCurrentDepth(tree) + 1.0;
+         glb = SCIPvarGetLbGlobal(var);
+         gub = SCIPvarGetUbGlobal(var);
+
+         if( !SCIPsetIsInfinity(set, -glb) && !SCIPsetIsInfinity(set, gub) )
+         {
+            /* shrink midpull if width of local domain, relative to global domain, is small
+             * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
+             *
+             * do this only if the relative domain width is below the minreldomainwidth value
+             */
+            SCIP_Real reldomainwidth;
+
+            assert(glb < gub);
+
+            reldomainwidth = (ub - lb) / (gub - glb);
+
+            if( reldomainwidth < set->branch_midpull_reldomwidththreshold )
+               midpull *= reldomainwidth;
+         }
 
          branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
       }

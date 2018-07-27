@@ -173,6 +173,7 @@ struct SCIP_Set
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    SCIP_Real             branch_midpull;     /**< fraction by which to move branching point of a continuous variable towards the middle of the domain; a value of 1.0 leads to branching always in the middle of the domain */
+   SCIP_Real             branch_midpull_reldomwidththreshold; /**< multiply midpull by relative domain width if the latter is below this value */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
    SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
