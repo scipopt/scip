@@ -46,6 +46,7 @@
  * Default parameter settings
  */
 #define DEFAULT_SELTYPE 'w'
+#define DEFAULT_SCORETYPE 'c'
 
 
 /* locally defined heuristic data */
@@ -556,7 +557,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
          &heurdata->seltype, FALSE, DEFAULT_SELTYPE, "enw", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoretype",
-         "score parameter", &heurdata->scoretype, FALSE, 'd', "nicd", NULL, NULL) );
+         "score parameter", &heurdata->scoretype, FALSE, DEFAULT_SCORETYPE, "nicd", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/epsilon",
          "parameter that increases probability of exploration among divesets",
