@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_allinonediving.c
+/**@file   heur_adaptivediving.c
  * @brief  diving heuristic that selects adaptively between the existing, public divesets
  * @author Gregor Hendel
  */
@@ -23,14 +23,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/heur_allinonediving.h"
+#include "scip/heur_adaptivediving.h"
 #include "scip/heuristics.h"
 #include "scip/branch_distribution.h"
 #include "scip/scipdefplugins.h"
 
 #include "scip/heur_fracdiving.h"
 
-#define HEUR_NAME             "allinonediving"
+#define HEUR_NAME             "adaptivediving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
 #define HEUR_DISPCHAR         'a'
 #define HEUR_PRIORITY         -70000
@@ -99,21 +99,21 @@ SCIP_Real divesetGetScore(
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyAllinonediving)
+SCIP_DECL_HEURCOPY(heurCopyAdaptivediving)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurAllinonediving(scip) );
+   SCIP_CALL( SCIPincludeHeurAdaptivediving(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeAllinonediving) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeAdaptivediving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -190,7 +190,7 @@ SCIP_RETCODE findAndStoreDivesets(
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitAllinonediving) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -211,7 +211,7 @@ SCIP_DECL_HEURINIT(heurInitAllinonediving) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitAllinonediving) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitAdaptivediving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -442,7 +442,7 @@ SCIP_RETCODE selectDiving(
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
@@ -518,15 +518,15 @@ SCIP_DECL_HEUREXEC(heurExecAllinonediving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** creates the allinonediving heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurAllinonediving(
+/** creates the adaptivediving heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
-   /* create allinonediving data */
+   /* create adaptivediving data */
    heurdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
@@ -537,15 +537,15 @@ SCIP_RETCODE SCIPincludeHeurAllinonediving(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecAllinonediving, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecAdaptivediving, heurdata) );
 
    assert(heur != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAllinonediving) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAllinonediving) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAllinonediving) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAllinonediving) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAdaptivediving) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAdaptivediving) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAdaptivediving) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAdaptivediving) );
 
    /* author gregor
     *

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_allinonediving.h
+/**@file   heur_adaptivediving.h
  * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
  * @author Tobias Achterberg
@@ -28,8 +28,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_ALLINONEDIVING_H__
-#define __SCIP_HEUR_ALLINONEDIVING_H__
+#ifndef __SCIP_HEUR_ADAPTIVEDIVING_H__
+#define __SCIP_HEUR_ADAPTIVEDIVING_H__
 
 
 #include "scip/scip.h"
@@ -38,9 +38,9 @@
 extern "C" {
 #endif
 
-/** creates the allinonediving heuristic and includes it in SCIP */
+/** creates the adaptivediving heuristic and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeHeurAllinonediving(
+SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

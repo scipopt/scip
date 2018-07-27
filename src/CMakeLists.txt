@@ -79,7 +79,7 @@ set(scipsources
     scip/event_solvingphase.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
-    scip/heur_allinonediving.c
+    scip/heur_adaptivediving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
@@ -509,7 +509,7 @@ set(scipheaders
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
-    scip/heur_allinonediving.h
+    scip/heur_adaptivediving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
