@@ -2349,26 +2349,24 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          SCIP_Real midpull = set->branch_midpull;
          SCIP_Real glb;
          SCIP_Real gub;
+         SCIP_Real reldomainwidth;
 
+         /* shrink midpull if width of local domain, relative to global domain, is small
+          * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
+          *
+          * do this only if the relative domain width is below the minreldomainwidth value
+          */
          glb = SCIPvarGetLbGlobal(var);
          gub = SCIPvarGetUbGlobal(var);
+         assert(glb < gub);
 
          if( !SCIPsetIsInfinity(set, -glb) && !SCIPsetIsInfinity(set, gub) )
-         {
-            /* shrink midpull if width of local domain, relative to global domain, is small
-             * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
-             *
-             * do this only if the relative domain width is below the minreldomainwidth value
-             */
-            SCIP_Real reldomainwidth;
-
-            assert(glb < gub);
-
             reldomainwidth = (ub - lb) / (gub - glb);
+         else
+            reldomainwidth = SCIPsetEpsilon(set);
 
-            if( reldomainwidth < set->branch_midpull_reldomwidththreshold )
-               midpull *= reldomainwidth;
-         }
+         if( reldomainwidth < set->branch_midpull_reldomwidththreshold )
+            midpull *= reldomainwidth;
 
          branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
       }
