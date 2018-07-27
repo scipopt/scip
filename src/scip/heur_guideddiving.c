@@ -194,7 +194,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    assert(diveset != NULL);
 
    /* call generic diving algorithm */
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L) );
 
    return SCIP_OKAY;
 }

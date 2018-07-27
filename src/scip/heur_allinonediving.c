@@ -40,29 +40,11 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
-#define EVENTHDLR_NAME "eventhdlr_allinonedistribution"
-#define SQUARED(x) ((x) * (x))
 #define DIVESETS_INITIALSIZE 10
 
 /*
  * Default parameter settings
  */
-
-#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
-#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
-#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
-#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
-#define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
-#define DEFAULT_MAXDIVEUBQUOTNOSOL  1.0 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
-#define DEFAULT_MAXDIVEAVGQUOTNOSOL 1.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-#define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15
-#define DEFAULT_LPSOLVEFREQ 0
-#define DEFAULT_INITIALSEED 12345
 #define DEFAULT_SELTYPE 'w'
 
 
@@ -71,7 +53,6 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
 
-   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler pointer */
    SCIP_DIVESET**        divesets;           /**< publicly available divesets from diving heuristics */
    int                   ndivesets;          /**< number of publicly available divesets from diving heuristics */
    int                   divesetssize;       /**< array size for divesets array */
@@ -191,8 +172,9 @@ SCIP_RETCODE findAndStoreDivesets(
 
             if( heurdata->ndivesets == heurdata->divesetssize )
             {
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &heurdata->divesets, heurdata->divesetssize, 2 * heurdata->divesetssize) );
-               heurdata->divesetssize *= 2;
+               int newsize = 2 * heurdata->divesetssize;
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &heurdata->divesets, heurdata->divesetssize, newsize) );
+               heurdata->divesetssize = newsize;
             }
             heurdata->divesets[heurdata->ndivesets++] = diveset;
          }
@@ -311,7 +293,7 @@ char* printRealArray(
 static
 int sampleWeighted(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN*      rand,               /**< random number generator */
+   SCIP_RANDNUMGEN*      rng,                /**< random number generator */
    SCIP_Real*            weights,            /**< weights of a ground set that define the sampling distribution */
    int                   nweights            /**< number of elements in the ground set */
    )
@@ -332,7 +314,7 @@ int sampleWeighted(
    }
    assert(weightsum > 0);
 
-   randomnr = SCIPrandomGetReal(rand, 0, weightsum);
+   randomnr = SCIPrandomGetReal(rng, 0.0, weightsum);
 
    weightsum = 0.0;
    /* choose first element i such that the weight sum exceeds the random number */

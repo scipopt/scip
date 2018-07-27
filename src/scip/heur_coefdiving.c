@@ -173,7 +173,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L) );
 
    return SCIP_OKAY;
 }

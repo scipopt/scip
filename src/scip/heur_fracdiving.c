@@ -175,7 +175,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L) );
 
    return SCIP_OKAY;
 }
