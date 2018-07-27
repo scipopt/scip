@@ -363,6 +363,7 @@ SCIP_RETCODE selectDiving(
       methodunavailable[d] = ! available;
    }
 
+   *selection = -1;
    rng = SCIPdivesetGetRandnumgen(divesets[0]);
    assert(rng != NULL);
 
@@ -426,7 +427,6 @@ SCIP_RETCODE selectDiving(
          heurdata->lastselection = *selection;
       break;
    default:
-      *selection = -1;
       SCIPerrorMessage("Error: Unknown selection method %c\n", heurdata->seltype);
 
       return SCIP_INVALIDDATA;
