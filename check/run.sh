@@ -35,8 +35,11 @@ TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 
+# only wait for optimi to be mounted in run.sh if you are on an opt computer at zib
+OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]')
+
 # check if the scripts runs a *.zib.de host
-if hostname -f | grep -q zib.de ;
+if $(hostname -f | grep -q zib.de) && $([[ "${OPTHOST}" == "opt" ]] || [[ "${OPTHOST}" == "optc" ]]);
 then
   # access /optimi once to force a mount
   ls /nfs/optimi/QUOTAS >/dev/null 2>&1

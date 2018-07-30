@@ -59,7 +59,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "PERMUTE       = $PERMUTE"
