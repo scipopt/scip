@@ -41,6 +41,7 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DIVESETS_INITIALSIZE 10
+#define DEFAULT_INITIALSEED 13
 
 /*
  * Default parameter settings
@@ -54,6 +55,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
 
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator for selection */
    SCIP_DIVESET**        divesets;           /**< publicly available divesets from diving heuristics */
    int                   ndivesets;          /**< number of publicly available divesets from diving heuristics */
    int                   divesetssize;       /**< array size for divesets array */
@@ -68,7 +70,7 @@ struct SCIP_HeurData
  */
 
 
-/** todo get the score for this dive set */
+/** get the score for this dive set */
 static
 SCIP_Real divesetGetScore(
    SCIP_DIVESET*         diveset,            /**< diving settings data structure */
@@ -130,6 +132,8 @@ SCIP_DECL_HEURFREE(heurFreeAdaptivediving) /*lint --e{715}*/
    {
       SCIPfreeBlockMemoryArray(scip, &heurdata->divesets, heurdata->divesetssize);
    }
+
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -205,6 +209,10 @@ SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
+
+   /* initialize random seed; use problem dimensions to vary initial order between different instances */
+   SCIPsetRandomSeed(scip, heurdata->randnumgen,
+         (unsigned int)(DEFAULT_INITIALSEED + SCIPgetNOrigVars(scip) + SCIPgetNOrigConss(scip)));
 
    return SCIP_OKAY;
 }
@@ -365,7 +373,8 @@ SCIP_RETCODE selectDiving(
    }
 
    *selection = -1;
-   rng = SCIPdivesetGetRandnumgen(divesets[0]);
+
+   rng = heurdata->randnumgen;
    assert(rng != NULL);
 
    switch (heurdata->seltype) {
@@ -534,6 +543,8 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    heurdata->divesets = NULL;
    heurdata->ndivesets = 0;
    heurdata->divesetssize = -1;
+
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
