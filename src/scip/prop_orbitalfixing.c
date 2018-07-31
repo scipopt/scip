@@ -198,7 +198,7 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    /* get fixed variable */
    var = SCIPeventGetVar(event);
    assert( var != NULL );
-   assert( SCIPvarIsBinary(var) );
+   assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
    if ( ! SCIPhashmapExists(propdata->permvarmap, (void*) var) )
    {
@@ -373,7 +373,7 @@ SCIP_RETCODE getSymmetries(
          /* free variables */
          for (v = 0; v < propdata->npermvars; ++v)
          {
-            if ( SCIPvarIsBinary(propdata->permvars[v]) )
+            if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
             {
                SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
                      propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
@@ -427,11 +427,12 @@ SCIP_RETCODE getSymmetries(
 
          propdata->bg1[v] = FALSE;
 
-         /* only catch binary variables, since integer variables should be fixed pointwise */
-         if ( SCIPvarIsBinary(propdata->permvars[v]) )
+         /* only catch binary variables, since integer variables should be fixed pointwise; implicit integer variables are not branched on */
+         if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
          {
             /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1 */
-            SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, NULL) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, NULL) );
          }
       }
       assert( propdata->nbg1 == 0 );
@@ -923,9 +924,10 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
 
    for (v = 0; v < propdata->npermvars; ++v)
    {
-      if ( SCIPvarIsBinary(propdata->permvars[v]) )
+      if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED, propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+         SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+               propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
    }
