@@ -68,7 +68,7 @@
 #define DEFAULT_SYMCOMPTIMING         2           /**< timing of symmetry computation for orbital fixing
                                                    *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
-#define DEFAULT_ENABLEAFTERRESTART    FALSE       /**< Run orbital fixing after a restart has occured? */
+#define DEFAULT_RECOMPUTERESTART      TRUE        /**< Recompute symmetries after a restart has occured? */
 
 /* event handler properties */
 #define EVENTHDLR_ORBITALFIXING_NAME    "orbitalfixing"
@@ -96,7 +96,7 @@ struct SCIP_PropData
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   SCIP_Bool             enableafterrestart; /**< Run orbital fixing after a restart has occured? */
+   SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
    int                   symcomptiming;      /**< timing of symmetry computation for orbital fixing
                                               *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
@@ -359,52 +359,58 @@ SCIP_RETCODE getSymmetries(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   if ( propdata->nperms < 0 || SCIPgetNRuns(scip) > propdata->lastrestart )
+   /* free symmetries after a restart to recompute them later */
+   if ( SCIPgetNRuns(scip) > propdata->lastrestart && propdata->nperms > 0 )
    {
-      /* recompute symmetries after a restart */
-      if ( SCIPgetNRuns(scip) > propdata->lastrestart )
+      /* reset symmetry information */
+      assert( propdata->npermvars > 0 );
+      assert( propdata->permvarmap != NULL );
+      assert( propdata->permvars != NULL );
+      assert( propdata->bg1list != NULL );
+      assert( propdata->bg1 != NULL );
+      assert( propdata->inactiveperms != NULL );
+
+      SCIPhashmapFree(&propdata->permvarmap);
+
+      /* free variables */
+      for (v = 0; v < propdata->npermvars; ++v)
       {
-         /* reset symmetry information */
-         if ( propdata->permvarmap != NULL )
+         if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
          {
-            SCIPhashmapFree(&propdata->permvarmap);
+            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
          }
-
-         /* free variables */
-         for (v = 0; v < propdata->npermvars; ++v)
-         {
-            if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
-            {
-               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
-                     propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
-            }
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
-
-         propdata->nperms = -1;
-         propdata->permstrans = NULL;
-         propdata->permvars = NULL;
-         propdata->bg1 = NULL;
-         propdata->bg1list = NULL;
-         propdata->nbg1 = 0;
-         propdata->npermvars = -1;
-         propdata->permvarmap = NULL;
-
-         /* recompute symmetries and update restart counter */
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, TRUE, TRUE,
-               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
-
-         propdata->lastrestart = SCIPgetNRuns(scip);
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
       }
-      else
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
+
+      propdata->nperms = -1;
+      propdata->permstrans = NULL;
+      propdata->permvars = NULL;
+      propdata->bg1 = NULL;
+      propdata->bg1list = NULL;
+      propdata->nbg1 = 0;
+      propdata->npermvars = -1;
+      propdata->permvarmap = NULL;
+
+      propdata->lastrestart =  SCIPgetNRuns(scip);
+
+      /* if we do not want to recompute symmetries */
+      if ( ! propdata->recomputerestart )
       {
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, TRUE,
-               &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
+         propdata->enabled = FALSE;
+         return SCIP_OKAY;
       }
+   }
+
+   /* now possibly (re)compute symmetries */
+   if ( propdata->nperms < 0 )
+   {
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, TRUE,
+            &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
 
       if ( propdata->nperms == 0 )
       {
@@ -1003,10 +1009,6 @@ SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* check whether we run after a restart */
-   if ( propdata->enabled && ! propdata->enableafterrestart && SCIPgetNRuns(scip) > 1 )
-      propdata->enabled = FALSE;
-
    /* do not run if not enabled */
    if ( ! propdata->enabled )
       return SCIP_OKAY;
@@ -1073,10 +1075,6 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
-
-   /* check whether we run after a restart */
-   if ( propdata->enabled && ! propdata->enableafterrestart && SCIPgetNRuns(scip) > 1 )
-      propdata->enabled = FALSE;
 
    /* do not run if not enabled */
    if ( ! propdata->enabled )
@@ -1190,9 +1188,9 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/enableafterrestart",
-         "Run orbital fixing after a restart has occured?",
-         &propdata->enableafterrestart, TRUE, DEFAULT_ENABLEAFTERRESTART, NULL, NULL) );
+         "propagating/" PROP_NAME "/recomputerestart",
+         "Recompute symmetries after a restart has occured?",
+         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
 
    return SCIP_OKAY;
 }
