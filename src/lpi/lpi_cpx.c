@@ -3234,6 +3234,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: CPLEX solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -3247,6 +3252,7 @@ SCIP_Bool SCIPlpiIsStable(
       if( !primalfeasible )
          return FALSE;
    }
+#endif
 
    /* If the condition number of the basis should be checked, everything above the specified threshold is counted
     * as instable.
