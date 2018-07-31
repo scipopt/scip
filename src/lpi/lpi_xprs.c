@@ -2561,7 +2561,8 @@ SCIP_Bool SCIPlpiIsStable(
 
 #ifdef SCIP_DISABLED_CODE
    /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
-    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol(). */
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
 
    /* If the solution status of Xpress is XPRS_LP_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this

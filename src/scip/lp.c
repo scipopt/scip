@@ -14514,7 +14514,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
          rayobjval += ray[c] * col->obj;
 
       /* Many LP solvers cannot directly provide a feasible solution if they detected unboundedness. We therefore first
-       * heuristically try to construct a primal solution. */
+       * heuristically try to construct a primal solution.
+       */
       primsol[c] = 0.0;
       if( SCIPsetIsFeasZero(set, ray[c]) )
       {
@@ -14589,7 +14590,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
             assert( lpicols[c]->var != NULL );
 
             /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
-             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined */
+             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
+             */
             *primalfeasible = *primalfeasible
                && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
                && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);

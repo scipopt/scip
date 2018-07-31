@@ -3543,7 +3543,8 @@ SCIP_RETCODE SCIPlpiGetSol(
    if ( primsol != NULL && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX )
    {
       /* If the status shows that the dual is infeasible this is due to the primal being unbounded. In this case, we need
-       * to compute a feasible solution by setting the objective to 0. */
+       * to compute a feasible solution by setting the objective to 0.
+       */
       MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
       if ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER )
       {
@@ -3564,7 +3565,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          SCIP_CALL( SolveWSimplex(lpi) );
 
          /* At this point we assume that the problem is feasible, since we previously ran the primal simplex and it
-          * produced a ray. */
+          * produced a ray.
+          */
 
          /* get primal solution */
          MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
