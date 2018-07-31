@@ -150,6 +150,8 @@ done
 ### Compilation ###
 ###################
 
+make solchecker
+
 BUILD_DIR=""
 # build with soplex only if today we have some soplex runs scheduled
 # that is the case if $LPSVERSIONS contains 'scipdbgspx'
@@ -207,6 +209,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   done
   export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
-  make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
+  make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
 

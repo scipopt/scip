@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,13 +28,23 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/pub_matrix.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "presol_dualinfer.h"
+#include "scip/presol_dualinfer.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_matrix.h"
+#include "scip/pub_message.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual informations for fixings and side changes"

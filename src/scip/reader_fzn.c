@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,14 +26,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#ifdef ALLDIFFERENT
-#include "scip/cons_alldifferent.h"
-#endif
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
@@ -44,8 +38,30 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
 #include "scip/reader_fzn.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef ALLDIFFERENT
+#include "scip/cons_alldifferent.h"
+#endif
 
 #define READER_NAME             "fznreader"
 #define READER_DESC             "file reader for FlatZinc format"
@@ -1481,7 +1497,6 @@ SCIP_RETCODE parseList(
       SCIPdebugMsg(scip, "list is empty\n");
    }
 
-
    /* push back ']' which closes the list */
    pushToken(fzninput);
 
@@ -1628,7 +1643,7 @@ SCIP_RETCODE parseName(
    }
 
    /* copy identifier name */
-   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, (const char*)fzninput->token);
+   (void)SCIPsnprintf(name, FZN_BUFFERLEN-1, "%s", (const char*)fzninput->token);
 
    /* search for an assignment; therefore, skip annotations */
    do
@@ -2964,7 +2979,6 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             }
          }
 
-
          if( equalTokens(scip, ftokens[1], "ne" ) || equalTokens(scip, ftokens[1], "not") )
          {
             SCIP_Real vals[] = {1.0, 1.0};
@@ -3016,7 +3030,6 @@ CREATE_CONSTRAINT(createLogicalOpCons)
 
       /* free elements array */
       freeStringBufferArray(scip, elements, nelements);
-
    }
    else if(equalTokens(scip, ftokens[1], "bool") && nftokens == 3 )
    {
@@ -3981,7 +3994,6 @@ void flattenFloat(
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.1f", SCIPround(scip, val));
    else
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%+.15g", val);
-
 }
 
 /* print row in FZN format to file stream */
@@ -4191,7 +4203,6 @@ SCIP_RETCODE printLinearCons(
          }
       }
    }
-
 
    if( SCIPisEQ(scip, lhs, rhs) )
    {
@@ -4763,7 +4774,6 @@ SCIP_DECL_READERFREE(readerFreeFzn)
 static
 SCIP_DECL_READERREAD(readerReadFzn)
 {  /*lint --e{715}*/
-
    FZNINPUT fzninput;
    int i;
 
@@ -4995,7 +5005,6 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
       }
       else
       {
-
          SCIPinfoMessage(scip, file, "%s = array%dd(", vararray->name, info->ndims);
 
          for( v = 0; v < info->ndims; ++v )

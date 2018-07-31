@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1110,7 +1110,7 @@ SCIP_RETCODE SCIPlpiCreate(
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_THREADS, 1) );
 #endif
 
-#if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
+#ifdef SCIP_DISABLED_CODE /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif
@@ -2468,7 +2468,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* this fixes the strange behavior of CPLEX, that in case of the objective limit exceedance, it returns the
     * solution for the basis preceeding the one with exceeding objective limit
     * (using this "wrong" dual solution can cause column generation algorithms to fail to find an improving column)
@@ -3234,6 +3234,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: CPLEX solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -3247,6 +3252,7 @@ SCIP_Bool SCIPlpiIsStable(
       if( !primalfeasible )
          return FALSE;
    }
+#endif
 
    /* If the condition number of the basis should be checked, everything above the specified threshold is counted
     * as instable.
@@ -4308,33 +4314,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
       break;
-#if 0
-   case SCIP_LPPAR_PRICING:
-      switch( getIntParam(lpi, CPX_PARAM_PPRIIND) )
-      {
-      case CPX_PPRIIND_FULL:
-         *ival = (int)SCIP_PRICING_FULL;
-         break;
-      case CPX_PPRIIND_PARTIAL:
-         *ival = (int)SCIP_PRICING_PARTIAL;
-         break;
-      case CPX_PPRIIND_STEEP:
-         *ival = (int)SCIP_PRICING_STEEP;
-         break;
-      case CPX_PPRIIND_STEEPQSTART:
-         *ival = (int)SCIP_PRICING_STEEPQSTART;
-         break;
-#if (CPX_VERSION >= 900)
-      case CPX_PPRIIND_DEVEX:
-         *ival = (int)SCIP_PRICING_DEVEX;
-         break;
-#endif
-      default:
-         *ival = (int)SCIP_PRICING_AUTO;
-         break;
-      }
-      break;
-#endif
    case SCIP_LPPAR_LPINFO:
       *ival = (getIntParam(lpi, CPX_PARAM_SCRIND) == CPX_ON);
       break;

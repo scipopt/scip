@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,14 +22,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
-#include "scip/cons_logicor.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/presolve.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -129,7 +151,6 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
    unsigned int          validsignature:1;   /**< is the signature valid */
-
 };
 
 
@@ -3639,7 +3660,6 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
 
-
          /* get correct variables */
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[0], &vars[0]) );
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[1], &vars[1]) );
@@ -4743,7 +4763,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

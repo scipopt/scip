@@ -120,8 +120,7 @@ SECTION: General Questions about SCIP
       please read the SCIP <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file first.
     </p>
     <p>
-      If you encounter compilation problems dealing with the <code>explicit</code> keyword you can either try a newer
-      compiler or set the flags <code>LEGACY=true</code> for SoPlex and <code>SPX_LEGACY=true</code> for SCIP.
+      If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
     </p>
 
     QUESTION: I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
@@ -129,20 +128,8 @@ SECTION: General Questions about SCIP
     LABEL:versionchange
     ANSWER:
     <p>
-        Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
+        Maybe the parameters of a function in SCIP changed. Please have a look at the <a href="PATHTODOC/CHG.LINKEXT">Changelog</a>
     </p>
-    <ul>
-        <li> <a href="PATHTODOC/CHG1.LINKEXT">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
-        <li> <a href="PATHTODOC/CHG2.LINKEXT">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
-        <li> <a href="PATHTODOC/CHG3.LINKEXT">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
-        <li> <a href="PATHTODOC/CHG4.LINKEXT">Interface changes between SCIP 1.2 and SCIP 2.0</a></li>
-        <li> <a href="PATHTODOC/CHG5.LINKEXT">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
-        <li> <a href="PATHTODOC/CHG6.LINKEXT">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
-        <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
-        <li> <a href="PATHTODOC/CHG8.LINKEXT">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
-        <li> <a href="PATHTODOC/CHG9.LINKEXT">Interface changes between SCIP 3.2 and SCIP 4.0</a></li>
-        <li> <a href="PATHTODOC/CHG10.LINKEXT">Interface changes between SCIP 4.0 and SCIP 5.0</a></li>
-    </ul>
 
     QUESTION: How can I debug in SCIP?
     LABEL:howtodebug
@@ -304,6 +291,9 @@ SECTION: General Questions about SCIP
         <li>
             <a href="https://www.uni-due.de/~si203go/#vbc">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
             in ps and pdf format. It is written in Ruby and requires dot (graphviz).
+        </li>
+        <li>
+            <a href="https://www.uni-due.de/~si203go/vbctool/zimplTblConverter.rb">zimplTblConverter</a> is a small Ruby-script that converts a scip solution file to a file where all names are replaced according to a zimpl tbl-file output.
         </li>
         <li>
             <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>

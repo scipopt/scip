@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,19 +20,28 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/heur_conflictdiving.h"
+#include "scip/heuristics.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME                    "conflictdiving"
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                '~'
-#define HEUR_PRIORITY                1
+#define HEUR_PRIORITY                -1000100
 #define HEUR_FREQ                    -1
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
-#define HEUR_TIMING                  SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPPLUNGE
+#define HEUR_TIMING                  SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP             FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES            SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
 #define DEFAULT_RANDSEED             151 /**< default random seed */
@@ -52,44 +61,24 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.45/**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15/**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
+#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict and variable locks */
+#define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
-#define DEFAULT_MAXNNZOBJFAC      0.025 /**< maximal portion of nonzero objective coeffcients */
-#define DEFAULT_MAXVARSFAC         -1.0 /**< maximal fraction of variables involved in a conflict constraint (< 0: auto) */
-#define DEFAULT_MINMAXVARS           -1 /**< minimal absolute maximum of variables involved in a conflict constraint (-1: auto) */
-#define DEFAULT_MINCONFLICTLOCKS      0 /**< threshold for penalizing the score */
+#define DEFAULT_MINCONFLICTLOCKS      5 /**< threshold for penalizing the score */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-
-   SCIP_Bool             maxviol;            /**< rounding into potentially infeasible or feasible direction */
-   SCIP_Real             maxvarsfac;         /**< maximal fraction of variables involved in a conflict constraint */
-   SCIP_Real             maxnnzobjfac;       /**< maximal portion of nonzero objective coeffcients */
-   int                   minmaxvars;         /**< minimal absolute maximum of variables involved in a conflict constraint */
+   SCIP_Real             lockweight;         /**< weight factor to combine conflict and variable locks */
+   SCIP_Bool             likecoefdiving;     /**< use the same rounding strategy like coefficent diving */
+   SCIP_Bool             maxviol;            /**< rounding into potentially infeasible direction */
    int                   minconflictlocks;   /**< threshold for penalizing the score */
 };
-
-static
-SCIP_Bool shouldRun(
-   SCIP*                 scip,
-   SCIP_HEURDATA*        heurdata,
-   SCIP_RESULT*          result
-   )
-{
-   assert(heurdata != NULL);
-
-   *result = SCIP_DELAYED;
-   /* don't run if no conflict constraints where found */
-   if( SCIPgetNConflictConssFound(scip) == 0 )
-      return FALSE;
-
-   return TRUE;
-}
 
 /*
  * Callback methods
@@ -175,8 +164,6 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
-   SCIP_Real maxvarsfac;
-   int minmaxvars;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -186,45 +173,280 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   if( !shouldRun(scip, heurdata, result) )
+   *result = SCIP_DELAYED;
+
+   /* don't run if no conflict constraints where found */
+   if( SCIPgetNConflictConssFound(scip) == 0 )
       return SCIP_OKAY;
-
-   maxvarsfac = SCIP_INVALID;
-   minmaxvars = INT_MAX;
-
-   if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
-      return SCIP_OKAY;
-
-   if( heurdata->maxvarsfac >= 0.0 && !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
-   {
-      SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
-      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", heurdata->maxvarsfac) );
-   }
-   if( heurdata->minmaxvars >= 0 && !SCIPisParamFixed(scip, "conflict/minmaxvars") )
-   {
-      SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
-      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", heurdata->minmaxvars) );
-   }
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
-
-   if( heurdata->maxvarsfac >= 0.0 && !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
-   {
-      assert(maxvarsfac != SCIP_INVALID); /*lint !e777*/
-      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", maxvarsfac) );
-   }
-   if( heurdata->minmaxvars >= 0.0 && !SCIPisParamFixed(scip, "conflict/minmaxvars") )
-   {
-      assert(minmaxvars != INT_MAX);
-      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", minmaxvars) );
-   }
 
    return SCIP_OKAY;
 }
 
 #define MIN_RAND 1e-06
 #define MAX_RAND 1e-05
-#define LOCKFRAC 1e-04
+
+/** calculate score variant 1: use rounding strategy like coefficent diving */
+static
+SCIP_RETCODE getScoreLikeCoefdiving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
+   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
+   SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
+   SCIP_VAR*             cand,               /**< diving candidate */
+   SCIP_Real             candsol,            /**< diving candidate solution */
+   SCIP_Real             candsfrac,          /**< fractionality of the candidate solution */
+   SCIP_Real*            score,              /**< pointer to store the score */
+   SCIP_Bool*            roundup             /**< pointer to store whether the candidate should be rounded upwards */
+   )
+{
+   SCIP_Real upweight;
+   SCIP_Real downweight;
+   SCIP_Bool mayrounddown;
+   SCIP_Bool mayroundup;
+   int nconflictlocksdown;
+   int nconflictlocksup;
+   int nlocksdown;
+   int nlocksup;
+
+   /* get conflict locks */
+   nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
+   nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);
+
+   /* get variable locks */
+   nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
+   nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
+
+   /* combine conflict and variable locks */
+   upweight = heurdata->lockweight * nconflictlocksup +  (1.0 - heurdata->lockweight) * nlocksup;
+   downweight = heurdata->lockweight * nconflictlocksdown + (1.0 - heurdata->lockweight) * nlocksdown;
+
+   /* check whether there exists a direction w/o any locks */
+   mayrounddown = SCIPisZero(scip, upweight);
+   mayroundup = SCIPisZero(scip, downweight);
+
+   if( mayrounddown || mayroundup )
+   {
+      /* choose rounding direction:
+       * - if variable may be rounded in both directions, round corresponding to the fractionality
+       * - otherwise, round in the infeasible direction
+       */
+      if( mayrounddown && mayroundup )
+      {
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
+
+         /* try to avoid variability; decide randomly if the LP solution can contain some noise */
+         if( SCIPisEQ(scip, candsfrac, 0.5) )
+            *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
+         else
+            *roundup = (candsfrac > 0.5);
+      }
+      else
+         *roundup = mayrounddown;
+   }
+   else
+   {
+      /* the candidate may not be rounded */
+      *roundup = (SCIPisGT(scip, downweight, upweight) || (SCIPisEQ(scip, downweight, upweight) && candsfrac > 0.5));
+   }
+
+   if( *roundup )
+   {
+      switch( divetype )
+      {
+         case SCIP_DIVETYPE_INTEGRALITY:
+            candsfrac = 1.0 - candsfrac;
+            break;
+         case SCIP_DIVETYPE_SOS1VARIABLE:
+            if( SCIPisFeasPositive(scip, candsol) )
+               candsfrac = 1.0 - candsfrac;
+            break;
+         default:
+            SCIPerrorMessage("Error: Unsupported diving type\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
+
+      /* add some noise to avoid ties */
+      *score = upweight + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND);
+   }
+   else
+   {
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+         candsfrac = 1.0 - candsfrac;
+
+      /* add some noise to avoid ties */
+      *score = downweight + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND);
+   }
+
+
+   /* penalize too small fractions */
+   if( SCIPisEQ(scip, candsfrac, 0.01) )
+   {
+      /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+       * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for scaling the score
+       */
+      if( SCIPrandomGetInt(rng, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+         (*score) *= 0.01;
+   }
+   else if( candsfrac < 0.01 )
+      (*score) *= 0.1;
+
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      *score = -1.0 / *score;
+
+   return SCIP_OKAY;
+}
+
+/** calculate score variant 2: use a rounding strategy that tends towards infeasibility */
+static
+SCIP_RETCODE getScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_RANDNUMGEN*      rng,                /**< random number generator of the diveset */
+   SCIP_DIVESET*         diveset,            /**< diveset of the heuristic */
+   SCIP_DIVETYPE         divetype,           /**< divetype of the heuristic */
+   SCIP_VAR*             cand,               /**< diving candidate */
+   SCIP_Real             candsol,            /**< diving candidate solution */
+   SCIP_Real             candsfrac,          /**< fractionality of the candidate solution */
+   SCIP_Real*            score,              /**< pointer to store the score */
+   SCIP_Bool*            roundup             /**< pointer to store whether the candidate should be rounded upwards */
+   )
+{
+   SCIP_Real conflictlocksum;
+   SCIP_Real upweight;
+   SCIP_Real downweight;
+   SCIP_Bool mayrounddown;
+   SCIP_Bool mayroundup;
+   int nlocksup;
+   int nlocksdown;
+   int nconflictlocksup;
+   int nconflictlocksdown;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+   assert(rng != NULL);
+
+   /* get conflict locks */
+   nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
+   nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);
+   conflictlocksum = nconflictlocksup + nconflictlocksdown;
+
+   /* get variable locks */
+   nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
+   nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
+
+   /* combine conflict and variable locks */
+   upweight = heurdata->lockweight * nconflictlocksup +  (1.0 - heurdata->lockweight) * nlocksup;
+   downweight = heurdata->lockweight * nconflictlocksdown + (1.0 - heurdata->lockweight) * nlocksdown;
+
+   /* check whether there exists a rounding direction w/o any locks */
+   mayrounddown = SCIPisZero(scip, upweight);
+   mayroundup = SCIPisZero(scip, downweight);
+
+   /* variable can be rounded in exactly one direction and we try to go into the feasible direction */
+   if( mayrounddown || mayroundup )
+   {
+      /* choose rounding direction:
+       * - if variable may be rounded in both directions, round corresponding to the fractionality
+       * - otherwise, round in the feasible direction
+       */
+      if( mayrounddown && mayroundup )
+      {
+         assert(divetype != SCIP_DIVETYPE_SOS1VARIABLE || heurdata->lockweight > 0);
+
+         /* try to avoid variability; decide randomly if the LP solution can contain some noise */
+         if( SCIPisEQ(scip, candsfrac, 0.5) )
+            *roundup = (SCIPrandomGetInt(rng, 0, 1) == 0);
+         else
+            *roundup = (candsfrac > 0.5);
+      }
+      else
+         *roundup = mayroundup;
+   }
+   else
+   {
+      assert(!mayrounddown);
+
+      /* both rounding directions have a different amount of locks */
+      if( !SCIPisEQ(scip, upweight, downweight) )
+      {
+         *roundup = (heurdata->maxviol ? SCIPisGT(scip, upweight, downweight) : SCIPisLT(scip, upweight, downweight));
+      }
+      /* break ties with lp fractionality != 0.5 */
+      else if( !SCIPisEQ(scip, candsfrac, 0.5) )
+      {
+         *roundup = (candsfrac > 0.5);
+      }
+      /* break tie randomly */
+      else
+      {
+         *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
+      }
+   }
+
+   if( *roundup )
+   {
+      switch( divetype )
+      {
+         case SCIP_DIVETYPE_INTEGRALITY:
+            candsfrac = 1.0 - candsfrac;
+            break;
+         case SCIP_DIVETYPE_SOS1VARIABLE:
+            if( SCIPisFeasPositive(scip, candsol) )
+               candsfrac = 1.0 - candsfrac;
+            break;
+         default:
+            SCIPerrorMessage("Error: Unsupported diving type\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
+
+      /* add some noise to avoid ties */
+      *score = upweight + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND);
+   }
+   else
+   {
+      if( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
+         candsfrac = 1.0 - candsfrac;
+
+      /* add some noise to avoid ties */
+      *score = downweight + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND);
+   }
+
+   /* penalize too few conflict locks */
+   if( conflictlocksum > 0 && conflictlocksum < heurdata->minconflictlocks )
+      (*score) *= 0.1;
+
+   /* penalize if no conflict locks exist at all */
+   if( conflictlocksum == 0 )
+      (*score) *= 0.01;
+
+   /* penalize too small fractions */
+   if( SCIPisEQ(scip, candsfrac, 0.01) )
+   {
+      /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+       * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for scaling the score
+       */
+      if( SCIPrandomGetInt(rng, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+         (*score) *= 0.01;
+   }
+   else if( candsfrac < 0.01 )
+      (*score) *= 0.01;
+
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      *score = -1.0 / *score;
+
+   return SCIP_OKAY;
+}
+
 
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
@@ -233,14 +455,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
    SCIP_RANDNUMGEN* rng;
-   SCIP_Real conflictlocksum;
-   SCIP_Real locksum;
-   SCIP_Bool mayrounddown;
-   SCIP_Bool mayroundup;
-   int nlocksup;
-   int nlocksdown;
-   int nconflictlocksup;
-   int nconflictlocksdown;
 
    rng = SCIPdivesetGetRandnumgen(diveset);
    assert(rng != NULL);
@@ -251,134 +465,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
-   nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
-
-   nconflictlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_CONFLICT);
-   nconflictlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_CONFLICT);
-
-   conflictlocksum = nconflictlocksup + nconflictlocksdown;
-   locksum = nlocksdown + nlocksup;
-
-   mayrounddown = (nconflictlocksdown == 0);
-   mayroundup = (nconflictlocksup == 0);
-
-   /* variable can be rounded in exactly one direction and we try to go into the feasible direction */
-   if( mayrounddown != mayroundup )
+   if( heurdata->likecoefdiving )
    {
-      *roundup = mayroundup;
-   }
-   /* variable is locked in both directions */
-   else if( !mayroundup )
-   {
-      assert(!mayrounddown);
-
-      if( nconflictlocksup != nconflictlocksdown || nlocksup != nlocksdown )
-      {
-         if( nconflictlocksup != nconflictlocksdown )
-         {
-            *roundup = (nconflictlocksup > nconflictlocksdown);
-         }
-         else
-         {
-            assert(nlocksup != nlocksdown);
-            *roundup = (nlocksup > nlocksdown);
-         }
-
-         if( !heurdata->maxviol )
-            *roundup = !(*roundup);
-      }
-      else if( !SCIPisEQ(scip, candsfrac, 0.5) )
-      {
-         *roundup = (heurdata->maxviol ? candsfrac < 0.5 : candsfrac > 0.5);
-      }
-      else
-      {
-         *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
-      }
-   }
-   /* the variable is not locked by conflict constraints */
-   else
-   {
-      assert(nconflictlocksdown == 0 && nconflictlocksup == 0);
-
-      if( nlocksup != nlocksdown )
-      {
-         *roundup = (nconflictlocksup > nconflictlocksdown);
-
-         if( !heurdata->maxviol )
-            *roundup = !(*roundup);
-
-      }
-      else if( !SCIPisEQ(scip, candsfrac, 0.5) )
-      {
-         *roundup = (heurdata->maxviol ? candsfrac < 0.5 : candsfrac > 0.5);
-      }
-      else
-      {
-         *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
-      }
-   }
-
-   if( *roundup )
-   {
-      SCIP_Real scalefactor;
-
-      switch( divetype )
-      {
-         case SCIP_DIVETYPE_INTEGRALITY:
-            candsfrac = 1.0 - candsfrac;
-            break;
-         case SCIP_DIVETYPE_SOS1VARIABLE:
-            if ( SCIPisFeasPositive(scip, candsol) )
-               candsfrac = 1.0 - candsfrac;
-            break;
-         default:
-            SCIPerrorMessage("Error: Unsupported diving type\n");
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
-      } /*lint !e788*/
-
-      scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
-
-      *score = candsfrac;
-
-      if( nconflictlocksup > 0 )
-         *score += (10.0 * nconflictlocksup / conflictlocksum);
-
-      *score += (scalefactor * nlocksup / MAX(1.0, locksum));
+      SCIP_CALL( getScoreLikeCoefdiving(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
    }
    else
    {
-      SCIP_Real scalefactor;
-
-      if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
-         candsfrac = 1.0 - candsfrac;
-
-      scalefactor = (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND));
-
-      *score = candsfrac;
-
-      if( nconflictlocksdown > 0 )
-         *score += (10.0 * nconflictlocksdown / conflictlocksum);
-
-      *score += (scalefactor * nlocksdown / MAX(1.0, locksum));
+      SCIP_CALL( getScore(scip, heur, heurdata, rng, diveset, divetype, cand, candsol, candsfrac, score, roundup) );
    }
-
-   /* penalize too less conflict locks */
-   if( conflictlocksum < heurdata->minconflictlocks )
-      (*score) *= 0.1;
-
-   if( conflictlocksum == 0 )
-      (*score) *= 0.01;
-
-   /* penalize too small fractions */
-   if( candsfrac < 0.01 )
-      (*score) *= 0.1;
-
-   /* prefer decisions on binary variables */
-   if( !SCIPvarIsBinary(cand) )
-      (*score) *= 0.1;
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) || divetype == SCIP_DIVETYPE_SOS1VARIABLE );
@@ -421,21 +515,17 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
          &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/likecoef",
+         "perform rounding like coefficient diving",
+         &heurdata->likecoefdiving, TRUE, DEFAULT_LIKECOEF, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minconflictlocks",
          "minimal number of conflict locks per variable",
          &heurdata->minconflictlocks, TRUE, DEFAULT_MINCONFLICTLOCKS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minmaxvars",
-         "minimal absolute maximum of variables involved in a conflict constraint (-1: auto)",
-         &heurdata->minmaxvars, TRUE, DEFAULT_MINMAXVARS, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxvarsfac",
-         "maximal fraction of variables involved in a conflict constraint (< 0: auto)",
-         &heurdata->maxvarsfac, TRUE, DEFAULT_MAXVARSFAC, -1.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnnzobjfac",
-         "maximal portion of nonzero objective coeffcients.",
-         &heurdata->maxnnzobjfac, TRUE, DEFAULT_MAXNNZOBJFAC, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lockweight",
+         "weight used in a convex combination of conflict and variable locks",
+         &heurdata->lockweight, TRUE, DEFAULT_LOCKWEIGHT, 0.0, 1.0, NULL, NULL) );
 
 
    return SCIP_OKAY;

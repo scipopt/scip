@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page TSP_MAIN TSP example
+/**@page TSP_MAIN Traveling Salesman Problem
  * @version  0.9
  * @author   Timo Berthold
 
@@ -48,24 +48,18 @@
  * degree constraints) and one "subtour" constraint. The latter is a
  * complex, non-linear constraint for which one has to implement an own
  * constraint handler.
- * The variables are created in the TSP file reader ReaderTSP.cpp at line
- * 408:
- * \code
- *    SCIP_CALL( SCIPcreateVar(scip, &var, varname.str().c_str(), 0.0, 1.0, edge->length,
- *           SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+ * The variables are created in the TSP file reader ReaderTSP.cpp:
  *
- *    SCIP_CALL( SCIPaddVar(scip, var) );
- *    SCIP_CALL( addVarToEdges(scip, edge, var) );
- * \endcode
+ * @refsnippet{examples/TSP/src/ReaderTSP.cpp,SnippetTSPVariableCreation}
+ *
  *  A pointer to each variable is stored in the data structure of the
  * corresponding edge (i.e., in <code>edge->var</code> and <code>edge->back->var</code>,
  *  since the formally undirected graph is represented as a directed graph with
  * antiparallel arcs).
- * After that, the degree constraints are created at line 430.
- * \code
- * SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname.str().c_str(), 0, NULL, NULL, 2.0, 2.0,
- *    TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
- * \endcode
+ * After that, the degree constraints are created:
+ *
+ * @refsnippet{examples/TSP/src/ReaderTSP.cpp,SnippetTSPDegreeConstraintCreation}
+ *
  * The data for the
  * linear degree constraints are the coefficients (for each \f$e \in
  * \delta(v)\f$ the variable \f$ x_e \f$  has coefficient 1.0) which are generated at
@@ -76,10 +70,6 @@
  * constraint is the graph and the variables (see above), but we only have
  * to store a pointer to the graph because the edges already have links to
  * their respective variables.
- * \code
- *   SCIP_CALL( SCIPcreateConsSubtour(scip, &cons, "subtour", graph,
- *       FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) );
- * \endcode
  *
  * Now the problem instance is defined, and the "only" thing left is to
  * implement the semantics of the "subtour" constraint. This is of
@@ -96,6 +86,8 @@
  * find (after waiting long enough) the optimal solution. The remaining
  * methods are only needed to speed up the solving process (for example,
  * cutting plane separation and domain propagation).
+ *
+ * @refsnippet{examples/TSP/src/ReaderTSP.cpp,SnippetTSPNosubtourConstraintCreation}
  *
  * As there is only one subtour constraint in a TSP instance, all the
  * loops

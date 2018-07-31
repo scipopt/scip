@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -189,17 +189,47 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "lpi/lpi.h"
+#include "lpi/type_lpi.h"
+#include "nlpi/type_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
-#include "scip/heur_trysol.h"
+#include "scip/cons_varbound.h"
 #include "scip/heur_indicator.h"
+#include "scip/heur_trysol.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1903,7 +1933,6 @@ SCIP_RETCODE scaleFirstRow(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 
@@ -3163,10 +3192,6 @@ SCIP_RETCODE consdataCreate(
       }
 #endif
    }
-
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
 
    return SCIP_OKAY;
 }
@@ -5626,6 +5651,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
    assert( consdata != NULL );
 
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
+
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -7441,6 +7470,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
+      /* do not need to capture slack variable and linear constraint here */
 
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -7465,10 +7495,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
          }
       }
    }
-
-   /* release slack variable and linear constraint */
-   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
-   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
    return SCIP_OKAY;
 }
@@ -7628,6 +7654,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    return SCIP_OKAY;
 }

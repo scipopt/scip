@@ -88,10 +88,18 @@ JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipo
 TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
+
+SAPSETTINGS=sap-next-release-pure-diff
+
+if [ "${GITBRANCH}" != "master" ]; then
+  SAPSETTINGS=sap-600-pure-diff
+fi
+
+JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance"
 
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-600-pure-diff.set settings/.
 
 
 #########################
@@ -140,6 +148,8 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ###################
   ### Compilation ###
   ###################
+
+  make solchecker
 
   # build with soplex only if today we have some soplex runs scheduled
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}

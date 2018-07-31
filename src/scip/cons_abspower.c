@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,22 +20,53 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
 #define SCIP_PRIVATE_ROWPREP
 
+#include <ctype.h>
+#include "nlpi/pub_expr.h"
+#include "nlpi/type_expr.h"
+#include "nlpi/type_nlpi.h"
 #include "scip/cons_abspower.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_varbound.h"
-#include "scip/intervalarith.h"
+#include "scip/debug.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/debug.h"
+#include "scip/intervalarith.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "abspower"
@@ -944,7 +975,6 @@ SCIP_RETCODE presolveFindDuplicates(
 
    if( *infeas )
       return SCIP_OKAY;
-
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the z variable */
 
@@ -3189,7 +3219,6 @@ SCIP_RETCODE addVarbound(
       return SCIP_OKAY;
    }
 
-
    if( !SCIPisInfinity(scip, -lhs) )
    {
       SCIP_CALL( SCIPaddVarVlb(scip, var, vbdvar, -vbdcoef, lhs, infeas, &nbdchgs_local) );
@@ -3548,6 +3577,7 @@ SCIP_RETCODE generateLinearizationCutProject(
    xproj = xref;
    iter = 0;
    if( exponent == 2.0 )
+   {
       do
       {
          tmp = (xproj+xoffset) * (xproj+xoffset);
@@ -3557,10 +3587,11 @@ SCIP_RETCODE generateLinearizationCutProject(
 
          gderiv = 1 + 6 * tmp / (zcoef*zcoef) + 2 / zcoef * (zref - rhs/zcoef);
          xproj -= gval / gderiv;
-
       }
       while( ++iter <= 5 );
+   }
    else
+   {
       do
       {
          tmp = pow(xproj + xoffset, exponent-1);
@@ -3570,9 +3601,9 @@ SCIP_RETCODE generateLinearizationCutProject(
 
          gderiv = 1 + exponent / zcoef * ( (2*exponent-1)*tmp*tmp/zcoef + (exponent-1)*pow(xproj+xoffset, exponent-2) * (zref-rhs/zcoef) );
          xproj -= gval / gderiv;
-
       }
       while( ++iter <= 5 );
+   }
 
    if( xproj < xmin )
       xproj = xmin;
@@ -6993,7 +7024,6 @@ SCIP_DECL_CONSPARSE(consParseAbspower)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsAbspower)
 {  /*lint --e{715}*/
-
    if( varssize < 2 )
       (*success) = FALSE;
    else
@@ -7047,7 +7077,6 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
          conshdlrdata) );
 
    assert(conshdlr != NULL);
-
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveAbspower) );

@@ -84,6 +84,13 @@ Rational& Rational::operator-=(const Rational& rhs)
    return *this;
 }
 
+Rational& Rational::operator*=(const Rational& rhs)
+{
+   mpq_mul(number, number, rhs.number);
+   mpq_canonicalize(number);
+   return *this;
+}
+
 void Rational::addProduct(const Rational& op1, const Rational& op2)
 {
    mpq_t prod;
@@ -173,20 +180,6 @@ void Rational::fromString(const char* num)
    // Skip initial whitespace
    while(isspace(*num))
       num++;
-
-   // check if the value is +/-infinity
-   if (strcmp(num, "+infinity") == 0 || strcmp(num, "-infinity") == 0)
-   {
-      double val = 1e+20;
-
-      if (*num == '-')
-         val *= -1;
-
-      mpq_set_d(number, val);
-      mpq_canonicalize(number);
-
-      return;
-   }
 
    // Skip initial +/-
    if (*num == '+')

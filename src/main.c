@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -47,8 +47,8 @@ void handleSigterm(
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
    )
 {
    SCIP_RETCODE retcode;

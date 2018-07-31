@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,13 +25,22 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/presol_convertinttobin.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
+#include "scip/presol_convertinttobin.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME            "convertinttobin"
 #define PRESOL_DESC            "converts integer variables to binaries"

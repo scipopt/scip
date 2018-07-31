@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,6 +48,7 @@
 #include "scip/type_var.h"
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_misc_linear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -488,8 +489,8 @@ void** SCIPpqueueElems(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
-   int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
+   int theexp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
 }
 
 /** creates a hash table */

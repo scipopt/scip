@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,11 +24,14 @@
 #ifndef __SCIP_PUB_TREE_H__
 #define __SCIP_PUB_TREE_H__
 
-
 #include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
 #include "scip/type_misc.h"
-#include "scip/type_tree.h"
 #include "scip/type_reopt.h"
+#include "scip/type_retcode.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
@@ -211,6 +214,21 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
 EXTERN
 SCIP_NODE* SCIPnodeGetParent(
    SCIP_NODE*            node                /**< node */
+   );
+
+/** returns all constraints added to a given node */
+EXTERN
+void SCIPnodeGetAddedConss(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
+   );
+
+/** returns the number of added constraints to the given node */
+EXTERN
+int SCIPnodeGetNAddedConss(
+   SCIP_NODE*           node
    );
 
 /** returns whether node is in the path to the current node */

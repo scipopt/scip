@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,24 +20,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
+#include "scip/branch.h"
+#include "scip/conflictstore.h"
+#include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
 #include "scip/primal.h"
-#include "scip/tree.h"
-#include "scip/reopt.h"
-#include "scip/branch.h"
-#include "scip/cons.h"
-#include "scip/conflictstore.h"
+#include "scip/prob.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/struct_cons.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/var.h"
+#include <string.h>
 
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
@@ -1488,7 +1493,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       return SCIP_OKAY;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
@@ -1601,7 +1606,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
 
    nints = transprob->nvars - transprob->ncontvars;

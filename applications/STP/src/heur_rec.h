@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -108,10 +108,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** initialize heurdata */
-SCIP_RETCODE SCIPStpHeurRecInit(
-   SCIP_HEUR*            heur                /**< rec heuristic */
-   );
 
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 extern

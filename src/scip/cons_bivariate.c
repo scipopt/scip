@@ -22,18 +22,48 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <math.h>
-
+#include "blockmemshell/memory.h"
+#include "nlpi/exprinterpret.h"
+#include "nlpi/pub_expr.h"
+#include "nlpi/type_exprinterpret.h"
 #include "scip/cons_bivariate.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/debug.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/debug.h"
-#include "nlpi/nlpi.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/intervalarith.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_expr.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "bivariate"
@@ -2124,7 +2154,6 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
 
-
       /* construct e2 := f((xval-xlb*t)/(1-t), ylb) */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_VARIDX, 0) );          /* expr1 = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
@@ -2147,7 +2176,6 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
 
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
-
 
       /* construct vred := t * e1 + (1-t) * e2 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_VARIDX, 0) );          /* expr  = t */
@@ -2306,7 +2334,6 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MINUS, tmp, expr) );   /* expr  = 1-t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MUL, e2, expr) );      /* expr2 = (1-t) * e2*/
-
 
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &vred, SCIP_EXPR_PLUS, expr1, expr2) );
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &vredtree, vred, 1, 0, NULL) );
@@ -2519,7 +2546,6 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
 
-
       /* construct e2 := f(xub, (yval-t*ylb)/(1-t)) */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_VARIDX, 0) );          /* expr1 = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
@@ -2543,22 +2569,18 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
 
-
       /* construct vred := t * e1 + (1-t) * e2 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );           /* expr  = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_MUL, e1, expr) );      /* expr1 = t * e1*/
-
 
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_VARIDX, 0) );          /* expr  = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MINUS, tmp, expr) );   /* expr  = 1-t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MUL, e2, expr) );      /* expr2 = (1-t) * e2*/
 
-
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &vred, SCIP_EXPR_PLUS, expr1, expr2) );
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &vredtree, vred, 1, 0, NULL) );
       SCIP_CALL( SCIPexprintCompile(exprinterpreter, vredtree) );
-
 
       /* compute bounds on t */
       tlb = (xub-xval)/(xub-xlb);
@@ -2640,12 +2662,10 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
          cutcoeff[3] = cutcoeff[0]*xub+cutcoeff[1]*sval-cutcoeff[2]*fsval;
       }
 
-
       SCIPdebugMsg(scip, "LowerRight: Cut of (xval,yval)=(%g,%g)\n",xval,yval);
       SCIPdebugMsg(scip, "LowerRight: t=%g in [%g,%g], r=%g in [%g,%g], s=%g in [%g,%g]\n",tval,tlb,tub,rval,xlb,xub,sval,ylb,yub);
       SCIPdebugMsg(scip, "LowerRight: (r,ylb)=(%g,%g) (xub,sval)=(%g,%g) vredval=%g\n",rval,ylb,xub,sval,*convenvvalue);
       SCIPdebugMsg(scip, "LowerRight: cutcoeff[0]=%g, cutcoeff[1]=%g,cutcoeff[2]=1.0,cutcoeff[3]=%g\n",cutcoeff[0]/cutcoeff[2],cutcoeff[1]/cutcoeff[2],cutcoeff[3]/cutcoeff[2]);
-
    }
    else
    {
@@ -2672,7 +2692,6 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
 
-
       /* construct e2 := f(xlb, (yval-t*yub)/(1-t) ) */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_VARIDX, 0) );          /* expr1 = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
@@ -2695,22 +2714,18 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[0]);
       SCIPexprFreeDeep(SCIPblkmem(scip), &subst[1]);
 
-
       /* construct vred := t * e1 + (1-t) * e2 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_VARIDX, 0) );          /* expr  = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_MUL, e1, expr) );      /* expr1 = t * e1*/
-
 
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );           /* expr  = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,  SCIP_EXPR_CONST, 1.0) );          /* tmp   = 1.0 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_MINUS, tmp, expr) );    /* expr  = 1-t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MUL, e2, expr) );      /* expr2 = (1-t) * e2*/
 
-
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &vred, SCIP_EXPR_PLUS, expr1, expr2) );
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &vredtree, vred, 1, 0, NULL) );
       SCIP_CALL( SCIPexprintCompile(exprinterpreter, vredtree) );
-
 
       /* compute bounds on lambda */
       tlb = (xval-xlb)/(xub-xlb);
@@ -4257,7 +4272,6 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
       *row = NULL;
       return SCIP_OKAY;
    }
-
 
    /* construct row from cut coefficients (alpha, beta, gamma, delta)
     * coefficients are such that alpha * x + beta * y - gamma * f(x,y) <= delta,
@@ -7360,7 +7374,6 @@ SCIP_DECL_CONSCOPY(consCopyBivariate)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsBivariate)
 {  /*lint --e{715}*/
-
    if( varssize < 3 )
       (*success) = FALSE;
    else
@@ -7386,7 +7399,6 @@ SCIP_DECL_CONSGETVARS(consGetVarsBivariate)
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsBivariate)
 {  /*lint --e{715}*/
-
    (*nvars) = 3;
    (*success) = TRUE;
 

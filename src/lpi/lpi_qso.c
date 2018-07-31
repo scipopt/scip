@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -668,7 +668,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       {
          lpi->iccnt[i] = 0;
          lbeg[i] = 0;
-         assert( val[i] != 0.0 );
       }
    }
    else
@@ -679,7 +678,10 @@ SCIP_RETCODE SCIPlpiAddCols(
 
       nrows = QSget_rowcount(lpi->prob);
       for (i = 0; i < nnonz; ++i)
+      {
          assert( 0 <= ind[i] && ind[i] < nrows );
+         assert( val[i] != 0.0 );
+      }
 #endif
 
       /* compute column lengths */
@@ -1766,7 +1768,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    /* There seems to be a bug in qsopt: The function QSget_obj_list might return values for slack variables. We
     * therefore have to use a workarround. */
-#if 0
+#ifdef SCIP_DISABLED_CODE
    QS_CONDRET( QSget_obj_list(lpi->prob, len, lpi->iccnt, vals) );
 #endif
 
@@ -2145,8 +2147,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIPdebugMessage("calling QSopt strong branching on %d variables with integral value (%d it lim)\n", ncols, itlim);
 
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
-    * value for all cases. Could also implement a manual search as in lpi_cpx.c
-    */
+    * value for all cases. Could also implement a manual search as in lpi_cpx.c. */
    QS_CONDRET( QSget_objval(lpi->prob, &objval) );
 
    for( j = 0; j < ncols; ++j )
@@ -2500,90 +2501,27 @@ SCIP_RETCODE SCIPlpiGetSol(
    int nrows;
    register int i;
 
-#ifdef SCIP_DEBUG
-   int stat, ncols, sense;
-   char *icstat, *irstat;
-#endif
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting solution\n");
 
-   /* cannot return solution if we reached the objective limit */
-   if ( lpi->solstat == QS_LP_OBJ_LIMIT )
-      return SCIP_LPERROR;
+   /* Do nothing if the status is not optimal, e.g., if we reached the objective limit or the problem is
+    * infeasible. QSopt cannot return a solution in this case.*/
+   if ( lpi->solstat != QS_LP_OPTIMAL )
+      return SCIP_OKAY;
 
    nrows = QSget_rowcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    QS_CONDRET( QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost) );
 
-#if 0
-#ifdef SCIP_DEBUG
-   QSget_status(lpi->prob, &stat);
-   rval = QSget_objsense(lpi->prob, &sense);
-   if( stat == QS_LP_OPTIMAL )
-   {
-      ncols = QSget_colcount(lpi->prob);
-      QS_CONDRET(rval);
-
-      SCIP_CALL(ensureTabMem(lpi,nrows+ncols));
-      icstat = lpi->ibas;
-      irstat = lpi->ibas+ncols;
-
-      rval = QSget_basis_array(lpi->prob,icstat, irstat);
-      QS_CONDRET(rval);
-
-      for( i = ncols ; i-- ; )
-      {
-         switch( icstat[i] )
-         {
-         case QS_COL_BSTAT_BASIC:
-         case QS_COL_BSTAT_FREE:
-            if( fabs(redcost[i])> FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         case QS_COL_BSTAT_UPPER:
-            if( redcost[i]*sense > FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         case QS_COL_BSTAT_LOWER:
-            if( redcost[i]*sense < -FEASTOL )
-            {
-               SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i]*sense, sense);
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            break;
-         default:
-            SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i]*sense);
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
-         }
-      }
-   }
-   else
-   {
-      SCIPerrorMessage("Getting solution with stat %d (not optimal)\n", stat);
-   }
-#endif
-#endif
-
-   QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
-   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
-
    /* build back the activity */
    if( activity )
    {
+      QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
+      QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
+
       for( i = 0; i < nrows; ++i )
       {
          switch( lpi->isen[i] )
@@ -2603,6 +2541,65 @@ SCIP_RETCODE SCIPlpiGetSol(
          }
       }
    }
+
+#ifdef SCIP_DISABLED_CODE
+   {
+      int stat;
+      int ncols;
+      int sense;
+      char* icstat;
+      char* irstat;
+
+      QSget_status(lpi->prob, &stat);
+      if( stat == QS_LP_OPTIMAL )
+      {
+         QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+         ncols = QSget_colcount(lpi->prob);
+
+         SCIP_CALL(ensureTabMem(lpi, nrows + ncols));
+         icstat = lpi->ibas;
+         irstat = lpi->ibas + ncols;
+
+         QS_CONDRET( QSget_basis_array(lpi->prob,icstat, irstat) );
+
+         for( i = ncols ; i-- ; )
+         {
+            switch( icstat[i] )
+            {
+            case QS_COL_BSTAT_BASIC:
+            case QS_COL_BSTAT_FREE:
+               if( fabs(redcost[i])> FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            case QS_COL_BSTAT_UPPER:
+               if( redcost[i] * sense > FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            case QS_COL_BSTAT_LOWER:
+               if( redcost[i] * sense < -FEASTOL )
+               {
+                  SCIPerrorMessage("stat col[%d] = %c, rd[%d] = %lg sense %d\n", i, icstat[i], i, redcost[i] * sense, sense);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               break;
+            default:
+               SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i] * sense);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+         }
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }

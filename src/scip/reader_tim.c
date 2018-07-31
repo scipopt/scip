@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,12 +20,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
-#include "scip/reader_tim.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
+#include "scip/reader_tim.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include <string.h>
 
 #define READER_NAME             "timreader"
 #define READER_DESC             "file reader for the TIME file of a stochastic program in SMPS format"
@@ -269,7 +276,6 @@ SCIP_RETCODE createReaderdata(
       SCIP_CALL( SCIPhashmapCreate(&readerdata->stages[i]->consnametocons, SCIPblkmem(scip), hashmapsize) );
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -489,7 +495,7 @@ static
 SCIP_RETCODE timinputSetStageStartCons(
    TIMINPUT*             timi,               /**< tim input structure */
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           consname,            /**< name of the constraint that starts the stage */
+   const char*           consname,           /**< name of the constraint that starts the stage */
    int                   stagenum            /**< the stage number the constraint starts */
    )
 {

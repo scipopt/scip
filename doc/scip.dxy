@@ -285,7 +285,7 @@ OPTIMIZE_OUTPUT_VHDL   = NO
 # Note that for custom extensions you also need to set FILE_PATTERNS otherwise
 # the files are not read by doxygen.
 
-EXTENSION_MAPPING      =
+EXTENSION_MAPPING      = no_extension=C
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -304,7 +304,7 @@ MARKDOWN_SUPPORT       = YES
 # Minimum value: 0, maximum value: 99, default value: 0.
 # This tag requires that the tag MARKDOWN_SUPPORT is set to YES.
 
-TOC_INCLUDE_HEADINGS   = 0
+TOC_INCLUDE_HEADINGS   = 1
 
 # When enabled doxygen tries to link words that correspond to documented
 # classes, or namespaces to their corresponding documentation. Such a link can
@@ -785,6 +785,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = . \
+                         ../CHANGELOG \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
@@ -812,8 +813,11 @@ INPUT                  = . \
                          ../examples/GMI/doc/xternal_gmi.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/SCFLP/src/ \
+                         ../examples/SCFLP/doc/xternal_scflp.c \
                          ../examples/TSP/src/ \
-                         ../examples/TSP/doc/xternal_tsp.c
+                         ../examples/TSP/doc/xternal_tsp.c \
+                         ../examples/VRP/src/ ../examples/VRP/doc/xternal_vrp.c
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -841,9 +845,8 @@ INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
-                         *.hpp \
-                         interfaces.dxy \
-                         howtoadd.dxy
+                         CHANGELOG \
+                         *.hpp
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -994,9 +997,11 @@ EXCLUDE_SYMBOLS        = Ipopt \
 
 EXAMPLE_PATH           = inc/ \
                          ../ \
+                         ../INSTALL \
                          ../release-notes/ \
                          ../src \
-                         ../check/instances/Stochastic/pltexpA2_6.smps
+                         ../check/instances/Stochastic/pltexpA2_6.smps \
+                         inc/simpleinstance/simple.lp inc/simpleinstance/output.log
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
@@ -1010,7 +1015,7 @@ EXAMPLE_PATTERNS       =
 # irrespective of the value of the RECURSIVE tag.
 # The default value is: NO.
 
-EXAMPLE_RECURSIVE      = YES
+EXAMPLE_RECURSIVE      = NO
 
 # The IMAGE_PATH tag can be used to specify one or more files or directories
 # that contain images that are to be included in the documentation (see the
@@ -1052,7 +1057,10 @@ INPUT_FILTER           = "sed 's/^EXTERN\([ ]*\)$/extern/g; /^SCIP_DEPRECATED/d'
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by doxygen.
 
-FILTER_PATTERNS        =
+FILTER_PATTERNS        = "*/CHANGELOG=sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'"
+
+# depending on your doxygen version you might need to add/remove the outer pair of escaped quotes:
+# FILTER_PATTERNS        = "*/CHANGELOG=\"sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'\""
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -1536,7 +1544,7 @@ ECLIPSE_DOC_ID         = org.doxygen.Project
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-DISABLE_INDEX          = NO
+DISABLE_INDEX          = YES
 
 # The GENERATE_TREEVIEW tag is used to specify whether a tree-like index
 # structure should be generated to display hierarchical information. If the tag
@@ -1553,7 +1561,7 @@ DISABLE_INDEX          = NO
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-GENERATE_TREEVIEW      = NO
+GENERATE_TREEVIEW      = YES
 
 # The ENUM_VALUES_PER_LINE tag can be used to set the number of enum values that
 # doxygen will group on one line in the generated HTML documentation.

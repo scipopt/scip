@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,13 +25,16 @@
 #define __SCIP_STRUCT_TREE_H__
 
 
-#include "scip/def.h"
-#include "scip/type_lp.h"
-#include "scip/type_var.h"
-#include "scip/type_tree.h"
-#include "scip/type_cons.h"
-#include "scip/type_nodesel.h"
 #include "lpi/type_lpi.h"
+#include "scip/def.h"
+#include "scip/struct_tree.h"
+#include "scip/type_cons.h"
+#include "scip/type_history.h"
+#include "scip/type_lp.h"
+#include "scip/type_nodesel.h"
+#include "scip/type_prop.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 
 #ifdef __cplusplus

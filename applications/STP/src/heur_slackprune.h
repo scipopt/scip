@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -50,7 +50,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*                g,                  /**< the graph */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph         /**< try to reduce graph initially? */
+   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    );
 
 /** execute MWCSP slack-and-prune heuristic on given graph */
