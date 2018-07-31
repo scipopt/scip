@@ -353,6 +353,7 @@ SCIP_RETCODE getSymmetries(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
+   SCIP_Bool recompute = FALSE;
    SCIP_VAR** permvars;
    int v;
 
@@ -396,7 +397,7 @@ SCIP_RETCODE getSymmetries(
       propdata->npermvars = -1;
       propdata->permvarmap = NULL;
 
-      propdata->lastrestart =  SCIPgetNRuns(scip);
+      propdata->lastrestart = SCIPgetNRuns(scip);
 
       /* if we do not want to recompute symmetries */
       if ( ! propdata->recomputerestart )
@@ -404,12 +405,13 @@ SCIP_RETCODE getSymmetries(
          propdata->enabled = FALSE;
          return SCIP_OKAY;
       }
+      recompute = TRUE;
    }
 
    /* now possibly (re)compute symmetries */
    if ( propdata->nperms < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, TRUE,
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
             &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
 
       if ( propdata->nperms == 0 )
