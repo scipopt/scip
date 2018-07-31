@@ -380,7 +380,7 @@ SCIP_RETCODE getSymmetries(
    assert( propdata != NULL );
 
    /* free symmetries after a restart to recompute them later */
-   if ( SCIPgetNRuns(scip) > propdata->lastrestart && propdata->nperms > 0 )
+   if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       /* reset symmetry information */
       assert( propdata->npermvars > 0 );
@@ -416,14 +416,6 @@ SCIP_RETCODE getSymmetries(
       propdata->npermvars = -1;
       propdata->permvarmap = NULL;
 
-      propdata->lastrestart = SCIPgetNRuns(scip);
-
-      /* if we do not want to recompute symmetries */
-      if ( ! propdata->recomputerestart )
-      {
-         propdata->enabled = FALSE;
-         return SCIP_OKAY;
-      }
       recompute = TRUE;
    }
 
@@ -432,6 +424,9 @@ SCIP_RETCODE getSymmetries(
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
             &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL) );
+
+      /* store restart level */
+      propdata->lastrestart = SCIPgetNRuns(scip);
 
       if ( propdata->nperms == 0 )
       {
