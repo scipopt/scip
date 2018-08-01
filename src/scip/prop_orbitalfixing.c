@@ -914,9 +914,7 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
    if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITALFIXING )
       propdata->enabled = TRUE;
    else
-   {
       propdata->enabled = FALSE;
-   }
 
    return SCIP_OKAY;
 }
