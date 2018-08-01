@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
-/** check whether given (multi) aggregation is valid for the debugging solution */
+/** checks whether given (multi)-aggregation is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckAggregation(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */

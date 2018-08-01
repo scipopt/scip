@@ -1223,7 +1223,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    return SCIP_OKAY;
 }
 
-/** check whether given (multi) aggregation is valid for the debugging solution */
+/** checks whether given (multi)-aggregation is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckAggregation(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
