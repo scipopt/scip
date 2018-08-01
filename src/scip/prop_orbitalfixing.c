@@ -32,6 +32,25 @@
  *
  * F. Margot: Symmetry in integer linear programming. 50 Years of Integer Programming, 647-686, Springer 2010.
  *
+ * To illustrate this, consider the example \f$\max\{x_1 + x_2 : x_1 + x_2 \leq 1, Ay \leq b,
+ * (x,y) \in \{0,1\}^{2 + n}\} \f$. Since \f$x_1\f$ and \f$x_2\f$ are independent from the remaining problem, the
+ * setppc constraint handler may fix \f$(x_1,x_2) = (1,0)\f$. However, since both variables are symmetric, this setting
+ * is not strict (if it was strict, both variables would have been set to the same value) and orbital fixing would
+ * declare this subsolution as infeasible (there exists an orbit of non-branching variables that are fixed to different
+ * values). To avoid this situation, we have to assume that all non-strict settings fix variables globally, i.e., we
+ * can take care of it by taking variables into account that have been globally fixed to 1. In fact, it suffices to
+ * consider one kind of global fixings since stabilizing one kind prevents an orbit to contain variables that have
+ * been fixed globally to different values.
+ *
+ * @pre All non-strict settings are global settings, since otherwise, we cannot (efficiently) take care of them.
+ *
+ * @pre No strict setting algorithm is interrupted early (e.g., by a time or iteration limit), since this may lead to
+ * wrong decisions by orbital fixing as well. For example, if cons_setppc in the above toy example starts by fixing
+ * \f$x_2 = 0\f$ and is interrupted afterwards, orbital fixing detects that the orbit \f$\{x_1, x_2\}\f$ contains
+ * one variable that is fixed to 0, and thus, it fixes \f$x_1\f$ to 0 as well. Thus, after these reductions, every
+ * feasible solution has objective 0 which is not optimal. This situation would not occur if the strict setting is
+ * complete, because then \f$x_1\f$ is globally fixed to 1, and thus, is stabilized in orbital fixing.
+ *
  * Note that orbital fixing might lead to wrong results if it is called in repropagation of a node, because the path
  * from the node to the root might have been changed. Thus, the stabilizers of global 1-fixing and 1-branchings of the
  * initial propagation and repropagation might differ, which may cause conflicts. For this reason, orbital fixing cannot
