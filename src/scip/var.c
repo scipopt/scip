@@ -4610,6 +4610,9 @@ SCIP_RETCODE SCIPvarAggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
+   /* check aggregation on debugging solution */
+   SCIP_CALL( SCIPdebugCheckAggregation(set, var, &aggvar, &scalar, constant, 1) ); /*lint !e506 !e774*/
+
    *infeasible = FALSE;
    *aggregated = FALSE;
 
@@ -5306,6 +5309,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(aggregated != NULL);
 
    SCIPsetDebugMsg(set, "trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+
+   /* check multi-aggregation on debugging solution */
+   SCIP_CALL( SCIPdebugCheckAggregation(set, var, aggvars, scalars, constant, naggvars) ); /*lint !e506 !e774*/
 
    *infeasible = FALSE;
    *aggregated = FALSE;
