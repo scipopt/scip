@@ -270,6 +270,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
+#define SCIPdebugCheckAggregation(set,var,aggrvars,scalars,constant,naggrvars) SCIP_OKAY
 #define SCIPdebugCheckClique(set,vars,values,nvars) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,bdchginfos,relaxedbds,nliterals) SCIP_OKAY
 #define SCIPdebugCheckConflictFrontier(blkmem,set,node,bdchginfo,bdchginfos,relaxedbds,nliterals,bdchgqueue,forcedbdchgqueue) SCIP_OKAY
