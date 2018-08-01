@@ -246,6 +246,23 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
 
    for( i = 0; i < nactivebenders; i++ )
    {
+      /* if there are any constraints that can be transferred from LNS heuristics, then these are added now. If any
+       * constraints are added, then the LP is resolved. This can only be performed when enforcing the LP, pseudo or
+       * relaxation solutions.
+       */
+      if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX || type == SCIP_BENDERSENFOTYPE_PSEUDO )
+      {
+         SCIP_Bool success;
+
+         SCIP_CALL( SCIPaddBendersTransferConss(scip, benders[i], &success) );
+
+         if( success )
+         {
+            (*result) = SCIP_CONSADDED;
+            break;
+         }
+      }
+
       switch( type )
       {
          case SCIP_BENDERSENFOTYPE_LP:

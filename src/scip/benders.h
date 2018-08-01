@@ -441,6 +441,17 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** adds the transfer constraint to the main SCIP instance
+ *  The transfer constraints are collected from the LNS heuristics
+ */
+extern
+SCIP_RETCODE SCIPbendersAddTransferConss(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            success             /**< were any constraints added to the main SCIP instance? */
+   );
+
+
 /** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */
 extern
 SCIP_RETCODE SCIPbendersIncludeBenderscut(

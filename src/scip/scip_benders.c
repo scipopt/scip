@@ -1046,6 +1046,41 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    return SCIP_OKAY;
 }
 
+/** adds constraints, which are Benders' cuts, that are generated in LNS heuristics to the main SCIP instance.
+ *
+ *  This method is required because constraints must be added at the correct stage in the solving process. This is
+ *  typically in the enforcement of the LP or relaxation solutions. This function can be called from the Benders'
+ *  decomposition constraint handler to add the transferred constraints.
+ *
+ *  A success flag is returned if there were any constraints transferred to the main SCIP instance.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPaddBendersTransferConss(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool*            success             /**< flag to indicate whether any constraints are added to the main SCIP */
+   )
+{
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddBendersTransferConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbendersAddTransferConss(benders, scip->set, success) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
