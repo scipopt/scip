@@ -195,10 +195,8 @@ static
 SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
 {
    SCIP_PROPDATA* propdata;
-#ifndef NDEBUG
    SCIP_VAR* var;
    int varidx;
-#endif
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
