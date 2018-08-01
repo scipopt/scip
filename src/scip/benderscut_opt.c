@@ -210,9 +210,12 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
          coef = -1.0*(SCIPvarGetObj(var) + redcost);
 
-         vars[(*nvars)] = mastervar;
-         vals[(*nvars)] = coef;
-         (*nvars)++;
+         if( !SCIPisZero(masterprob, coef) )
+         {
+            vars[(*nvars)] = mastervar;
+            vals[(*nvars)] = coef;
+            (*nvars)++;
+         }
       }
       else
       {
@@ -376,9 +379,6 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
    else
    {
-      /* adding the auxiliary variable to the optimality cut */
-      SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, vars, vals, &nvars, probnumber) );
-
       /* creating an empty row or constraint for the Benders' cut */
       if( addcut )
       {
@@ -393,7 +393,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       }
 
       /* verification of the cut */
-      verifyobj = SCIPgetBendersAuxiliaryVarVal(masterprob, benders, sol, probnumber);
+      verifyobj = 0.0;
       if( addcut )
       {
          verifyobj += SCIProwGetLhs(row) - SCIPgetRowSolActivity(masterprob, row, sol);
@@ -419,10 +419,16 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
       if( success )
       {
+         /* adding the auxiliary variable to the optimality cut */
+         SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, vars, vals, &nvars, probnumber) );
+
          /* adding the constraint to the master problem */
          if( addcut )
          {
             SCIP_Bool infeasible;
+
+            /* adding the auxiliary variable coefficient to the row */
+            SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
 
             if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
             {
@@ -439,6 +445,9 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          }
          else
          {
+            /* adding the auxiliary variable coefficient to the constraint */
+            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
+
             SCIP_CALL( SCIPaddCons(masterprob, cons) );
 
             SCIPdebugPrintCons(masterprob, cons, NULL);
