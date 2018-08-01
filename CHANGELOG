@@ -7,6 +7,8 @@
 Features
 --------
 
+- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
+
 Performance improvements
 ------------------------
 
