@@ -1594,6 +1594,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
    presoldata->changeddefaultparams = FALSE;
+   presoldata->transposedperms = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
