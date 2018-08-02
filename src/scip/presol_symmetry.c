@@ -1150,7 +1150,7 @@ SCIP_RETCODE computeSymmetryGroup(
       {
 
          /* transpose symmetries matrix here if necessary */
-         if ( transposedperms && *nperms > 0 )
+         if ( transposedperms )
          {
             int** transposedpermsmatrix;
             int p;
@@ -1175,10 +1175,6 @@ SCIP_RETCODE computeSymmetryGroup(
             *nmaxperms = *nperms;
          }
 
-         /* copy variables */
-         *permvars = vars;
-         *npermvars = nvars;
-
          /* symmetric variables are not allowed to be multi-aggregated */
          for (j = 0; j < nvars; ++j)
          {
@@ -1193,6 +1189,17 @@ SCIP_RETCODE computeSymmetryGroup(
       }
    }
    *success = TRUE;
+
+   if ( *nperms > 0 )
+   {
+      /* copy variables */
+      *permvars = vars;
+      *npermvars = nvars;
+   }
+   else
+   {
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+   }
 
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
