@@ -357,7 +357,7 @@ SCIP_Bool removeZerosQuad(
          lb = SCIPvarGetLbGlobal(vars[v]);
          ub = SCIPvarGetUbGlobal(vars[v]);
       }
-      if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisZero(scip, ub-lb) )
+      if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisEQ(scip, ub, lb) )
          isfixed = TRUE;
       else
          isfixed = FALSE;
