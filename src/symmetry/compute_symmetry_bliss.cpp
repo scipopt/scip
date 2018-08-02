@@ -67,19 +67,25 @@ void blisshook(
    /* check whether we need to resize */
    if ( data->nperms >= data->nmaxperms )
    {
-      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms);
-      SCIP_RETCODE retcode = SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize);
-      if ( retcode != SCIP_OKAY )
+      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms + 1);
+      assert( newsize >= data->nperms );
+
+      /* only need up to maxgenerators many permutations */
+      if ( data->maxgenerators != 0 && newsize > data->maxgenerators )
+         newsize = data->maxgenerators;
+
+      if ( SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize) != SCIP_OKAY )
          return;
+
       data->nmaxperms = newsize;
    }
 
    /* copy first part of automorphism */
    bool isIdentity = true;
    int* p = 0;
-   SCIP_RETCODE retcode = SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars);
-   if ( retcode != SCIP_OKAY )
+   if ( SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars) != SCIP_OKAY )
       return;
+
    for (int j = 0; j < data->npermvars; ++j)
    {
       /* convert index of variable-level 0-nodes to variable indices */
@@ -344,7 +350,10 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.scip = scip;
    data.npermvars = matrixdata->npermvars;
    data.nperms = 0;
-   data.nmaxperms = 100 * matrixdata->npermvars;
+   if ( maxgenerators == 0 )
+      data.nmaxperms = 100;
+   else
+      data.nmaxperms = maxgenerators;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &data.perms, data.nmaxperms) );
