@@ -165,7 +165,8 @@ void updateDivesetstats(
 }
 
 /** returns the dive set statistics for the given context */
-SCIP_DIVESETSTATS* SCIPdivesetGetStats(
+static
+SCIP_DIVESETSTATS* divesetGetStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
@@ -193,15 +194,15 @@ void SCIPdivesetUpdateStats(
    )
 {
    int c;
-   assert(diveset != NULL);
    SCIP_DIVECONTEXT updatecontexts[] = {SCIP_DIVECONTEXT_TOTAL, divecontext};
 
+   assert(diveset != NULL);
    assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE);
 
    /* update statistics for total context and given context */
    for( c = 0; c < 2; ++c )
    {
-      updateDivesetstats(SCIPdivesetGetStats(diveset, updatecontexts[c]), depth, nprobingnodes,
+      updateDivesetstats(divesetGetStats(diveset, updatecontexts[c]), depth, nprobingnodes,
             nbacktracks, nsolsfound, nbestsolsfound, nconflictsfound, leavesol);
    }
 
@@ -453,8 +454,10 @@ SCIP_Longint SCIPdivesetGetSolSuccess(
 
    )
 {
-   assert(diveset != NULL);
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
+
+   assert(divesetstats != NULL);
+
    return 10 * divesetstats->nbestsolsfound + divesetstats->nsolsfound;
 }
 
@@ -464,7 +467,7 @@ int SCIPdivesetGetNCalls(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -477,7 +480,7 @@ int SCIPdivesetGetNSolutionCalls(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(diveset != NULL);
 
@@ -490,7 +493,7 @@ int SCIPdivesetGetMinDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -503,7 +506,7 @@ int SCIPdivesetGetMaxDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -516,7 +519,7 @@ SCIP_Real SCIPdivesetGetAvgDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -529,7 +532,7 @@ int SCIPdivesetGetMinSolutionDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -542,7 +545,7 @@ int SCIPdivesetGetMaxSolutionDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -555,7 +558,7 @@ SCIP_Real SCIPdivesetGetAvgSolutionDepth(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -568,7 +571,7 @@ SCIP_Longint SCIPdivesetGetNLPIterations(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -581,7 +584,7 @@ SCIP_Longint SCIPdivesetGetNProbingNodes(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -594,7 +597,7 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -607,7 +610,7 @@ SCIP_Longint SCIPdivesetGetNConflicts(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -620,7 +623,7 @@ SCIP_Longint SCIPdivesetGetNSols(
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
-   SCIP_DIVESETSTATS* divesetstats = SCIPdivesetGetStats(diveset, divecontext);
+   SCIP_DIVESETSTATS* divesetstats = divesetGetStats(diveset, divecontext);
 
    assert(divesetstats != NULL);
 
@@ -772,8 +775,8 @@ void SCIPdivesetUpdateLPStats(
    assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE);
 
    /* update statistics for total context and given context */
-   updateDivesetstatsLP(SCIPdivesetGetStats(diveset, divecontext), niterstoadd);
-   updateDivesetstatsLP(SCIPdivesetGetStats(diveset, SCIP_DIVECONTEXT_TOTAL), niterstoadd);
+   updateDivesetstatsLP(divesetGetStats(diveset, divecontext), niterstoadd);
+   updateDivesetstatsLP(divesetGetStats(diveset, SCIP_DIVECONTEXT_TOTAL), niterstoadd);
 
    stat->ndivesetlpiterations += niterstoadd;
    stat->ndivesetlps++;
