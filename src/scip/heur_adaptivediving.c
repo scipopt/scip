@@ -79,16 +79,16 @@ SCIP_Real divesetGetScore(
 {
    switch (scoretype) {
       case 'n': /* min average nodes */
-         return SCIPdivesetGetNProbingNodes(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+         return SCIPdivesetGetNProbingNodes(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
 
       case 'i': /* min avg LP iterations */
-         return SCIPdivesetGetNLPIterations(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+         return SCIPdivesetGetNLPIterations(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
 
       case 'c': /* min backtrack / conflict ratio */
-         return (SCIPdivesetGetNBacktracks(diveset) + 100) / (SCIPdivesetGetNConflicts(diveset) + 100.0);
+         return (SCIPdivesetGetNBacktracks(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 100) / (SCIPdivesetGetNConflicts(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 100.0);
 
       case 'd': /* minimum average depth (the current default) */
-         return SCIPdivesetGetAvgDepth(diveset) * SCIPdivesetGetNCalls(diveset) / (SCIPdivesetGetNCalls(diveset) + 10.0);
+         return SCIPdivesetGetAvgDepth(diveset, SCIP_DIVECONTEXT_ADAPTIVE) * SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
 
       default:
          break;
@@ -261,7 +261,7 @@ SCIP_Longint getLPIterlimit(
    /* loop over the divesets and collect their individual iterations */
    for( i = 0; i < heurdata->ndivesets; ++i )
    {
-      nlpiterationsdive += SCIPdivesetGetNLPIterations(heurdata->divesets[i]);
+      nlpiterationsdive += SCIPdivesetGetNLPIterations(heurdata->divesets[i], SCIP_DIVECONTEXT_ADAPTIVE);
    }
 
    /* author gregor
@@ -518,7 +518,8 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
 
    SCIPdebugMsg(scip, "Selected diveset %s\n", SCIPdivesetGetName(diveset));
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, lpiterlimit) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible,
+         lpiterlimit, SCIP_DIVECONTEXT_ADAPTIVE) );
 
    if( *result == SCIP_FOUNDSOL )
    {

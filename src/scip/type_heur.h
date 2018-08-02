@@ -48,6 +48,16 @@ extern "C" {
 
 typedef unsigned int SCIP_DIVETYPE;
 
+/** context for diving statistics */
+enum SCIP_DiveContext
+{
+   SCIP_DIVECONTEXT_TOTAL  = 0,                   /**< all contexts combined */
+   SCIP_DIVECONTEXT_SINGLE = 1,                   /**< single heuristic context */
+   SCIP_DIVECONTEXT_ADAPTIVE = 2                  /**< within adaptive diving */
+};
+typedef enum SCIP_DiveContext SCIP_DIVECONTEXT;
+
+
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */

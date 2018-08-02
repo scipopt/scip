@@ -228,85 +228,99 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 /** get the number of successful runs of the diving settings */
 EXTERN
 SCIP_Longint SCIPdivesetGetSolSuccess(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the number of calls to this dive set */
 EXTERN
 int SCIPdivesetGetNCalls(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the number of calls successfully terminated at a feasible leaf node */
 EXTERN
 int SCIPdivesetGetNSolutionCalls(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+SCIP_DIVESET*         diveset,            /**< diving settings */
+SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the minimum depth reached by this dive set */
 EXTERN
 int SCIPdivesetGetMinDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum depth reached by this dive set */
 EXTERN
 int SCIPdivesetGetMaxDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the average depth this dive set reached during execution */
 EXTERN
 SCIP_Real SCIPdivesetGetAvgDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the minimum depth at which this dive set found a solution */
 EXTERN
 int SCIPdivesetGetMinSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum depth at which this dive set found a solution */
 EXTERN
 int SCIPdivesetGetMaxSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the average depth at which this dive set found a solution */
 EXTERN
 SCIP_Real SCIPdivesetGetAvgSolutionDepth(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of LP iterations used by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNLPIterations(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of probing nodes used by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNProbingNodes(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of backtracks performed by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNBacktracks(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of conflicts found by this dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNConflicts(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */
 EXTERN
 SCIP_Longint SCIPdivesetGetNSols(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the maximum LP iterations quotient of the diving settings */

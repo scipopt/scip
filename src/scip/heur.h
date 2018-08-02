@@ -88,7 +88,8 @@ void SCIPdivesetUpdateStats(
    SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
    SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
+   SCIP_Bool             leavesol,           /**< has the diving heuristic reached a feasible leaf */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
@@ -117,7 +118,8 @@ extern
 void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** copies the given primal heuristic to a new scip */
