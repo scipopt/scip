@@ -1137,38 +1137,41 @@ SCIP_RETCODE computeSymmetryGroup(
    {
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
+      assert( *nperms <= *nmaxperms );
 
       /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
       if ( checksymmetries && SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && ! SCIPisStopped(scip) )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
+
+      /* transpose symmetries matrix here if necessary */
+      if ( transposedperms )
+      {
+         int** transposedpermsmatrix;
+         int p;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nvars) );
+         for (j = 0; j < nvars; ++j)
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[j], *nperms) );
+            for (p = 0; p < *nperms; ++p)
+               transposedpermsmatrix[j][p] = (*perms)[p][j];
+         }
+
+         /* free original perms matrix */
+         for (p = 0; p < *nperms; ++p)
+         {
+            SCIPfreeBlockMemoryArray(scip, &(*perms)[p], nvars);
+         }
+         SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
+
+         /* adjust matrix and size */
+         *perms = transposedpermsmatrix;
+         *nmaxperms = *nperms;
+      }
    }
    *success = TRUE;
-
-   /* transpose symmetries matrix here if necessary */
-   if ( transposedperms )
-   {
-      int** transposedpermsmatrix;
-      int p;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nvars) );
-      for (j = 0; j < nvars; ++j)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[j], *nmaxperms) );
-         for (p = 0; p < *nperms; ++p)
-            transposedpermsmatrix[j][p] = (*perms)[p][j];
-      }
-
-      /* free original perms matrix */
-      for (p = 0; p < *nperms; ++p)
-      {
-         SCIPfreeBlockMemoryArray(scip, &(*perms)[p], nvars);
-      }
-      SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
-
-      *perms = transposedpermsmatrix;
-   }
 
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
