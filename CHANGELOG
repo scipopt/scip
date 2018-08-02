@@ -14,6 +14,14 @@ Features
 Performance improvements
 ------------------------
 
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
+
 Examples and applications
 -------------------------
 
@@ -63,6 +71,7 @@ Fixed bugs
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
+- fix and improve memory handling in symmetry computation
 
 Miscellaneous
 -------------
