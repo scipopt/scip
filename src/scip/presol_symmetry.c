@@ -1145,30 +1145,51 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
 
-      /* transpose symmetries matrix here if necessary */
-      if ( transposedperms )
+      /* updata data if nontrivial symmetry */
+      if ( *nperms > 0 )
       {
-         int** transposedpermsmatrix;
-         int p;
 
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nvars) );
+         /* transpose symmetries matrix here if necessary */
+         if ( transposedperms && *nperms > 0 )
+         {
+            int** transposedpermsmatrix;
+            int p;
+
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nvars) );
+            for (j = 0; j < nvars; ++j)
+            {
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[j], *nperms) );
+               for (p = 0; p < *nperms; ++p)
+                  transposedpermsmatrix[j][p] = (*perms)[p][j];
+            }
+
+            /* free original perms matrix */
+            for (p = 0; p < *nperms; ++p)
+            {
+               SCIPfreeBlockMemoryArray(scip, &(*perms)[p], nvars);
+            }
+            SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
+
+            /* adjust matrix and size */
+            *perms = transposedpermsmatrix;
+            *nmaxperms = *nperms;
+         }
+
+         /* copy variables */
+         *permvars = vars;
+         *npermvars = nvars;
+
+         /* symmetric variables are not allowed to be multi-aggregated */
          for (j = 0; j < nvars; ++j)
          {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[j], *nperms) );
-            for (p = 0; p < *nperms; ++p)
-               transposedpermsmatrix[j][p] = (*perms)[p][j];
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[j]) );
          }
 
-         /* free original perms matrix */
-         for (p = 0; p < *nperms; ++p)
-         {
-            SCIPfreeBlockMemoryArray(scip, &(*perms)[p], nvars);
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, perms, *nmaxperms);
-
-         /* adjust matrix and size */
-         *perms = transposedpermsmatrix;
-         *nmaxperms = *nperms;
+#ifndef NDEBUG
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvarsobj, nvars) );
+         for (j = 0; j < nvars; ++j)
+            (*permvarsobj)[j] = SCIPvarGetObj(vars[j]);
+#endif
       }
    }
    *success = TRUE;
@@ -1188,22 +1209,6 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
-
-   /* copy variables */
-   *permvars = vars;
-   *npermvars = nvars;
-
-   /* symmetric variables are not allowed to be multi-aggregated */
-   for (j = 0; j < nvars; ++j)
-   {
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[j]) );
-   }
-
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvarsobj, nvars) );
-   for (j = 0; j < nvars; ++j)
-      (*permvarsobj)[j] = SCIPvarGetObj(vars[j]);
-#endif
 
    return SCIP_OKAY;
 }
