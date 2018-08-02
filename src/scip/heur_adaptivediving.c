@@ -48,6 +48,7 @@
  */
 #define DEFAULT_SELTYPE 'w'
 #define DEFAULT_SCORETYPE 'c'
+#define DEFAULT_USEADAPTIVECONTEXT FALSE
 
 
 /* locally defined heuristic data */
@@ -63,6 +64,7 @@ struct SCIP_HeurData
    char                  scoretype;          /**< score parameter to compare different divesets */
    SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets */
    char                  seltype;            /**< selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving */
+   SCIP_Bool             useadaptivecontext; /**< should the heuristic use its own statistics, or shared statistics? */
 };
 
 /*
@@ -70,25 +72,27 @@ struct SCIP_HeurData
  */
 
 
-/** get the score for this dive set */
+/** get the selection score for this dive set */
 static
-SCIP_Real divesetGetScore(
+SCIP_Real divesetGetSelectionScore(
    SCIP_DIVESET*         diveset,            /**< diving settings data structure */
-   char                  scoretype           /**< score parameter */
+   char                  scoretype,          /**< score parameter */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
+
    )
 {
    switch (scoretype) {
       case 'n': /* min average nodes */
-         return SCIPdivesetGetNProbingNodes(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
+         return SCIPdivesetGetNProbingNodes(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
 
       case 'i': /* min avg LP iterations */
-         return SCIPdivesetGetNLPIterations(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
+         return SCIPdivesetGetNLPIterations(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
 
       case 'c': /* min backtrack / conflict ratio */
-         return (SCIPdivesetGetNBacktracks(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 100) / (SCIPdivesetGetNConflicts(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 100.0);
+         return (SCIPdivesetGetNBacktracks(diveset, divecontext)) / (SCIPdivesetGetNConflicts(diveset, divecontext) + 10.0);
 
       case 'd': /* minimum average depth (the current default) */
-         return SCIPdivesetGetAvgDepth(diveset, SCIP_DIVECONTEXT_ADAPTIVE) * SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) / (SCIPdivesetGetNCalls(diveset, SCIP_DIVECONTEXT_ADAPTIVE) + 10.0);
+         return SCIPdivesetGetAvgDepth(diveset, divecontext) * SCIPdivesetGetNCalls(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
 
       default:
          break;
@@ -205,6 +209,7 @@ SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    heurdata->lastselection = -1;
+
    assert(heurdata != NULL);
 
    /* create working solution */
@@ -354,6 +359,7 @@ SCIP_RETCODE selectDiving(
    int ndivesets;
    int d;
    SCIP_RANDNUMGEN* rng;
+   SCIP_DIVECONTEXT divecontext;
    SCIP_Real* weights;
    SCIP_Real epsilon_t;
 
@@ -363,6 +369,8 @@ SCIP_RETCODE selectDiving(
    assert(divesets != NULL);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &methodunavailable, ndivesets) );
+
+   divecontext = heurdata->useadaptivecontext ? SCIP_DIVECONTEXT_ADAPTIVE : SCIP_DIVECONTEXT_TOTAL;
 
    /* check availability of divesets */
    for( d = 0; d < heurdata->ndivesets; ++d )
@@ -401,7 +409,7 @@ SCIP_RETCODE selectDiving(
             if( methodunavailable[d] )
                continue;
 
-            score = divesetGetScore(divesets[d], heurdata->scoretype);
+            score = divesetGetSelectionScore(divesets[d], heurdata->scoretype, divecontext);
             if( !methodunavailable[d] && score < bestscore )
             {
                bestscore = score;
@@ -417,7 +425,7 @@ SCIP_RETCODE selectDiving(
       /* initialize weights as inverse of the score + a small positive epsilon */
       for( d = 0; d < ndivesets; ++d )
       {
-         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetScore(divesets[d], heurdata->scoretype) + 1e-4);
+         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetSelectionScore(divesets[d], heurdata->scoretype, divecontext) + 1e-4);
       }
 
       *selection = sampleWeighted(scip, rng, weights, ndivesets);
@@ -470,14 +478,19 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    if( heurdata->divesets == NULL )
    {
       SCIP_CALL( findAndStoreDivesets(scip, heur, heurdata) );
-
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
    }
 
    divesets = heurdata->divesets;
    assert(divesets != NULL);
    assert(heurdata->ndivesets > 0);
+
+   SCIPdebugMsg(scip, "heurExecAdaptivediving: depth %d sols %d inf %u node %lld (last dive at %lld)\n",
+         SCIPgetDepth(scip),
+         SCIPgetNSols(scip),
+         nodeinfeasible,
+         SCIPgetNNodes(scip),
+         SCIPgetLastDivenode(scip)
+         );
 
    *result = SCIP_DELAYED;
 
@@ -499,7 +512,11 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
 
    /* don't dive two times at the same node */
    if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
+   {
+      SCIPdebugMsg(scip, "already dived at node here\n");
+
       return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTRUN;
 
@@ -574,6 +591,11 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/epsilon",
          "parameter that increases probability of exploration among divesets",
          &heurdata->epsilon, FALSE, 1.0, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useadaptivecontext",
+       "should the heuristic use its own statistics, or shared statistics?", &heurdata->useadaptivecontext, TRUE,
+       DEFAULT_USEADAPTIVECONTEXT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
