@@ -840,6 +840,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    for (j = propdata->nbg1; j < nbg1; ++j)
       bg1[bg1list[j]] = FALSE;
 
+   /* exit if no active permuations left */
+   if ( nactiveperms == 0 )
+      return SCIP_OKAY;
+
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
