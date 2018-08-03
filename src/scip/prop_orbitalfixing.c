@@ -109,6 +109,7 @@ struct SCIP_PropData
 {
    int                   npermvars;          /**< pointer to store number of variables for permutations */
    SCIP_VAR**            permvars;           /**< pointer to store variables on which permutations act */
+   int*                  permvarsevents;     /**< stores events caught for permvars */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
    int                   nperms;             /**< pointer to store number of permutations */
    int**                 permstrans;         /**< pointer to store transposed permutation generators as (npermvars x nperms) matrix */
@@ -384,6 +385,7 @@ SCIP_RETCODE getSymmetries(
       assert( propdata->npermvars > 0 );
       assert( propdata->permvarmap != NULL );
       assert( propdata->permvars != NULL );
+      assert( propdata->permvarsevents != NULL );
       assert( propdata->bg1list != NULL );
       assert( propdata->bg1 != NULL );
       assert( propdata->inactiveperms != NULL );
@@ -393,21 +395,26 @@ SCIP_RETCODE getSymmetries(
       /* free variables */
       for (v = 0; v < propdata->npermvars; ++v)
       {
-         if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
+         if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[v] >= 0 )
          {
+            /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
+             * variables, for which no event has been catched. Since there currently is no way of checking whether a var
+             * event has been caught for a particular variable, we use the stored eventfilter positions. */
             SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
-                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[v]) );
          }
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
       }
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
       propdata->nperms = -1;
       propdata->permstrans = NULL;
       propdata->permvars = NULL;
+      propdata->permvarsevents = NULL;
       propdata->bg1 = NULL;
       propdata->bg1list = NULL;
       propdata->nbg1 = 0;
@@ -438,6 +445,7 @@ SCIP_RETCODE getSymmetries(
 
       /* insert variables into hashmap and capture variables */
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1list, propdata->npermvars) );
       for (v = 0; v < propdata->npermvars; ++v)
@@ -446,13 +454,14 @@ SCIP_RETCODE getSymmetries(
          SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[v]) );
 
          propdata->bg1[v] = FALSE;
+         propdata->permvarsevents[v] = -1;
 
          /* only catch binary variables, since integer variables should be fixed pointwise; implicit integer variables are not branched on */
          if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
          {
-            /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1 */
+            /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1; also store filter position */
             SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
-                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, NULL) );
+                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, &propdata->permvarsevents[v]) );
          }
       }
       assert( propdata->nbg1 == 0 );
@@ -946,21 +955,29 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
 
    for (v = 0; v < propdata->npermvars; ++v)
    {
-      if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
+      assert( propdata->permvars != NULL );
+      assert( propdata->permvarsevents != NULL );
+
+      if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[v] >= 0 )
       {
+         /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
+          * variables, for which no event has been catched. Since there currently is no way of checking whether a var
+          * event has been caught for a particular variable, we use the stored eventfilter positions. */
          SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
-               propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, -1) );
+               propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[v]) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
    }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
    propdata->nperms = -1;
    propdata->permstrans = NULL;
    propdata->permvars = NULL;
+   propdata->permvarsevents = NULL;
    propdata->bg1 = NULL;
    propdata->bg1list = NULL;
    propdata->nbg1 = 0;
@@ -1160,6 +1177,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->nperms = -1;
    propdata->permstrans = NULL;
    propdata->permvars = NULL;
+   propdata->permvarsevents = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
    propdata->inactiveperms = NULL;
