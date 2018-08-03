@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,16 +44,21 @@
 #include "heur_prune.h"
 #include "heur_ascendprune.h"
 #include "portab.h"
+#include "branch_stp.h"
 
 #include "scip/scip.h"
 #include "scip/misc.h"
 #include "scip/cons_linear.h"
 #include <time.h>
+#if 0
 #ifdef WITH_UG
 #define ADDCUTSTOPOOL 1
 #else
 #define ADDCUTSTOPOOL 0
 #endif
+#endif
+
+#define ADDCUTSTOPOOL 0
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 
@@ -90,7 +95,9 @@
 #define DEFAULT_FLOWSEP        TRUE  /**< Try Flow-Cuts */
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
-
+#define DA_MAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
+#define DA_MAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
+#define DA_EPS (5.0 * 1e-7)
 
 /* *
 #define FLOW_FACTOR     100000
@@ -174,6 +181,7 @@ SCIP_RETCODE cut_add(
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
    int*                  ncuts,              /**< pointer to store number of cuts */
+   SCIP_Bool             local,              /**< is the cut local? */
    SCIP_Bool*            success             /**< pointer to store whether add cut be added */
    )
 {
@@ -194,7 +202,7 @@ SCIP_RETCODE cut_add(
    assert(g != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -642,6 +650,7 @@ SCIP_RETCODE sep_2cut(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   const int*            termorg,            /**< original terminals or NULL */
    int                   maxcuts,            /**< maximal number of cuts */
    int*                  ncuts               /**< pointer to store number of cuts */
    )
@@ -680,7 +689,6 @@ SCIP_RETCODE sep_2cut(
    int     e;
    int     root;
    int     head;
-   int     erev;
    int     count;
    int     terms;
    int     nedges;
@@ -744,42 +752,15 @@ SCIP_RETCODE sep_2cut(
 
    assert(nedges >= nnodes);
 
-   for( e = 0; e < nnodes; e += 2 )
+   for( k = 0; k < nnodes; k++ )
    {
-      erev = e + 1;
-
-      if( intree && SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
-      {
-         capa[e] = 0;
-         capa[erev] = 0;
-         residual[e] = 0;
-         residual[erev] = 0;
-
-         headarr[e] = 1;
-         headarr[erev] = 1;
-      }
-      else
-      {
-         capa[e]     = ((int)(xval[e] * FLOW_FACTOR + 0.5)) + CREEP_VALUE;
-         capa[erev]  = ((int)(xval[erev] * FLOW_FACTOR + 0.5)) + CREEP_VALUE;
-         residual[e] = capa[e];
-         residual[erev] = capa[erev];
-
-         headarr[e] = SCIPisFeasLT(scip, xval[e], 1.0) ? 1 : 0;
-         headarr[erev] = SCIPisFeasLT(scip, xval[erev], 1.0) ? 1 : 0;
-      }
-
-      w[e] = 0;
-      w[erev] = 0;
-      excess[e] = 0;
-      excess[erev] = 0;
-      edgearr[e] = -1;
-      edgearr[erev] = -1;
+      w[k] = 0;
+      excess[k] = 0;
    }
 
-   for( ; e < nedges; e += 2 )
+   for( e = 0; e < nedges; e += 2 )
    {
-      erev = e + 1;
+      const int erev = e + 1;
 
       if( intree && SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
       {
@@ -918,7 +899,7 @@ SCIP_RETCODE sep_2cut(
 
    while( terms > 0 )
    {
-      if( terms % 20 == 0 && SCIPisStopped(scip) )
+      if( ((unsigned) terms) % 32 == 0 && SCIPisStopped(scip) )
          break;
 
       /* look for reachable terminal */
@@ -957,6 +938,8 @@ SCIP_RETCODE sep_2cut(
 
          fclose(fptr);
 #endif
+         // declare cuts on branched-on (artificial) terminals as local
+         const SCIP_Bool localcut = (termorg != NULL && termorg[i] != g->term[i]);
 
          /* non-trivial cut? */
          if( w[i] != 1 )
@@ -989,7 +972,7 @@ SCIP_RETCODE sep_2cut(
 
          rerun = TRUE;
 
-         SCIP_CALL( cut_add(scip, conshdlr, g, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
+         SCIP_CALL( cut_add(scip, conshdlr, g, xval, capa, nested_cut || disjunct_cut, ncuts, localcut, &addedcut) );
          if( addedcut )
          {
             count++;
@@ -1093,6 +1076,123 @@ SCIP_RETCODE sep_2cut(
 }
 
 
+static
+SCIP_RETCODE dualascent_init(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int* RESTRICT   start,              /**< CSR start array [0,...,nnodes] */
+   const int* RESTRICT   edgearr,            /**< CSR ancestor edge array */
+   int                   root,               /**< the root */
+   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
+   int                   ncsredges,          /**< number of CSR edges */
+   int*                  gmark,              /**< array for marking nodes */
+   int* RESTRICT         active,             /**< active vertices mark */
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   GNODE**               gnodearr,           /**< array containing terminal nodes*/
+   SCIP_Real* RESTRICT   rescap,             /**< residual capacity */
+   SCIP_Real*            dualobj,            /**< dual objective */
+   int*                  augmentingcomponent /**< augmenting component */
+)
+{
+   const int nnodes = g->knots;
+   *dualobj = 0.0;
+   *augmentingcomponent = -1;
+
+   for( int i = 0; i < ncsredges; i++ )
+      rescap[i] = g->cost[edgearr[i]];
+
+   /* mark terminals as active, add all except root to pqueue */
+   for( int i = 0, k = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         active[i] = 0;
+         assert(g->grad[i] > 0);
+         if( i != root )
+         {
+            SCIP_Real warmstart = FALSE;
+            gnodearr[k]->number = i;
+            gnodearr[k]->dist = g->grad[i];
+
+            /* for variants with dummy terminals */
+            if( g->grad[i] == 2 )
+            {
+               int a;
+
+               for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
+                  if( g->cost[a] == 0.0 )
+                     break;
+
+               if( a != EAT_LAST )
+               {
+                  const int tail = g->tail[a];
+                  gnodearr[k]->dist += g->grad[tail] - 1;
+
+                  if( is_pseudoroot )
+                  {
+                     SCIP_Bool zeroedge = FALSE;
+                     for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
+                        if( g->cost[a] == 0.0 )
+                        {
+                           zeroedge = TRUE;
+                           gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
+                        }
+
+                     /* warmstart possible? */
+                     if( !zeroedge )
+                     {
+                        int j;
+                        int end;
+                        int prizearc;
+                        SCIP_Real prize;
+
+                        if( rescap[start[i]] == 0.0 )
+                           prizearc = start[i] + 1;
+                        else
+                           prizearc = start[i];
+
+                        prize = rescap[prizearc];
+                        assert(prize > 0.0);
+
+                        for( j = start[tail], end = start[tail + 1]; j != end; j++ )
+                           if( rescap[j] < prize )
+                              break;
+
+                        if( j == end )
+                        {
+                           warmstart = TRUE;
+                           *dualobj += prize;
+                           rescap[prizearc] = 0.0;
+                           for( j = start[tail], end = start[tail + 1]; j != end; j++ )
+                              rescap[j] -= prize;
+                        }
+                     }
+                  }
+               }
+
+               assert(gnodearr[k]->dist > 0);
+            }
+            if( !warmstart )
+               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
+            else if( *augmentingcomponent == -1 )
+            {
+               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
+               *augmentingcomponent = i;
+            }
+            k++;
+         }
+      }
+      else
+      {
+         active[i] = -1;
+      }
+   }
+
+   for( int i = 0; i < nnodes + 1; i++ )
+      gmark[i] = FALSE;
+
+   return SCIP_OKAY;
+}
 
 /**@} */
 
@@ -1143,6 +1243,9 @@ SCIP_DECL_CONSFREE(consFreeStp)
 static
 SCIP_DECL_CONSINITSOL(consInitsolStp)
 {  /*lint --e{715}*/
+#ifdef WITH_UG
+   SCIPStpConshdlrSetGraph(scip, SCIPprobdataGetGraph2(scip));
+#endif
    return SCIP_OKAY;
 }
 
@@ -1219,31 +1322,74 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpStp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   GRAPH* g;
+   int* termorg = NULL;
+   int* nodestatenew = NULL;
    int maxcuts;
    int ncuts = 0;
-   int i;
+   const SCIP_Bool atrootnode = (SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0);
+#ifndef NDEBUG
+   int nterms;
+#endif
 
    *result = SCIP_DIDNOTRUN;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   maxcuts = SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 ?
-      conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+   maxcuts = atrootnode ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
 
-   for( i = 0; i < nconss; ++i )
+   assert(nconss == 1);
+   consdata = SCIPconsGetData(conss[0]);
+
+   assert(consdata != NULL);
+
+   g = consdata->graph;
+   assert(g != NULL);
+
+#ifndef NDEBUG
+   nterms = g->terms;
+#endif
+
+   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+
+   /* change graph according to branch-and-bound terminal changes  */
+   if( !atrootnode && g->stp_type == STP_SPG )
    {
-      SCIP_CONSDATA* consdata;
+      const int nnodes = g->knots;
 
-      consdata = SCIPconsGetData(conss[i]);
+      SCIP_CALL(SCIPallocBufferArray(scip, &nodestatenew, nnodes));
+      SCIP_CALL(SCIPallocBufferArray(scip, &termorg, nnodes));
+      BMScopyMemoryArray(termorg, g->term, nnodes);
 
-      SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+      SCIPStpBranchruleInitNodeState(g, nodestatenew);
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
 
-      SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+      for( int k = 0; k < nnodes; k++ )
+         if( nodestatenew[k] == BRANCH_STP_VERTEX_TERM && !Is_term(g->term[k]) )
+            graph_knot_chg(g, k, 0);
    }
+
+   SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, termorg, maxcuts, &ncuts) );
 
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
+
+   /* restore graph */
+   if( !atrootnode && g->stp_type == STP_SPG )
+   {
+      for( int k = 0; k < g->knots; k++ )
+         if( g->term[k] != termorg[k] )
+            graph_knot_chg(g, k, termorg[k]);
+   }
+
+#ifndef NDEBUG
+   assert(g->terms == nterms);
+#endif
+
+   SCIPfreeBufferArrayNull(scip, &termorg);
+   SCIPfreeBufferArrayNull(scip, &nodestatenew);
 
    return SCIP_OKAY;
 }
@@ -1279,12 +1425,12 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsStp)
 {  /*lint --e{715}*/
    SCIP_Bool feasible;
-   SCIP_CONSDATA* consdata;
-   int i;
 
-   for( i = 0; i < nconss; i++ )
+   assert(nconss == 1);
+
+   for( int i = 0; i < nconss; i++ )
    {
-      consdata = SCIPconsGetData(conss[i]);
+      const SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
 
       SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
@@ -1302,23 +1448,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckStp)
-{  /*lint --e{715}*/
+{ /*lint --e{715}*/
+   const GRAPH* g = SCIPprobdataGetGraph2(scip);
    SCIP_Bool feasible;
-   SCIP_CONSDATA* consdata;
-   int i;
 
-   for( i = 0; i < nconss; i++ )
+   assert(g != NULL);
+
+   SCIP_CALL(SCIPStpValidateSol(scip, g, SCIPprobdataGetXval(scip, sol), &feasible));
+
+   if( !feasible )
    {
-      consdata = SCIPconsGetData(conss[i]);
-
-      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, sol), &feasible) );
-
-      if( !feasible )
-      {
-         *result = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
    }
+
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -1388,7 +1531,7 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocks(scip, vars[v], 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
 
    return SCIP_OKAY;
 }
@@ -1516,6 +1659,27 @@ SCIP_RETCODE SCIPcreateConsStp(
    return SCIP_OKAY;
 }
 
+/** sets graph */
+void SCIPStpConshdlrSetGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   assert(conshdlr != NULL);
+   assert(SCIPconshdlrGetNConss(conshdlr) > 0);
+
+   consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0]);
+
+   assert(consdata != NULL);
+
+   consdata->graph = SCIPprobdataGetGraph2(scip);
+   assert(consdata->graph != NULL);
+}
+
 /* dual ascent heuristic */
 SCIP_RETCODE SCIPStpDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1530,14 +1694,14 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
-   int                   nruns,              /**< number of dual ascent runs */
+   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
+   SCIP_Real             damaxdeviation,     /**< maximum deviation for dual-ascent ( -1.0 for default) */
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
+   SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
-   SCIP_Real dualobj;
-   SCIP_Real currscore;
    SCIP_Real* RESTRICT rescap;
    GNODE** gnodearr;
    int* RESTRICT edgearr;
@@ -1549,19 +1713,26 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT unsattails;
    int* RESTRICT gmark;
    int* RESTRICT active;
-   STP_Bool* RESTRICT mynodearrchar = NULL;
+   SCIP_Real dualobj;
+   SCIP_Real currscore;
+   const SCIP_Real maxdeviation = (damaxdeviation > 0.0) ? damaxdeviation : DEFAULT_DAMAXDEVIATION;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
-   int nnewedges;
+   int ncsredges;
    int norgcutverts;
    int stacklength;
+   int augmentingcomponent;
+   const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
+   /* should currently not  be activated */
+   assert(addconss || !addcuts);
    assert(g != NULL);
    assert(scip != NULL);
-   assert(nruns >= 0);
    assert(objval != NULL);
    assert(Is_term(g->term[root]));
+   assert(maxdeviation >= DA_MAXDEVIATION_LOWER && maxdeviation <= DA_MAXDEVIATION_UPPER);
+   assert(damaxdeviation == -1.0 || damaxdeviation > 0.0);
 
    if( nnodes == 1 )
       return SCIP_OKAY;
@@ -1570,13 +1741,17 @@ SCIP_RETCODE SCIPStpDualAscent(
    {
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
+
+      if( !addconss )
+      {
+         conshdlr = SCIPfindConshdlr(scip, "stp");
+         assert(conshdlr != NULL);
+      }
    }
    else
    {
       vars = NULL;
    }
-
-   dualobj = 0.0;
 
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
@@ -1595,11 +1770,6 @@ SCIP_RETCODE SCIPStpDualAscent(
       SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
    else
       rescap = redcost;
-
-   if( nodearrchar == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
-   else
-      mynodearrchar = nodearrchar;
 
    if( nodearrint == NULL )
       SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
@@ -1632,50 +1802,15 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_CALL( SCIPallocMemoryArray(scip, &stackarr, nnodes) );
 
    /* fill auxiliary adjacent vertex/edges arrays */
-   graph_get_csr(g, edgearr, tailarr, start, &nnewedges);
+   graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
 
-   /* mark terminals as active, add all except root to pqueue */
-   for( int i = 0, k = 0; i < nnodes; i++ )
+   /* initialize priority queue and res. capacity */
+   SCIP_CALL( dualascent_init(scip, g, start, edgearr, root, is_pseudoroot, ncsredges, gmark, active, pqueue,
+         gnodearr, rescap, &dualobj, &augmentingcomponent) );
+
+   /* mark whether an arc is satisfied (has capacity 0) */
+   for( int i = 0; i < ncsredges; i++ )
    {
-      if( Is_term(g->term[i]) )
-      {
-         active[i] = 0;
-         assert(g->grad[i] > 0);
-         if( i != root )
-         {
-            gnodearr[k]->number = i;
-            gnodearr[k]->dist = g->grad[i];
-            /* for variants with dummy terminals */
-            if( g->grad[i] == 2 )
-            {
-               int a;
-
-               for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
-                  if( g->cost[a] == 0.0 )
-                     break;
-
-               if( a != EAT_LAST )
-                  gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
-
-               assert(gnodearr[k]->dist > 0);
-            }
-
-            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodearr[k++]) );
-         }
-      }
-      else
-      {
-         active[i] = -1;
-      }
-   }
-
-   for( int i = 0; i < nnodes + 1; i++ )
-      gmark[i] = FALSE;
-
-   /* set residual capacities and mark whether an arc is satisfied (has capacity 0) */
-   for( int i = 0; i < nnewedges; i++ )
-   {
-      rescap[i] = g->cost[edgearr[i]];
 #ifdef BITFIELDSARRAY
       if( SCIPisZero(scip, rescap[i]) )
          SetBit(bitarr, i);
@@ -1831,11 +1966,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             assert(currscore <= nedges);
 
             if( nsolarcs > 1 )
-#if 1
-              currscore += (SCIP_Real) ((nsolarcs - 1) * (g->knots * 0.5));
-#else
-            currscore *= 1.0 + (nsolarcs - 1) * (nsolarcs - 1) * (0.2);
-#endif
+              currscore += (SCIP_Real) ((nsolarcs - 1) * (g->knots * 2.0));
          }
          else
          {
@@ -1846,9 +1977,11 @@ SCIP_RETCODE SCIPStpDualAscent(
          SCIPdebugMessage("DA: currscore %f prio1 %f prio2 %f \n", currscore, prio1, prio2);
 
          /* augmentation criteria met? */
-         if( ((currscore - prio1) / prio1) <= DEFAULT_DAMAXDEVIATION || currscore <= prio2 )
+         if( ((currscore - prio1) / prio1) <= maxdeviation || currscore <= prio2 )
          {
             SCIP_CONS* cons = NULL;
+            SCIP_ROW* row = NULL;
+
             int shift = 0;
             SCIP_Real min = FARAWAY;
             SCIP_Bool isactive = FALSE;
@@ -1889,13 +2022,21 @@ SCIP_RETCODE SCIPStpDualAscent(
 
             /* 3. step: perform augmentation */
 
-            /* create constraints? */
+            /* create constraints/cuts ? */
             if( addcuts )
             {
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
+                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0,
+                        SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
-               SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+               }
             }
 
             shift = 0;
@@ -1910,19 +2051,23 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                if( addcuts )
                {
-                  assert(cons != NULL);
                   assert(vars != NULL);
-                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+
+                  if( addconss )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[edgearr[a]], 1.0) );
                }
                rescap[a] -= min;
 
                assert(SCIPisGE(scip, rescap[a], 0.0));
 
-               if( rescap[a] == 0.0 )
+               if( rescap[a] <= DA_EPS )
                {
                   int tail = unsattails[i];
 
-                  assert(rescap[a] == 0.0);
+                  rescap[a] = 0.0;
+
                   assert(tail > 0);
                   assert(tailarr[a] > 0);
 
@@ -1961,8 +2106,21 @@ SCIP_RETCODE SCIPStpDualAscent(
 
             if( addcuts )
             {
-               assert(cons != NULL);
-               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               }
+               else
+               {
+                  SCIP_Bool infeasible;
+
+                  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+                  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+                  assert(!infeasible);
+               }
             }
 
             if( isactive )
@@ -1976,9 +2134,35 @@ SCIP_RETCODE SCIPStpDualAscent(
          }
          else
          {
-            /* reinsert active vertex */
-            gnodeact->dist = currscore;
-            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            SCIP_Bool insert = TRUE;
+
+            if( is_pseudoroot )
+            {
+               int i = start[v];
+               const int end = start[v + 1];
+
+               assert(end - i == 2);
+
+               for( ; i != end; i++ )
+                  if( rescap[i] != 0.0 )
+                     break;
+
+               if( i == end )
+               {
+                  if( augmentingcomponent == -1 )
+                     augmentingcomponent = v;
+
+                  if( augmentingcomponent != v )
+                     insert = FALSE;
+               }
+            }
+
+            if( insert )
+            {
+               /* reinsert active vertex */
+               gnodeact->dist = currscore;
+               SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            }
          }
 
          ENDOFLOOP:
@@ -1998,14 +2182,14 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
-   for( int i = nnewedges; i < nedges; i++ )
+   for( int i = ncsredges; i < nedges; i++ )
    {
       edgearr[i] = i;
       rescap[i] = g->cost[i];
    }
 
    /* re-extend rescap array */
-   for( int i = 0; i < nnewedges; i++ )
+   for( int i = 0; i < ncsredges; i++ )
    {
       if( edgearr[i] != i  )
       {
@@ -2050,7 +2234,17 @@ SCIP_RETCODE SCIPStpDualAscent(
    if( ascendandprune )
    {
        SCIP_Bool success;
+       STP_Bool* RESTRICT mynodearrchar = NULL;
+
+       if( nodearrchar == NULL )
+          SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
+       else
+          mynodearrchar = nodearrchar;
+
        SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, mynodearrchar, &success, TRUE) );
+
+       if( nodearrchar == NULL )
+          SCIPfreeBufferArray(scip, &mynodearrchar);
    }
 
    if( edgearrint == NULL )
@@ -2058,9 +2252,6 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    if( nodearrint == NULL )
       SCIPfreeBufferArray(scip, &cutverts);
-
-   if( nodearrchar == NULL )
-      SCIPfreeBufferArray(scip, &mynodearrchar);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
@@ -2081,9 +2272,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    int                   nruns               /**< number of dual ascent runs */
    )
 {
-#if 0
-   SCIP_CONSHDLR* conshdlr;
-#endif
+   SCIP_CONSHDLR* conshdlr = NULL;
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    GRAPH* transgraph;
@@ -2121,6 +2310,10 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    STP_Bool firstrun;
    STP_Bool* sat;
    STP_Bool* active;
+   const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+
+   /* should currently not  be activated */
+   assert(addconss || !addcuts);
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -2134,6 +2327,11 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    {
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
+      if( !addconss )
+      {
+         conshdlr = SCIPfindConshdlr(scip, "stp");
+         assert(conshdlr != NULL);
+      }
    }
    else
    {
@@ -2144,9 +2342,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    degsum = 0;
    offset = 0.0;
    dualobj = 0.0;
-#if 0
-   conshdlr = SCIPfindConshdlr(scip, "stp");
-#endif
+
    ncutverts = 0;
    norgcutverts = 0;
    maxdeviation = DEFAULT_DAMAXDEVIATION;
@@ -2318,10 +2514,8 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
          /* augmentation criteria met? */
          if( SCIPisLE(scip, (currscore - prio1) / prio1, maxdeviation) || (SCIPpqueueNElems(pqueue) == 0) )
          {
-            int in = FALSE;
-#if 0
+            SCIP_Bool in = FALSE;
             SCIP_ROW* row;
-#endif
             SCIP_CONS* cons = NULL;
 
             /* 2. pass: get minimum residual capacity among cut-arcs */
@@ -2360,14 +2554,20 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
             /* 3. pass: perform augmentation */
 
 
-            /* create constraint */
+            /* create constraint/row */
 
             if( addcuts )
             {
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-
-               SCIP_CALL( SCIPaddCons(scip, cons) );
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
+                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               }
+               else
+               {
+                  SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+                  SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+               }
             }
 
             dualobj += min;
@@ -2384,11 +2584,11 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
 
                   if( g->tail[a] == root && g->head[a] == v )
                      in = TRUE;
-#if 1
-                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
-#else
-                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
-#endif
+
+                  if( addconss )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
                }
                rescap[a] -= min;
 
@@ -2409,23 +2609,36 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
 
             if( addcuts )
             {
+               assert(vars != NULL);
+
                if( !in )
                {
-                  assert(vars != NULL);
                   for( i = g->outbeg[root]; i != EAT_LAST; i = g->oeat[i] )
-                  {
                      if( g->head[i] == v )
                      {
-                        SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+                        if( addconss )
+                           SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+                        else
+                           SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], 1.0) );
                      }
-                  }
                }
-#if 1
-               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-#else
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-#endif
 
+               if( addconss )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               }
+               else
+               {
+                  SCIP_Bool infeasible;
+                  assert(row != NULL);
+
+                  SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+                  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+                  assert(!infeasible);
+               }
             }
 
             continue;
@@ -2474,7 +2687,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
 
-   graph_free(scip, transgraph, TRUE);
+   graph_free(scip, &transgraph, TRUE);
 
    return SCIP_OKAY;
 

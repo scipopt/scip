@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,15 +23,20 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/def.h"
-#include "scip/set.h"
+#include "scip/branch.h"
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/lp.h"
-#include "scip/var.h"
 #include "scip/primal.h"
-#include "scip/branch.h"
+#include "scip/pub_event.h"
 #include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
+#include "scip/struct_event.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_set.h"
+#include "scip/struct_var.h"
+#include "scip/var.h"
 
 /* timing the execution methods for event handling takes a lot of time, so it is disabled */
 /* #define TIMEEVENTEXEC */
@@ -60,8 +65,9 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates an event handler */
-SCIP_RETCODE SCIPeventhdlrCreate(
+/** internal method for creating an event handler */
+static
+SCIP_RETCODE doEventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
@@ -82,6 +88,7 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    assert(eventexec != NULL);
 
    SCIP_ALLOC( BMSallocMemory(eventhdlr) );
+   BMSclearMemory(*eventhdlr);
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*eventhdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*eventhdlr)->desc, desc, strlen(desc)+1) );
    (*eventhdlr)->eventcopy = eventcopy;
@@ -102,6 +109,32 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    return SCIP_OKAY;
 }
 
+/** creates an event handler */
+SCIP_RETCODE SCIPeventhdlrCreate(
+   SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of event handler */
+   const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol)),  /**< solving process initialization method of event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol)),  /**< solving process deinitialization method of event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
+   SCIP_DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   assert(eventhdlr != NULL);
+   assert(set != NULL);
+
+   SCIP_CALL_FINALLY( doEventhdlrCreate(eventhdlr, name, desc, eventcopy, eventfree, eventinit, eventexit,
+      eventinitsol, eventexitsol, eventdelete, eventexec, eventhdlrdata), (void) SCIPeventhdlrFree(eventhdlr, set) );
+
+   return SCIP_OKAY;
+}
+
 /** calls destructor and frees memory of event handler */
 SCIP_RETCODE SCIPeventhdlrFree(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
@@ -109,9 +142,12 @@ SCIP_RETCODE SCIPeventhdlrFree(
    )
 {
    assert(eventhdlr != NULL);
-   assert(*eventhdlr != NULL);
-   assert(!(*eventhdlr)->initialized);
    assert(set != NULL);
+
+   if( *eventhdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(!(*eventhdlr)->initialized);
 
    /* call destructor of event handler */
    if( (*eventhdlr)->eventfree != NULL )
@@ -123,8 +159,8 @@ SCIP_RETCODE SCIPeventhdlrFree(
    SCIPclockFree(&(*eventhdlr)->eventtime);
    SCIPclockFree(&(*eventhdlr)->setuptime);
 
-   BMSfreeMemoryArray(&(*eventhdlr)->name);
-   BMSfreeMemoryArray(&(*eventhdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*eventhdlr)->name);
+   BMSfreeMemoryArrayNull(&(*eventhdlr)->desc);
    BMSfreeMemory(eventhdlr);
 
    return SCIP_OKAY;

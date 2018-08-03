@@ -69,6 +69,21 @@ You can also run a single test, e.g. `
  >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
 ```
 
+Note, that parameterized tests will not work on systems that have address
+space layout randomization (ASLR) enabled. One can disable ASLR for a
+specific process (and its children) by calling it in a modified environment, e.g.,
+```
+ >> setarch `uname -m` -R ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+```
+
+This is the approach that is also followed by the Makefile when running
+the whole test suite.
+
+Alternatively, one can disable ASLR system-wide (requires root access):
+```
+ >> sudo echo 0 > /proc/sys/kernel/randomize_va_space
+```
+
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
 
 ## Debug (up to Criterion 2.2.2)

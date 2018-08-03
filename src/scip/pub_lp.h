@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,18 +25,13 @@
 #define __SCIP_PUB_LP_H__
 
 
-#include <stdio.h>
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_lp.h"
-#include "scip/type_var.h"
-#include "scip/type_sol.h"
-#include "scip/type_sepa.h"
-#include "scip/type_misc.h"
 #include "lpi/type_lpi.h"
+#include "scip/def.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
+#include "scip/type_sepa.h"
+#include "scip/type_var.h"
+#include "scip/type_misc.h"
 
 #ifdef NDEBUG
 #include "scip/struct_lp.h"

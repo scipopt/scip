@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,8 +24,10 @@
 #ifndef __SCIP_DIALOG_DEFAULT_H__
 #define __SCIP_DIALOG_DEFAULT_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_dialog.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +70,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 /** dialog execution method for the cliquegraph command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph);
+
+/** dialog execution method for the display benders command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBenders);
 
 /** dialog execution method for the display branching command */
 EXTERN
@@ -152,6 +158,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
 /** dialog execution method for the display of solutions in the pool command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool);
+
+/** dialog execution method for the display subproblem command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem);
+
+/** dialog execution method for the display subsolution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution);
 
 /** dialog execution method for the display statistics command */
 EXTERN

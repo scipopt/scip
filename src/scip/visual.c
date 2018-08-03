@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPvisualCreate(
    (*visual)->lastnode = NULL;
    (*visual)->lastcolor = SCIP_VBCCOLOR_NONE;
    (*visual)->userealtime = FALSE;
+   (*visual)->lastlowerbound = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -118,6 +119,8 @@ SCIP_RETCODE SCIPvisualInit(
    assert( set->visual_vbcfilename != NULL );
    assert( set->visual_bakfilename != NULL );
    assert( visual->nodenum == NULL );
+
+   visual->lastlowerbound = -SCIPsetInfinity(set);
 
    /* check whether we should initialize VBC output */
    if ( set->visual_vbcfilename[0] != '-' || set->visual_vbcfilename[1] != '\0' )
@@ -662,13 +665,17 @@ void SCIPvisualFoundSolution(
    SCIP_SOL*             sol                 /**< solution that has been found */
    )
 {
-   if( node == NULL || !set->visual_dispsols || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( node == NULL || ! set->visual_dispsols )
       return;
 
    if( visual->vbcfile != NULL )
    {
       SCIP_Real obj;
       size_t nodenum;
+
+      /* if we are in probing, determine original parent node */
+      while ( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+         node = SCIPnodeGetParent(node);
 
       /* get node num from hash map */
       assert(node != NULL);
@@ -757,19 +764,29 @@ void SCIPvisualLowerbound(
 {
    assert(visual != NULL);
 
+   /* do not output if not required */
+   if ( ! set->visual_displb )
+      return;
+
    /* check, if VBC output should be created */
    if( visual->vbcfile == NULL )
       return;
 
-   /* determine external lower bound */
-   if( set->visual_objextern )
-      lowerbound = SCIPretransformObj(set->scip, lowerbound);
+   /* only output if lowerbound has improved and is finite */
+   if ( ! SCIPsetIsInfinity(set, lowerbound) && SCIPsetIsGT(set, lowerbound, visual->lastlowerbound) )
+   {
+      visual->lastlowerbound = lowerbound;
 
-   printTime(visual, stat, TRUE);
-   if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE )
-      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", lowerbound);
-   else
-      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", lowerbound);
+      /* determine external lower bound */
+      if( set->visual_objextern )
+         lowerbound = SCIPretransformObj(set->scip, lowerbound);
+
+      printTime(visual, stat, TRUE);
+      if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE )
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", lowerbound);
+      else
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", lowerbound);
+   }
 
    /* do nothing for BAK */
 }

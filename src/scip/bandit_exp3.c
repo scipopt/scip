@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,9 +20,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
+#include "scip/bandit.h"
 #include "scip/bandit_exp3.h"
+#include "scip/pub_bandit.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/scip_bandit.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_randnumgen.h"
 
 #define BANDIT_NAME "exp3"
 #define NUMTOL 1e-6
@@ -51,7 +56,6 @@ struct SCIP_BanditData
 /** callback to free bandit specific data structures */
 SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    int nactions;
    assert(bandit != NULL);
@@ -72,7 +76,6 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3)
 /** selection callback for bandit selector */
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3)
 {  /*lint --e{715}*/
-
    SCIP_BANDITDATA* banditdata;
    SCIP_RANDNUMGEN* rng;
    SCIP_Real randnr;
@@ -92,7 +95,6 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3)
    rng = SCIPbanditGetRandnumgen(bandit);
    assert(rng != NULL);
    nactions = SCIPbanditGetNActions(bandit);
-
 
    /* draw a random number between 0 and 1 */
    randnr = SCIPrandomGetReal(rng, 0.0, 1.0);
@@ -361,7 +363,7 @@ SCIP_Real SCIPgetProbabilityExp3(
    return (1.0 - banditdata->gamma) * banditdata->weights[action] / banditdata->weightsum + banditdata->gamma / (SCIP_Real)SCIPbanditGetNActions(exp3);
 }
 
-/* include virtual function table for Exp.3 bandit algorithms */
+/** include virtual function table for Exp.3 bandit algorithms */
 SCIP_RETCODE SCIPincludeBanditvtableExp3(
    SCIP*                 scip                /**< SCIP data structure */
    )

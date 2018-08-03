@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,11 +20,22 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/heur_zirounding.h"
-#include "scip.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
@@ -41,6 +52,7 @@
 #define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
 #define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */
 
+#define MINSHIFT                   1e-4   /**< minimum shift value for every single step */
 
 /*
  * Data structures
@@ -143,7 +155,7 @@ void calculateBounds(
     * if one of these values is significantly < 0.0, this will cause the abort of execution of the heuristic so that
     * infeasible solutions are avoided
     */
-   for( i = 0; i < ncolvals && (*lowerbound > 0.0 || *upperbound > 0.0); ++i )
+   for( i = 0; i < ncolvals && MAX(*lowerbound, *upperbound) >= MINSHIFT; ++i )
    {
       SCIP_ROW* row;
       int       rowpos;
@@ -269,7 +281,7 @@ SCIP_RETCODE updateSlacks(
             SCIP_Real slackvarsolval;
 
             assert(slackvars[rowpos] != NULL);
-            assert(!SCIPisFeasZero(scip, slackcoeffs[rowpos]));
+            assert(!SCIPisZero(scip, slackcoeffs[rowpos]));
 
             slackvarsolval = SCIPgetSolVal(scip, sol, slackvars[rowpos]);
             slackvarshiftval = -val / slackcoeffs[rowpos];
@@ -657,15 +669,10 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             coeffslackvar = slackvarcoeffs[i];
             assert(!SCIPisFeasZero(scip, coeffslackvar));
 
-            ubgap = ubslackvar - solvalslackvar;
-            lbgap = solvalslackvar - lbslackvar;
+            ubgap = MAX(0.0, ubslackvar - solvalslackvar);
+            lbgap = MAX(0.0, solvalslackvar - lbslackvar);
 
-            if( SCIPisFeasZero(scip, ubgap) )
-              ubgap = 0.0;
-            if( SCIPisFeasZero(scip, lbgap) )
-              lbgap = 0.0;
-
-            if( SCIPisFeasPositive(scip, coeffslackvar) )
+            if( SCIPisPositive(scip, coeffslackvar) )
             {
               if( !SCIPisInfinity(scip, lbslackvar) )
                 upslacks[i] += coeffslackvar * lbgap;
@@ -743,6 +750,16 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          if( numericalerror )
             goto TERMINATE;
 
+         /* continue if only marginal shifts are possible */
+         if( MAX(upperbound, lowerbound) < MINSHIFT )
+         {
+            /* stop immediately if a variable has not been rounded during the last round */
+            if( nroundings == heurdata->maxroundingloops )
+               break;
+            else
+               continue;
+         }
+
          /* calculate the possible values after shifting */
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
@@ -812,7 +829,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             if( c < currentlpcands )
                c--;
          }
-         else if( nroundings == heurdata->maxroundingloops - 1 )
+         else if( nroundings == heurdata->maxroundingloops )
             goto TERMINATE;
       }
    }

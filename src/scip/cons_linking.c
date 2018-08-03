@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,13 +37,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "linking"
@@ -430,6 +452,8 @@ SCIP_RETCODE consdataCreateBinvars(
 
    /* allocate block memory for the binary variables */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->binvars, nbinvars) );
+   /* allocate block memory for the binary variables */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nbinvars) );
    consdata->sizebinvars = nbinvars;
 
    /* check if the integer variable is fixed */
@@ -1747,7 +1771,6 @@ SCIP_RETCODE separateCons(
       else
          addcut = !checkCons(scip, cons, sol);
 
-
       if( !addcut )
       {
          /* constraint was feasible -> increase age */
@@ -2300,7 +2323,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
                /* check that at least one binary variable is fixed */
                if( pos == -1 )
                {
-                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one");
+                  SCIPinfoMessage(scip, NULL, "violation: none of the binary variables is set to one\n");
                }
                else if( !SCIPisFeasEQ(scip, (SCIP_Real) (consdata->vals[pos]), SCIPgetSolVal(scip, sol, consdata->intvar)) )
                {
@@ -2692,7 +2715,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinking)
 {  /*lint --e{715}*/
-
    SCIP_CONSDATA* consdata;
    SCIP_VAR* intvar;
    int v;
@@ -2757,7 +2779,6 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5); /*@repair: neu*/
       assert( SCIPisFeasEQ(scip, SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, intvar, bdchgidx, FALSE)) );
       assert( SCIPisFeasEQ(scip, SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, intvar, bdchgidx, FALSE)) );
-
 
       SCIP_CALL( SCIPaddConflictLb( scip, intvar, bdchgidx) );
    }
@@ -2871,16 +2892,18 @@ SCIP_DECL_CONSLOCK(consLockLinking)
    SCIP_CONSDATA* consdata;
    int b;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* look integer variable in both directions */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* look binary variables in both directions */
    for( b = 0; b < consdata->nbinvars; ++b )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[b], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvars[b], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -3329,6 +3352,12 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
+   /* create binary variables for the integer domain */
+   if( nbinvars == 0 )
+   {
+      SCIP_CALL( consdataCreateBinvars(scip, *cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
+   }
+
    /* insert linking constraint into the hash map */
    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varmap, getHashmapKey(intvar), *cons) );
    assert(SCIPhashmapExists(conshdlrdata->varmap, getHashmapKey(intvar)));
@@ -3420,7 +3449,6 @@ SCIP_VAR* SCIPgetIntvarLinking(
    assert(consdata != NULL);
 
    return consdata->intvar;
-
 }
 
 /** returns the binary variables of the linking constraint */

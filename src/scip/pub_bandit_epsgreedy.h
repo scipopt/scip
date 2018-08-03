@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,7 +25,9 @@
 #define SRC_SCIP_PUB_BANDIT_EPSGREEDY_H_
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_bandit.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +57,11 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
+   SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
+   int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
+                                               *  only relevant if exponential decay is enabled
+                                               */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
    );

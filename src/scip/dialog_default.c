@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,15 +22,61 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/dialog_default.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
-#include "scip/pub_cons.h"
-#include "scip/type_cons.h"
 #include "scip/cons_linear.h"
-
+#include "scip/dialog_default.h"
+#include "scip/pub_benders.h"
+#include "scip/pub_branch.h"
+#include "scip/pub_compr.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_dialog.h"
+#include "scip/pub_disp.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nodesel.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_pricer.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_relax.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_compr.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_dialog.h"
+#include "scip/scip_disp.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_relax.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_validation.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 
 
 /** executes a menu dialog */
@@ -307,6 +353,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 /** dialog execution method for the change add constraint */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
@@ -359,6 +406,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 /** dialog execution method for the change bounds command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
 {  /*lint --e{715}*/
+   assert( scip != NULL );
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       SCIPdialogMessage(scip, NULL, "cannot call method after problem was transformed\n");
@@ -615,6 +663,38 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
          }
       }
    }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display benders command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBenders)
+{  /*lint --e{715}*/
+   SCIP_BENDERS** benders;
+   int nbenders;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   benders = SCIPgetBenders(scip);
+   nbenders = SCIPgetNBenders(scip);
+
+   /* display list of benders */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " benders              priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  -----------\n");
+   for( i = 0; i < nbenders; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPbendersGetName(benders[i]));
+      if( strlen(SCIPbendersGetName(benders[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPbendersGetPriority(benders[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPbendersGetDesc(benders[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1354,6 +1434,317 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display subproblem command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
+{  /*lint --e{715}*/
+   SCIP_BENDERS** benders;
+   char prompt[SCIP_MAXSTRLEN];
+   int nactivebenders;
+   int nbenders;
+   SCIP_Bool endoffile;
+   char* idxstr;
+   char* endstr;
+   int count;
+   int idx;
+   int subidx;
+   int i;
+
+   idxstr = NULL;
+   idx = 0;
+   subidx = 0;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   if(SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED)
+   {
+      SCIPdialogMessage(scip, NULL, "problem must be transformed to display subproblems\n\n");
+      return SCIP_OKAY;
+   }
+
+   /* if there are no active Benders' decompositions, then there are no subproblem */
+   nactivebenders = SCIPgetNActiveBenders(scip);
+   if( nactivebenders == 0 )
+   {
+      SCIPdialogMessage(scip, NULL, "no active Benders' decomposition\n\n");
+      return SCIP_OKAY;
+   }
+
+   nbenders = SCIPgetNBenders(scip);
+   benders = SCIPgetBenders(scip);
+
+   /* if there is only one active Benders decomposition, then there is no need to display the list of Benders */
+   if( nactivebenders > 1 )
+   {
+      SCIPdialogMessage(scip, NULL, "Active Benders' decomposition:\n");
+      count = 0;
+      for( i = 0; i < nbenders; i++ )
+      {
+         if( SCIPbendersIsActive(benders[i]) )
+         {
+            assert(i >= count);
+            benders[count] = benders[i];
+            SCIPdialogMessage(scip, NULL, "  %d: %s\n", count, SCIPbendersGetName(benders[count]));
+            count++;
+         }
+      }
+
+      /* parse decomposition number */
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of decomposition [0-%d]: ", nactivebenders-1);
+
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
+
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
+   }
+   else
+      idx = 0;
+
+   if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
+   {
+      int nsubproblems;
+
+      if ( idx < 0 || idx >= nactivebenders)
+      {
+         SCIPdialogMessage(scip, NULL, "Decomposition index out of bounds [0-%d].\n", nactivebenders-1);
+         return SCIP_OKAY;
+      }
+
+      nsubproblems = SCIPbendersGetNSubproblems(benders[idx]);
+
+      /* if there is only one subproblem, then there is no need to ask for a prompt */
+      if( nsubproblems > 1 )
+      {
+         /* parse subproblem number */
+         (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of subproblem [0-%d] or -1 for all: ", nsubproblems-1);
+
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
+
+         if( endoffile )
+         {
+            *nextdialog = NULL;
+            return SCIP_OKAY;
+         }
+      }
+      else
+         subidx = 0;
+
+      if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
+      {
+         SCIP* subproblem;
+         int nsubdisplay;
+
+         if ( subidx < -1 || subidx >= nsubproblems)
+         {
+            SCIPdialogMessage(scip, NULL, "Subproblem index out of bounds [0-%d] or -1.\n", nsubproblems-1);
+            return SCIP_OKAY;
+         }
+
+         if( subidx == -1 )
+            nsubdisplay = nsubproblems;
+         else
+            nsubdisplay = 1;
+
+         for( i = 0; i < nsubdisplay; i++ )
+         {
+            if( nsubdisplay > 1 )
+               subidx = i;
+
+            subproblem = SCIPbendersSubproblem(benders[idx], subidx);
+            assert(subproblem != NULL);
+
+            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            {
+               SCIPdialogMessage(scip, NULL, "\n");
+               SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
+               SCIP_CALL( SCIPprintOrigProblem(subproblem, NULL, "cip", FALSE) );
+               SCIPdialogMessage(scip, NULL, "\n");
+            }
+            else
+               SCIPdialogMessage(scip, NULL, "no problem available\n");
+         }
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display subsolution command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
+{  /*lint --e{715}*/
+   SCIP_BENDERS** benders;
+   char prompt[SCIP_MAXSTRLEN];
+   int nactivebenders;
+   int nbenders;
+   SCIP_Bool endoffile;
+   SCIP_Bool printzeros;
+   char* idxstr;
+   char* endstr;
+   int count;
+   int idx;
+   int subidx;
+   int i;
+
+   idxstr = NULL;
+   idx = 0;
+   subidx = 0;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   if(SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED)
+   {
+      SCIPdialogMessage(scip, NULL, "problem must be transformed to display subproblems\n\n");
+      return SCIP_OKAY;
+   }
+
+   /* if there are no active Benders' decompositions, then there are no subproblem */
+   nactivebenders = SCIPgetNActiveBenders(scip);
+   if( nactivebenders == 0 )
+   {
+      SCIPdialogMessage(scip, NULL, "no active Benders' decomposition\n\n");
+      return SCIP_OKAY;
+   }
+
+   nbenders = SCIPgetNBenders(scip);
+   benders = SCIPgetBenders(scip);
+
+   /* if there is only one active Benders decomposition, then there is no need to display the list of Benders */
+   if( nactivebenders > 1 )
+   {
+      SCIPdialogMessage(scip, NULL, "Active Benders' decomposition:\n");
+      count = 0;
+      for( i = 0; i < nbenders; i++ )
+      {
+         if( SCIPbendersIsActive(benders[i]) )
+         {
+            assert(i >= count);
+            benders[count] = benders[i];
+            SCIPdialogMessage(scip, NULL, "  %d: %s\n", count, SCIPbendersGetName(benders[count]));
+            count++;
+         }
+      }
+
+      /* parse decomposition number */
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of decomposition [0-%d]: ", nactivebenders-1);
+
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
+
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
+   }
+   else
+      idx = 0;
+
+   if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
+   {
+      int nsubproblems;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+
+      if ( idx < 0 || idx >= nactivebenders)
+      {
+         SCIPdialogMessage(scip, NULL, "Decomposition index out of bounds [0-%d].\n", nactivebenders-1);
+         return SCIP_OKAY;
+      }
+
+      nsubproblems = SCIPbendersGetNSubproblems(benders[idx]);
+
+      /* if there is only one subproblem, then there is no need to ask for a prompt */
+      if( nsubproblems > 1 )
+      {
+         /* parse subproblem number */
+         (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of subproblem [0-%d] or -1 for all: ", nsubproblems-1);
+
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
+
+         if( endoffile )
+         {
+            *nextdialog = NULL;
+            return SCIP_OKAY;
+         }
+      }
+      else
+         subidx = 0;
+
+      if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
+      {
+         SCIP* subproblem;
+         SCIP_SOL* bestsol;
+         int nsubdisplay;
+         SCIP_Bool infeasible;
+
+         if ( subidx < -1 || subidx >= nsubproblems)
+         {
+            SCIPdialogMessage(scip, NULL, "Subproblem index out of bounds [0-%d] or -1.\n", nsubproblems-1);
+            return SCIP_OKAY;
+         }
+
+         bestsol = SCIPgetBestSol(scip);
+
+         if( subidx == -1 )
+            nsubdisplay = nsubproblems;
+         else
+            nsubdisplay = 1;
+
+         for( i = 0; i < nsubdisplay; i++ )
+         {
+            if( nsubdisplay > 1 )
+               subidx = i;
+
+            subproblem = SCIPbendersSubproblem(benders[idx], subidx);
+            assert(subproblem != NULL);
+
+            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            {
+               /* setting up the subproblem with the best solution to the master problem */
+               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
+
+               /* solving the subproblem using the best solution to the master problem */
+               SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
+                     SCIP_BENDERSENFOTYPE_CHECK, TRUE, NULL) );
+
+               if( infeasible )
+                  SCIPdialogMessage(scip, NULL, "subproblem %d is infeasible.\n", subidx);
+               else
+               {
+                  SCIPdialogMessage(scip, NULL, "\n");
+                  SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
+                  if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
+                     SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                  else
+                     SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
+                  SCIPdialogMessage(scip, NULL, "\n");
+               }
+
+               /* freeing the subproblem */
+               SCIP_CALL( SCIPfreeBendersSubproblem(scip, benders[idx], subidx) );
+            }
+            else
+               SCIPdialogMessage(scip, NULL, "no problem available\n");
+         }
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display statistics command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 {  /*lint --e{715}*/
@@ -2037,7 +2428,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
-
       }
 
       break;
@@ -2838,7 +3228,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   (void)strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
+   (void)SCIPstrncpy(filename, valuestr, SCIP_MAXSTRLEN);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -3538,6 +3928,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* display benders */
+   if( !SCIPdialogHasEntry(submenu, "benders") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayBenders, NULL, NULL,
+            "benders", "display Benders' decomposition", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display branching */
    if( !SCIPdialogHasEntry(submenu, "branching") )
    {
@@ -3765,6 +4166,28 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplaySolutionPool, NULL, NULL,
             "sols", "display solutions from pool", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display benders decomposition subproblem */
+   if( !SCIPdialogHasEntry(submenu, "subproblem") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySubproblem, NULL, NULL,
+            "subproblem", "display subproblem of a Benders' decomposition", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display the best solution to the benders decomposition subproblem */
+   if( !SCIPdialogHasEntry(submenu, "subsolution") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySubSolution, NULL, NULL,
+            "subsolution", "display solution to the Benders' decomposition subproblems given the best master problem solution", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

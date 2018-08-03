@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,20 +25,43 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include "scip/heur_dualval.h"
-#include "scip/scip.h"
-#include "scip/cons_linear.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/type_expr.h"
+#include "nlpi/type_nlpi.h"
 #include "scip/cons_indicator.h"
-#include "scip/cons_varbound.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_knapsack.h"
-
-#include "nlpi/nlpi.h"
-#include "nlpi/nlpioracle.h"
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/cons_varbound.h"
+#include "scip/heur_dualval.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "dualval"
 #define HEUR_DESC             "primal heuristic using dual values"
@@ -1222,8 +1245,8 @@ SCIP_RETCODE createSubSCIP(
                         indicatorcopy = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, indicatorbinvar);
                      else
                      {
-                        negatedvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
-                        SCIP_CALL( SCIPgetNegatedVar(heurdata->subscip, negatedvar, &indicatorcopy) );
+                        indicatorcopy = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, negatedvar);
+                        SCIP_CALL( SCIPgetNegatedVar(heurdata->subscip, indicatorcopy, &indicatorcopy) );
                      }
                   }
 
@@ -1560,20 +1583,24 @@ SCIP_RETCODE fixDiscreteVars(
       if ( SCIPhashmapGetImage(heurdata->indicopymap, subvar) != NULL )
          subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->indicopymap, subvar);
 
-      /* get value of the variables, taking NULL as refpoint gives us the current LP solution,
-       * otherwise we get our start point */
-      fixval = SCIPgetSolVal(scip, refpoint, heurdata->integervars[i]);
-
-      /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large
-       * values - thus, we set to 0.0 here and project on bounds below
-       */
-      if( REALABS(fixval) > BIG_VALUE && refpoint == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      /* if we do not really have a startpoint, we set to 0.0 here and project on bounds below */
+      if( refpoint == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
          fixval = 0.0;
+      else
+      {
+         /* get value of the variables (NULL as refpoint gives the current LP solution, otherwise the start point) */
+         fixval = SCIPgetSolVal(scip, refpoint, heurdata->integervars[i]);
 
-      /* round fractional variables to the nearest integer,
-       * use exact integral value, if the variable is only integral within numerical tolerances
-       */
-      fixval = SCIPfloor(scip, fixval+0.5);
+         /* take care that we do not fix variables to very large values (project on bounds below) */
+         if( REALABS(fixval) > BIG_VALUE )
+            fixval = 0.0;
+         else
+         {
+            /* round fractional variables to the nearest integer, use exact integral value, if the variable is only
+             * integral within numerical tolerances */
+            fixval = SCIPfloor(scip, fixval + 0.5);
+         }
+      }
 
       /* adjust value to the global bounds of the corresponding SCIP variable */
       fixval = MAX(fixval, SCIPvarGetLbGlobal(heurdata->integervars[i]));  /*lint !e666*/
@@ -1749,7 +1776,6 @@ SCIP_RETCODE computeRanks(
 
             assert(dualvalue != NULL);
             ranks[j] = (*dualvalue);
-
          }
          else /* if we have an indicator variable */
          {

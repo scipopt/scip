@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,14 +27,20 @@
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
 
-
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef WITH_DEBUG_SOLUTION
+#include "blockmemshell/memory.h"
+#include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_prob.h"
-#include "scip/type_tree.h"
 #include "scip/type_misc.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -284,6 +290,34 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 #else
 
 #define SCIPdebugCheckBInvRow(scip,r,coef) SCIP_OKAY
+
+#endif
+
+/** checks, if SCIP is in one of the feasible stages */
+#ifndef NDEBUG
+
+SCIP_RETCODE SCIPcheckStage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           method,             /**< method that was called */
+   SCIP_Bool             init,               /**< may method be called in the INIT stage? */
+   SCIP_Bool             problem,            /**< may method be called in the PROBLEM stage? */
+   SCIP_Bool             transforming,       /**< may method be called in the TRANSFORMING stage? */
+   SCIP_Bool             transformed,        /**< may method be called in the TRANSFORMED stage? */
+   SCIP_Bool             initpresolve,       /**< may method be called in the INITPRESOLVE stage? */
+   SCIP_Bool             presolving,         /**< may method be called in the PRESOLVING stage? */
+   SCIP_Bool             exitpresolve,       /**< may method be called in the EXITPRESOLE stage? */
+   SCIP_Bool             presolved,          /**< may method be called in the PRESOLVED stage? */
+   SCIP_Bool             initsolve,          /**< may method be called in the INITSOLVE stage? */
+   SCIP_Bool             solving,            /**< may method be called in the SOLVING stage? */
+   SCIP_Bool             solved,             /**< may method be called in the SOLVED stage? */
+   SCIP_Bool             exitsolve,          /**< may method be called in the EXITSOLVE stage? */
+   SCIP_Bool             freetrans,          /**< may method be called in the FREETRANS stage? */
+   SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
+   );
+#else
+
+#define SCIPcheckStage(scip,method,init,problem,transforming,transformed,initpresolve,presolving,exitpresolve,presolved, \
+   initsolve,solving,solved,exitsolve,freetrans,freescip) SCIP_OKAY
 
 #endif
 

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -124,75 +124,7 @@ static void trail(
    }
 }
 #endif
-#if 0
-/*---------------------------------------------------------------------------*/
-/*--- Name     : Trail                                                    ---*/
-/*--- Function : Durchlaeuft einen Graphen entsprechend einer Loesung und ---*/
-/*---            stellt fest ob er bei allen Knoten vorbeikommt           ---*/
-/*--- Parameter: Startknoten, Loesung, Herkunft, Schongewesenliste        ---*/
-/*--- Returns  : Nichts                                                   ---*/
-/*---------------------------------------------------------------------------*/
-static void trail2(
-   const GRAPH*  g,
-   int           layer,
-   const double* xval,
-   STP_Bool*         connected,
-   int           max_hops)
-{
-   int* stackstart = malloc((size_t)g->knots * sizeof(int));
-   int* stackedge = malloc((size_t)g->knots * sizeof(int));
-   int* stacktail = malloc((size_t)g->knots * sizeof(int));
-   int k;
-   int i = g->source;
-   int stacksize = 1;
 
-   stackstart[0] = i;
-   stackedge[0] = g->outbeg[i];
-   stacktail[0] = -1;
-
-   while( stacksize > 0 )
-   {
-      k = stackedge[stacksize-1];
-
-      printf("stacksize: %d, edge %d: %d --> %d\n", stacksize, k, g->tail[k], g->head[k]);
-
-      if ( k == EAT_LAST )
-      {
-         --stacksize;
-      }
-      else if ((g->head[k] != stacktail[stacksize-1]) && (xval[k] + EPSILON > 1.0))
-      {
-         assert(connected[g->head[k]] >= 0);
-         if( connected[g->head[k]] < 2 )
-         {
-            ++(connected[g->head[k]]);
-
-            if ((connected[i] < 2) && (stacksize < max_hops + 1))
-            {
-               stackstart[stacksize] = g->head[k];
-               stackedge[stacksize] = g->outbeg[g->head[k]];
-               stacktail[stacksize] = stackstart[stacksize-1];
-
-               printf("stack: size=%d start[%d]=%d, edge[%d]=%d, tail[%d]=%d\n",
-                  stacksize+1, stacksize, stackstart[stacksize], stacksize, stackedge[stacksize],
-                  stacksize, stacktail[stacksize]);
-
-               ++stacksize;
-               continue;
-            }
-         }
-      }
-      if (stacksize > 0)
-         stackedge[stacksize-1] = g->oeat[k];
-   }
-
-   free(stacktail);
-   free(stackedge);
-   free(stackstart);
-
-   printf("done\n");
-}
-#endif
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Validate Solution                                        ---*/
 /*--- Function : Stellt fuer eine (Teil-)Loesung fest, ob sie zulaessig   ---*/
@@ -229,17 +161,10 @@ SCIP_RETCODE SCIPStpValidateSol(
    *feasible = FALSE;
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
-#if 0
-      if (layer > 0)
-         memset(connected, 0, (size_t)g->knots * sizeof(STP_Bool));
-#endif
-#if 1
       trail(g, g->source, xval + layer * g->edges, -1,
          connected,
          0, 1000000000);
-#else
-      trail2(g, layer, xval + layer * g->edges, connected, 1000000000);
-#endif
+
       for(i = 0; i < g->knots; i++)
       {
          if( g->stp_type == STP_DCSTP )

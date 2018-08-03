@@ -11,11 +11,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
 endif()
 
-set(SCIP_VERSION_MAJOR 5)
+set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 17)
+set(SCIP_VERSION_API 33)
 
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
@@ -51,7 +51,7 @@ option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
 option(PARASCIP "should scip be compiled thread safe" OFF)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
-option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
+option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
@@ -72,7 +72,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
@@ -158,14 +158,6 @@ if(NOT PARASCIP)
     add_definitions(-DNPARASCIP)
 endif()
 
-#check if legacy mode must be used
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.7")
-        set(LEGACY ON)
-    endif()
-endif()
-message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
-
 set(NEWLINE "\\\\n")
 
 # create a target for updating the current git hash
@@ -244,6 +236,10 @@ elseif(LPS STREQUAL "glop")
     find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
+elseif(LPS STREQUAL "qso")
+    find_package(QSO REQUIRED)
+    set(BUILD_SHARED_LIBS off)
+    message(STATUS "Turning off shared libraries.")
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
 elseif(LPS STREQUAL "xprs")
@@ -267,8 +263,7 @@ if(SOPLEX_FOUND)
         set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
     endif()
     if(LEGACY)
-      set(lpi lpi/lpi_spx1.cpp)
-      set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTHREADLOCAL='' -DSOPLEX_LEGACY")
+        set(lpi lpi/lpi_spx1.cpp)
     else()
         set(lpi lpi/lpi_spx2.cpp)
     endif()
@@ -316,6 +311,13 @@ if(MOSEK_FOUND)
     include_directories(${MOSEK_INCLUDE_DIRS})
     set(lpi lpi/lpi_msk.c)
     set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
+if(QSO_FOUND)
+    include_directories(${QSO_INCLUDE_DIRS})
+    set(lpi lpi/lpi_qso.c)
+    set(LPS_LIBRARIES ${QSO_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
@@ -463,10 +465,19 @@ add_subdirectory(examples)
 #
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+
+#
+# add AMPL interface
+#
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
+add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()
 
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    include(FeatureSummary)
+    feature_summary(WHAT ALL)
+endif()
 
-include(FeatureSummary)
-feature_summary(WHAT ALL)

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,6 +26,7 @@
 
 #ifdef __cplusplus
 #define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 #endif
 
 #include <stdio.h>
@@ -100,17 +101,17 @@
 
 
 #include "scip/type_retcode.h"
-#include "scip/pub_message.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define SCIP_VERSION                500 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                600 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_APIVERSION              21 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_APIVERSION              33 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*

@@ -1,0 +1,65 @@
+$(LIBOBJDIR)/lpi/lpi_spx1.o: src/lpi/lpi_spx1.cpp  \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+  \
+  \
+  \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+   \
+ src/scip/pub_message.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/type_message.h src/lpi/lpi.h src/blockmemshell/memory.h \
+ src/lpi/type_lpi.h src/scip/bitencode.h
+$(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+ src/scip/type_message.h src/scip/bitencode.h
+$(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
+ src/scip/type_retcode.h src/scip/type_message.h src/scip/pub_message.h \
+ src/blockmemshell/memory.h src/scip/rbtree.h src/scip/type_misc.h
+$(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/struct_message.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/type_message.h src/scip/pub_message.h \
+ src/scip/pub_misc.h src/blockmemshell/memory.h src/scip/type_misc.h \
+ src/scip/type_var.h src/scip/pub_misc_select.h src/scip/type_misc.h \
+ src/scip/pub_misc_sort.h src/scip/pub_misc_linear.h src/scip/type_cons.h \
+ src/scip/type_lp.h src/scip/type_result.h src/scip/type_sol.h \
+ src/scip/type_scip.h src/scip/type_timing.h src/scip/type_heur.h

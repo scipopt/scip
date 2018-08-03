@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,7 +32,7 @@
 #include "probdata_cyc.h"
 
 #define READER_NAME             "cycreader"
-#define READER_DESC             "file reader for a .cyc-file representing a transition matrix for a cycle clustering problem"
+#define READER_DESC             "file reader for a .cyc-file with a transition matrix for a cycle clustering problem"
 #define READER_EXTENSION        "cyc"
 
 #define COL_MAX_LINELEN 10000
@@ -144,14 +144,18 @@ SCIP_RETCODE readCyc(
 
       if( i >= nbins )
       {
-         SCIPerrorMessage( "more lines than expected: expected %d many, but got already %d'th (non-duplicate) edge", nbins, i+1 );
+         SCIPerrorMessage( "more lines than expected: expected %d many, but got already %d'th (non-duplicate) edge",
+            nbins, i+1 );
+
          return SCIP_READERROR;
       }
+
       i++;
    }
 
    /* create problem data */
    SCIP_CALL( SCIPcreateProbCyc(scip, filename, nbins, ncluster, cmatrix) );
+
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for( i = nbins - 1; i >= 0; i-- )
@@ -160,6 +164,7 @@ SCIP_RETCODE readCyc(
    }
 
    SCIPfreeMemoryArray(scip, &cmatrix);
+
    SCIPfclose(fp);
 
    return SCIP_OKAY;
@@ -173,7 +178,7 @@ SCIP_RETCODE readCyc(
 static
 SCIP_DECL_READERCOPY(readerCopyCyc)
 {
-   assert( scip != NULL);
+   assert(scip != NULL);
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
 
@@ -186,8 +191,9 @@ SCIP_DECL_READERREAD(readerReadCyc)
 {
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
-   assert( scip != NULL);
+   assert(scip != NULL);
    assert(result != NULL);
+
    SCIP_CALL( readCyc( scip, filename) );
 
    *result = SCIP_SUCCESS;
@@ -217,9 +223,28 @@ SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopyCyc) );
    SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadCyc ) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model", "the model variant", NULL, FALSE, 's', "seq", NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,"cycleclustering/scale_coherence",
+      "factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddCharParam(scip, "cycleclustering/model",
+      "the model variant", NULL, FALSE, 's', "seqt", NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cycleclustering/usecutselection",
+      "true if cut selection should be used in cyc-separators", NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/goodscorefac", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.8, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/badscorefac", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/goodmaxparall", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/maxparall", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.5, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/dircutoffdist", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.5, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/efficacyweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.4, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/objparalweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cycleclustering/intsuppweight", "used for cut-selection in cycle-clustering",
+      NULL, FALSE, 0.3, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

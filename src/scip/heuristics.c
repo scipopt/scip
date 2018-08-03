@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -230,6 +230,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int nviollpcands;
    SCIP_Longint oldnsolsfound;
    SCIP_Longint oldnbestsolsfound;
+   SCIP_Longint oldnconflictsfound;
 
    SCIP_Bool success;
    SCIP_Bool leafsol;
@@ -353,7 +354,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
-
    /* allocate buffer storage for previous candidates and their branching values for pseudo cost updates */
    lpsolvefreq = SCIPdivesetGetLPSolveFreq(diveset);
    previouscandssize = MAX(1, lpsolvefreq);
@@ -369,6 +369,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    totalnprobingnodes = 0;
    oldnsolsfound = SCIPgetNSolsFound(scip);
    oldnbestsolsfound = SCIPgetNBestSolsFound(scip);
+   oldnconflictsfound = SCIPgetNConflictConssFound(scip);
 
    /* link the working solution to the dive set */
    SCIPdivesetSetWorkSolution(diveset, worksol);
@@ -414,7 +415,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       SCIPdebugMsg(scip, "%s heuristic continues diving at depth %d, %d candidates left\n",
          SCIPdivesetGetName(diveset), lastlpdepth, nlpcands);
-
 
       /* loop over candidates and determine if they are roundable */
       allroundable = TRUE;
@@ -483,15 +483,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       lastlpobjval = SCIPgetLPObjval(scip);
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
-      /* in case we do not solve LP's at every probing node, we must explicitly store the solution values by unlinking the
-       * solution, otherwise, the working solution may contain wrong entries, if, e.g., a backtrack occurred after an
-       * intermediate LP resolve
+      /* we must explicitly store the solution values by unlinking the solution, otherwise,
+       * the working solution may contain wrong entries, if, e.g., a backtrack occurred after an
+       * intermediate LP resolve or the LP was resolved during conflict analysis.
        */
-      if( lpsolvefreq != 1 )
-      {
-         SCIP_CALL( SCIPunlinkSol(scip, worksol) );
-      }
-
+      SCIP_CALL( SCIPunlinkSol(scip, worksol) );
 
       /* ensure array sizes for the diving on the fractional variables */
       if( onlylpbranchcands && nlpcands > lpcandsscoressize )
@@ -505,7 +501,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
          lpcandsscoressize = nlpcands;
       }
-
 
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
@@ -581,7 +576,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                assert(bdchgvar != NULL);
                lblocal = SCIPvarGetLbLocal(bdchgvar);
                ublocal = SCIPvarGetUbLocal(bdchgvar);
-
 
                SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
@@ -734,7 +728,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
 
-
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
                {
@@ -756,7 +749,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       assert(cutoff || (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OBJLIMIT && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_INFEASIBLE &&
             (SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
-
 
       /* check new LP candidates and use the LP Objective gain to update pseudo cost information */
       if( ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
@@ -812,7 +804,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    }
 
    SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
-         SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, leafsol);
+         SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, SCIPgetNConflictConssFound(scip) - oldnconflictsfound, leafsol);
 
    SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
@@ -936,6 +928,9 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL, fixedvars, fixedvals, nfixedvars, TRUE) );
+
+      /* copy parameter settings */
+      SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );

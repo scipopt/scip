@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,8 +37,9 @@
 #include "scip/clock.h"
 
 
-/** creates a concurrent solver type */
-SCIP_RETCODE SCIPconcsolverTypeCreate(
+/** internal method for creating a concurrent solver type */
+static
+SCIP_RETCODE doConcsolverTypeCreate(
    SCIP_CONCSOLVERTYPE** concsolvertype,     /**< pointer to concurrent solver data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -73,6 +74,8 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    assert(concsolversyncread != NULL);
 
    SCIP_ALLOC( BMSallocMemory(concsolvertype) );
+   BMSclearMemory(*concsolvertype);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*concsolvertype)->name, name, strlen(name) + 1) );
 
    (*concsolvertype)->data = data;
@@ -96,18 +99,59 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    return SCIP_OKAY;
 }
 
+/** creates a concurrent solver type */
+SCIP_RETCODE SCIPconcsolverTypeCreate(
+   SCIP_CONCSOLVERTYPE** concsolvertype,     /**< pointer to concurrent solver data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of concurrent solver */
+   SCIP_Real             prefpriodefault,    /**< the default preferred priority of this concurrent solver type */
+   SCIP_DECL_CONCSOLVERCREATEINST ((*concsolvercreateinst)),/**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERDESTROYINST ((*concsolverdestroyinst)),/**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERINITSEEDS ((*concsolverinitseeds)),/**< initialize random seeds of concurrent solver */
+   SCIP_DECL_CONCSOLVEREXEC ((*concsolverexec)),/**< execution method of concurrent solver */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
+   SCIP_DECL_CONCSOLVERSTOP ((*concsolverstop)),/**< terminate solving in concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCWRITE ((*concsolversyncwrite)),/**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCREAD ((*concsolversyncread)),/**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERTYPEFREEDATA ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
+   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurent solver type's data */
+   )
+{
+   assert(concsolvertype != NULL);
+   assert(name != NULL);
+   assert(prefpriodefault >= 0.0 && prefpriodefault <= 1.0);
+
+   assert(concsolvercreateinst != NULL);
+   assert(concsolverdestroyinst != NULL);
+   assert(concsolverexec != NULL);
+   assert(concsolvercopysolvdata != NULL);
+   assert(concsolverstop != NULL);
+   assert(concsolversyncwrite != NULL);
+   assert(concsolversyncread != NULL);
+
+   SCIP_CALL_FINALLY( doConcsolverTypeCreate(concsolvertype, set, messagehdlr, blkmem,
+      name, prefpriodefault, concsolvercreateinst, concsolverdestroyinst, concsolverinitseeds, concsolverexec,
+      concsolvercopysolvdata, concsolverstop, concsolversyncwrite, concsolversyncread, concsolvertypefreedata, data),
+      SCIPconcsolverTypeFree(concsolvertype) );
+
+   return SCIP_OKAY;
+}
+
 /** frees all memory of a concurrent solver type */
 void SCIPconcsolverTypeFree(
    SCIP_CONCSOLVERTYPE** concsolvertype      /**< pointer to concurrent solver data structure */
    )
 {
    assert(concsolvertype != NULL);
-   assert(*concsolvertype != NULL);
+   if( *concsolvertype == NULL )
+      return;
 
    if( (*concsolvertype)->concsolvertypefreedata != NULL )
       (*concsolvertype)->concsolvertypefreedata(&(*concsolvertype)->data);
 
-   BMSfreeMemoryArray(&(*concsolvertype)->name);
+   BMSfreeMemoryArrayNull(&(*concsolvertype)->name);
    BMSfreeMemory(concsolvertype);
 }
 

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,6 +41,7 @@ extern "C" {
 #endif
 
 /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
+EXTERN
 void SCIPStpHeurTMCompStarts(
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< starting points array */
@@ -48,13 +49,13 @@ void SCIPStpHeurTMCompStarts(
    );
 
 /** creates the TM primal heuristic and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execute shortest paths heuristic to obtain a Steiner tree */
-extern
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
@@ -73,8 +74,21 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
    );
 
+/** run shortest path heuristic, but bias edge costs towards best current LP solution */
+EXTERN
+SCIP_RETCODE SCIPStpHeurTMRunLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_HEUR*            heur,               /**< heuristic or NULL */
+   int*                  result,             /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int                   runs,               /**< number of runs */
+   SCIP_Real*            cost,               /**< arc costs (uninitialized) */
+   SCIP_Real*            costrev,            /**< reversed arc costs (uninitialized) */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+   );
+
 /** prune a Steiner tree in such a way that all leaves are terminals */
-extern
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -85,7 +99,7 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
    );
 
 /** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
-extern
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -95,6 +109,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    );
 
 /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -105,6 +120,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    );
 
 /** build Steiner tree in such a way that all leaves are terminals */
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMBuildTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -115,7 +131,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTree(
    );
 
 /** prune a degree constrained Steiner tree in such a way that all leaves are terminals */
-extern
+EXTERN
 SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */

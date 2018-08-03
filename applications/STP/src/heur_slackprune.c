@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -60,6 +60,7 @@
 #define BREAKONERROR FALSE
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
+#define SLACK_MAXTOTNEDGES 5000
 
 #ifdef WITH_UG
 extern
@@ -302,6 +303,16 @@ SCIP_DECL_HEURFREE(heurFreeSlackPrune)
 static
 SCIP_DECL_HEURINIT(heurInitSlackPrune)
 {  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolSlackPrune)
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -319,6 +330,17 @@ SCIP_DECL_HEURINIT(heurInitSlackPrune)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolSlackPrune)
+{  /*lint --e{715}*/
+
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -387,7 +409,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
          if( SCIPisGT(scip, stallproportion, SLACKPRUNE_MAXSTALLPROPORTION) )
             stallproportion = SLACKPRUNE_MAXSTALLPROPORTION;
 
-         if( (SCIPstpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
+         if( (SCIPStpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
             return SCIP_OKAY;
       }
    }
@@ -400,7 +422,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    if( xval == NULL )
       return SCIP_OKAY;
 
-   heurdata->lastnfixededges = SCIPstpNfixedEdges(scip);
+   heurdata->lastnfixededges = SCIPStpNfixedEdges(scip);
 
    vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
@@ -419,14 +441,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    }
 
    /* execute slackprune heuristic */
-   if( graph->stp_type == STP_MWCSP )
-   {
-      SCIP_CALL( SCIPStpHeurSlackPruneRunPcMw(scip, vars, graph, soledge, &success) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE) );
-   }
+   SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
 
    /* solution found by slackprune heuristic? */
    if( success )
@@ -513,7 +528,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*                g,                  /**< graph data structure */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph         /**< try to reduce graph initially? */
+   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    )
 {
    GRAPH*    prunegraph;
@@ -656,7 +672,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    if( reducegraph )
    {
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
    }
 
    /* get number of remaining vertices, edges and terminals */
@@ -729,7 +745,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
 
       /* graph vanished? */
       if( prunegraph->grad[prunegraph->source] == 0 )
@@ -756,7 +772,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 #endif
 
    /* free memory */
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
@@ -796,7 +812,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    PATH*    vnoi;
    PATH*    path;
    GNODE** gnodearr;
-   IDX* curr;
    SCIP_Real    ubbest;
    SCIP_Real    offsetnew;
    SCIP_Real*    cost;
@@ -1031,8 +1046,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
          /* calculate objective value of solution */
          objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
-      printf("\n\n obj of solution from solnode %f \n", objorg + SCIPprobdataGetOffset(scip));
-
       /* compute new solution on heuristically reduced graph */
 
 #ifdef SCIP_DEBUG
@@ -1076,27 +1089,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    /* retransform edges fixed during graph reduction */
    graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
-   /* prune the solution tree (in the original graph) */
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( nodearrchar[k] == TRUE )
-      {
-         curr = prunegraph->pcancestors[k];
-         while( curr != NULL )
-         {
-
-            if( nodearrchar[prunegraph->orgtail[curr->index]] == FALSE )
-            {
-               nodearrchar[prunegraph->orgtail[curr->index]] = TRUE;
-            }
-            if( nodearrchar[g->orghead[curr->index]] == FALSE )
-            {
-               nodearrchar[g->orghead[curr->index]] = TRUE;
-            }
-            curr = curr->parent;
-         }
-      }
-   }
+   SCIP_CALL( graph_sol_markPcancestors(scip, prunegraph->pcancestors, prunegraph->orgtail, prunegraph->orghead, nnodes,
+         nodearrchar, NULL, NULL, NULL, NULL) );
 
    for( e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;
@@ -1108,7 +1102,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
    /* free memory */
    graph_path_exit(scip, prunegraph);
-   graph_free(scip, prunegraph, TRUE);
+   graph_free(scip, &prunegraph, TRUE);
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
@@ -1154,7 +1148,8 @@ SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySlackPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSlackPrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSlackPrune) );
-
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSlackPrune) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSlackPrune) );
 
    /* add slackprune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",

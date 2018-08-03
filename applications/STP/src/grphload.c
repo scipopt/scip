@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -63,7 +63,7 @@
 /* Try to get the maximum length of a path.
  *
  * WARNING: if a path found or build during the scanning process is
- *          longer than defined below, the programm will probably
+ *          longer than defined below, the program will probably
  *          crash, because scanf() will overwrite some memory.
  */
 #if defined(PATH_MAX)                     /* Found this on SCO UNIX */
@@ -159,7 +159,7 @@ struct key
 #define KEY_HOPCONS_LIM          10000
 #define KEY_HOPCONS_FACTOR       10001
 
-#define KEY_PRIZECOLL_E          11000
+#define KEY_TREE_S               11000
 
 static const struct key keyword_table[] =
    {
@@ -219,8 +219,6 @@ static const struct key keyword_table[] =
       {  "presolve.time",            KEY_PRESOLVE_TIME,          "n"         },
       {  "presolve.upper",           KEY_PRESOLVE_UPPER,         "n"         },
 
-      {  "prizecollect.edges",       KEY_PRIZECOLL_E,            "n"         },
-
       {  "solution.date",            KEY_SOLUTION_DATE,          "s"         },
       {  "solution.end",             KEY_END,                    NULL        },
       {  "solution.s",               KEY_SOLUTION_S,             "n"         },
@@ -237,6 +235,8 @@ static const struct key keyword_table[] =
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
+
+      {  "tree.s",                   KEY_TREE_S,                 NULL        },
    };
 
 struct section
@@ -262,7 +262,7 @@ static struct section section_table[] =
       /*
        * *** The section names MUST be sorted alphabetically ! ***
        */
-      { "comment",     NULL,  FLAG_REQUIRED, SECTION_MISSING },
+      { "comment",     NULL,  FLAG_OPTIONAL, SECTION_MISSING },
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
       { "maximumdegrees", "mdg", FLAG_OPTIONAL, SECTION_MISSING },
@@ -271,6 +271,7 @@ static struct section section_table[] =
       { "presolve",    "prs", FLAG_OPTIONAL, SECTION_MISSING },
       { "solution",    "slt", FLAG_OPTIONAL, SECTION_MISSING },
       { "terminals",   "trm", FLAG_OPTIONAL, SECTION_MISSING },
+      { "tree",        "tre", FLAG_OPTIONAL, SECTION_MISSING },
    };
 
 typedef struct current_file
@@ -356,10 +357,7 @@ static int key_cmp(
    assert(key                                != NULL);
    assert(elem                               != NULL);
    assert(((const struct key*)elem)->keyword != NULL);
-#if 0
-   (void)fprintf(stderr, "key [%s] elem [%s]\n",
-      (const char*)key, ((const struct key*)elem)->keyword);
-#endif
+
    return(strcmp((const char*)key, ((const struct key*)elem)->keyword));
 }
 
@@ -421,7 +419,7 @@ static int get_arguments(
          {
             s++;
          }
-         /* Someting left ?
+         /* Something left ?
           */
          if (*s != '\0')
          {
@@ -501,7 +499,9 @@ static int get_arguments(
 /*---            or < 0 for failure.                                      ---*/
 /*---------------------------------------------------------------------------*/
 static int open_file(
-   CURF* curf)
+   CURF* curf,
+   unsigned char main_file
+)
 {
    const char* err_cantopen_s   = "%s.";
    const char* err_noheader_v   = "Wrong file header.";
@@ -524,9 +524,39 @@ static int open_file(
    curf->line = 1;
    curf->fp   = NULL;
 
+   /* reading in the main file? */
+   if( main_file )
+   {
+      char fillname_gr[MAX_STRING_LEN];
+
+      (void)sprintf(fillname_gr, "%s.%s",
+            curf->filename, "gr");
+
+      /* try to open .gr */
+      if ((curf->fp = fopen(fillname_gr, "r")) != NULL)
+      {
+         (void)sprintf(curf->filename, "%s", fillname_gr);
+         return(SUCCESS);
+      }
+      else
+      {
+         /* try to open .stp */
+         char fillname_stp[MAX_STRING_LEN];
+         (void) sprintf(fillname_stp, "%s.%s", curf->filename, "stp");
+
+         if ((curf->fp = fopen(fillname_stp, "r")) == NULL)
+         {
+            message(MSG_FATAL, curf, err_cantopen_s, strerror(errno));
+            return result;
+         }
+         (void)sprintf(curf->filename, "%s", fillname_stp);
+      }
+   }
+
+
    /* Try to open the file...
     */
-   if ((curf->fp = fopen(curf->filename, "r")) == NULL)
+   if (!main_file && (curf->fp = fopen(curf->filename, "r")) == NULL)
       message(MSG_FATAL, curf, err_cantopen_s, strerror(errno));
 
    /* Read Header...
@@ -611,13 +641,9 @@ static int start_section(
          message(MSG_FATAL, curf, err_badsect_s, sectname);
       else
       {
-#if 0
-         if( temp.section->mark & SECTION_EXISTEND )
-            message(MSG_FATAL, curf, err_duplicate_s, sectname);
-#endif
          /* Is this section in a separate file ?
           */
-         if( tokens == 1 )
+         if( tokens == 1 || (tokens == 2 && strcmp(strlower(sectname),"tree") == 0) )
          {
             curf->section        = temp.section;
             curf->section->mark |= SECTION_EXISTEND;
@@ -650,7 +676,7 @@ static int start_section(
             }
             else
             {
-               if (!open_file(&temp))
+               if (!open_file(&temp, FALSE) )
                {
                   *save                = *curf;
                   *curf                = temp;
@@ -888,14 +914,13 @@ SCIP_RETCODE graph_load(
    curf.section     = &section_table[0];
    save             = curf_null;
 
-   (void)sprintf(curf.filename, "%s%s.%s",
+   (void)sprintf(curf.filename, "%s%s",
       pathname,
-      basename,
-      curf.section->extension);
+      basename);
 
    /* Open the file...
     */
-   if (!open_file(&curf))
+   if (!open_file(&curf, TRUE))
    {
       /* We read while a file is open...
        */
@@ -1000,13 +1025,12 @@ SCIP_RETCODE graph_load(
                      stop_input = TRUE;
                   }
                   if (!stop_input)
-                     message(MSG_INFO, &curf, msg_newsect_s,
-                        curf.section->name);
-
+                     message(MSG_INFO, &curf, msg_newsect_s, curf.section->name);
                   break;
                case KEY_END : /* END found. */
                   curf.section = &section_table[0];
                   break;
+               case KEY_TREE_S : /* fall through */
                case KEY_EOF : /* EOF found */
                   ret        = SUCCESS;
                   stop_input = TRUE;

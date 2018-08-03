@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -493,12 +493,12 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIP_CALL( level0(scip, newgraph) );
 
-#if 0
+#ifdef DEBUG_ASCENDPRUNE
    for( int k = 0; k < nnodes && !pcmw; k++ )
    {
       if( Is_term(g->term[k]) )
       {
-         int i = nodechild[k];
+         const int i = nodechild[k];
          if( i < 0 )
          {
             printf("k %d root %d \n", k, root);
@@ -520,7 +520,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
-#if 0
+#ifdef DEBUG_ASCENDPRUNE
    for( int k = 0; k < newgraph->knots; ++k )
    {
       if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source )
@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 #endif
    if( !success )
    {
-      printf("failed to build tree in ascend-prune (by prune) \n");
+      SCIPdebugMessage("failed to build tree in ascend-prune (by prune) \n");
       goto TERMINATE;
    }
 
@@ -608,7 +608,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       mark[k] = (g->grad[k] > 0);
 
    /* free memory */
-   graph_free(scip, newgraph, TRUE);
+   graph_free(scip, &newgraph, TRUE);
    SCIPfreeBufferArray(scip, &edgeancestor);
    SCIPfreeBufferArrayNull(scip, &nval);
 
@@ -638,7 +638,6 @@ SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAscendPrune) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAscendPrune) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAscendPrune) );
-
 
    /* add ascend and prune primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",

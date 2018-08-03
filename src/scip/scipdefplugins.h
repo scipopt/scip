@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,7 @@
 #include "scip/branch_fullstrong.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
+#include "scip/branch_lookahead.h"
 #include "scip/branch_mostinf.h"
 #include "scip/branch_multaggr.h"
 #include "scip/branch_nodereopt.h"
@@ -45,6 +46,8 @@
 #include "scip/compr_weakcompr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
+#include "scip/cons_benders.h"
+#include "scip/cons_benderslp.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_cardinality.h"
@@ -83,10 +86,12 @@
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_completesol.h"
+#include "scip/heur_conflictdiving.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
 #include "scip/heur_dualval.h"
+#include "scip/heur_farkasdiving.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
@@ -140,7 +145,6 @@
 #include "scip/presol_boundshift.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_domcol.h"
-#include "scip/presol_implfree.h"
 #include "scip/presol_dualagg.h"
 #include "scip/presol_dualcomp.h"
 #include "scip/presol_dualinfer.h"
@@ -169,6 +173,7 @@
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
+#include "scip/reader_cor.h"
 #include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
@@ -182,7 +187,10 @@
 #include "scip/reader_ppm.h"
 #include "scip/reader_pbm.h"
 #include "scip/reader_rlp.h"
+#include "scip/reader_smps.h"
 #include "scip/reader_sol.h"
+#include "scip/reader_sto.h"
+#include "scip/reader_tim.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
 #include "scip/sepa_eccuts.h"
@@ -204,6 +212,7 @@
 #include "scip/scipshell.h"
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
+#include "scip/benders_default.h"
 
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"

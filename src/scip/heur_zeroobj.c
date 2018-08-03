@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,11 +20,33 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_zeroobj.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/heur_zeroobj.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "zeroobj"
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
@@ -210,7 +232,6 @@ SCIP_DECL_HEURINIT(heurInitZeroobj)
 static
 SCIP_DECL_HEUREXEC(heurExecZeroobj)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nnodes;                 /* number of stalling nodes for the subproblem */
 
@@ -281,7 +302,6 @@ SCIP_RETCODE setupAndSolveSubscip(
    int i;
    SCIP_Bool success;
    SCIP_Bool valid;
-
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -482,7 +502,6 @@ SCIP_RETCODE setupAndSolveSubscip(
 
    SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
 
-
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
@@ -562,7 +581,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );

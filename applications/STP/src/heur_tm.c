@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -46,11 +46,11 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_EVALRUNS 15                  /**< number of runs */
+#define DEFAULT_EVALRUNS 25                  /**< number of runs */
 #define DEFAULT_INITRUNS 100                 /**< number of initial runs */
 #define DEFAULT_LEAFRUNS 15                  /**< number of runs at leafs */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
-#define DEFAULT_DURINGLPFREQ 10              /**< frequency during LP solving */
+#define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
@@ -58,7 +58,6 @@
 #define TM_SP       1
 #define TM_VORONOI  2
 #define TM_DIJKSTRA 3
-
 
 #ifdef WITH_UG
 extern
@@ -341,7 +340,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
              */
             for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             {
-               if( result[j] == 0 )
+               if( result[j] == CONNECT )
                {
                   result[j]    = -1;
                   g->mark[i]   = FALSE;
@@ -355,6 +354,22 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       }
    }
    while( count > 0 );
+
+#ifndef NDEBUG
+   /* make sure there is no unconnected vertex */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( connected[i] && i != g->source )
+      {
+         for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
+            if( result[j] == CONNECT )
+               break;
+
+         assert(j != EAT_LAST);
+
+      }
+   }
+#endif
 
    assert(graph_sol_valid(scip, g, result));
    SCIPfreeBufferArray(scip, &mst);
@@ -2059,7 +2074,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          if( SCIPisLT(scip, obj, min) )
          {
-            *bestnewstart = k;
+            if( bestnewstart != NULL )
+               *bestnewstart = k;
             min = obj;
 
             SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) nexecs, obj);
@@ -2121,7 +2137,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
             if( SCIPisLT(scip, obj, min) && edgecount <= graph->hoplimit )
             {
                min = obj;
-               *bestnewstart = root;
+               if( bestnewstart != NULL )
+                  *bestnewstart = root;
 
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];
@@ -2255,7 +2272,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
             if( graph->stp_type != STP_DHCSTP || edgecount <= graph->hoplimit )
             {
                min = obj;
-               *bestnewstart = start[r];
+               if( bestnewstart != NULL )
+                  *bestnewstart = start[r];
 
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];
@@ -2330,6 +2348,283 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    return SCIP_OKAY;
 }
+
+/** run shortest path heuristic, but bias edge costs towards best current LP solution */
+SCIP_RETCODE SCIPStpHeurTMRunLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_HEUR*            heur,               /**< heuristic or NULL */
+   int*                  result,             /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int                   runs,               /**< number of runs */
+   SCIP_Real*            cost,               /**< arc costs (uninitialized) */
+   SCIP_Real*            costrev,            /**< reversed arc costs (uninitialized) */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real* xval;
+   SCIP_Real* nodepriority = NULL;
+   SCIP_Real maxcost = 0.0;
+   int beststart;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(result != NULL);
+   assert(cost != NULL);
+   assert(costrev != NULL);
+   assert(success != NULL);
+
+   assert(SCIPfindHeur(scip, "TM") != NULL);
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+
+   vars = SCIPprobdataGetVars(scip);
+   assert(vars != NULL);
+
+   /* LP was not solved */
+   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      xval = NULL;
+   }
+   else
+   {
+      SCIP_SOL* sol = NULL;
+      SCIP_CALL(SCIPcreateSol(scip, &sol, heur));
+
+      /* copy the current LP solution to the working solution */
+      SCIP_CALL(SCIPlinkLPSol(scip, sol));
+
+      xval = SCIPprobdataGetXval(scip, sol);
+
+      SCIP_CALL(SCIPfreeSol(scip, &sol));
+   }
+
+   /* set (edge) result array to default */
+   for( int e = 0; e < nedges; e++ )
+      result[e] = UNKNOWN;
+
+   {
+      const SCIP_Real randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
+      const SCIP_Real randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
+
+      if( xval == NULL )
+      {
+         BMScopyMemoryArray(cost, graph->cost, nedges);
+
+         /* hop constraint problem? */
+         if( graph->stp_type == STP_DHCSTP )
+         {
+            for( int e = 0; e < nedges; e++ )
+            {
+               if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
+                  cost[e] = BLOCKED;
+               else if( SCIPisGT(scip, cost[e], maxcost) && SCIPisLT(scip, cost[e], FARAWAY) )
+                  maxcost = cost[e];
+            }
+            for( int e = 0; e < nedges; e++ )
+               costrev[e] = cost[flipedge(e)];
+         }
+         else
+         {
+            if( graph->stp_type != STP_PCSPG && graph->stp_type != STP_MWCSP )
+            {
+               SCIP_CALL(SCIPallocBufferArray(scip, &nodepriority, nnodes));
+               for( int k = 0; k < nnodes; k++ )
+               {
+                  if( Is_term(graph->term[k]) )
+                     nodepriority[k] = (SCIP_Real) graph->grad[k];
+                  else
+                     nodepriority[k] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
+               }
+            }
+
+            for( int e = 0; e < nedges; e += 2 )
+            {
+               if( SCIPvarGetUbGlobal(vars[e + 1]) < 0.5 )
+               {
+                  costrev[e] = BLOCKED;
+                  cost[e + 1] = BLOCKED;
+               }
+               else
+               {
+                  costrev[e] = cost[e + 1];
+               }
+
+               if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
+               {
+                  costrev[e + 1] = BLOCKED;
+                  cost[e] = BLOCKED;
+               }
+               else
+               {
+                  costrev[e + 1] = cost[e];
+               }
+            }
+         }
+      }
+      else
+      {
+         SCIP_Bool partrand = FALSE;
+         SCIP_Bool totalrand = FALSE;
+
+         if( (heurdata->nlpiterations == SCIPgetNLPIterations(scip) && SCIPrandomGetInt(heurdata->randnumgen, 0, 5) != 1)
+               || SCIPrandomGetInt(heurdata->randnumgen, 0, 15) == 5 )
+            partrand = TRUE;
+
+         if( !partrand && (heurdata->nlpiterations == SCIPgetNLPIterations(scip) ) )
+            totalrand = TRUE;
+         else if( graph->stp_type == STP_DCSTP && heurdata->ncalls != 1 && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1
+               && (graph->maxdeg[graph->source] == 1 || SCIPrandomGetInt(heurdata->randnumgen, 0, 5) == 5) )
+         {
+            totalrand = TRUE;
+            partrand = FALSE;
+         }
+
+         assert(nodepriority == NULL);
+
+         SCIP_CALL(SCIPallocBufferArray(scip, &nodepriority, nnodes));
+
+         if( graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP )
+         {
+            for( int k = 0; k < nnodes; k++ )
+               nodepriority[k] = 0.0;
+
+            for( int e = 0; e < nedges; e++ )
+            {
+               nodepriority[graph->head[e]] += xval[e];
+               nodepriority[graph->tail[e]] += xval[e];
+            }
+         }
+
+         if( graph->stp_type == STP_DHCSTP )
+         {
+            for( int e = 0; e < nedges; e++ )
+            {
+               if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
+               {
+                  cost[e] = BLOCKED;
+               }
+               else
+               {
+                  if( totalrand )
+                  {
+                     const SCIP_Real randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
+                     cost[e] = graph->cost[e] * randval;
+                  }
+                  else
+                  {
+                     cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
+                  }
+               }
+               if( partrand )
+               {
+                  const SCIP_Real randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
+                  cost[e] = cost[e] * randval;
+               }
+               if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
+                  maxcost = cost[e];
+               assert(SCIPisGE(scip, cost[e], 0.0));
+            }
+            for( int e = 0; e < nedges; e++ )
+               costrev[e] = cost[flipedge(e)];
+         }
+         else
+         {
+            /* swap costs; set a high cost if the variable is fixed to 0 */
+            if( graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
+            {
+               for( int e = 0; e < nnodes; e++ )
+                  nodepriority[e] = 0.0;
+               for( int e = 0; e < nedges; e++ )
+                  nodepriority[graph->head[e]] += xval[e];
+
+               for( int e = 0; e < nedges; e++ )
+               {
+                  if( graph->cost[e] >= FARAWAY )
+                     cost[e] = graph->cost[e];
+
+                  if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+                     cost[e] = BLOCKED;
+                  else
+                     cost[e] = graph->cost[e] * (1.0 - MIN(1.0, nodepriority[graph->head[e]]));
+               }
+
+               for( int e = 0; e < nedges; e++ )
+               {
+                  nodepriority[graph->tail[e]] += xval[e];
+                  costrev[flipedge(e)] = cost[e];
+               }
+            }
+            else
+            {
+               for( int e = 0; e < nedges; e += 2 )
+               {
+                  const SCIP_Real randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
+
+                  if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
+                  {
+                     costrev[e] = BLOCKED;
+                     cost[e + 1] = BLOCKED;
+                  }
+                  else
+                  {
+                     if( totalrand )
+                        costrev[e] = graph->cost[e + 1] * randval;
+                     else
+                        costrev[e] = ((1.0 - xval[e + 1]) * graph->cost[e + 1]);
+
+                     if( partrand )
+                        costrev[e] = costrev[e] * randval;
+
+                     cost[e + 1] = costrev[e];
+                  }
+
+                  if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+                  {
+                     costrev[e + 1] = BLOCKED;
+                     cost[e] = BLOCKED;
+                  }
+                  else
+                  {
+                     if( totalrand )
+                        costrev[e + 1] = graph->cost[e] * randval;
+                     else
+                        costrev[e + 1] = ((1.0 - xval[e]) * graph->cost[e]);
+
+                     if( partrand )
+                        costrev[e + 1] = costrev[e + 1] * randval;
+                     cost[e] = costrev[e + 1];
+                  }
+                  assert(SCIPisGE(scip, cost[e], 0.0));
+                  assert(SCIPisGE(scip, costrev[e], 0.0));
+               }
+            }
+         }
+      }
+
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( SCIPisZero(scip, cost[e]) )
+         {
+            cost[e] = SCIPepsilon(scip) * 2.0;
+            assert(!SCIPisZero(scip, cost[e]));
+            assert(SCIPisZero(scip, costrev[flipedge(e)]));
+            costrev[flipedge(e)] = cost[e];
+         }
+      }
+
+      /* can we connect the network */
+      SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, &beststart, result, runs, heurdata->beststartnode,
+            cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, success, FALSE) );
+   }
+
+   SCIPfreeBufferArrayNull(scip, &nodepriority);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of primal heuristic
@@ -2416,24 +2711,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_VAR** vars;
    SCIP_PROBDATA* probdata;
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* sol;
    GRAPH* graph;
    SCIP_Real* cost;
    SCIP_Real* costrev;
-   SCIP_Real* nval;
-   SCIP_Real* xval;
-   SCIP_Real pobj;
-   SCIP_Real maxcost;
-   int* results;
-   SCIP_Real* nodepriority;
-   int e;
-   int v;
+   int* soledges;
    int runs;
-   int nvars;
    int nedges;
-   int nnodes;
-   int best_start;
-   SCIP_Real pctrivialbound = FARAWAY;
    SCIP_Bool success = FALSE;
 
    assert(scip != NULL);
@@ -2441,7 +2724,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    assert(scip != NULL);
    assert(result != NULL);
 
-   *result = SCIP_DELAYED;
    *result = SCIP_DIDNOTRUN;
 
    /* get heuristic data */
@@ -2453,15 +2735,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
-
-   maxcost = 0.0;
-   nedges = graph->edges;
-   nnodes = graph->knots;
-   best_start = -1;
-   nodepriority = NULL;
-
-   if( graph->stp_type == STP_PCSPG && graph->knots > pctrivialbound && !(heurtiming & SCIP_HEURTIMING_BEFORENODE) )
-      return SCIP_OKAY;
 
    runs = 0;
 
@@ -2499,320 +2772,53 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIPdebugMessage("Heuristic Start\n");
 
    /* get all variables (corresponding to the edges) */
-   nvars = SCIPprobdataGetNVars(scip);
    vars = SCIPprobdataGetVars(scip);
    if( vars == NULL )
       return SCIP_OKAY;
 
    assert(vars[0] != NULL);
 
+   nedges = graph->edges;
+
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
+   SCIP_CALL(SCIPallocBufferArray(scip, &cost, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
 
    *result = SCIP_DIDNOTFIND;
 
-   /* LP was not solved */
-   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      sol = NULL;
-      xval = NULL;
-   }
-   else
-   {
-      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+   /* call the actual heuristic */
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, heur, soledges, runs, cost, costrev, &success) );
 
-      /* copy the current LP solution to the working solution */
-      SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-
-      xval = SCIPprobdataGetXval(scip, sol);
-
-      SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   }
-
-   /* set (edge) result array to default */
-   for( e = 0; e < nedges; e++ )
-      results[e] = UNKNOWN;
-
-   {
-      SCIP_Real randval;
-      SCIP_Real randupper;
-      SCIP_Real randlower;
-      randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
-      randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
-
-         if( xval == NULL )
-         {
-            BMScopyMemoryArray(cost, graph->cost, nedges);
-
-            /* hop constraint problem? */
-            if( graph->stp_type == STP_DHCSTP )
-            {
-               for( e = 0; e < nedges; e++)
-               {
-                  if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
-                     cost[e] = BLOCKED;
-                  else if( SCIPisGT(scip, cost[e], maxcost) && SCIPisLT(scip, cost[e], FARAWAY) )
-                     maxcost = cost[e];
-               }
-               for( e = 0; e < nedges; e++)
-                  costrev[e] = cost[flipedge(e)];
-            }
-            else
-            {
-               if( graph->stp_type != STP_PCSPG && graph->stp_type != STP_MWCSP )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
-                  for( e = 0; e < nnodes; e++)
-                  {
-                     if( Is_term(graph->term[e]) )
-                        nodepriority[e] = (SCIP_Real) graph->grad[e];
-                     else
-                        nodepriority[e] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
-                  }
-               }
-
-               for( e = 0; e < nedges; e += 2)
-               {
-                  if( SCIPvarGetUbGlobal(vars[e + 1]) < 0.5 )
-                  {
-                     costrev[e] = BLOCKED;
-                     cost[e + 1] = BLOCKED;
-                  }
-                  else
-                  {
-                     costrev[e] = cost[e + 1];
-                  }
-
-                  if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
-                  {
-                     costrev[e + 1] = BLOCKED;
-                     cost[e] = BLOCKED;
-                  }
-                  else
-                  {
-                     costrev[e + 1] = cost[e];
-                  }
-               }
-            }
-         }
-         else
-         {
-            SCIP_Bool partrand = FALSE;
-            SCIP_Bool totalrand = FALSE;
-
-            if( (heurdata->nlpiterations == SCIPgetNLPIterations(scip) && SCIPrandomGetInt(heurdata->randnumgen, 0, 3) != 1)
-               || SCIPrandomGetInt(heurdata->randnumgen, 0, 10) == 5 )
-               partrand = TRUE;
-
-            if( !partrand && (heurdata->nlpiterations == SCIPgetNLPIterations(scip) || SCIPrandomGetInt(heurdata->randnumgen, 0, 25) == 10) )
-               totalrand = TRUE;
-            else if( graph->stp_type == STP_DCSTP && heurdata->ncalls != 1 && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 && (graph->maxdeg[graph->source] == 1  ||
-                  SCIPrandomGetInt(heurdata->randnumgen, 0, 5) == 5)  )
-               totalrand = TRUE;
-
-            if( graph->stp_type == STP_DCSTP && partrand )
-            {
-               totalrand = TRUE;
-               partrand = FALSE;
-            }
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
-
-
-            if( graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP )
-            {
-               for( e = 0; e < nnodes; e++)
-                  nodepriority[e] = 0.0;
-
-               for( e = 0; e < nedges; e++)
-               {
-                  nodepriority[graph->head[e]] += xval[e];
-                  nodepriority[graph->tail[e]] += xval[e];
-               }
-            }
-
-            if( graph->stp_type == STP_DHCSTP )
-            {
-               for( e = 0; e < nedges; e++ )
-               {
-                  if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
-                  {
-                     cost[e] = BLOCKED;
-                  }
-                  else
-                  {
-                     if( totalrand )
-                     {
-                        randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
-                        cost[e] = graph->cost[e] * randval;
-                     }
-                     else
-                     {
-                        cost[e] = ((1.0 - xval[e]) * graph->cost[e]);
-                     }
-                  }
-                  if( partrand )
-                  {
-                     randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
-                     cost[e] = cost[e] * randval;
-                  }
-                  if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
-                     maxcost = cost[e];
-                  assert(SCIPisGE(scip, cost[e], 0.0));
-               }
-               for( e = 0; e < nedges; e++)
-                  costrev[e] = cost[flipedge(e)];
-            }
-            else
-            {
-               /* swap costs; set a high cost if the variable is fixed to 0 */
-               if( graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
-               {
-                  for( e = 0; e < nnodes; e++)
-                     nodepriority[e] = 0.0;
-                  for( e = 0; e < nedges; e++)
-                      nodepriority[graph->head[e]] += xval[e];
-
-                  for( e = 0; e < nedges; e++ )
-                  {
-                     if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
-                        cost[e] = graph->cost[e];
-                     /* todo does not work because SCIP presolving kills constraints; deactivate? */
-#if 0
-                     assert(SCIPisLE(scip, nodepriority[graph->head[e]], 1.0) || Is_gterm(graph->term[graph->head[e]]));
-#endif
-
-                     if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-                        cost[e] = BLOCKED;
-                     else
-                        cost[e] = graph->cost[e] * (1.0 - MIN(1.0, nodepriority[graph->head[e]]));
-                  }
-
-                  for( e = 0; e < nedges; e++ )
-                  {
-                     nodepriority[graph->tail[e]] += xval[e];
-                     costrev[flipedge(e)] = cost[e];
-                  }
-               }
-               else
-               {
-                  for( e = 0; e < nedges; e += 2)
-                  {
-                     randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
-
-                     if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
-                     {
-                        costrev[e] = BLOCKED;
-                        cost[e + 1] = BLOCKED;
-                     }
-                     else
-                     {
-                        if( totalrand )
-                           costrev[e] = graph->cost[e + 1] * randval;
-                        else
-                           costrev[e] = ((1.0 - xval[e + 1]) * graph->cost[e + 1]);
-
-                        if( partrand )
-                           costrev[e] = costrev[e] * randval;
-
-                        cost[e + 1] = costrev[e];
-                     }
-
-                     if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-                     {
-                        costrev[e + 1] = BLOCKED;
-                        cost[e] = BLOCKED;
-                     }
-                     else
-                     {
-                        if( totalrand )
-                           costrev[e + 1] = graph->cost[e] * randval;
-                        else
-                           costrev[e + 1] = ((1.0 - xval[e]) * graph->cost[e]);
-
-                        if( partrand )
-                           costrev[e + 1] = costrev[e + 1]  * randval;
-                        cost[e] = costrev[e + 1];
-                     }
-                     assert(SCIPisGE(scip, cost[e], 0.0));
-                     assert(SCIPisGE(scip, costrev[e], 0.0));
-                  }
-               }
-#if 0
-               if( graph->stp_type == STP_SPG )
-               {
-                  for( e = 0; e < nedges; e += 2 )
-                  {
-                     if(  (SCIPisLT(scip, cost[e], BLOCKED) && SCIPisLT(scip, cost[e + 1], BLOCKED)) )
-                     {
-                        if( SCIPisLT(scip, cost[e], cost[e + 1]) )
-                        {
-                           cost[e + 1] = cost[e];
-                           costrev[e] = cost[e];
-                           costrev[e + 1] = cost[e];
-                        }
-                        else
-                        {
-                           cost[e] = cost[e + 1];
-                           costrev[e] = cost[e + 1];
-                           costrev[e + 1] = cost[e + 1];
-                        }
-                     }
-                  }
-               }
-#endif
-            }
-         }
-
-         for( e = 0; e < nedges; e++ )
-         {
-            if( SCIPisZero(scip, cost[e]) )
-            {
-               cost[e] = SCIPepsilon(scip) * 2.0;
-               assert(!SCIPisZero(scip, cost[e]));
-               assert(SCIPisZero(scip, costrev[flipedge(e)]));
-               costrev[flipedge(e)] = cost[e];
-            }
-         }
-
-         /* can we connect the network */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
-               cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success, FALSE) );
-   }
    if( success )
    {
-      for( v = 0; v < nvars; v++ )
-         nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
+      SCIP_Real* nval;
+      const int nvars = SCIPprobdataGetNVars(scip);
+
+      SCIP_CALL(SCIPallocBufferArray(scip, &nval, nvars));
+
+      for( int v = 0; v < nvars; v++ )
+         nval[v] = (soledges[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
       SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
       if( success )
       {
-         pobj = SCIPprobdataGetOffset(scip);
-
-         for( e = 0; e < nedges; e++ )
-            if( results[e] == CONNECT )
-               pobj += graph->cost[e];
-
-         if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
-            heurdata->beststartnode = best_start;
-
+         SCIP_SOL* sol = NULL;
          SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
          if( success )
          {
-            SCIPdebugMessage("TM solution added, value %f \n", pobj);
+            SCIPdebugMessage("TM solution added, value %f \n",
+                  graph_sol_getObj(graph->cost, soledges, SCIPprobdataGetOffset(scip), nedges));
+
             *result = SCIP_FOUNDSOL;
          }
       }
+      SCIPfreeBufferArray(scip, &nval);
    }
 
    heurdata->nlpiterations = SCIPgetNLPIterations(scip);
-   SCIPfreeBufferArrayNull(scip, &nodepriority);
-   SCIPfreeBufferArray(scip, &nval);
-   SCIPfreeBufferArray(scip, &results);
+   SCIPfreeBufferArray(scip, &soledges);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
 
@@ -2882,7 +2888,7 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
 #endif
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );
 
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristic should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/timing", paramdesc,

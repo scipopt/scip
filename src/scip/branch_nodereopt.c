@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,6 @@
 
 #include "scip/branch_nodereopt.h"
 #include "scip/branch_relpscost.h"
-#include "scip/cons_logicor.h"
 #include "scip/scip.h"
 #include "scip/tree.h"
 #include "scip/pub_reopt.h"
@@ -86,7 +85,6 @@ SCIP_RETCODE Exec(
    reoptnode = SCIPgetReoptnode(scip, curid);
    assert(reoptnode != NULL);
    reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
-
 
    /* The current node is equal to the root and dual reductions were performed. Since the root has a special role
     * within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to

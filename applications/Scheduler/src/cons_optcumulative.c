@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2089,11 +2089,11 @@ SCIP_RETCODE fixIntegerVariable(
    {
       /* the integer start time variable has a zero objective value; if only the optcumulative constraint
        * handler has a problem with rounding it down or up, then this issue is obsolete since binary
-       * variable is fixed zero; therefore, rounding the integer down or up up is feasible dual reduction
+       * variable is fixed zero; therefore, rounding the integer down or up is a feasible dual reduction
        */
-      if( SCIPvarGetNLocksDown(var) == (int)uplock )
+      if( SCIPvarGetNLocksDown(var) == (int)downlock )
          fixvalue = SCIPvarGetLbLocal(var);
-      else if( SCIPvarGetNLocksUp(var) == (int)downlock )
+      else if( SCIPvarGetNLocksUp(var) == (int)uplock )
          fixvalue = SCIPvarGetUbLocal(var);
       else
          return SCIP_OKAY;
@@ -3781,20 +3781,20 @@ SCIP_DECL_CONSLOCK(consLockOptcumulative)
       if( consdata->downlocks[v] && consdata->uplocks[v] )
       {
          /* the integer start variable should not get rounded in both direction  */
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
       else if( consdata->downlocks[v]  )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlockspos, nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
       }
       else if( consdata->uplocks[v] )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[v], nlocksneg, nlockspos) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
       }
 
       /* the binary decision variable should not get rounded up; rounding down does not influence the feasibility */
       assert(consdata->binvars[v] != NULL);
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvars[v], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;

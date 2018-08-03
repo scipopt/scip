@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,27 +21,41 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#include "scip/reader_pip.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_logicor.h"
-#include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_nonlinear.h"
+#include "nlpi/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_pip.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
+#endif
 
 #define READER_NAME             "pipreader"
 #define READER_DESC             "file reader for polynomial mixed-integer programs in PIP format"
@@ -898,8 +912,7 @@ SCIP_RETCODE readPolynomial(
          if( strcmp(pipinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            (void)strncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
-            name[PIP_MAX_LINELEN - 1] = '\0';
+            (void)SCIPstrncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
             SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", pipinput->linenumber, name);
          }
          else
@@ -2105,7 +2118,7 @@ void printRow(
    )
 {
    int v;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2237,7 +2250,7 @@ void printRowNl(
    int v;
    int c;
    int e;
-   char linebuffer[PIP_MAX_PRINTLEN] = { '\0' };
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
 
    SCIP_VAR* var;
@@ -2964,7 +2977,7 @@ SCIP_RETCODE SCIPwritePip(
    int e;
 
    int linecnt;
-   char linebuffer[PIP_MAX_PRINTLEN];
+   char linebuffer[PIP_MAX_PRINTLEN+1];
 
    char varname[PIP_MAX_NAMELEN];
    char buffer[PIP_MAX_PRINTLEN];

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,19 +25,22 @@
 #define __SCIP_IMPLICS_H__
 
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/def.h"
+#include "scip/type_branch.h"
+#include "scip/type_event.h"
+#include "scip/type_implics.h"
+#include "scip/type_lp.h"
+#include "scip/type_prob.h"
+#include "scip/type_reopt.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
-#include "scip/type_event.h"
-#include "scip/type_lp.h"
+#include "scip/type_tree.h"
 #include "scip/type_var.h"
-#include "scip/type_implics.h"
-#include "scip/type_branch.h"
-#include "scip/pub_implics.h"
 
 #ifdef NDEBUG
+#include "scip/pub_implics.h"
 #include "scip/struct_implics.h"
 #endif
 

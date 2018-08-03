@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,12 +27,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "scip/presol_dualcomp.h"
 #include "scip/pub_matrix.h"
-#include "presol_dualcomp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME            "dualcomp"
 #define PRESOL_DESC            "compensate single up-/downlocks by singleton continuous variables"
@@ -131,8 +143,8 @@ SCIP_RETCODE compensateVarLock(
 
       if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 &&
          SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
-         SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, *rowpnt) &&
-         SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt)
+         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, *rowpnt) &&
+         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt)
          )
       {
          /* minimal one valid compensation variable is present in this row */
@@ -144,7 +156,6 @@ SCIP_RETCODE compensateVarLock(
    /* return if no compensation variable is available */
    if( !singleton )
       return SCIP_OKAY;
-
 
    /* we perform the following transformations afterwards:
     *
@@ -248,8 +259,8 @@ SCIP_RETCODE compensateVarLock(
          }
       }
       else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 &&
-         SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, colidx) &&
-         SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, colidx) &&
+         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, colidx) &&
+         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, colidx) &&
          SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          /* this is singleton continuous variable and
@@ -573,7 +584,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             continue;
 
          /* verifiy that this variable has one uplock and that the uplocks are consistent */
-         if( SCIPvarGetNLocksUp(var) == 1 &&
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1 &&
             SCIPmatrixGetColNUplocks(matrix, i) == 1 &&
             SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
          {
@@ -631,7 +642,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             }
          }
          /* verifiy that this variable has one downlock and that the downlocks are consistent */
-         else if( SCIPvarGetNLocksDown(var) == 1 &&
+         else if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1 &&
             SCIPmatrixGetColNDownlocks(matrix, i) == 1 &&
             SCIPisGE(scip, SCIPvarGetObj(var), 0.0) )
          {

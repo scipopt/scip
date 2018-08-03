@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,40 +24,60 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <assert.h>
 
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/clock.h"
-#include "scip/visual.h"
-#include "scip/interrupt.h"
-#include "scip/event.h"
-#include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/sol.h"
-#include "scip/primal.h"
-#include "scip/tree.h"
-#include "scip/reopt.h"
-#include "scip/pricestore.h"
-#include "scip/sepastore.h"
-#include "scip/cutpool.h"
-#include "scip/solve.h"
-#include "scip/scip.h"
+#include "lpi/lpi.h"
 #include "scip/branch.h"
+#include "scip/clock.h"
+#include "scip/concurrent.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"
+#include "scip/cutpool.h"
 #include "scip/disp.h"
+#include "scip/event.h"
 #include "scip/heur.h"
+#include "scip/interrupt.h"
+#include "scip/lp.h"
 #include "scip/nodesel.h"
 #include "scip/pricer.h"
-#include "scip/relax.h"
-#include "scip/sepa.h"
+#include "scip/pricestore.h"
+#include "scip/primal.h"
+#include "scip/prob.h"
 #include "scip/prop.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/debug.h"
-#include "scip/concurrent.h"
+#include "scip/pub_pricer.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_relax.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/relax.h"
+#include "scip/reopt.h"
+#include "scip/scip_concurrent.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/sepa.h"
+#include "scip/sepastore.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/solve.h"
+#include "scip/stat.h"
+#include "scip/struct_cons.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_tree.h"
+#include "scip/struct_var.h"
 #include "scip/syncstore.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include "scip/visual.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
@@ -103,6 +123,12 @@ SCIP_Bool SCIPsolveIsStopped(
       {
          SCIPresetInterrupted();
       }
+   }
+   else if( SCIPterminated() )
+   {
+      stat->status = SCIP_STATUS_TERMINATE;
+
+      return TRUE;
    }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )
@@ -189,7 +215,6 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    )
 {  /*lint --e{715}*/
-
    SCIP_RESULT result;
    SCIP_Longint oldnbestsolsfound;
    SCIP_Real lowerbound;
@@ -912,7 +937,6 @@ SCIP_RETCODE updatePseudocost(
                      }
                      else
                         delta = SCIP_INVALID;
-
                   }
                   else
                   {
@@ -1129,7 +1153,6 @@ SCIP_RETCODE SCIPinitConssLP(
       /* the current node will be cut off; we clear the sepastore */
       SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
    }
-
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -2239,7 +2262,6 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool root;
    SCIP_Bool allowlocal;
    int maxseparounds;
-   int maxincseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
    int stallnfracs;
@@ -2286,9 +2308,6 @@ SCIP_RETCODE priceAndCutLoop(
    maxnsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
    if( maxnsepastallrounds == -1 )
       maxnsepastallrounds = INT_MAX;
-   maxincseparounds = set->sepa_maxincrounds;
-   if( maxincseparounds == -1 )
-      maxincseparounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
    /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
@@ -2454,7 +2473,6 @@ SCIP_RETCODE priceAndCutLoop(
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && stat->nincseparounds < maxincseparounds
          && nsepastallrounds < maxnsepastallrounds
          && !(*cutoff);
 
@@ -2485,7 +2503,6 @@ SCIP_RETCODE priceAndCutLoop(
       {
          SCIP_Longint olddomchgcount;
          SCIP_Longint oldninitconssadded;
-         int oldnlprows;
          SCIP_Bool enoughcuts;
 
          assert(lp->flushed);
@@ -2497,7 +2514,6 @@ SCIP_RETCODE priceAndCutLoop(
 
          mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
-         oldnlprows = lp->nrows;
 
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
@@ -2712,12 +2728,6 @@ SCIP_RETCODE priceAndCutLoop(
 
          /* increase separation round counter */
          stat->nseparounds++;
-
-         /* if size of lp relaxation increased also count this round separately */
-         if( lp->nrows > oldnlprows )
-            ++stat->nincseparounds;
-         else if( lp->nrows < oldnlprows )
-            stat->nincseparounds = 0;
       }
    }
 
@@ -3047,7 +3057,6 @@ SCIP_RETCODE solveNodeLP(
          *solverelaxagain = TRUE;
          markRelaxsUnsolved(set, relaxation);
       }
-
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -3257,7 +3266,6 @@ SCIP_RETCODE enforceConstraints(
    *branched = FALSE;
    /**@todo avoid checking the same pseudosolution twice */
 
-
    /* enforce (best) relaxation solution if the LP has a worse objective value */
    enforcerelaxsol = SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
@@ -3344,7 +3352,6 @@ SCIP_RETCODE enforceConstraints(
       }
       else if( SCIPtreeHasFocusNodeLP(tree) )
       {
-
          SCIPsetDebugMsg(set, "enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
 
          assert(lp->flushed);
@@ -3815,7 +3822,6 @@ SCIP_RETCODE propAndSolve(
    *relaxcalled = FALSE;
    if( solverelax && !(*cutoff) )
    {
-
       /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
@@ -4097,7 +4103,6 @@ SCIP_RETCODE solveNode(
    nlperrors = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
-   stat->nincseparounds = 0;
    solverelaxagain = TRUE;
    solvelpagain = TRUE;
    propagateagain = TRUE;
@@ -4154,7 +4159,6 @@ SCIP_RETCODE solveNode(
          /* time or solution limit was hit and we already created a dummy child node to terminate fast */
          if( *stopped )
             return SCIP_OKAY;
-
       }
       fullseparation = FALSE;
 
@@ -4204,7 +4208,6 @@ SCIP_RETCODE solveNode(
 
       if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
       {
-
          SCIPtreeSetFocusNodeLP(tree, FALSE);
 
          /* if we just ran into the time limit this is not really a numerical trouble;
@@ -4682,7 +4685,6 @@ SCIP_RETCODE addCurrentSolution(
 
       /* stop clock for relaxation solutions */
       SCIPclockStop(stat->relaxsoltime, set);
-
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
@@ -4990,7 +4992,6 @@ SCIP_RETCODE SCIPsolveCIP(
 
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
                SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
-
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;

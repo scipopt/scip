@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,17 +24,41 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-#include <stdio.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_select.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
@@ -481,7 +505,6 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding up may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
 
    return SCIP_OKAY;
@@ -495,7 +518,6 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding up may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
 
    return SCIP_OKAY;
@@ -807,7 +829,6 @@ void consdataChgWeight(
    weightdiff = newweight - oldweight;
    consdata->weights[item] = newweight;
 
-
    /* update weight sums for all and fixed variables */
    updateWeightSums(consdata, consdata->vars[item], weightdiff);
 
@@ -983,7 +1004,6 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
-
    }
 
    return SCIP_OKAY;
@@ -1577,7 +1597,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    {
       tempsort[j] = profits[j]/((SCIP_Real) weights[j]);
       realweights[j] = (SCIP_Real)weights[j];
-
    }
 
    /* partially sort indices such that all elements that are larger than the break item appear first */
@@ -1963,7 +1982,6 @@ SCIP_RETCODE GUBsetCreate(
       /* already updated status of variable in GUB constraint if it exceeds the capacity of the knapsack */
       if( weights[i] > capacity )
          (*gubset)->gubconss[(*gubset)->gubconssidx[i]]->gubvarsstatus[(*gubset)->gubvarsidx[i]] = GUBVARSTATUS_CAPACITYEXCEEDED;
-
    }
 
    return SCIP_OKAY;
@@ -2987,7 +3005,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
 #endif
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
-
 
    /* to get the GUB lifting sequence, we first sort all variables in F, C2, and R
     * - F:      non-increasing x*_j and non-increasing a_j in case of equality
@@ -6761,7 +6778,8 @@ SCIP_RETCODE dualPresolving(
       /* the variable should not be (globally) fixed */
       assert(SCIPvarGetLbGlobal(var) < 0.5 && SCIPvarGetUbGlobal(var) > 0.5);
 
-      if( SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 1 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 0
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 1 )
       {
          applicable = FALSE;
          break;
@@ -7603,12 +7621,16 @@ SCIP_RETCODE propagateCons(
                 */
                if( consdata->onesweightsum + minweightsum  + (maxcliqueweight - secondmaxweights[c]) > consdata->capacity )
                {
+#ifndef NDEBUG
+                  SCIP_Longint oldonesweightsum = consdata->onesweightsum;
+#endif
                   assert(maxcliqueweight >= secondmaxweights[c]);
                   assert(SCIPvarGetLbLocal(maxvar) < 0.5 && SCIPvarGetUbLocal(maxvar) > 0.5);
 
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
+                  assert(consdata->onesweightsum == oldonesweightsum);
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -7633,7 +7655,7 @@ SCIP_RETCODE propagateCons(
                /* loop over items with non-maximal weight (omitting the first position) */
                for( i = endvarposclique; i > startvarposclique; --i )
                {
-                  /* there should be no variable fixed to 0 between and startvarposclique + 1 and endvarposclique unless we
+                  /* there should be no variable fixed to 0 between startvarposclique + 1 and endvarposclique unless we
                    * messed up the clique preprocessing in the previous loop to filter those variables out */
                   assert(SCIPvarGetUbLocal(myvars[i]) > 0.5);
 
@@ -7651,8 +7673,12 @@ SCIP_RETCODE propagateCons(
                       * since replacing i with the element of maximal weight leads to infeasibility */
                      if( maxvarfixed || consdata->onesweightsum + minweightsum - myweights[i] + maxcliqueweight > consdata->capacity  )
                      {
-                     SCIPdebugMsg(scip, " -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[i]));
+#ifndef NDEBUG
+                        SCIP_Longint oldonesweightsum = consdata->onesweightsum;
+#endif
+                        SCIPdebugMsg(scip, " -> fixing variable <%s> to 1, due to negated clique information\n", SCIPvarGetName(myvars[i]));
                         SCIP_CALL( SCIPinferBinvarCons(scip, myvars[i], TRUE, cons, -i, &infeasible, &tightened) );
+                        assert(consdata->onesweightsum == oldonesweightsum + myweights[i]);
                         assert(!infeasible);
                         assert(tightened);
                         ++(*nfixedvars);
@@ -8200,7 +8226,6 @@ SCIP_RETCODE detectRedundantVars(
       SCIP_Longint maxactduetoclqfront;
       int* clqpart;
       int cliquenum;
-
 
       sumfront = 0;
       maxactduetoclqfront = 0;
@@ -9191,7 +9216,6 @@ SCIP_RETCODE dualWeightsTightening(
          }
       }
    }
-
 
  TERMINATE:
    /* correct capacity */
@@ -11206,7 +11230,6 @@ SCIP_RETCODE greedyCliqueAlgorithm(
             compareweightidx--;
             ncliquevars --;
          }
-
       }
 
       SCIPfreeBufferArray(scip, &cliquevars);
@@ -12461,7 +12484,6 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
 
       /* unmark the constraint to be propagated */
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-
    }
 
    /* adjust result code */
@@ -12783,7 +12805,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                      continue;
 
                   /* number of down locks should be one */
-                  if ( SCIPvarGetNLocksDown(vars[v]) != 1 )
+                  if ( SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) != 1 )
                      continue;
 
                   cardvars[v] = implvars[j];
@@ -12832,7 +12854,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                for (v = 0; v < nvars; ++v)
                {
                   assert( SCIPhashmapExists(varhash, vars[v]) );
-                  if ( SCIPvarGetNLocksUp(vars[v]) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
+                  if ( SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
                      break;
                }
                if ( v < nvars )
@@ -12998,7 +13020,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -13264,9 +13286,9 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
             consdata->existmultaggr = TRUE;
             consdata->merged = FALSE;
          }
-         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
+            (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(SCIPvarGetNegatedVar(var)) == SCIP_VARSTATUS_AGGREGATED) )
             consdata->merged = FALSE;
-
       }
       /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */

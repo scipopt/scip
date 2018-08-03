@@ -28,6 +28,7 @@ add_executable(scipstp
     src/probdata_stp.c
     src/prop_stp.c
     src/reader_stp.c
+    src/reader_gr.c
     src/reduce_alt.c
     src/reduce_bnd.c
     src/reduce.c

@@ -31,6 +31,7 @@ set(scipsources
     scip/branch_fullstrong.c
     scip/branch_inference.c
     scip/branch_leastinf.c
+    scip/branch_lookahead.c
     scip/branch_mostinf.c
     scip/branch_multaggr.c
     scip/branch_nodereopt.c
@@ -43,6 +44,8 @@ set(scipsources
     scip/concsolver_scip.c
     scip/cons_and.c
     scip/cons_bivariate.c
+    scip/cons_benders.c
+    scip/cons_benderslp.c
     scip/cons_bounddisjunction.c
     scip/cons_cardinality.c
     scip/cons_components.c
@@ -74,16 +77,20 @@ set(scipsources
     scip/event_globalbnd.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
+    scip/event_treesizeprediction.c
     scip/disp_default.c
+    scip/disp_estimates.c
     scip/heur_actconsdiving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
     scip/heur_completesol.c
+    scip/heur_conflictdiving.c
     scip/heur_crossover.c
     scip/heur_dins.c
     scip/heur_distributiondiving.c
     scip/heur_dualval.c
+    scip/heur_farkasdiving.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
@@ -143,7 +150,6 @@ set(scipsources
     scip/presol_dualcomp.c
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
-    scip/presol_implfree.c
     scip/presol_implics.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
@@ -169,6 +175,7 @@ set(scipsources
     scip/reader_ccg.c
     scip/reader_cip.c
     scip/reader_cnf.c
+    scip/reader_cor.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -183,6 +190,9 @@ set(scipsources
     scip/reader_ppm.c
     scip/reader_rlp.c
     scip/reader_sol.c
+    scip/reader_sto.c
+    scip/reader_smps.c
+    scip/reader_tim.c
     scip/reader_wbo.c
     scip/reader_zpl.c
     scip/sepa_cgmip.c
@@ -201,7 +211,15 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/benders_default.c
+    scip/benderscut_feas.c
+    scip/benderscut_int.c
+    scip/benderscut_nogood.c
+    scip/benderscut_opt.c
     scip/table_default.c
+    scip/benders.c
+    scip/benderscut.c
+    scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
@@ -228,6 +246,7 @@ set(scipsources
     scip/matrix.c
     scip/mem.c
     scip/misc.c
+    scip/misc_linear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -242,8 +261,49 @@ set(scipsources
     scip/relax.c
     scip/reopt.c
     scip/retcode.c
-    scip/scip.c
     scip/scip_bandit.c
+    scip/scip_benders.c
+    scip/scip_branch.c
+    scip/scip_compr.c
+    scip/scip_concurrent.c
+    scip/scip_conflict.c
+    scip/scip_cons.c
+    scip/scip_copy.c
+    scip/scip_cut.c
+    scip/scip_datastructures.c
+    scip/scip_debug.c
+    scip/scip_dialog.c
+    scip/scip_disp.c
+    scip/scip_event.c
+    scip/scip_expr.c
+    scip/scip_general.c
+    scip/scip_heur.c
+    scip/scip_lp.c
+    scip/scip_mem.c
+    scip/scip_message.c
+    scip/scip_nlp.c
+    scip/scip_nodesel.c
+    scip/scip_nonlinear.c
+    scip/scip_numerics.c
+    scip/scip_param.c
+    scip/scip_presol.c
+    scip/scip_pricer.c
+    scip/scip_prob.c
+    scip/scip_probing.c
+    scip/scip_prop.c
+    scip/scip_randnumgen.c
+    scip/scip_reader.c
+    scip/scip_relax.c
+    scip/scip_reopt.c
+    scip/scip_sepa.c
+    scip/scip_sol.c
+    scip/scip_solve.c
+    scip/scip_solvingstats.c
+    scip/scip_table.c
+    scip/scip_timing.c
+    scip/scip_tree.c
+    scip/scip_validation.c
+    scip/scip_var.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -268,6 +328,8 @@ set(scipsources
 )
 
 set(objscipsources
+    objscip/objbenders.cpp
+    objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
     objscip/objdialog.cpp
@@ -336,6 +398,8 @@ set(nlpiheaders
 )
 
 set(objscipheaders
+    objscip/objbenders.h
+    objscip/objbenderscut.h
     objscip/objbranchrule.h
     objscip/objcloneable.h
     objscip/objconshdlr.h
@@ -366,6 +430,14 @@ set(scipheaders
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
     scip/bandit_ucb.h
+    scip/benders.h
+    scip/benders_default.h
+    scip/benderscut.h
+    scip/benderscut_feas.h
+    scip/benderscut_int.h
+    scip/benderscut_nogood.h
+    scip/benderscut_opt.h
+    scip/bendersdefcuts.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -375,6 +447,7 @@ set(scipheaders
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
+    scip/branch_lookahead.h
     scip/branch_mostinf.h
     scip/branch_multaggr.h
     scip/branch_nodereopt.h
@@ -392,6 +465,8 @@ set(scipheaders
     scip/conflictstore.h
     scip/cons_abspower.h
     scip/cons_and.h
+    scip/cons_benders.h
+    scip/cons_benderslp.h
     scip/cons_bivariate.h
     scip/cons_bounddisjunction.h
     scip/cons_cardinality.h
@@ -429,20 +504,24 @@ set(scipheaders
     scip/dialog_default.h
     scip/dialog.h
     scip/disp_default.h
+    scip/disp_estimates.h
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/event_treesizeprediction.h
     scip/heur_actconsdiving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
     scip/heur_completesol.h
+    scip/heur_conflictdiving.h
     scip/heur_crossover.h
     scip/heur_dins.h
     scip/heur_distributiondiving.h
     scip/heur_dualval.h
+    scip/heur_farkasdiving.h
     scip/heur_feaspump.h
     scip/heur_fixandinfer.h
     scip/heur_fracdiving.h
@@ -516,7 +595,6 @@ set(scipheaders
     scip/presol_dualinfer.h
     scip/presol_gateextraction.h
     scip/presol.h
-    scip/presol_implfree.h
     scip/presol_implics.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
@@ -549,6 +627,8 @@ set(scipheaders
     scip/pub_bandit_epsgreedy.h
     scip/pub_bandit_exp3.h
     scip/pub_bandit_ucb.h
+    scip/pub_benders.h
+    scip/pub_benderscut.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -564,6 +644,7 @@ set(scipheaders
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h
+    scip/pub_misc_linear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
@@ -585,6 +666,7 @@ set(scipheaders
     scip/reader_ccg.h
     scip/reader_cip.h
     scip/reader_cnf.h
+    scip/reader_cor.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -600,6 +682,9 @@ set(scipheaders
     scip/reader_ppm.h
     scip/reader_rlp.h
     scip/reader_sol.h
+    scip/reader_smps.h
+    scip/reader_sto.h
+    scip/reader_tim.h
     scip/reader_wbo.h
     scip/reader_zpl.h
     scip/relax.h
@@ -610,6 +695,49 @@ set(scipheaders
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
+    scip/scip_bandit.h
+    scip/scip_benders.h
+    scip/scip_branch.h
+    scip/scip_compr.h
+    scip/scip_concurrent.h
+    scip/scip_conflict.h
+    scip/scip_cons.h
+    scip/scip_copy.h
+    scip/scip_cut.h
+    scip/scip_datastructures.h
+    scip/scip_debug.h
+    scip/scip_dialog.h
+    scip/scip_disp.h
+    scip/scip_event.h
+    scip/scip_expr.h
+    scip/scip_general.h
+    scip/scip_heur.h
+    scip/scip_lp.h
+    scip/scip_mem.h
+    scip/scip_message.h
+    scip/scip_nlp.h
+    scip/scip_nodesel.h
+    scip/scip_nonlinear.h
+    scip/scip_numerics.h
+    scip/scip_param.h
+    scip/scip_presol.h
+    scip/scip_pricer.h
+    scip/scip_prob.h
+    scip/scip_probing.h
+    scip/scip_prop.h
+    scip/scip_randnumgen.h
+    scip/scip_reader.h
+    scip/scip_relax.h
+    scip/scip_reopt.h
+    scip/scip_sepa.h
+    scip/scip_sol.h
+    scip/scip_solve.h
+    scip/scip_solvingstats.h
+    scip/scip_table.h
+    scip/scip_timing.h
+    scip/scip_tree.h
+    scip/scip_validation.h
+    scip/scip_var.h
     scip/scipshell.h
     scip/sepa_cgmip.h
     scip/sepa_clique.h
@@ -634,6 +762,8 @@ set(scipheaders
     scip/solve.h
     scip/stat.h
     scip/struct_bandit.h
+    scip/struct_benders.h
+    scip/struct_benderscut.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -683,6 +813,8 @@ set(scipheaders
     scip/table.h
     scip/tree.h
     scip/type_bandit.h
+    scip/type_benders.h
+    scip/type_benderscut.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h

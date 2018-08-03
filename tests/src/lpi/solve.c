@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -132,9 +132,6 @@ SCIP_RETCODE solveTest(
    /* check feasibility status */
    SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, &dualfeasible) );
 
-   /* CPLEX has a strange definition of stability such that we cannot use the test here. */
-   /* cr_assert( SCIPlpiIsStable(lpi) ); */
-
    /* if we are feasible, we should be optimal */
    if ( exp_primalfeas == SCIPfeas && exp_dualfeas == SCIPfeas )
    {
@@ -161,7 +158,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the primal is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsPrimalUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsPrimalRay(lpi) );
+      /* primal ray should exist if the primal simplex ran */
+      cr_assert( ! solveprimal || SCIPlpiExistsPrimalRay(lpi) );
       cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
       break;
 
@@ -199,7 +197,8 @@ SCIP_RETCODE solveTest(
       /* It seems that we cannot guarantee that the dual is shown to be unbounded. */
       /* cr_assert( SCIPlpiIsDualUnbounded(lpi) ); */
 
-      cr_assert( SCIPlpiExistsDualRay(lpi) );
+      /* dual ray should exist if the dual simplex ran */
+      cr_assert( solveprimal || SCIPlpiExistsDualRay(lpi) );
       cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
       break;
 
@@ -279,10 +278,19 @@ SCIP_RETCODE solveTest(
    else if ( exp_dualfeas == SCIPunbounded )
    {
       assert( exp_dualsol != NULL );
+
       if ( SCIPlpiHasDualRay(lpi) )
       {
          SCIP_Real scalingfactor = 1.0;
+         SCIP_Real* lhs;
+         SCIP_Real* rhs;
 
+         /* get lhs/rhs for check of dual ray */
+         BMSallocMemoryArray(&lhs, nrows);
+         BMSallocMemoryArray(&rhs, nrows);
+         SCIP_CALL( SCIPlpiGetSides(lpi, 0, nrows-1, lhs, rhs) );
+
+         /* get dual ray */
          SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualsol) );
 
          /* loop until scaling factor can be determined */
@@ -301,7 +309,12 @@ SCIP_RETCODE solveTest(
          for (i = 0; i < nrows; ++i)
          {
             cr_assert_float_eq(dualsol[i], scalingfactor * exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], scalingfactor * exp_dualsol[i]);
+            cr_assert( ! SCIPlpiIsInfinity(lpi, -lhs[i]) || dualsol[i] <= -EPS );
+            cr_assert( ! SCIPlpiIsInfinity(lpi, rhs[i]) || dualsol[i] >= EPS );
          }
+
+         BMSfreeMemoryArray(&rhs);
+         BMSfreeMemoryArray(&lhs);
       }
    }
 
@@ -919,4 +932,60 @@ Test(solve, test6)
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );
+}
+
+
+/** Test 7
+ *
+ *  min 10 x1 + 15 x2
+ *       2 x1 +   x2 >= 3
+ *         x1 + 3 x2 <= 1
+ *         x1,    x2 >= 0
+ *
+ *  which is dual unbounded (this is a variant of Test 3 in which the equations have been replaced by inequalities).
+ *
+ *  The dual is:
+ *  max  3 y1 +   y2
+ *       2 y1 +   y2 <= 10
+ *         y1 + 3 y2 <= 15
+ *         y1 >= 0, y2 <= 0
+ */
+Test(solve, test7)
+{
+   /* data with fixed values: */
+   SCIP_Real obj[2] = {10, 15};
+   SCIP_Real lb[2] = {0, 0};
+   SCIP_Real lhs[2] = {3, 1};
+   SCIP_Real rhs[2] = {3, 1};
+   int beg[2] = {0, 2};
+   int ind[4] = {0, 1, 0, 1};
+   SCIP_Real val[4] = {2, 1, 1, 3};
+
+   /* data to be filled */
+   SCIP_Real ub[2];
+
+   /* expected ray */
+   SCIP_Real exp_dualray[2] = {0.5, -1};
+
+   /* fill data */
+   rhs[0] = SCIPlpiInfinity(lpi);
+   lhs[1] = -SCIPlpiInfinity(lpi);
+   ub[0] = SCIPlpiInfinity(lpi);
+   ub[1] = SCIPlpiInfinity(lpi);
+
+   /* check problem with primal simplex */
+   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+         SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+   /* clear basis status */
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* check problem with dual simplex */
+   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
 }

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -287,13 +287,16 @@ struct SCIP_Lp
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
+   SCIP_Real*            soldirection;       /**< normalized vector in direction of primal solution from current LP solution */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    SCIP_Real*            divechgsides;       /**< stores the lhs/rhs changed in the current diving */
    SCIP_SIDETYPE*        divechgsidetypes;   /**< stores the side type of the changes done in the current diving */
    SCIP_ROW**            divechgrows;        /**< stores the rows changed in the current diving */
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
+   SCIP_SOL*             validsoldirsol;     /**< primal solution for which the currently stored solution direction vector is valid */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
+   SCIP_Longint          validsoldirlp;      /**< LP number for which the currently stored solution direction vector is valid */
    SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
@@ -306,6 +309,7 @@ struct SCIP_Lp
    int                   chgrowssize;        /**< available slots in chgrows vector */
    int                   nchgrows;           /**< current number of chgrows (number of used slots in chgrows vector) */
    int                   colssize;           /**< available slots in cols vector */
+   int                   soldirectionsize;   /**< available slots in soldirection vector */
    int                   ncols;              /**< current number of LP columns (number of used slots in cols vector) */
    int                   lazycolssize;       /**< available slots in lazycols vector */
    int                   nlazycols;          /**< current number of LP lazy columns (number of used slots in lazycols vector) */

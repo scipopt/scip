@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,14 +33,48 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/scip.h"
-#include "scip/scipdefplugins.h"
-#include "scip/heur_undercover.h"
-#include "scip/pub_misc.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
+#include "nlpi/pub_expr.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_indicator.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_soc.h"
+#include "scip/heur_subnlp.h"
+#include "scip/heur_undercover.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scipdefplugins.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME               "undercover"
 #define HEUR_DESC               "solves a sub-CIP determined by a set covering approach"
@@ -198,7 +232,6 @@ SCIP_Bool termIsConstant(
       return SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    else
       return SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-
 }
 
 
@@ -1263,16 +1296,16 @@ SCIP_RETCODE createCoveringProblem(
    case 'l': /* number of locks */
       for( i = nvars-1; i >= 0; i-- )
       {
-         nlocksup = SCIPvarGetNLocksUp(vars[i]);
-         nlocksdown = SCIPvarGetNLocksDown(vars[i]);
+         nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
+         nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (nlocksup+nlocksdown+1)) );
       }
       break;
    case 'm': /* min(up locks, down locks)+1 */
       for( i = nvars-1; i >= 0; i-- )
       {
-         nlocksup = SCIPvarGetNLocksUp(vars[i]);
-         nlocksdown = SCIPvarGetNLocksDown(vars[i]);
+         nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
+         nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (MIN(nlocksup, nlocksdown)+1)) );
       }
       break;
@@ -1636,7 +1669,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_CALL( SCIPsetIntParam(coveringscip, "display/verblevel", 0) );
 #endif
 
-
    /* solve covering problem */
    retcode = SCIPsolve(coveringscip);
 
@@ -1758,7 +1790,6 @@ SCIP_RETCODE computeFixingOrder(
          bestscore = MAX(bestscore, scores[i]);
       else
          bestscore = MIN(bestscore, scores[i]);
-
    }
 
    /* put integers to the front */
@@ -2054,9 +2085,9 @@ SCIP_RETCODE roundFixingValue(
    /* round in the direction of least locks with fractionality as tie breaker */
    else if( locksrounding )
    {
-      if( SCIPvarGetNLocksDown(var) < SCIPvarGetNLocksUp(var) )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) )
          x = SCIPfeasFloor(scip, x);
-      else if( SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var) )
+      else if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) )
          x = SCIPfeasCeil(scip, x);
       else
          x = SCIPfeasFrac(scip, x) < 0.5 ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
@@ -2069,7 +2100,7 @@ SCIP_RETCODE roundFixingValue(
       else if( SCIPfeasFrac(scip, x) > 0.5 )
          x = SCIPfeasCeil(scip, x);
       else
-         x = SCIPvarGetNLocksDown(var) < SCIPvarGetNLocksUp(var) ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
+         x = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) ? SCIPfeasFloor(scip, x) : SCIPfeasCeil(scip, x);
    }
 
    /* return rounded fixing value */
@@ -3158,7 +3189,7 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,10 +24,15 @@
 #ifndef __SCIP_STRUCT_REOPT_H__
 #define __SCIP_STRUCT_REOPT_H__
 
-
 #include "scip/def.h"
-#include "scip/type_reopt.h"
+#include "scip/type_clock.h"
+#include "scip/type_cons.h"
+#include "scip/type_history.h"
+#include "scip/type_lp.h"
 #include "scip/type_misc.h"
+#include "scip/type_reopt.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,7 +111,6 @@ struct SCIP_ReoptNode
 /* tree to store the current search tree */
 struct SCIP_ReoptTree
 {
-
    SCIP_REOPTNODE**      reoptnodes;              /**< array of SCIP_REOPTNODE */
    SCIP_QUEUE*           openids;                 /**< queue of open positions in the reoptnodes array */
    int                   nreoptnodes;             /**< number of saved nodes */

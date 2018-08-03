@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -60,6 +60,18 @@ void SCIPinterruptRelease(
 /** returns whether the user interrupted by pressing CTRL-C */
 extern
 SCIP_Bool SCIPinterrupted(
+   void
+   );
+
+/** returns whether the process has received a SIGTERM */
+extern
+SCIP_Bool SCIPterminated(
+   void
+   );
+
+/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+extern
+void SCIPtryTerminate(
    void
    );
 

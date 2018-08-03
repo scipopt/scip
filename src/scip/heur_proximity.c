@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,11 +22,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_proximity.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/heuristics.h"
+#include "scip/heur_proximity.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "proximity"
 #define HEUR_DESC             "heuristic trying to improve the incumbent by an auxiliary proximity objective function"
@@ -265,7 +290,6 @@ SCIP_RETCODE createNewSol(
          {
             SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], subsolvals[v]) );
          }
-
       }
    }
 
@@ -543,7 +567,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    nnodes -= heurdata->usednodes;
    nnodes = MIN(nnodes, heurdata->maxnodes);
 
-   nlpiters = (SCIP_Longint) heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip);
+   nlpiters = (SCIP_Longint) (heurdata->lpitersquot * SCIPgetNRootFirstLPIterations(scip));
    nlpiters = MIN(nlpiters, heurdata->maxlpiters);
 
    /* check whether we have enough nodes left to call subproblem solving */
@@ -880,7 +904,9 @@ SCIP_RETCODE SCIPapplyProximity(
       assert(SCIPvarIsBinary(subvars[i]));
 
       solval = SCIPgetSolVal(scip, incumbent, vars[i]);
-      assert(SCIPisFeasEQ(scip, solval, 1.0) || SCIPisFeasEQ(scip, solval, 0.0));
+      assert(SCIPisFeasGE(scip, solval, 0.0));
+      assert(SCIPisFeasLE(scip, solval, 1.0));
+      assert(SCIPisFeasIntegral(scip, solval));
 
       if( solval < 0.5 )
       {

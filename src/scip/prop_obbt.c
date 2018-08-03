@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,16 +35,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/prop_obbt.h"
-#include "scip/prop_genvbounds.h"
-#include "scip/debug.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_nonlinear.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/intervalarith.h"
+#include "scip/prop_genvbounds.h"
+#include "scip/prop_obbt.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -155,8 +181,6 @@ struct SCIP_PropData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    SCIP_Longint          npropagatedomreds;  /**< number of domain reductions found during propagation */
-   SCIP_Longint          nprobingiterations; /**< number of LP iterations during the probing mode */
-   SCIP_Longint          nfilterlpiters;     /**< number of LP iterations spend for filtering */
    SCIP_Longint          minitlimit;         /**< minimum LP iteration limit */
    SCIP_Longint          itlimitbilin;       /**< total LP iterations limit for solving bilinear inequality LPs */
    SCIP_Longint          itusedbilin;        /**< total LP iterations used for solving bilinear inequality LPs */
@@ -191,12 +215,6 @@ struct SCIP_PropData
    int                   nbilinbounds;       /**< length of interesting bilinear bounds array */
    int                   boundssize;         /**< size of bounds array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
-   int                   nfiltered;          /**< number of filtered bounds by solving auxiliary variables */
-   int                   ntrivialfiltered;   /**< number of filtered bounds because the LP value was equal to the bound */
-   int                   nsolvedbounds;      /**< number of solved bounds during the loop in applyObbt() */
-   int                   ngenvboundsprobing; /**< number of non-trivial genvbounds generated and added during obbt */
-   int                   ngenvboundsaggrfil; /**< number of non-trivial genvbounds found during aggressive filtering */
-   int                   ngenvboundstrivfil; /**< number of non-trivial genvbounds found during trivial filtering */
    int                   lastidx;            /**< index to store the last undone and unfiltered bound */
    int                   lastbilinidx;       /**< index to store the last undone and unfiltered bilinear bound */
    int                   sepaminiter;        /**< minimum number of iteration spend to separate an obbt LP solution */
@@ -877,10 +895,7 @@ SCIP_RETCODE filterExistingLP(
 #endif
 
             /* solve the OBBT LP */
-            propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->nprobingiterations += SCIPgetNLPIterations(scip);
-            assert(propdata->nprobingiterations >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
             if( optimal && propdata->genvboundprop != NULL
@@ -891,11 +906,7 @@ SCIP_RETCODE filterExistingLP(
                assert(!error);
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
 
-               if( found )
-               {
-                  propdata->ngenvboundstrivfil += 1;
-                  SCIPdebugMsg(scip, "found genvbound during trivial filtering\n");
-               }
+               SCIPdebugMsg(scip, "found genvbound during trivial filtering? %u\n", found);
             }
 
             /* restore objective function */
@@ -1004,10 +1015,7 @@ SCIP_RETCODE filterRound(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* solve LP */
-   propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
    SCIP_CALL( solveLP(scip, itlimit, &error, &optimal) );
-   propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
-   assert(propdata->nfilterlpiters >= 0);
 
    if( !optimal )
    {
@@ -1076,10 +1084,7 @@ SCIP_RETCODE filterRound(
             SCIP_CALL( setObjProbing(scip, propdata, bound, 1.0) );
 
             /* solve the OBBT LP */
-            propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
-            assert(propdata->nfilterlpiters >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
             if( optimal && propdata->genvboundprop != NULL
@@ -1089,13 +1094,7 @@ SCIP_RETCODE filterRound(
 
                assert(!error);
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
-
-               if( found )
-               {
-                  propdata->ngenvboundsaggrfil += 1;
-                  SCIPdebugMsg(scip, "found genvbound during aggressive filtering\n");
-               }
-
+               SCIPdebugMsg(scip, "found genvbound during aggressive filtering? %u\n", found);
             }
 
             /* restore objective function */
@@ -1265,7 +1264,6 @@ SCIP_RETCODE filterBounds(
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
 
    SCIPdebugMsg(scip, "filtered %d this round\n", ntotalfiltered);
-   propdata->nfiltered += ntotalfiltered;
 
    /* free array */
    SCIPfreeBufferArray(scip, &objcoefsinds);
@@ -1592,7 +1590,6 @@ SCIP_RETCODE applySeparation(
       {
          SCIP_Bool found;
          SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-         propdata->ngenvboundsprobing += found ? 1 : 0;
       }
 
       /* try to tight the variable bound */
@@ -1703,13 +1700,8 @@ SCIP_RETCODE findNewBounds(
 
       SCIPdebugMsg(scip, "probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
 
-      propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
-
       /* now solve the LP */
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
-
-      propdata->nprobingiterations += SCIPgetNLPIterations(scip);
-      propdata->nsolvedbounds++;
 
       SCIPdebugMsg(scip, "probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
       SCIPdebugMsg(scip, "OPT: %u ERROR: %u\n" , optimal, error);
@@ -1749,9 +1741,6 @@ SCIP_RETCODE findNewBounds(
             SCIP_Bool found;
 
             SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-
-            if( found )
-               propdata->ngenvboundsprobing += 1;
          }
 
          /* try to tighten bound in probing mode */
@@ -1774,9 +1763,7 @@ SCIP_RETCODE findNewBounds(
          /* separate current OBBT LP solution */
          if( iterationsleft && propdata->separatesol )
          {
-            propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
             SCIP_CALL( applySeparation(scip, propdata, currbound, nleftiterations, &success) );
-            propdata->nprobingiterations += SCIPgetNLPIterations(scip);
 
             /* remember best solution value after solving additional separations LPs */
             if( success )
@@ -1804,7 +1791,6 @@ SCIP_RETCODE findNewBounds(
          {
             SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered, currbound) );
             SCIPdebugMsg(scip, "filtered %d bounds via inspecting present LP solution\n", nfiltered);
-            propdata->ntrivialfiltered += nfiltered;
          }
 
          propdata->propagatecounter += success ? 1 : 0;
@@ -1937,7 +1923,6 @@ SCIP_RETCODE applyObbt(
    {
       SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered, NULL) );
       SCIPdebugMsg(scip, "filtered %d bounds via inspecting present LP solution\n", nfiltered);
-      propdata->ntrivialfiltered += nfiltered;
    }
 
    /* store old dualfeasibletol */
@@ -2101,12 +2086,12 @@ TERMINATE:
  *  Let x* be the optimal primal and (mu,theta) be the optimal dual solution of this LP. The KKT conditions imply that
  *  the aggregation of the linear constraints mu*Ax <= mu*b can be written as
  *
- *  x * (1 - theta) / (xt - xs) + y * theta / (yt - ys) = mu * Ax <= mu * b
+ *  x * (1 - theta / (xt - xs)) + y * theta / (yt - ys) = mu * Ax <= mu * b
  *
  *  <=> alpha * x + beta * y <= mu * b = alpha * (x*) + beta * (y*)
  *
  *  which is a valid inequality in the (x,y)-space; in order to avoid numerical difficulties when (xs,ys) is too close
- *  to (xt,yt), we scale constraint (1) by max{1,|xt-xs|,|yt-ys|} beforehand
+ *  to (xt,yt), we scale constraint (2) by min{ max{1,|xt-xs|,|yt-ys|}, 100 } beforehand
  */
 static
 SCIP_RETCODE solveBilinearLP(
@@ -2578,8 +2563,6 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
    {
-
-      /*SCIPdebugMsg(scip, "cons_quadratic is there!\n");*/
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
@@ -2830,7 +2813,6 @@ SCIP_RETCODE initBounds(
       bilinidx = 0;
       nbilinterms = 0;
 
-
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &y, nbilins) );
@@ -2974,7 +2956,7 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
    SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -3123,14 +3105,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
    SCIPfreeRandom(scip, &propdata->randnumgen);
    propdata->randnumgen = NULL;
 
-   /* note that because we reset filtered flags to false at each call to obbt, the same bound may be filtered multiple
-    * times
-    */
-   SCIPstatisticMessage("DIVE-LP: %" SCIP_LONGINT_FORMAT "  NFILTERED: %d NTRIVIALFILTERED: %d NSOLVED: %d "
-      "FILTER-LP: %" SCIP_LONGINT_FORMAT " NGENVB(dive): %d NGENVB(aggr.): %d NGENVB(triv.) %d\n",
-      propdata->nprobingiterations, propdata->nfiltered, propdata->ntrivialfiltered, propdata->nsolvedbounds,
-      propdata->nfilterlpiters, propdata->ngenvboundsprobing, propdata->ngenvboundsaggrfil, propdata->ngenvboundstrivfil);
-
    /* free bilinear bounds */
    if( propdata->nbilinbounds > 0 )
    {
@@ -3153,6 +3127,11 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
       SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }
 
+   /* reset variables */
+   propdata->lastidx = -1;
+   propdata->lastbilinidx = 0;
+   propdata->propagatecounter = 0;
+   propdata->npropagatedomreds = 0;
    propdata->nbounds = -1;
    propdata->itlimitbilin = 0;
    propdata->itusedbilin = 0;
@@ -3196,18 +3175,8 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    BMSclearMemory(propdata);
 
-   /* initialize statistic variables */
-   propdata->nprobingiterations = 0;
-   propdata->nfiltered = 0;
-   propdata->ntrivialfiltered = 0;
-   propdata->nsolvedbounds = 0;
-   propdata->ngenvboundsprobing = 0;
-   propdata->ngenvboundsaggrfil = 0;
-   propdata->ngenvboundstrivfil = 0;
-   propdata->nfilterlpiters = 0;
+   /* initialize variables with a non-zero default value */
    propdata->lastidx = -1;
-   propdata->propagatecounter = 0;
-   propdata->npropagatedomreds = 0;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

@@ -175,7 +175,18 @@ SCIP_Real computeProbabilities(SCIP* scip, TSEtree* node, ProbabilityMethod prob
  * and pruned nodes according to this upper bound.
  */
 static
-void estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Real* totalsize, SCIP_Real* remainingsize, SCIP_Real* minimumsize, SCIP_Real* currentsize, ProbabilityMethod probabilitymethod, EstimationMethod estimationmethod, SCIP_Bool doknownnodes)
+void estimateTreeSize(
+   SCIP*                 scip,
+   TSEtree*              node,
+   SCIP_Real             upperbound,
+   SCIP_Real*            totalsize,
+   SCIP_Real*            remainingsize,
+   SCIP_Real*            minimumsize,
+   SCIP_Real*            currentsize,
+   ProbabilityMethod     probabilitymethod,
+   EstimationMethod      estimationmethod,
+   SCIP_Bool             doknownnodes
+   )
 {
    assert(node != NULL);
    assert(totalsize != NULL);

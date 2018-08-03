@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -79,7 +79,7 @@ void setup(void)
    SCIP_CALL( SCIPallocMemoryArray(scip, &profits, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &solitems, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nonsolitems, MEMSIZE) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED, TRUE) );
    cr_assert_not_null(items);
    cr_assert_not_null(weights);
    cr_assert_not_null(profits);

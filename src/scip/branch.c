@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -822,7 +822,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
          }
          branchcand->nprioexternimpls++;
 
-
          if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
          {
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
@@ -838,7 +837,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             }
             branchcand->nprioexternints++;
             branchcand->nprioexternimpls--;
-
 
             if( vartype == SCIP_VARTYPE_BINARY )
             {
@@ -1440,8 +1438,9 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a branching rule */
-SCIP_RETCODE SCIPbranchruleCreate(
+/** internal method for creating a branching rule */
+static
+SCIP_RETCODE doBranchruleCreate(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1473,6 +1472,8 @@ SCIP_RETCODE SCIPbranchruleCreate(
    assert(desc != NULL);
 
    SCIP_ALLOC( BMSallocMemory(branchrule) );
+   BMSclearMemory(*branchrule);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*branchrule)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*branchrule)->desc, desc, strlen(desc)+1) );
    (*branchrule)->priority = priority;
@@ -1520,6 +1521,42 @@ SCIP_RETCODE SCIPbranchruleCreate(
    return SCIP_OKAY;
 }
 
+/** creates a branching rule */
+SCIP_RETCODE SCIPbranchruleCreate(
+   SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for external solutions */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   assert(branchrule != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doBranchruleCreate(branchrule, set, messagehdlr, blkmem, name, desc, priority, maxdepth,
+      maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol, branchexeclp,
+      branchexecext, branchexecps, branchruledata), (void) SCIPbranchruleFree(branchrule, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of branching rule */
 SCIP_RETCODE SCIPbranchruleFree(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
@@ -1527,7 +1564,8 @@ SCIP_RETCODE SCIPbranchruleFree(
    )
 {
    assert(branchrule != NULL);
-   assert(*branchrule != NULL);
+   if( *branchrule == NULL )
+      return SCIP_OKAY;
    assert(!(*branchrule)->initialized);
    assert(set != NULL);
 
@@ -1539,8 +1577,8 @@ SCIP_RETCODE SCIPbranchruleFree(
 
    SCIPclockFree(&(*branchrule)->branchclock);
    SCIPclockFree(&(*branchrule)->setuptime);
-   BMSfreeMemoryArray(&(*branchrule)->name);
-   BMSfreeMemoryArray(&(*branchrule)->desc);
+   BMSfreeMemoryArrayNull(&(*branchrule)->name);
+   BMSfreeMemoryArrayNull(&(*branchrule)->desc);
    BMSfreeMemory(branchrule);
 
    return SCIP_OKAY;

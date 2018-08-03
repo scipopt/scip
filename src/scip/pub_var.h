@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,17 +26,22 @@
 
 
 #include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_misc.h"
-#include "scip/type_history.h"
-#include "scip/type_var.h"
-#include "scip/type_implics.h"
 #include "scip/type_cons.h"
+#include "scip/type_history.h"
+#include "scip/type_implics.h"
+#include "scip/type_lp.h"
+#include "scip/type_misc.h"
+#include "scip/type_prop.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef NDEBUG
 #include "scip/struct_var.h"
 #include "scip/implics.h"
 #include "scip/history.h"
+#include "scip/pub_lp.h"
 #endif
 
 #ifdef __cplusplus
@@ -44,7 +49,7 @@ extern "C" {
 #endif
 
 /*
- * methods for variables 
+ * methods for variables
  */
 
 /**@addtogroup PublicVariableMethods
@@ -52,25 +57,55 @@ extern "C" {
  * @{
  */
 
-/** gets number of locks for rounding down */
+/** gets number of locks for rounding down
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksDownType()
+ */
 EXTERN
 int SCIPvarGetNLocksDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of locks for rounding up */
+/** gets number of locks for rounding up
+ *
+ *  @note This method will always return variable locks of type model
+ *
+ *  @note It is recommented to use SCIPvarGetNLocksUpType()
+ */
 EXTERN
 int SCIPvarGetNLocksUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** is it possible, to round variable down and stay feasible? */
+/** gets number of locks for rounding up of a special type */
+EXTERN
+int SCIPvarGetNLocksUpType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
+   );
+
+/** gets number of locks for rounding down of a special type */
+EXTERN
+int SCIPvarGetNLocksDownType(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_LOCKTYPE         locktype            /**< type of variable locks */
+   );
+
+/** is it possible, to round variable down and stay feasible?
+ *
+ *  @note This method will always check w.r.t variable locks of type model
+ */
 EXTERN
 SCIP_Bool SCIPvarMayRoundDown(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** is it possible, to round variable up and stay feasible? */
+/** is it possible, to round variable up and stay feasible?
+ *
+ *  @note This method will always check w.r.t. variable locks of type model
+ */
 EXTERN
 SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */

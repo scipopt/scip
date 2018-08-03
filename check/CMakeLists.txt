@@ -1,9 +1,22 @@
 include(CTest)
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure --schedule-random
+#
+# add a custom SCIP check target 'scip_check'
+#
+add_custom_target(scip_check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
                 DEPENDS scip
                 )
+
+#
+# add a phony target check, if it has not been defined in a different SCIP Optimization Suite project, yet
+# and add 'scip_check' as a dependency.
+#
+if (NOT TARGET check)
+    add_custom_target(check)
+endif()
+
+add_dependencies(check scip_check)
 
 #
 # define the instance sets
@@ -63,6 +76,7 @@ set(settings_MIP
     "solvingphases"
 #    "cloud"
     "uct_breadth_dualval"
+    "conflictdiving"
 )
 #
 # settings to run a reduced MIP test
@@ -79,9 +93,11 @@ set(settings_fastMIP
     "cgmipviol"
     "presolving_off"
     "separating_off"
+    "lookahead-abbrev-bincons"
+    "lookahead-addclique-scaledcutoffscore"
   )
 set(settings_MINLP
-    "checkfeastolfac10"
+    "minlp"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -93,27 +109,34 @@ set(settings_MINLP
     "separating_aggressive"
 )
 set(settings_Bivariate
-    "checkfeastolfac10"
+    "minlp"
     "bivariate"
 )
 
 set(settings_Bilinrelax
-    "checkfeastolfac10"
+    "minlp"
     "bilinrelax"
   )
 
 set(settings_Symmetry
-    "orbitalfixing-beforepre"
-    "orbitopes-beforepre"
-    "symresacks-beforepre"
-    "orbitalfixing-afterpre"
-    "orbitopes-afterpre"
-    "symresacks-afterpre"
+    "orbitalfixing-timing0"
+    "orbitalfixing-timing1"
+    "orbitalfixing-timing2"
+    "orbitopes-timing0"
+    "orbitopes-timing2"
+    "packingorbitopes-timing0"
+    "packingorbitopes-timing2"
+    "symresacks-timing0"
+    "symresacks-timing2"
     )
 
 set(settings_sparsify
     "sparsifyaggr"
   )
+
+set(settings_Benders
+    "usebenders"
+   )
 
 #
 # Indicator instances
@@ -171,6 +194,7 @@ set(instances_MIP
 # Reduced set of MIP instances for more expensive settings
 #
 set(instances_fastMIP
+    "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/MANN_a9.clq.lp\;16"
@@ -293,6 +317,20 @@ set(instances_Symmetry
     )
 
 #
+# Stochastic programming instances
+#
+set(instances_Stochastic
+   "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
+   "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
+   "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
+   )
+
+set(instances_Benders
+    "instances/Stochastic/4node1.smps\;480.9"
+    "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+   )
+
+#
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
@@ -377,6 +415,8 @@ add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
+add_instancetests(instances_Stochastic settings_default "Stochastic")
+add_instancetests(instances_Benders settings_Benders "Benders")
 
 #
 # test writing and reading solutions
@@ -495,6 +535,8 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                # the MIP start instances are validated twice.
+                                FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
                             )
     endif()
@@ -651,5 +693,29 @@ foreach(instance ${instances_MIP})
 
 endforeach()
 
-
-
+#
+# add a test for handling of the SIGTERM signal. The test uses the timeout command that
+# is only available on Linux, that is available on MAC OS as "gtimeout" after installing
+# the 'coreutils' package
+#
+if (TEST_SIGNAL_HANDLING)
+if (UNIX)
+    if (APPLE)
+        set(timeoutcommand "gtimeout")
+    else ()
+        set(timeoutcommand "timeout")
+    endif (APPLE)
+    configure_file(interactiveshell/signal-handling-sigterm.bat.in interactiveshell/signal-handling-sigterm.bat)
+    add_test(NAME signal-handling-sigterm
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -b interactiveshell/signal-handling-sigterm.bat
+            )
+    set_tests_properties(signal-handling-sigterm
+                        PROPERTIES
+                            DEPENDS scip-build
+                            PASS_REGULAR_EXPRESSION "termination signal received"
+                            #
+                            # I assume that this test takes longer than 2 seconds
+                            #
+                            )
+endif (UNIX)
+endif()

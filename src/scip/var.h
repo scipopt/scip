@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,29 +25,35 @@
 #define __SCIP_VAR_H__
 
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_misc.h"
-#include "scip/type_history.h"
-#include "scip/type_event.h"
-#include "scip/type_lp.h"
-#include "scip/type_var.h"
-#include "scip/type_prob.h"
-#include "scip/type_primal.h"
-#include "scip/type_tree.h"
-#include "scip/type_reopt.h"
+#include "scip/def.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
-#include "scip/pub_var.h"
-#include "scip/pub_misc.h"
+#include "scip/type_event.h"
+#include "scip/type_history.h"
+#include "scip/type_implics.h"
+#include "scip/type_lp.h"
+#include "scip/type_message.h"
+#include "scip/type_misc.h"
+#include "scip/type_primal.h"
+#include "scip/type_prob.h"
+#include "scip/type_prop.h"
+#include "scip/type_relax.h"
+#include "scip/type_reopt.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_set.h"
+#include "scip/type_sol.h"
+#include "scip/type_stat.h"
+#include "scip/type_tree.h"
+#include "scip/type_var.h"
 
 #ifndef NDEBUG
 #include "scip/struct_var.h"
 #else
 #include "scip/event.h"
+#include "scip/pub_history.h"
 #endif
 
 #ifdef __cplusplus
@@ -625,6 +631,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LOCKTYPE         locktype,           /**< type of the variable locks */
    int                   addnlocksdown,      /**< increase in number of rounding down locks */
    int                   addnlocksup         /**< increase in number of rounding up locks */
    );

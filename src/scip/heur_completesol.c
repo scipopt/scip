@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,20 +20,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-
+#include "blockmemshell/memory.h"
+#include "scip/cons_linear.h"
 #include "scip/heur_completesol.h"
-#include "scip/scipdefplugins.h"       /* needed for the secondary SCIP instance */
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/def.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "completesol"
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
 #define HEUR_DISPCHAR         'h'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
@@ -1005,8 +1027,6 @@ SCIP_RETCODE applyCompletesol(
    SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPendProbing(scip) );
 
-
-
    return SCIP_OKAY;
 }
 
@@ -1088,11 +1108,12 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       return SCIP_OKAY;
 
    /* check whether we want to run before presolving */
-   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL && !heurdata->beforepresol )
+   if( (heurtiming & SCIP_HEURTIMING_BEFOREPRESOL) && !heurdata->beforepresol )
       return SCIP_OKAY;
 
    /* only run before root node */
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip) )
+   if( (heurtiming & SCIP_HEURTIMING_BEFORENODE)
+      && (heurdata->beforepresol || SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip)) )
       return SCIP_OKAY;
 
    /* get variable data and return of no variables are left in the problem */
@@ -1174,22 +1195,20 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
        */
       if( nunknown == 0 && nfracints == 0 && SCIPgetNContVars(scip) == 0 && SCIPgetNImplVars(scip) == 0 )
       {
-         SCIP_VAR** origvars;
          SCIP_SOL* newsol;
          SCIP_Bool stored;
-         int norigvars;
 
-         origvars = SCIPgetOrigVars(scip);
-         norigvars = SCIPgetNOrigVars(scip);
+         assert(vars != NULL);
+         assert(nvars >= 0);
 
-         SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, heur) );
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
-         for( v = 0; v < norigvars; v++ )
+         for( v = 0; v < nvars; v++ )
          {
-            solval = SCIPgetSolVal(scip, sol, origvars[v]);
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
             assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvars[v], solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
          }
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
@@ -1299,7 +1318,6 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
          "maximal number of continuous variables after presolving",
          &heurdata->maxcontvars, FALSE, DEFAULT_MAXCONTVARS, -1, INT_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }
