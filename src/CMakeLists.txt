@@ -75,6 +75,7 @@ set(scipsources
     scip/cons_xor.c
     scip/dialog_default.c
     scip/event_globalbnd.c
+    scip/event_restart.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/event_treesizeprediction.c
@@ -508,6 +509,7 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
+    scip/event_restart.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/event_treesizeprediction.h
