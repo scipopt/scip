@@ -3924,22 +3924,6 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
             SCIPsetDebugMsg(set, " -> propagation returned result <%d>\n", *result);
 
-#ifdef WITH_DEBUG_SOLUTION
-            {
-               int c;
-
-               /* loop over all constraints and check all check-constraints w.r.t. the debug solution */
-               for( c = 0; c < nmarkedpropconss; c++ )
-               {
-                  if( SCIPconsIsChecked(conss[c]) )
-                  {
-                     /* check constraint w.r.t. debug solution */
-                     SCIP_CALL( SCIPdebugCheckConss(set->scip, &(conss[c]), 1) );
-                  }
-               }
-            }
-#endif
-
             /* stop timing */
             if( instrongbranching )
                SCIPclockStop(conshdlr->sbproptime, set);
@@ -4097,22 +4081,6 @@ SCIP_RETCODE SCIPconshdlrPresolve(
                nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
                ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
-
-#ifdef WITH_DEBUG_SOLUTION
-         {
-            int c;
-
-            /* loop over all constraints and check all check-constraints w.r.t. the debug solution */
-            for( c = 0; c < conshdlr->nactiveconss; c++ )
-            {
-               if( SCIPconsIsChecked(conshdlr->conss[c]) )
-               {
-                  /* check constraint w.r.t. debug solution */
-                  SCIP_CALL( SCIPdebugCheckConss(set->scip, &(conshdlr->conss[c]), 1) );
-               }
-            }
-         }
-#endif
 
          /* stop timing */
          SCIPclockStop(conshdlr->presoltime, set);
@@ -7616,14 +7584,6 @@ SCIP_RETCODE SCIPconsProp(
       SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, &cons, 1, 1, 1, proptiming, result) );
       SCIPsetDebugMsg(set, " -> prop returned result <%d>\n", *result);
 
-#ifdef WITH_DEBUG_SOLUTION
-      if( SCIPconsIsChecked(cons) )
-      {
-         /* check constraint w.r.t. debug solution */
-         SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
-      }
-#endif
-
       if( *result != SCIP_CUTOFF
          && *result != SCIP_CONSADDED
          && *result != SCIP_REDUCEDDOM
@@ -7739,14 +7699,6 @@ SCIP_RETCODE SCIPconsPresol(
             nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes,
             nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
       SCIPsetDebugMsg(set, " -> presol returned result <%d>\n", *result);
-
-#ifdef WITH_DEBUG_SOLUTION
-      if( SCIPconsIsChecked(cons) )
-      {
-         /* check constraint w.r.t. debug solution */
-         SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
-      }
-#endif
 
       if( *result != SCIP_UNBOUNDED
          && *result != SCIP_CUTOFF
