@@ -90,7 +90,11 @@ struct TreeSizeEstimateTree
  * Returns the left probability (between 0 and 1).
  */
 static
-SCIP_Real computeProbabilities(SCIP* scip, TSEtree* node, ProbabilityMethod probabilitymethod)
+SCIP_Real computeProbabilities(
+   SCIP*                 scip,
+   TSEtree*              node,
+   ProbabilityMethod     probabilitymethod
+   )
 {
    SCIP_Real fractionleft;
    SCIP_Real fractionright;
@@ -434,7 +438,10 @@ postconditions:
  * Recursively frees memory in the tree.
  */
 static
-void freeTreeMemory(SCIP *scip, TSEtree **tree)
+void freeTreeMemory(
+   SCIP*                 scip,
+   TSEtree**             tree
+   )
 {
    assert(scip != NULL);
    assert(tree != NULL);
@@ -497,7 +504,9 @@ struct SCIP_EventhdlrData
    Elist *lastestimate;
 };
 
-SCIP_Real SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
+SCIP_Real SCIPtreeSizeGetEstimateRemaining(
+   SCIP*                 scip
+   )
 {
    SCIP_Real totalsize;
    SCIP_Real remainingsize;
@@ -539,7 +548,9 @@ SCIP_Real SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
    }
 }
 
-SCIP_Real SCIPtreeSizeGetEstimateTotal(SCIP* scip)
+SCIP_Real SCIPtreeSizeGetEstimateTotal(
+   SCIP*                 scip
+   )
 {
    SCIP_Real remainingestimate;
    SCIP_Real estimate;
