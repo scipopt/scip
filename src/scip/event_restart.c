@@ -21,7 +21,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/event_restart.h"
-
+#include "scip/event_treesizeprediction.h"
 #include "pub_event.h"
 #include "pub_message.h"
 #include "scip_event.h"
@@ -57,6 +57,9 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define RESTARTPOLICY_CHAR_ALWAYS 'a'
 #define RESTARTPOLICY_CHAR_ESTIMATION 'e'
 #define RESTARTPOLICY_CHAR_PROGRESS 'p'
+
+#define ESTIMATION_CHAR_TREESIZE         't' /**< should estimation use probability based tree size prediction? */
+#define ESTIMATION_CHAR_PROFILE          'p'  /**< should estimation use profile based prediction a la Cornuejols? */
 
 
 /** event handler data */
@@ -224,6 +227,46 @@ SCIP_Bool checkConditions(
    return TRUE;
 }
 
+/** should a restart be applied based on the current tree size estimation? */
+static
+SCIP_Bool shouldApplyRestartEstimation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   SCIP_Real estimation;
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+
+   switch (eventhdlrdata->estimationparam) {
+      case ESTIMATION_CHAR_TREESIZE:
+         estimation = SCIPtreeSizeGetEstimateTotal(scip);
+
+         /* no estimation is available yet */
+         if( estimation < 0.0 )
+            return FALSE;
+
+         if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                     "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
+                     estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
+            return TRUE;
+         }
+         return FALSE;
+         break;
+      case ESTIMATION_CHAR_PROFILE:
+         SCIPerrorMessage("Needs to be implemented");
+
+         SCIPABORT();
+         break;
+      default:
+         break;
+   }
+
+   return TRUE;
+}
+
 /** check if a restart should be performed based on the given restart policy */
 static
 SCIP_Bool shouldApplyRestart(
@@ -237,6 +280,7 @@ SCIP_Bool shouldApplyRestart(
       case RESTARTPOLICY_NEVER:
          return FALSE;
       case RESTARTPOLICY_ESTIMATION:
+         return shouldApplyRestartEstimation(scip, eventhdlrdata);
       case RESTARTPOLICY_PROGRESS:
          /* author bzfhende
           *
@@ -263,10 +307,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   /* author bzfhende
-    *
-    * TODO check if all conditions are met such that the event handler should run.
-    */
+   /* check if all conditions are met such that the event handler should run */
    if( ! checkConditions(scip, eventhdlrdata) )
       return SCIP_OKAY;
 
@@ -339,6 +380,10 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->minnodes, FALSE, 1000, -1, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/countonlyleaves", "should only leaves count for the minnodes parameter?",
          &eventhdlrdata->countonlyleaves, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/factor",
+         "factor by which the estimated number of nodes should exceed the current number of nodes",
+         &eventhdlrdata->estim_factor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
