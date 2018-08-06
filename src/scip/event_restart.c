@@ -219,7 +219,7 @@ SCIP_Bool checkConditions(
       nnodes = SCIPgetNNodes(scip);
 
    if( nnodes < eventhdlrdata->minnodes )
-      return SCIP_OKAY;
+      return FALSE;
 
    return TRUE;
 }
@@ -256,8 +256,6 @@ static
 SCIP_DECL_EVENTEXEC(eventExecRestart)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA*   eventhdlrdata;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Executing the restart event handler\n");
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
