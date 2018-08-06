@@ -51,9 +51,9 @@ SCIP_RETCODE solveLP(
 
    nlpiterations = SCIPgetNLPIterations(scip);
 
-   /* allow at least MINLPITER more iterations */
+   /* allow at least 100 more iterations */
    lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset, divecontext));
-   lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
+   lpiterationlimit = MAX(lpiterationlimit, 100);
 
    retstat = SCIPsolveProbingLP(scip, lpiterationlimit, lperror, cutoff);
 
@@ -593,9 +593,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                lblocal = SCIPvarGetLbLocal(bdchgvar);
                ublocal = SCIPvarGetUbLocal(bdchgvar);
 
-               SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
+               SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset, divecontext), maxnlpiterations,
-                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
+                     SCIPvarGetName(bdchgvar),
+                     lblocal, ublocal,
+                     bdchgdir == SCIP_BRANCHDIR_DOWNWARDS ? lblocal : bdchgvalue,
+                     bdchgdir == SCIP_BRANCHDIR_UPWARDS ? ublocal : bdchgvalue);
 
                infeasbdchange = FALSE;
                /* tighten the lower and/or upper bound depending on the bound change type */
@@ -658,8 +661,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   cutoff = TRUE;
                   break;
                }
-
-               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n", SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
@@ -671,6 +672,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             /* add the number of bound changes we applied by ourselves after propagation, otherwise the counter would have been reset */
             localdomreds += nbdchanges;
+
+            SCIPdebugMsg(scip, "domain reductions: %" SCIP_LONGINT_FORMAT " (total:%" SCIP_LONGINT_FORMAT ")\n",
+               localdomreds, domreds + localdomreds);
 
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
              * was reached

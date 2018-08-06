@@ -254,7 +254,7 @@ SCIP_Longint getLPIterlimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   SCIP_Longint nsolsfound = SCIPheurGetNSolsFound(heur);
+   SCIP_Longint nsolsfound = SCIPheurGetNSolsFound(heur) + SCIPheurGetNBestSolsFound(heur);
    SCIP_Longint nlpiterations = SCIPgetNNodeLPIterations(scip);
    SCIP_Longint ncalls = SCIPheurGetNCalls(heur);
 
@@ -274,8 +274,8 @@ SCIP_Longint getLPIterlimit(
     * TODO parameterize this sufficiently
     */
 
-   lpiterlimit = (SCIP_Longint)(0.4 * (1.0 + 10*(nsolsfound+1.0)/(ncalls+1.0)) * nlpiterations);
-   lpiterlimit += 8000;
+   lpiterlimit = (SCIP_Longint)(0.1 * (nsolsfound+1.0)/(ncalls+1.0) * nlpiterations);
+   lpiterlimit += 1500;
 
    lpiterlimit -= nlpiterationsdive;
 
