@@ -44,11 +44,11 @@
 /* Defaults for parameters */
 #define SCIP_DEFAULT_TRANSFERCUTS          TRUE  /** should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
 #define SCIP_DEFAULT_CUTSASCONSS           TRUE  /** should the transferred cuts be added as constraints? */
-#define SCIP_DEFAULT_MIPCHECKFREQ             5  /** frequency at which the MIP subproblems are checked (-1: always) */
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
+#define SCIP_DEFAULT_AUXVARSIMPLINT        TRUE  /** set the auxiliary variables as implint if the subproblem objective is integer */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -615,9 +615,19 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
+         SCIP_VARTYPE vartype;
+
+         /* set the variable type of the auxiliary variables to implied integer if the objective function of the
+          * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
+          */
+         if( benders->auxvarsimplint && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
+            vartype = SCIP_VARTYPE_IMPLINT;
+         else
+            vartype = SCIP_VARTYPE_CONTINUOUS;
+
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-               SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
+               1.0, vartype) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
@@ -934,11 +944,6 @@ SCIP_RETCODE SCIPbendersCreate(
          "should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?", &(*benders)->transfercuts,
          FALSE, SCIP_DEFAULT_TRANSFERCUTS, NULL, NULL) ); /*lint !e740*/
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/mipcheckfreq", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
-         "frequency at which the MIP subproblems are checked (-1: always)", &(*benders)->mipcheckfreq, FALSE,
-         SCIP_DEFAULT_MIPCHECKFREQ, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
-
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnscheck", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should Benders' decomposition be used in LNS heurisics?", &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK,
@@ -963,6 +968,11 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should the auxiliary variable bound be updated by solving the subproblem?", &(*benders)->updateauxvarbound,
          FALSE, SCIP_DEFAULT_UPDATEAUXVARBOUND, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/auxvarsimplint", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
+         &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }

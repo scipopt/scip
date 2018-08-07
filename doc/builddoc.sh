@@ -7,6 +7,9 @@
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
 
+# stop on error
+set -e
+
 if [ "$1" != "" ]
 then
     DOXYFILE=$1
@@ -25,7 +28,7 @@ fi
 cd ..
 
 # build a fresh version of SCIP
-make -j clean
+# make -j clean
 make -j ZIMPL=false
 
 # run scip with some commands for the shell tutorial
@@ -61,6 +64,5 @@ bin/scip -c "read doc/inc/simpleinstance/simple.lp optimize quit" > doc/inc/simp
 cd doc
 
 ### FINISHED FAQ GENERATION
-
 # finally build the scip documentation
 doxygen $DOXYFILE

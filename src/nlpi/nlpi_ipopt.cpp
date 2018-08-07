@@ -2179,8 +2179,8 @@ bool ScipNLP::get_bounds_info(
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
    assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
 
-   assert(SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle) != NULL);
-   assert(SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle) != NULL);
+   assert(SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle) != NULL || n == 0);
+   assert(SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle) != NULL || n == 0);
 
    BMScopyMemoryArray(x_l, SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle), n);
    BMScopyMemoryArray(x_u, SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle), n);
