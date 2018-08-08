@@ -407,7 +407,9 @@ SCIP_Bool removeZerosQuad(
    return FALSE;
 }
 
-/** safely remove all coefficients below the given value; returns TRUE if the cut became redundant */
+/** safely remove all items with |a_i(u_i - l_i)| below the given value; returns TRUE if the cut became redundant
+ *  if it is a local cut, use local bounds, otherwise, using global bounds
+ * */
 static
 SCIP_Bool removeZeros(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -430,18 +432,35 @@ SCIP_Bool removeZeros(
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real val;
-
-      int v = cutinds[i];
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int v;
+      SCIP_Bool isfixed;
+      v = cutinds[i];
       val = cutcoefs[v];
+      if( cutislocal )
+      {
+         lb = SCIPvarGetLbLocal(vars[v]);
+         ub = SCIPvarGetUbLocal(vars[v]);
+      }
+      else
+      {
+         lb = SCIPvarGetLbGlobal(vars[v]);
+         ub = SCIPvarGetUbGlobal(vars[v]);
+      }
+      if( !(SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub)) && SCIPisEQ(scip, ub, lb) )
+         isfixed = TRUE;
+      else
+         isfixed = FALSE;
 
-      if( EPSZ(val, minval) )
+
+      if( EPSZ(val, minval) || isfixed )
       {
          if( REALABS(val) > QUAD_EPSILON )
          {
             /* adjust left and right hand sides with max contribution */
             if( val < 0.0 )
             {
-               SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
                if( SCIPisInfinity(scip, ub) )
                   return TRUE;
                else
@@ -451,7 +470,6 @@ SCIP_Bool removeZeros(
             }
             else
             {
-               SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
                if( SCIPisInfinity(scip, -lb) )
                   return TRUE;
                else
