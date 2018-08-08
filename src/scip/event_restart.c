@@ -22,6 +22,7 @@
 
 #include "scip/event_restart.h"
 #include "scip/event_treesizeprediction.h"
+#include "scip/event_treeprofile.h"
 #include "pub_event.h"
 #include "pub_message.h"
 #include "scip_event.h"
@@ -234,37 +235,38 @@ SCIP_Bool shouldApplyRestartEstimation(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   SCIP_Real estimation;
+   SCIP_Real estimation = -1.0;
    assert(scip != NULL);
    assert(eventhdlrdata != NULL);
 
+   /* query a tree size estimation based on the user parameter */
    switch (eventhdlrdata->estimationparam) {
       case ESTIMATION_CHAR_TREESIZE:
+         /* use the probability based tree size prediction */
          estimation = SCIPtreeSizeGetEstimateTotal(scip);
-
-         /* no estimation is available yet */
-         if( estimation < 0.0 )
-            return FALSE;
-
-         if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                     "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
-                     estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
-            return TRUE;
-         }
-         return FALSE;
          break;
       case ESTIMATION_CHAR_PROFILE:
-         SCIPerrorMessage("Needs to be implemented");
-
-         SCIPABORT();
+         /* use the estimation based on the tree profile */
+         estimation = SCIPpredictTotalSizeTreeprofile(scip);
          break;
       default:
          break;
    }
 
-   return TRUE;
+   /* no estimation is available yet */
+   if( estimation < 0.0 )
+      return FALSE;
+
+   /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
+   if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
+               estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
+      return TRUE;
+   }
+
+   return FALSE;
 }
 
 /** check if a restart should be performed based on the given restart policy */
