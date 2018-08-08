@@ -199,6 +199,8 @@ void freeTreeprofile(
    SCIPfreeMemoryArray(scip, &(*treeprofile)->profile);
 
    SCIPfreeMemory(scip, treeprofile);
+
+   *treeprofile = NULL;
 }
 
 /** update tree profile */
@@ -344,7 +346,6 @@ SCIP_DECL_EVENTINIT(eventInitTreeprofile)
 
    assert(eventhdlrdata != NULL);
 
-
    if( eventhdlrdata->enabled )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Activating tree profile data collection\n");
@@ -382,10 +383,17 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeprofile)
    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    assert(eventhdlrdata != NULL);
+   assert(eventhdlrdata->treeprofile == NULL);
 
    eventhdlrdata->lastestimate = -1.0;
    eventhdlrdata->nextoutputnode = 1L;
    resetTreeprofilestats(&eventhdlrdata->lastestimatestats);
+
+   if( eventhdlrdata->enabled )
+   {
+      SCIP_CALL( createTreeprofile(scip, &eventhdlrdata->treeprofile) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -413,11 +421,6 @@ SCIP_DECL_EVENTEXEC(eventExecTreeprofile)
 
    node = SCIPeventGetNode(event);
    assert(node != NULL);
-
-   if( eventhdlrdata->treeprofile == NULL )
-   {
-      SCIP_CALL( createTreeprofile(scip, &eventhdlrdata->treeprofile) );
-   }
 
    SCIP_CALL( updateTreeprofile(scip, eventhdlrdata->treeprofile, node) );
 
@@ -485,7 +488,7 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeprofile(
    /* create treeprofile event handler data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
-
+   eventhdlrdata->treeprofile = NULL;
 
    eventhdlr = NULL;
 
