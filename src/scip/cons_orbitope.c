@@ -235,7 +235,10 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
       if ( usedynamicprop )
+      {
          (*consdata)->roworder[i] = nspcons;
+         (*consdata)->rowused[i] = FALSE;
+      }
    }
    (*consdata)->nrowsused = 0;
 
