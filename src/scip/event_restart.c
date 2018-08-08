@@ -286,7 +286,7 @@ SCIP_Bool shouldApplyRestart(
       case RESTARTPOLICY_PROGRESS:
          /* author bzfhende
           *
-          * TODO both need to be implemented
+          * TODO still needs to be implemented
           */
 
          break;

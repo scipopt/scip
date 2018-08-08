@@ -44,7 +44,7 @@
 #define TREEPRROFILE_MINSIZE    512 /**< minimum size (depth) that tree profile can hold */
 #define DEFAULT_ENABLED       FALSE /**< should the event handler collect data? */
 #define DEFAULT_MAXDEPTHFACTOR 20.0 /**< factor by which the number of nodes exceeds the maximum width before producing estimations */
-#define DEFAULT_FREQ           -1   /**< frequency for periodic output of estimation, or -1 for no output */
+#define DEFAULT_FREQ           -1   /**< frequency for periodic output of estimation, 0 for every 2**k'th node, or -1 for no output */
 /*
  * Data structures
  */
@@ -79,7 +79,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             maxdepthfactor;    /**< factor by which the number of nodes exceeds the maximum width before producing estimations */
    SCIP_Real             lastestimate;      /**< the last estimate predicted by SCIPpredictTotalSizeTreeprofile() */
    TREEPROFILESTATS      lastestimatestats; /**< tree profile statistics at last estimation */
-   int                   freq;              /**< frequency for periodic output of estimation, or -1 for no output */
+   int                   freq;              /**< frequency for periodic output of estimation, 0 for every 2**k'th node, or -1 for no output */
    SCIP_Longint          nextoutputnode;    /**< next output node for geometric output frequency */
 };
 
@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeprofile(
          "factor by which the number of nodes exceeds the maximum width before producing estimations",
          &eventhdlrdata->maxdepthfactor, FALSE, DEFAULT_MAXDEPTHFACTOR, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/profile/freq",
-         "positive frequency for periodic output of estimation, or -1 for no output",
+         "positive frequency for periodic output of estimation, 0 for every 2**k'th node, or -1 for no output",
          &eventhdlrdata->freq, FALSE, DEFAULT_FREQ, -1, INT_MAX, NULL, NULL) );
 
 
