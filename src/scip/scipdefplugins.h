@@ -81,6 +81,7 @@
 #include "scip/event_restart.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/event_treeprofile.h"
 #include "scip/event_treesizeprediction.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_bound.h"

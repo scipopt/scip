@@ -126,6 +126,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeEventHdlrRestart(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeEventHdlrTreeSizePrediction(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrTreeprofile(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );

@@ -78,6 +78,7 @@ set(scipsources
     scip/event_restart.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
+    scip/event_treeprofile.c
     scip/event_treesizeprediction.c
     scip/disp_default.c
     scip/disp_estimates.c
@@ -512,6 +513,7 @@ set(scipheaders
     scip/event_restart.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/event_treeprofile.h
     scip/event_treesizeprediction.h
     scip/heur_actconsdiving.h
     scip/heur_bound.h
