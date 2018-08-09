@@ -151,7 +151,7 @@ SCIP_RETCODE extendMemoryTreeprofile(
    }
    else
    {
-      int newsize = SCIPcalcMemGrowSize(scip, mindepth);
+      int newsize = SCIPcalcMemGrowSize(scip, mindepth + 1);
 
       assert(newsize > treeprofile->profilesize);
       SCIP_CALL( SCIPreallocMemoryArray(scip, &treeprofile->profile, newsize) );
