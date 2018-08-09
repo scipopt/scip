@@ -74,8 +74,6 @@
 #define CUT_MAXNEDGES     10000
 #define CUT_MAXTOTNEDGES     50000
 
-
-
 #ifdef WITH_UG
 extern
 const char*
@@ -84,6 +82,9 @@ getBranchLinearConsName(const char* names, int i);
 extern
 const char*
 getBranchSetppcConsName(const char* names, int i);
+
+extern
+int getUgRank(void);
 #endif
 
 
@@ -1832,6 +1833,11 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    assert(scip != NULL);
    assert(probdata != NULL);
 
+#ifdef WITH_UG
+   if( getUgRank() != 0 )
+      return SCIP_OKAY;
+#endif
+
    if( probdata->logfile != NULL )
    {
       int success;
@@ -2000,6 +2006,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( intlogfilename != NULL && intlogfilename[0] != '\0' )
    {
+#ifdef WITH_UG
+   if( getUgRank() == 0 )
+   {
+#endif
       char finalfilename[SCIP_MAXSTRLEN];
 
       if( strcmp("use_probname", intlogfilename) == 0 )
@@ -2015,6 +2025,9 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
+#ifdef WITH_UG
+   }
+#endif
    }
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
@@ -2780,6 +2793,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    STP_Bool* orgnodes;
 
    assert(scip != NULL);
+
+#ifdef WITH_UG
+   if( getUgRank() != 0 )
+      return SCIP_OKAY;
+#endif
 
    probdata = SCIPgetProbData(scip);
 
