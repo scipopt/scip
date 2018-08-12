@@ -3159,6 +3159,11 @@ void SCIPprobdataWriteLogLine(
 
    assert(scip != NULL);
 
+#ifdef WITH_UG
+   if( getUgRank() == 0 )
+   {
+#endif
+
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
@@ -3174,6 +3179,9 @@ void SCIPprobdataWriteLogLine(
       SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->intlogfile, formatstr, ap);
       va_end(ap);
    }
+#ifdef WITH_UG
+   }
+#endif
 }
 
 /** add new solution */
