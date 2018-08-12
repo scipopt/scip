@@ -4400,11 +4400,14 @@ SCIP_Bool graph_valid(
    {
       if( (g->grad[k] == 0)
          && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
-         return((void)fprintf(stderr, fehler6, k), FALSE);
+         /* return((void)fprintf(stderr, fehler6, k), FALSE); */
+         return FALSE;
 
       if( !g->mark[k] && ((g->grad[k] > 0) || (Is_term(g->term[k])))
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-         return((void)fprintf(stderr, fehler7, k), FALSE);
+         /* return((void)fprintf(stderr, fehler7, k), FALSE); */
+         return FALSE;
+
    }
 
    if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
