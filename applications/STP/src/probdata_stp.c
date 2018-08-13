@@ -1833,15 +1833,15 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
    assert(scip != NULL);
    assert(probdata != NULL);
 
-#ifdef WITH_UG
-   if( getUgRank() != 0 )
-      return SCIP_OKAY;
-#endif
-
    if( probdata->logfile != NULL )
    {
       int success;
       SCIP_Real factor = 1.0;
+
+#ifdef WITH_UG
+      if( getUgRank() != 0 )
+         return SCIP_ERROR;
+#endif
 
       if( probdata->stp_type == STP_MWCSP || probdata->stp_type == STP_RMWCSP )
          factor = -1.0;
@@ -1886,6 +1886,11 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 
    if( probdata->intlogfile != NULL )
    {
+#ifdef WITH_UG
+      if( getUgRank() != 0 )
+         return SCIP_ERROR;
+#endif
+
       int success = fclose(probdata->intlogfile);
       if( success != 0 )
       {
@@ -1985,6 +1990,14 @@ SCIP_RETCODE SCIPprobdataCreate(
    (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
    SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
+#ifdef WITH_UG
+   if( getUgRank() != 0 )
+   {
+      logfilename = NULL;
+      intlogfilename = NULL;
+   }
+#endif
+
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
       char finalfilename[SCIP_MAXSTRLEN];;
@@ -2006,10 +2019,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    if( intlogfilename != NULL && intlogfilename[0] != '\0' )
    {
-#ifdef WITH_UG
-   if( getUgRank() == 0 )
-   {
-#endif
       char finalfilename[SCIP_MAXSTRLEN];
 
       if( strcmp("use_probname", intlogfilename) == 0 )
@@ -2025,9 +2034,6 @@ SCIP_RETCODE SCIPprobdataCreate(
          SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
-#ifdef WITH_UG
-   }
-#endif
    }
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
@@ -3160,8 +3166,8 @@ void SCIPprobdataWriteLogLine(
    assert(scip != NULL);
 
 #ifdef WITH_UG
-   if( getUgRank() == 0 )
-   {
+   if( getUgRank() != 0 )
+      return;
 #endif
 
    probdata = SCIPgetProbData(scip);
@@ -3179,9 +3185,6 @@ void SCIPprobdataWriteLogLine(
       SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->intlogfile, formatstr, ap);
       va_end(ap);
    }
-#ifdef WITH_UG
-   }
-#endif
 }
 
 /** add new solution */

@@ -443,7 +443,6 @@ SCIP_RETCODE redbasedVarfixing(
    assert(g != NULL);
    assert(vars != NULL);
 
-   *probisinfeas = FALSE;
    offset = 0.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
@@ -504,14 +503,7 @@ SCIP_RETCODE redbasedVarfixing(
       SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
    }
 
-   if( !graph_valid(propgraph) )
-   {
-      *probisinfeas = TRUE;
-      goto TERMINATE;
-   }
-
    SCIP_CALL( graph_path_init(scip, propgraph) );
-
 
    if( propdata->fixingbounds == NULL )
    {
@@ -520,8 +512,24 @@ SCIP_RETCODE redbasedVarfixing(
          propdata->fixingbounds[i] = -FARAWAY;
    }
 
+   *probisinfeas = FALSE;
+   SCIP_CALL( level0infeas(scip, propgraph, probisinfeas) );
+
+   if( *probisinfeas )
+      goto TERMINATE;
+
+#ifdef WITH_UG
+   if( !graph_valid(propgraph) )
+   {
+      printf("FAIL: problem has become invalid! \n");
+      return SCIP_ERROR;
+   }
+#else
+   assert(graph_valid(propgraph));
+#endif
+
    /* reduce graph */
-   SCIP_CALL( reduceRedcostExtended(scip, lpobjval, vars, propgraph) );
+   //SCIP_CALL( reduceRedcostExtended(scip, lpobjval, vars, propgraph) );
 
    SCIP_CALL( level0(scip, propgraph) );
    SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );

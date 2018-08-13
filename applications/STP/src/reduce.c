@@ -155,7 +155,6 @@ SCIP_RETCODE level0(
    GRAPH*                g                   /**< graph data structure */
 )
 {
-   int k;
    int nnodes;
 
    assert(scip != NULL);
@@ -163,12 +162,12 @@ SCIP_RETCODE level0(
 
    nnodes = g->knots;
 
-   for( k = nnodes - 1; k >= 0 ; k-- )
+   for( int k = 0; k < nnodes; k++ )
       g->mark[k] = FALSE;
 
    SCIP_CALL( graph_trail_arr(scip, g, g->source) );
 
-   for( k = nnodes - 1; k >= 0 ; k-- )
+   for( int k = nnodes - 1; k >= 0 ; k-- )
    {
       if( !g->mark[k] && (g->grad[k] > 0) )
       {
@@ -216,6 +215,42 @@ SCIP_RETCODE level0save(
 
    SCIPfreeBufferArray(scip, &savemark);
 
+   return SCIP_OKAY;
+}
+
+
+/* remove unconnected vertices and checks whether problem is infeasible, overwrites g->mark */
+SCIP_RETCODE level0infeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool*            infeas              /**< is problem infeasible? */
+)
+{
+   int nnodes;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(infeas != NULL);
+
+   *infeas = FALSE;
+   nnodes = g->knots;
+
+   for( int k = 0; k < nnodes; k++ )
+      g->mark[k] = FALSE;
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
+
+   for( int k = nnodes - 1; k >= 0 ; k-- )
+   {
+      if( !g->mark[k] && (g->grad[k] > 0) )
+      {
+         if( Is_term(g->term[k]) )
+            *infeas = TRUE;
+
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+      }
+   }
    return SCIP_OKAY;
 }
 
@@ -1631,11 +1666,12 @@ SCIP_RETCODE redLoopStp(
       if( fullreduce && !SCIPisStopped(scip) )
       {
          int extendedelims = 0;
+         int todo; // fix problem with reduce_da in I002
 
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE));
+                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, !TRUE));
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 

@@ -4322,7 +4322,7 @@ SCIP_RETCODE graph_termsReachable(
 
 /** is the given graph valid? */
 SCIP_Bool graph_valid(
-   const GRAPH*          g                   /**< the new graph */
+   const GRAPH*          g                   /**< the graph */
    )
 {
    const char* fehler1  = "*** Graph invalid: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
@@ -4334,24 +4334,21 @@ SCIP_Bool graph_valid(
    const char* fehler7  = "*** Graph invalid: Knot %d not connected\n";
    const char* fehler9  = "*** Graph invalid: Wrong Terminal count, count is %d, should be %d\n";
 
-   int    k;
-   int    e;
-   int    nterms;
-   int    nnodes;
-   int    nedges;
+   int nterms;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
 
    assert(g != NULL);
 
    nterms = g->terms;
-   nedges = g->edges;
-   nnodes = g->knots;
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
+      int e;
+
       if( Is_term(g->term[k]) )
-      {
          nterms--;
-      }
+
       for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
          if( g->head[e] != k )
             break;
@@ -4366,6 +4363,7 @@ SCIP_Bool graph_valid(
       if( e != EAT_LAST )
          return((void)fprintf(stderr, fehler2, k, e, g->tail[e], g->head[e]), FALSE);
    }
+
    if( nterms != 0 )
       return((void)fprintf(stderr, fehler9, g->terms, g->terms - nterms), FALSE);
 
@@ -4375,7 +4373,7 @@ SCIP_Bool graph_valid(
       return((void)fprintf(stderr, fehler3,
             0, g->source, g->term[g->source]), FALSE);
 
-   for( e = 0; e < nedges; e += 2 )
+   for( int e = 0; e < nedges; e += 2 )
    {
       if( (g->ieat[e] == EAT_FREE) && (g->oeat[e] == EAT_FREE)
          && (g->ieat[e + 1] == EAT_FREE) && (g->oeat[e + 1] == EAT_FREE) )
@@ -4391,23 +4389,20 @@ SCIP_Bool graph_valid(
                g->tail[e], g->head[e + 1]), FALSE);
    }
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
       g->mark[k] = FALSE;
 
    graph_trail(g, g->source);
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       if( (g->grad[k] == 0)
          && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
-         /* return((void)fprintf(stderr, fehler6, k), FALSE); */
-         return FALSE;
+         return((void)fprintf(stderr, fehler6, k), FALSE);
 
       if( !g->mark[k] && ((g->grad[k] > 0) || (Is_term(g->term[k])))
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-         /* return((void)fprintf(stderr, fehler7, k), FALSE); */
-         return FALSE;
-
+         return((void)fprintf(stderr, fehler7, k), FALSE);
    }
 
    if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
@@ -4421,13 +4416,14 @@ SCIP_Bool graph_valid(
       assert(g->prize != NULL);
       assert(g->term2edge != NULL);
 
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          if( k == root || (rooted && g->term2edge[k] < 0) )
             continue;
 
          if( (extended ? Is_term(g->term[k]) : Is_pterm(g->term[k])) )
          {
+            int e;
             int e2;
             int pterm;
             const int term = k;
@@ -4490,7 +4486,7 @@ SCIP_Bool graph_valid(
          }
       }
 
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
           g->mark[k] = (g->grad[k] > 0);
 
@@ -4503,7 +4499,7 @@ SCIP_Bool graph_valid(
    }
    else
    {
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
          g->mark[k] = (g->grad[k] > 0);
    }
 
