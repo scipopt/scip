@@ -78,6 +78,7 @@ set(settings_MIP
     "uct_breadth_dualval"
     "conflictdiving"
     "enable_treeprofile"
+    "estimation_ratio"
 )
 #
 # settings to run a reduced MIP test

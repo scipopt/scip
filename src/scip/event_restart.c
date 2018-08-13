@@ -62,10 +62,25 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define ESTIMATION_CHAR_TREESIZE         't' /**< should estimation use probability based tree size prediction? */
 #define ESTIMATION_CHAR_PROFILE          'p'  /**< should estimation use profile based prediction a la Cornuejols? */
 
+#define PROGRESS_CHAR_RATIO               'r' /**< should the search progress be measured using ratio-based probabilities? */
+#define PROGRESS_CHAR_UNIFORM             'u' /**< should the search progress be measured using even probabilities? */
+#define PROGRESS_CHAR_GAP                 'g' /**< should the search progress be measured in terms of the gap? */
+#define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
+
+/** data structure to hold the search progress */
+struct SearchProgress
+{
+   SCIP_Real*            progressarray;       /**< captures the current search progress in an array */
+   int                   curr;                /**< index of current element */
+   int                   nobservations;       /**< total number of training observations */
+};
+
+typedef struct SearchProgress SEARCHPROGRESS;
 
 /** event handler data */
 struct SCIP_EventhdlrData
 {
+   SEARCHPROGRESS*       ratioprogress;      /**< ratio progress data structure */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimationparam;    /**< parameter to select the estimation method */
    char                  progressparam;      /**< progress method to use */
@@ -82,7 +97,74 @@ struct SCIP_EventhdlrData
 
 /* put your local methods here, and declare them static */
 
+/** reset search progress */
+static
+void resetSearchprogress(
+   SEARCHPROGRESS*       progress            /**< search progress data structure */
+   )
+{
+   progress->curr = -1;
+   progress->nobservations = 0;
+}
 
+/** create a search progress */
+static
+SCIP_RETCODE createSearchprogress(
+   SEARCHPROGRESS**      progress            /**< pointer to store search progress data structure */
+   )
+{
+   assert(progress != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(progress) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, DEFAULT_WINDOWSIZE) );
+
+   resetSearchprogress(*progress);
+
+   return SCIP_OKAY;
+}
+
+/** free search progress */
+static
+void freeSearchprogress(
+   SEARCHPROGRESS**      progress            /**< pointer to search progress data structure */
+   )
+{
+   assert(progress != NULL);
+
+   if( *progress == NULL )
+      return;
+
+   BMSfreeMemoryArray(&(*progress)->progressarray);
+   BMSfreeMemory(progress);
+}
+
+/** add a new observation to the search progress */
+static
+void addObservationSearchprogress(
+   SEARCHPROGRESS*       progress,           /**< search progress data structure */
+   SCIP_Real             obs                 /**< new observation */
+   )
+{
+   assert(progress != NULL);
+   progress->nobservations++;
+   progress->curr = (progress->curr + 1) % DEFAULT_WINDOWSIZE;
+   progress->progressarray[progress->curr] = obs;
+}
+
+/** get the current search progress */
+static
+SCIP_Real getCurrentProgress(
+   SEARCHPROGRESS*       progress            /**< search progress data structure */
+   )
+{
+   assert(progress != NULL);
+   if( progress->curr == -1 )
+      return 0.0;
+
+   assert(0 <= progress->curr && progress->curr <= DEFAULT_WINDOWSIZE - 1);
+
+   return progress->progressarray[progress->curr];
+}
 
 /*
  * Callback methods of event handler
@@ -109,6 +191,8 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
 
    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
+
+   freeSearchprogress(&eventhdlrdata->ratioprogress);
 
    SCIPfreeMemory(scip, &eventhdlrdata);
 
@@ -139,18 +223,17 @@ SCIP_DECL_EVENTEXIT(eventExitRestart)
 #endif
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#if 0
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of restart event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   resetSearchprogress(eventhdlrdata->ratioprogress);
 
    return SCIP_OKAY;
 }
-#else
-#define eventInitsolRestart NULL
-#endif
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
 #if 0
@@ -269,6 +352,19 @@ SCIP_Bool shouldApplyRestartEstimation(
    return FALSE;
 }
 
+/** should a restart be applied based on the current progress? */
+static
+SCIP_Bool shouldApplyRestartProgress(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+
+
+
+   return FALSE;
+}
+
 /** check if a restart should be performed based on the given restart policy */
 static
 SCIP_Bool shouldApplyRestart(
@@ -288,7 +384,7 @@ SCIP_Bool shouldApplyRestart(
           *
           * TODO still needs to be implemented
           */
-
+         return shouldApplyRestartProgress(scip, eventhdlrdata);
          break;
       default:
          break;
@@ -297,11 +393,49 @@ SCIP_Bool shouldApplyRestart(
    return FALSE;
 }
 
+/** todo update the search progress after a new leaf has been reached */
+static
+SCIP_RETCODE updateSearchProgress(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
+   SCIP_NODE*            leafnode            /**< current leaf node of SCIP */
+   )
+{
+   SEARCHPROGRESS* searchprogress;
+   SCIP_Real currentprogress;
+
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+
+   searchprogress = eventhdlrdata->ratioprogress;
+
+   switch (eventhdlrdata->progressparam) {
+      case PROGRESS_CHAR_GAP:
+         currentprogress = 1.0 - MIN(SCIPgetGap(scip), 1.0);
+         break;
+      case PROGRESS_CHAR_UNIFORM:
+         currentprogress = getCurrentProgress(searchprogress) + pow(2.0, -SCIPnodeGetDepth(leafnode));
+
+         break;
+      case PROGRESS_CHAR_RATIO:
+         SCIP_CALL( SCIPgetNodeProbability(scip, leafnode, &currentprogress) );
+         currentprogress += getCurrentProgress(searchprogress);
+         break;
+      default:
+         break;
+   }
+
+   addObservationSearchprogress(searchprogress, currentprogress);
+
+   return SCIP_OKAY;
+}
+
 /** execution method of event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecRestart)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA*   eventhdlrdata;
+   SCIP_Bool isleaf;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -309,9 +443,18 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   /* update the search progress at leaf nodes */
+   isleaf = (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE));
+   if( isleaf )
+   {
+      SCIP_CALL( updateSearchProgress(scip, eventhdlrdata, SCIPeventGetNode(event)) );
+
+      SCIPdebugMsg(scip, "Updated search progress to %.8f\n", getCurrentProgress(eventhdlrdata->ratioprogress));
+   }
    /* check if all conditions are met such that the event handler should run */
    if( ! checkConditions(scip, eventhdlrdata) )
       return SCIP_OKAY;
+
 
    /* author bzfhende
     *
@@ -349,6 +492,8 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    BMSclearMemory(eventhdlrdata);
 
+   SCIP_CALL( createSearchprogress(&eventhdlrdata->ratioprogress) );
+
    eventhdlr = NULL;
 
    /* use SCIPincludeEventhdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
@@ -374,7 +519,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimationmethod", "select estimation method",
                &eventhdlrdata->estimationparam, FALSE, 't', "t", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/progressmeasure", "select progress measure",
-               &eventhdlrdata->progressparam, FALSE, 'p', "p", NULL, NULL) );
+               &eventhdlrdata->progressparam, FALSE, 'r', "gru", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
       &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );

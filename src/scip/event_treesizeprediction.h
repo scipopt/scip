@@ -43,6 +43,18 @@ SCIP_Real SCIPtreeSizeGetEstimateTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** return ratio based node probability for a SCIP node
+ *
+ *  The ratio based probability to reach this node is a recursive product along
+ *  all ancestors of this node, starting with the root node
+ */
+EXTERN
+SCIP_RETCODE SCIPgetNodeProbability(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< tree node of SCIP */
+   SCIP_Real*            probability         /**< probability to reach this node based on phi ratios */
+   );
+
 /** creates event handler for tree-size prediction event */
 EXTERN
 SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(

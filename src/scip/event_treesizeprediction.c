@@ -155,6 +155,7 @@ SCIP_Real computeProbabilities(
          }
          /* If the ratio computed is not valid, we do not break the switch, and we use the UNIFORM case */
       }
+      /* no break */
       case UNIFORM:
          fractionleft = .5;
          fractionright = .5;
@@ -308,6 +309,7 @@ void estimateTreeSize(
                   SCIP_Real fractionright;
 
                   assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
+                  assert(((leftstatus == UNKNOWN) || (rightstatus == UNKNOWN)) && (!(leftstatus == UNKNOWN && rightstatus == UNKNOWN)));
 
                   fractionleft = computeProbabilities(scip, node, probabilitymethod);
                   fractionright = 1.0 - fractionleft;
@@ -697,20 +699,6 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    if( eventhdlrdata->nodesfound != SCIPgetNNodes(scip) )
       SCIPdebugMessage("Warning: this number does not match the actual number of nodes: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip));
 
-   #ifdef SCIP_DEBUG
-   {
-      SCIP_Real remainingsize;
-      SCIP_Real totalsize;
-      SizeStatus status;
-      if( eventhdlrdata->tree != NULL ) /* SCIP may not have created any node */
-      {
-         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, eventhdlrdata->probabilitymethod, eventhdlr->estimationmthod);
-         assert(status == KNOWN);
-         SCIPdebugMessage("Estimated remaining nodes: %" SCIP_REAL_FORMAT " nodes in the B&B tree\n", remainingsize);
-      }
-   }
-   #endif
-
    //SCIPhashmapFree(&(eventhdlrdata->opennodes));
    SCIPhashmapFree(&(eventhdlrdata->allnodes));
 
@@ -871,6 +859,85 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    return SCIP_OKAY;
 }
 
+/** return ratio based node probability for a SCIP node
+ *
+ *  The ratio based probability to reach this node is a recursive product along
+ *  all ancestors of this node, starting with the root node
+ */
+SCIP_RETCODE SCIPgetNodeProbability(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< tree node of SCIP */
+   SCIP_Real*            probability         /**< probability to reach this node based on phi ratios */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_VAR* branchvar;
+   TSEtree* treenode;
+   TSEtree* parentnode;
+   SCIP_Longint parentnodenum;
+   SCIP_Bool isleftchild;
+   SCIP_Real probaleft;
+   SCIP_Real branchbound;
+   SCIP_BOUNDTYPE boundtype;
+   int nbranchvars;
+
+   assert(scip != NULL);
+   assert(node != NULL);
+   assert(probability != NULL);
+
+   /* query the corresponding node in the TSE tree */
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   *probability = 1.0;
+
+   if( SCIPnodeGetParent(node) == NULL )
+      return SCIP_OKAY;
+
+   /* this node is usually not part of the tree data structure, yet, which is why we query its parent */
+   parentnodenum = SCIPnodeGetNumber(SCIPnodeGetParent(node));
+   treenode = SCIPhashmapGetImage(eventhdlrdata->allnodes, (void*)parentnodenum);
+
+   if( treenode == NULL )
+   {
+      SCIPerrorMessage("Parent node %lld has not yet been recorded in hash map\n", parentnodenum);
+
+      return SCIP_INVALIDCALL;
+   }
+
+   /* determine manually the branching direction parent->node by querying the branching bound type */
+   SCIPnodeGetParentBranchings(node, &branchvar, &branchbound, &boundtype, &nbranchvars, 1);
+   assert(nbranchvars <= 1);
+   assert(boundtype == SCIP_BOUNDTYPE_UPPER || boundtype == SCIP_BOUNDTYPE_LOWER);
+   /* query the probabilities along the path from this node to the root node */
+   probaleft = computeProbabilities(scip, treenode, RATIO);
+
+   /* left node is a change of the upper bound, otherwise we are at a right node */
+   if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      *probability *= probaleft;
+   else
+      *probability *= (1.0 - probaleft);
+
+   /* now loop through all ancestors in the secondary tree and multiply the probability accordingly */
+   while( (parentnode = treenode->parent) != NULL )
+   {
+       probaleft = computeProbabilities(scip, parentnode, RATIO);
+      if( treenode == parentnode->leftchild )
+         *probability *= probaleft;
+      else
+      {
+         assert(treenode == parentnode->rightchild);
+         *probability *= (1.0 - probaleft);
+      }
+      treenode = parentnode;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** execution method of event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
@@ -898,7 +965,7 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    assert(scipnode != NULL);
    scipnodenumber = SCIPnodeGetNumber(scipnode);
 
-   #ifdef SCIP_DEBUG
+#ifdef SCIP_DEBUG
    {
    char eventstr[50];
    switch(SCIPeventGetType(event)) {
@@ -920,7 +987,7 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    }
    SCIPdebugMessage("Event %s for node %"SCIP_LONGINT_FORMAT"\n", eventstr, scipnodenumber);
    }
-   #endif
+#endif
 
    /* This node may already be in the set of nodes. if this happens, it means that there was a first event PQNODEINFEASIBLE with this node, and now a NODESOLVED event with the same node. */
    eventnode = SCIPhashmapGetImage(eventhdlrdata->allnodes, (void *)scipnodenumber);
