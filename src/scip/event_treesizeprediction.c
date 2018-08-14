@@ -892,6 +892,13 @@ SCIP_RETCODE SCIPgetNodeProbability(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   if( !eventhdlrdata->active )
+   {
+      SCIPerrorMessage("Eventhandler %s is deactivated, cannot query node probability!\n", EVENTHDLR_NAME);
+
+      return SCIP_INVALIDDATA;
+   }
+
    *probability = 1.0;
 
    if( SCIPnodeGetParent(node) == NULL )
@@ -905,7 +912,7 @@ SCIP_RETCODE SCIPgetNodeProbability(
    {
       SCIPerrorMessage("Parent node %lld has not yet been recorded in hash map\n", parentnodenum);
 
-      return SCIP_INVALIDCALL;
+      return SCIP_INVALIDDATA;
    }
 
    /* determine manually the branching direction parent->node by querying the branching bound type */

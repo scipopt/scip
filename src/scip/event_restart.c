@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_restart.c
- * @brief  eventhdlr for restart event
+ * @brief  event handler for restart event
  * @author Gregor Hendel
  */
 
@@ -43,7 +43,7 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary event handler data */
+/** enumerator for available restart policies */
 enum RestartPolicy
 {
    RESTARTPOLICY_NEVER      = 0,             /**< never restart (disable this event handler) */
@@ -66,13 +66,31 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define PROGRESS_CHAR_UNIFORM             'u' /**< should the search progress be measured using even probabilities? */
 #define PROGRESS_CHAR_GAP                 'g' /**< should the search progress be measured in terms of the gap? */
 #define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
+#define DEFAULT_DES_ALPHA               0.15  /**< default level smoothing constant for double exponential smoothing */
+#define DEFAULT_DES_BETA                0.15   /**< default trend smoothing constant for double exponential smoothing */
+#define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< should the trend be used in the level update? */
+
+/** double exponential smoothing data structure */
+struct DoubleExpSmooth
+{
+   SCIP_Real             alpha;              /**< level smoothing constant */
+   SCIP_Real             beta;               /**< trend smoothing constant */
+   SCIP_Real             level;              /**< estimation of the current level used for smoothing */
+   SCIP_Real             trend;              /**< estimation of the current trend (slope) */
+   SCIP_Bool             usetrendinlevel;    /**< should the trend be used in the level update? */
+   int                   n;                  /**< number of observations */
+};
+typedef struct DoubleExpSmooth DOUBLEEXPSMOOTH;
 
 /** data structure to hold the search progress */
 struct SearchProgress
 {
    SCIP_Real*            progressarray;       /**< captures the current search progress in an array */
+   SCIP_Real*            resourcearray;       /**< captures the resource measurements, e.g., nodes */
    int                   curr;                /**< index of current element */
    int                   nobservations;       /**< total number of training observations */
+   DOUBLEEXPSMOOTH       desprogress;         /**< double exponential smoothing data structure for progress */
+   DOUBLEEXPSMOOTH       desresources;        /**< double exponential smoothing data structure for resources */
 };
 
 typedef struct SearchProgress SEARCHPROGRESS;
@@ -97,6 +115,66 @@ struct SCIP_EventhdlrData
 
 /* put your local methods here, and declare them static */
 
+/** initialize a double exponential smoothing data structure */
+static
+void initDoubleexpsmooth(
+   DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
+   SCIP_Real             x1                  /**< the first sample value */
+   )
+{
+   assert(des != NULL);
+
+   des->n = 1;
+   des->level = x1;
+   des->trend = x1;
+
+   /* author bzfhende
+    *
+    * TODO make these user parameters
+    */
+   des->alpha = DEFAULT_DES_ALPHA;
+   des->beta = DEFAULT_DES_BETA;
+   des->usetrendinlevel = DEFAULT_DES_USETRENDINLEVEL;
+
+   return;
+}
+
+/** update a double exponential smoothing data structure */
+static
+void updateDoubleexpsmooth(
+   DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
+   SCIP_Real             xnew                /**< new sample value */
+   )
+{
+   if( des->n == 0 )
+      initDoubleexpsmooth(des, xnew);
+   else
+   {
+      SCIP_Real newlevel;
+      SCIP_Real newtrend;
+
+      newlevel = des->alpha * xnew + (1.0 - des->alpha) * (des->level + des->usetrendinlevel ? des->trend : 0.0);
+      newtrend = des->beta * (newlevel - des->level) + (1.0 - des->beta) * des->trend;
+
+      des->level = newlevel;
+      des->trend = newtrend;
+   }
+}
+
+/** get the current trend (slope) computed by this double exponential smoothing */
+static
+SCIP_Real getTrendDoubleexpsmooth(
+   DOUBLEEXPSMOOTH*      des                 /**< double exponential smoothing data structure */
+   )
+{
+   assert(des != NULL);
+
+   if( des->n == 0 )
+      return SCIP_INVALID;
+
+   return des->trend;
+}
+
 /** reset search progress */
 static
 void resetSearchprogress(
@@ -105,6 +183,8 @@ void resetSearchprogress(
 {
    progress->curr = -1;
    progress->nobservations = 0;
+   progress->desprogress.n = 0;
+   progress->desresources.n = 0;
 }
 
 /** create a search progress */
@@ -117,6 +197,7 @@ SCIP_RETCODE createSearchprogress(
 
    SCIP_ALLOC( BMSallocMemory(progress) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, DEFAULT_WINDOWSIZE) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->resourcearray, DEFAULT_WINDOWSIZE) );
 
    resetSearchprogress(*progress);
 
@@ -135,20 +216,26 @@ void freeSearchprogress(
       return;
 
    BMSfreeMemoryArray(&(*progress)->progressarray);
+   BMSfreeMemoryArray(&(*progress)->resourcearray);
    BMSfreeMemory(progress);
 }
 
-/** add a new observation to the search progress */
+/** add a new sample to the search progress */
 static
-void addObservationSearchprogress(
+void addSampleSearchprogress(
    SEARCHPROGRESS*       progress,           /**< search progress data structure */
-   SCIP_Real             obs                 /**< new observation */
+   SCIP_Real             obs,                /**< new observation */
+   SCIP_Real             res                 /**< total resources, e.g., nodes, to reach observation */
    )
 {
    assert(progress != NULL);
    progress->nobservations++;
    progress->curr = (progress->curr + 1) % DEFAULT_WINDOWSIZE;
    progress->progressarray[progress->curr] = obs;
+   progress->resourcearray[progress->curr] = res;
+
+   updateDoubleexpsmooth(&progress->desprogress, obs);
+   updateDoubleexpsmooth(&progress->desresources, res);
 }
 
 /** get the current search progress */
@@ -164,6 +251,119 @@ SCIP_Real getCurrentProgress(
    assert(0 <= progress->curr && progress->curr <= DEFAULT_WINDOWSIZE - 1);
 
    return progress->progressarray[progress->curr];
+}
+
+/** get the current resource measurement */
+static
+SCIP_Real getCurrentResources(
+   SEARCHPROGRESS*       progress            /**< search progress data structure */
+   )
+{
+   if( progress->curr == -1 )
+      return 0.0;
+
+   return progress->resourcearray[progress->curr];
+}
+
+/** forecast how many additional resources are necessary to reach a certain level of progress */
+static
+SCIP_Real forecastRemainingResources(
+   SEARCHPROGRESS*       progress,           /**< search progress data structure */
+   SCIP_Real             targetlevel         /**< targeted progress level, e.g., 1.0 to finish the search */
+   )
+{
+   SCIP_Real progresstrend;
+   SCIP_Real resourcetrend;
+   SCIP_Real remprogress;
+
+   assert(progress != NULL);
+
+   remprogress = targetlevel - getCurrentProgress(progress);
+
+   /* we have already reached the target level */
+   if( remprogress <= 0.0 )
+      return 0.0;
+
+   /* no observation available yet */
+   if( progress->nobservations == 0 )
+      return SCIP_REAL_MAX;
+
+   progresstrend = getTrendDoubleexpsmooth(&progress->desprogress);
+   resourcetrend = getTrendDoubleexpsmooth(&progress->desresources);
+
+   if( progresstrend == 0.0 )
+      return SCIP_REAL_MAX;
+
+   /* the remaining progress to the target level will be reached in approximately remprogress /progresstrend
+    * many samples. The corresponding resource trend per time step yields the remaining ressources
+    */
+   return remprogress * resourcetrend / progresstrend;
+}
+
+/** measure the velocity between the indices at t1 and t2 */
+static
+SCIP_Real measureVelocity(
+   SEARCHPROGRESS*       progress,           /**< search progress data structure */
+   int                   t1,                 /**< the earlier time index */
+   int                   t2                  /**< the later time index */
+   )
+{
+   return (progress->progressarray[t2] - progress->progressarray[t1]) / (progress->resourcearray[t2] - progress->resourcearray[t1]);
+}
+
+/** forecast how many additional resources are needed to reach a target level by using a moving window */
+static
+SCIP_Real forecastRollingAverageWindow(
+   SEARCHPROGRESS*       progress,           /**< search progress data structure */
+   SCIP_Real             targetlevel,        /**< targeted progress level, e.g., 1.0 to finish the search */
+   int                   windowsize,         /**< the size of the moving window */
+   SCIP_Bool             useacceleration     /**< should the acceleration within the window in speed be taken into account? */
+   )
+{
+   assert(progress != NULL);
+   SCIP_Real remprogress;
+   int windowstart;
+   int windowend;
+
+   windowsize = MIN(windowsize, progress->nobservations);
+
+   remprogress = targetlevel - getCurrentProgress(progress);
+   windowend = progress->curr;
+   assert(progress->curr == (progress->nobservations - 1) % DEFAULT_WINDOWSIZE);
+   if( progress->nobservations > DEFAULT_WINDOWSIZE )
+      windowstart = (progress->curr - windowsize + 1 + DEFAULT_WINDOWSIZE) % DEFAULT_WINDOWSIZE;
+   else
+      windowstart = progress->curr - windowsize + 1;
+
+   assert(windowstart >= 0);
+
+   if( useacceleration )
+   {
+      SCIP_Real rootdiscriminant;
+      SCIP_Real remres1;
+      SCIP_Real remres2;
+      int windowmid = (windowstart + windowsize / 2) % DEFAULT_WINDOWSIZE;
+      SCIP_Real vel1 = measureVelocity(progress, windowstart, windowmid);
+      SCIP_Real vel2 = measureVelocity(progress, windowmid, windowend);
+      SCIP_Real acceleration = (vel2 - vel1) / progress->resourcearray[windowend] - progress->resourcearray[windowmid];
+      SCIP_Real discriminant = vel2 * vel2 + 2 * acceleration * remprogress;
+      discriminant = MAX(0, discriminant);
+      rootdiscriminant = sqrt(discriminant);
+      remres1 = (-vel2 + rootdiscriminant) / acceleration;
+      remres2 = (-vel2 - rootdiscriminant) / acceleration;
+
+      return MAX(remres1, remres2);
+   }
+   else
+   {
+      SCIP_Real velocitywindow = measureVelocity(progress, windowstart, windowend);
+
+      return remprogress / velocitywindow;
+   }
+
+
+
+   return 0.0;
 }
 
 /*
@@ -393,7 +593,7 @@ SCIP_Bool shouldApplyRestart(
    return FALSE;
 }
 
-/** todo update the search progress after a new leaf has been reached */
+/** update the search progress after a new leaf has been reached */
 static
 SCIP_RETCODE updateSearchProgress(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -425,7 +625,11 @@ SCIP_RETCODE updateSearchProgress(
          break;
    }
 
-   addObservationSearchprogress(searchprogress, currentprogress);
+   /* author bzfhende
+    *
+    * TODO add different resource types than nodes
+    */
+   addSampleSearchprogress(searchprogress, currentprogress, SCIPgetNNodes(scip));
 
    return SCIP_OKAY;
 }
@@ -447,9 +651,20 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    isleaf = (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE));
    if( isleaf )
    {
+      SCIP_Real remainnodes;
       SCIP_CALL( updateSearchProgress(scip, eventhdlrdata, SCIPeventGetNode(event)) );
 
-      SCIPdebugMsg(scip, "Updated search progress to %.8f\n", getCurrentProgress(eventhdlrdata->ratioprogress));
+      remainnodes = forecastRemainingResources(eventhdlrdata->ratioprogress, 1.0);
+      SCIPdebugMsg(scip, "Updated search progress to %.8f tree size estimation %g (%lld + %g)\n",
+         getCurrentProgress(eventhdlrdata->ratioprogress),
+         SCIPgetNNodes(scip) + remainnodes,
+         SCIPgetNNodes(scip), remainnodes);
+      SCIPdebugMsg(scip, "Remaining nodes forecast at node %lld: %g %g %g (window sizes 2, 10, 100)\n",
+         SCIPgetNNodes(scip),
+         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 2, FALSE),
+         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 10, FALSE),
+         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 100, FALSE)
+         );
    }
    /* check if all conditions are met such that the event handler should run */
    if( ! checkConditions(scip, eventhdlrdata) )
