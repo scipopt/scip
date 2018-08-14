@@ -1886,12 +1886,13 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 
    if( probdata->intlogfile != NULL )
    {
+      const int success = fclose(probdata->intlogfile);
+
 #ifdef WITH_UG
       if( getUgRank() != 0 )
          return SCIP_ERROR;
 #endif
 
-      int success = fclose(probdata->intlogfile);
       if( success != 0 )
       {
          SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->intlogfile);

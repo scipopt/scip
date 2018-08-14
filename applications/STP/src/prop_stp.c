@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include "prop_stp.h"
 #include "grph.h"
 #include "branch_stp.h"
@@ -522,7 +523,7 @@ SCIP_RETCODE redbasedVarfixing(
    if( !graph_valid(propgraph) )
    {
       printf("FAIL: problem has become invalid! \n");
-      return SCIP_ERROR;
+      abort();
    }
 #else
    assert(graph_valid(propgraph));
@@ -535,8 +536,6 @@ SCIP_RETCODE redbasedVarfixing(
    SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 
    assert(graph_valid(propgraph));
-
-   graph_path_exit(scip, propgraph);
 
    /* try to fix edges ... */
 
@@ -603,7 +602,7 @@ SCIP_RETCODE redbasedVarfixing(
    SCIPdebugMessage("reduction based fixings: %d \n", *nfixed);
 
 TERMINATE:
-
+   graph_path_exit(scip, propgraph);
    SCIPfreeBufferArray(scip, &remain);
 
    return SCIP_OKAY;
