@@ -240,17 +240,23 @@ SCIP_RETCODE level0infeas(
 
    SCIP_CALL( graph_trail_arr(scip, g, g->source) );
 
-   for( int k = nnodes - 1; k >= 0 ; k-- )
+   for( int k = 0; k < nnodes; k++ )
+      if( !g->mark[k] && Is_term(g->term[k]) )
+      {
+         assert(k != g->source);
+         *infeas = TRUE;
+         break;
+      }
+
+   for( int k = 0; k < nnodes; k++ )
    {
       if( !g->mark[k] && (g->grad[k] > 0) )
       {
-         if( Is_term(g->term[k]) )
-            *infeas = TRUE;
-
          while( g->inpbeg[k] != EAT_LAST )
             graph_edge_del(scip, g, g->inpbeg[k], TRUE);
       }
    }
+
    return SCIP_OKAY;
 }
 
