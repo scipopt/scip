@@ -37,7 +37,7 @@
 
 #define EVENTHDLR_NAME         "restart"
 #define EVENTHDLR_DESC         "event handler for restart event"
-#define EVENTTYPE_RESTART      SCIP_EVENTTYPE_NODESOLVED
+#define EVENTTYPE_RESTART      SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_PQNODEINFEASIBLE
 
 /*
  * Data structures
@@ -327,9 +327,19 @@ SCIP_Real forecastRollingAverageWindow(
 
    windowsize = MIN(windowsize, progress->nobservations);
 
+   /* we need at least 3 observations in our window to compute the acceleration */
+   useacceleration = useacceleration && windowsize >= 3;
+
    remprogress = targetlevel - getCurrentProgress(progress);
+
+   /* nothing to forecast anymore */
+   if( remprogress <= 0.0 )
+      return 0.0;
+
    windowend = progress->curr;
    assert(progress->curr == (progress->nobservations - 1) % DEFAULT_WINDOWSIZE);
+
+   /* compute the start index of the window */
    if( progress->nobservations > DEFAULT_WINDOWSIZE )
       windowstart = (progress->curr - windowsize + 1 + DEFAULT_WINDOWSIZE) % DEFAULT_WINDOWSIZE;
    else
@@ -337,20 +347,44 @@ SCIP_Real forecastRollingAverageWindow(
 
    assert(windowstart >= 0);
 
+   /* try to compute remaining ressources as the root of a quadratic function
+    *
+    * s(r) = s_0 + v * r + .5 a * r^2
+    *
+    * where s_0, v, and a are computed by using the start, end, and midpoint of the current
+    * window.
+    * */
    if( useacceleration )
    {
       SCIP_Real rootdiscriminant;
       SCIP_Real remres1;
       SCIP_Real remres2;
-      int windowmid = (windowstart + windowsize / 2) % DEFAULT_WINDOWSIZE;
+      SCIP_Real v;
+      SCIP_Real s0;
+      int windowmid = ((windowstart + windowsize) / 2) % DEFAULT_WINDOWSIZE;
+      SCIP_Real w1 = progress->resourcearray[windowstart];
+      SCIP_Real w3 = progress->resourcearray[windowend];
+      SCIP_Real w2 = progress->resourcearray[windowmid];
       SCIP_Real vel1 = measureVelocity(progress, windowstart, windowmid);
       SCIP_Real vel2 = measureVelocity(progress, windowmid, windowend);
-      SCIP_Real acceleration = (vel2 - vel1) / progress->resourcearray[windowend] - progress->resourcearray[windowmid];
-      SCIP_Real discriminant = vel2 * vel2 + 2 * acceleration * remprogress;
+      SCIP_Real velwindow = measureVelocity(progress, windowstart, windowend);
+
+      /* coefficient a, the acceleration, in the above formula */
+      SCIP_Real acceleration = (velwindow - vel1) / (w3 - w2) * 2.0;
+
+      /* coefficient v, the velocity, and s_0, the y intercept in the quadratic function */
+      v = vel1 - .5 * acceleration * (w1 + w2);
+      s0 = progress->progressarray[windowstart] - v * w1 - .5 * acceleration * w1 * w1;
+
+      /* solve the quadratic equation s(r) = targetlevel = s_0 + v * r + 0.5 * a * r^2
+       *
+       * r1/2 = 2 / a * (-v +/- sqrt(v^2 - 2 * a * (s_0 - targetlevel)))
+       * */
+      SCIP_Real discriminant = v * v - 2 * acceleration * (s0 - targetlevel);
       discriminant = MAX(0, discriminant);
       rootdiscriminant = sqrt(discriminant);
-      remres1 = (-vel2 + rootdiscriminant) / acceleration;
-      remres2 = (-vel2 - rootdiscriminant) / acceleration;
+      remres1 = 2 * (-v + rootdiscriminant) / acceleration;
+      remres2 = 2 * (-v - rootdiscriminant) / acceleration;
 
       return MAX(remres1, remres2);
    }
@@ -360,8 +394,6 @@ SCIP_Real forecastRollingAverageWindow(
 
       return remprogress / velocitywindow;
    }
-
-
 
    return 0.0;
 }
@@ -483,6 +515,8 @@ RESTARTPOLICY getRestartPolicy(
          SCIPABORT();
          break;
    }
+
+   return RESTARTPOLICY_NEVER;
 }
 
 /** check conditions before applying restart policy */
@@ -648,7 +682,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    assert(eventhdlrdata != NULL);
 
    /* update the search progress at leaf nodes */
-   isleaf = (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE));
+   isleaf = (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE | SCIP_EVENTTYPE_PQNODEINFEASIBLE));
    if( isleaf )
    {
       SCIP_Real remainnodes;
@@ -666,6 +700,15 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
          forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 100, FALSE)
          );
    }
+
+   /* if nodes have been pruned, this is usually an indication that things are progressing, don't restart */
+   if( SCIPeventGetType(event) & SCIP_EVENTTYPE_PQNODEINFEASIBLE )
+   {
+      SCIPdebugMsg(scip, "PQ node %lld infeasible\n", SCIPnodeGetNumber(SCIPeventGetNode(event)));
+      return SCIP_OKAY;
+
+   }
+
    /* check if all conditions are met such that the event handler should run */
    if( ! checkConditions(scip, eventhdlrdata) )
       return SCIP_OKAY;
