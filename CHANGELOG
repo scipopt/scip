@@ -13,6 +13,8 @@ Features
 Performance improvements
 ------------------------
 
+- extended cut presolving staff by removing variable that have already be fixed at their bounds from the cut
+
 Examples and applications
 -------------------------
 
