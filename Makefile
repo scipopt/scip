@@ -1117,12 +1117,12 @@ $(BINDIR):
 .PHONY: clean
 clean:          cleanlibs cleanbin | $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
-		@-(cd $(LIBOBJDIR) && rm -f */*.o)
+		@-(cd $(LIBOBJDIR) && rm -f */*.o */*.d)
 		@-rmdir $(LIBOBJSUBDIRS)
 		@-rmdir $(LIBOBJDIR)
 endif
 ifneq ($(BINOBJDIR),)
-		@-rm -f $(BINOBJDIR)/*.o && rmdir $(BINOBJDIR)
+		@-rm -f $(BINOBJDIR)/*.o $(BINOBJDIR)/*.d && rmdir $(BINOBJDIR)
 endif
 ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
@@ -1222,12 +1222,12 @@ scipdepend:
 
 depend:		scipdepend lpidepend tpidepend nlpidepend maindepend objscipdepend
 
--include	$(MAINDEP)
--include	$(SCIPLIBDEP)
--include	$(OBJSCIPLIBDEP)
--include	$(LPILIBDEP)
--include	$(TPILIBDEP)
--include	$(NLPILIBDEP)
+-include $(MAINOBJFILES:.o=.d)
+-include $(SCIPLIBOBJFILES:.o=.d)
+-include $(OBJSCIPOBJFILES:.o=.d)
+-include $(LPILIBOBJFILES:.o=.d)
+-include $(TPILIBOBJFILES:.o=.d)
+-include $(NLPILIBOBJFILES:.o=.d)
 
 # make binary
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
@@ -1320,19 +1320,19 @@ endif
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.c | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 ifeq ($(GAMS),true)
 $(LIBOBJDIR)/scip/%.o:	$(GAMSDIR)/apifiles/C/api/%.c | $(LIBOBJDIR)
