@@ -262,7 +262,6 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
@@ -302,7 +301,6 @@ TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
-TPILIBDEP	=	$(SRCDIR)/depend.tpilib.$(TPI).$(OPT)
 TPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIBSHORTNAME).$(BASE).$(LIBEXT)
 TPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(TPILIBSRC)
@@ -388,7 +386,6 @@ NLPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
 NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
-NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
 NLPILIBSHORTLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
@@ -805,7 +802,6 @@ SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
-SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
@@ -857,7 +853,6 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPINCSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.h))
-OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 OBJSCIPLIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(OBJSCIPLIBSRC)
@@ -872,7 +867,6 @@ MAINNAME	=	$(MAINSHORTNAME)-$(VERSION)
 
 MAINOBJ		=	main.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.main.$(OPT)
 
 MAINFILE	=	$(BINDIR)/$(MAINNAME).$(BASE).$(LPS).$(TPI)$(EXEEXTENSION)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
@@ -1149,78 +1143,16 @@ cleanbin:       | $(BINDIR)
 		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-.PHONY: lpidepend
-lpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/include/cpxinc/cpxconst.h||g'\'' \
-		>$(LPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
-		| sed '\''s|$(LIBDIR)/include/cpxinc/cpxconst.h||g'\'' \
-		| sed '\''s|$(LIBDIR)/include/spxinc[^ ]*||g'\'' \
-		>$(LPILIBDEP)'
-endif
+depend:
 # We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
 # but contain all LPI's that use the WITH_LPSCHECK define.
 		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
-
-.PHONY: tpidepend
-tpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(TPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(TPILIBDEP)'
-endif
-
-.PHONY: nlpidepend
-nlpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(NLPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed -e '\''s|$(LIBDIR)/shared/ipopt[^ ]*||g'\'' -e '\''s|$(LIBDIR)/static/ipopt[^ ]*||g'\'' \
-		>$(NLPILIBDEP)'
-endif
-
-.PHONY: maindepend
-maindepend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(BINOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(MAINDEP)'
-
-.PHONY: objscipdepend
-objscipdepend:
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(OBJSCIPLIBDEP)'
-
-.PHONY: scipdepend
-scipdepend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) $(SYMSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(SCIPLIBDEP)'
 		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
-
-depend:		scipdepend lpidepend tpidepend nlpidepend maindepend objscipdepend
 
 -include $(MAINOBJFILES:.o=.d)
 -include $(SCIPLIBOBJFILES:.o=.d)
@@ -1677,7 +1609,7 @@ help:
 		@echo "  - splint: Run splint on all C SCIP files. (Need splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
-		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
+		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."
 		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 
