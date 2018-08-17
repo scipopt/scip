@@ -214,7 +214,7 @@ ctestrunner: 	$(UNITTESTSBIN)
 clean:
 		@echo "-> remove main object files"
 		$(foreach dir, $(OBJDIRS) $(OBJDIR), \
-			@-rm -f $(dir)/*.o)
+			@-rm -f $(dir)/*.o $(dir)/*.d)
 		@echo "-> remove binaries"
 		$(foreach bin, $(UNITTESTSBIN), \
 			@-rm -f $(bin))
