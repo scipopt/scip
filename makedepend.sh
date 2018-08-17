@@ -4,3 +4,7 @@
 #
 
 make depend
+
+pushd applications/Scheduler > /dev/null
+make depend
+popd > /dev/null
