@@ -294,7 +294,6 @@ CFLAGS		+=	$(USRCFLAGS)
 CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
-DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------

@@ -96,7 +96,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
 		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
-		USRDFLAGS=$(USRDFLAGS)\\n\
 		USRFLAGS=$(USRFLAGS)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
@@ -1154,12 +1153,19 @@ depend:
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
+# do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
+ifneq ($(DFLAGS),)
 -include $(MAINOBJFILES:.o=.d)
 -include $(SCIPLIBOBJFILES:.o=.d)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
 -include $(NLPILIBOBJFILES:.o=.d)
+else
+ifeq ($(VERBOSE),true)
+$(info No compilation dependencies. If changing header files, do a make clean before building.)
+endif
+endif
 
 # make binary
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
@@ -1398,7 +1404,6 @@ endif
 		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRLDFLAGS=$(USRLDFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRARFLAGS=$(USRARFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRDFLAGS=$(USRDFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBLKMEM=$(NOBLKMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBUFMEM=$(NOBUFMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
