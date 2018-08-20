@@ -135,6 +135,7 @@ struct SCIP_Node
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
+   SCIP_Real             probability;        /**< phi based probability to reach this node, determined at branching time */
    union
    {
       SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */

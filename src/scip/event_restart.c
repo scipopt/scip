@@ -65,6 +65,8 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define PROGRESS_CHAR_RATIO               'r' /**< should the search progress be measured using ratio-based probabilities? */
 #define PROGRESS_CHAR_UNIFORM             'u' /**< should the search progress be measured using even probabilities? */
 #define PROGRESS_CHAR_GAP                 'g' /**< should the search progress be measured in terms of the gap? */
+#define PROGRESS_CHAR_FIXED               'f' /**< should the search progress be measured using fixed, ratio based probabilities? */
+
 #define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
 #define DEFAULT_DES_ALPHA               0.15  /**< default level smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_BETA                0.15   /**< default trend smoothing constant for double exponential smoothing */
@@ -648,12 +650,15 @@ SCIP_RETCODE updateSearchProgress(
          currentprogress = 1.0 - MIN(SCIPgetGap(scip), 1.0);
          break;
       case PROGRESS_CHAR_UNIFORM:
-         currentprogress = getCurrentProgress(searchprogress) + pow(2.0, -SCIPnodeGetDepth(leafnode));
+         currentprogress = getCurrentProgress(searchprogress) + pow(0.5, SCIPnodeGetDepth(leafnode));
 
          break;
       case PROGRESS_CHAR_RATIO:
          SCIP_CALL( SCIPgetNodeProbability(scip, leafnode, &currentprogress) );
          currentprogress += getCurrentProgress(searchprogress);
+         break;
+      case PROGRESS_CHAR_FIXED:
+         currentprogress = getCurrentProgress(searchprogress) + SCIPnodeGetFixedProbability(leafnode);
          break;
       default:
          break;
@@ -777,7 +782,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimationmethod", "select estimation method",
                &eventhdlrdata->estimationparam, FALSE, 't', "t", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/progressmeasure", "select progress measure",
-               &eventhdlrdata->progressparam, FALSE, 'r', "gru", NULL, NULL) );
+               &eventhdlrdata->progressparam, FALSE, 'f', "fgru", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
       &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
