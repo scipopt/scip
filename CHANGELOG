@@ -45,6 +45,13 @@ Interface changes
 
 ### Data structures
 
+### Build system
+
+- The default value for DFLAGS in the non-cmake buildsystem has changed from -MM to -MMD. This will break the
+  generation of depend.* files if that was done by a compiler call that relied on -MM. The new preferred way
+  to handle compilation dependencies is to additionally use $(DFLAGS) when compiling the object files (.o) and
+  to include the generated .d files in the Makefile, see also "Build system / Makefile" below.
+
 Deleted files
 -------------
 
