@@ -109,6 +109,7 @@ struct SCIP_Benders
    SCIP_Real             perturbeps;         /**< epsilon value to perturb the LP solution */
    int                   noimprovecount;     /**< count of the iterations without improvement */
    int                   noimprovelimit;     /**< limit used to change behaviour of stabilitation */
+   SCIP_Longint          prevnlpiter;        /**< number of LP iters at the previous call of the cut strengthening */
    SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
    SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
    SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
