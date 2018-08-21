@@ -305,7 +305,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
     * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
     * that the Benders' cut could not find a valid cut.
     */
-   if( !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
+   if( SCIPisFeasLT(masterprob, checkobj, verifyobj) )
    {
       (*success) = FALSE;
       SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,

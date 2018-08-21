@@ -979,8 +979,8 @@ SCIP_RETCODE SCIPbendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutstrengthenenabled", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "should the core point cut strengthening be employed?", &(*benders)->strengthenenabled,
-         FALSE, SCIP_DEFAULT_STRENGTHENENABLED, NULL, NULL) ); /*lint !e740*/
+         "should the core point cut strengthening be employed (only applied to fractional solutions or continuous subproblems)?",
+         &(*benders)->strengthenenabled, FALSE, SCIP_DEFAULT_STRENGTHENENABLED, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2033,6 +2033,7 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
    SCIP_Bool             checkint,           /**< are the subproblems called during a check/enforce of integer sols? */
+   SCIP_Bool             perturbsol,         /**< should the solution be perturbed to escape infeasibility? */
    SCIP_Bool*            auxviol,            /**< set to TRUE only if the solution is feasible but the aux vars are violated */
    SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
    SCIP_Bool*            skipsolve,          /**< should the main solve be skipped as a result of this strengthening? */
@@ -2118,7 +2119,7 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
          /* if the number of iterations without improvement exceeds noimprovelimit, then no convex combination is
           * created
           */
-         if( benders->noimprovecount <= benders->noimprovelimit )
+         if( !perturbsol && benders->noimprovecount <= benders->noimprovelimit )
          {
             newsolval = lpsolval*benders->convexmult + corepointval*(1 - benders->convexmult);
 
@@ -2127,7 +2128,7 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
          }
 
          /* if the number of iterations without improvement exceeds 2*noimprovelimit, then perturbation is performed */
-         if( benders->noimprovecount <= 2*benders->noimprovelimit )
+         if( perturbsol || benders->noimprovecount <= 2*benders->noimprovelimit )
             newsolval += benders->perturbeps;
       }
 
@@ -2794,14 +2795,18 @@ SCIP_RETCODE SCIPbendersExec(
    /* the cut strengthening is performed before the regular subproblem solve is called. To avoid recursion, the flag
     * strengthenround is set to TRUE when the cut strengthening is performed. The cut strengthening is not performed as
     * part of the large neighbourhood Benders' search.
+    *
+    * NOTE: cut strengthening is only applied for fraction solutions and integer solutions if there are no CIP
+    * subproblems.
     */
-   if( benders->strengthenenabled && !benders->strengthenround && !benders->iscopy )
+   if( benders->strengthenenabled && !benders->strengthenround && !benders->iscopy
+      && (!checkint || SCIPbendersGetNConvexSubproblems(benders) == SCIPbendersGetNSubproblems(benders)) )
    {
       SCIP_Bool skipsolve;
 
       benders->strengthenround = TRUE;
       /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
-      SCIP_CALL( performInteriorSolCutStrenghtening(benders, set, sol, type, checkint, infeasible, auxviol,
+      SCIP_CALL( performInteriorSolCutStrenghtening(benders, set, sol, type, checkint, FALSE, infeasible, auxviol,
             &skipsolve, result) );
       benders->strengthenround = FALSE;
 
@@ -3052,6 +3057,28 @@ TERMINATE:
    SCIPfreeBlockMemoryArray(set->scip, &mergecands, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &substatus, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &subprobsolved, nsubproblems);
+
+   /* if there was an error in generating cuts and merging was not performed, then the solution is perturbed in an
+    * attempt to generate a cut and correct the infeasibility
+    */
+   if( !success )
+   {
+      SCIP_Bool skipsolve;
+      SCIP_RESULT perturbresult;
+
+      skipsolve = FALSE;
+
+      benders->strengthenround = TRUE;
+      /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
+      SCIP_CALL( performInteriorSolCutStrenghtening(benders, set, sol, type, checkint, TRUE, infeasible, auxviol,
+            &skipsolve, &perturbresult) );
+      benders->strengthenround = FALSE;
+
+      if( perturbresult == SCIP_CONSADDED || perturbresult == SCIP_SEPARATED )
+         (*result) = perturbresult;
+
+      success = skipsolve;
+   }
 
    if( !success )
       return SCIP_ERROR;
@@ -3367,9 +3394,9 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
           * decomposition subproblems
           */
          solval = SCIPgetSolVal(set->scip, sol, mastervar);
-         if( solval > SCIPvarGetUbLocal(vars[i]) )
+         if( !SCIPisLT(set->scip, solval, SCIPvarGetUbLocal(vars[i])) )
             solval = SCIPvarGetUbLocal(vars[i]);
-         else if( solval < SCIPvarGetLbLocal(vars[i]) )
+         else if( !SCIPisGT(set->scip, solval, SCIPvarGetLbLocal(vars[i])) )
             solval = SCIPvarGetLbLocal(vars[i]);
 
          /* fixing the variable in the subproblem */
