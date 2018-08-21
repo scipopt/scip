@@ -2071,6 +2071,14 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
    if( benders->noimprovecount > 3*benders->noimprovelimit )
       return SCIP_OKAY;
 
+   /* if no LP iterations have been performed since the last call of the cut strenghtening, then the strengthening is
+    * aborted
+    */
+   if( benders->prevnlpiter == SCIPgetNLPIterations(set->scip) )
+      return SCIP_OKAY;
+
+   benders->prevnlpiter = SCIPgetNLPIterations(set->scip);
+
    /* if the separation point solution is NULL, then we create the solution using the current LP relaxation. */
    if( benders->corepoint == NULL )
    {
