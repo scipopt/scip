@@ -671,32 +671,6 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
-/** adds constraints, which are Benders' cuts, that are generated in LNS heuristics to the main SCIP instance.
- *
- *  This method is required because constraints must be added at the correct stage in the solving process. This is
- *  typically in the enforcement of the LP or relaxation solutions. This function can be called from the Benders'
- *  decomposition constraint handler to add the transferred constraints.
- *
- *  A success flag is returned if there were any constraints transferred to the main SCIP instance.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPaddBendersTransferConss(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_Bool*            success             /**< flag to indicate whether any constraints are added to the main SCIP */
-   );
-
 /* @} */
 
 /**@addtogroup PublicBenderscutsMethods

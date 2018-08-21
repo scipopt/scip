@@ -1423,21 +1423,6 @@ SCIP_RETCODE createAndAddTransferredCut(
    {
       if( sourcebenders->cutsasconss )
       {
-         ///* ensuring that there is enough memory for the new constraint */
-         //assert(sourcebenders->ntransferconss <= sourcebenders->transferconsssize);
-         //if( sourcebenders->ntransferconss + 1 > sourcebenders->transferconsssize )
-         //{
-            //int newsize;
-
-            //newsize = SCIPcalcMemGrowSize(sourcescip, sourcebenders->ntransferconss + 1);
-            //SCIP_CALL( SCIPreallocBlockMemoryArray(sourcescip, &sourcebenders->transferconss,
-                  //sourcebenders->transferconsssize, newsize) );
-            //sourcebenders->transferconsssize = newsize;
-         //}
-         //assert(sourcebenders->ntransferconss + 1 <= sourcebenders->transferconsssize);
-
-         //sourcebenders->transferconss[sourcebenders->ntransferconss] = transfercons;
-         //sourcebenders->ntransferconss++;
          SCIP_CALL( SCIPaddCons(sourcescip, transfercons) );
       }
       else
@@ -1493,15 +1478,6 @@ SCIP_RETCODE transferBendersCuts(
    /* exit if the cuts should not be transferred from the sub SCIP to the source SCIP. */
    if( !sourcebenders->transfercuts )
       return SCIP_OKAY;
-
-   /* initialising the transfer constraints array. This is only necessary if the transferred constraints/cuts are added
-    * to the source SCIP as constraints, and not cuts. */
-   if( sourcebenders->cutsasconss && sourcebenders->transferconsssize == 0 )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(sourcescip, &sourcebenders->transferconss, BENDERS_DEFAULT_ARRAYSIZE) );
-      sourcebenders->transferconsssize = BENDERS_DEFAULT_ARRAYSIZE;
-      sourcebenders->ntransferconss = 0;
-   }
 
    for( i = 0; i < benders->nbenderscuts; i++ )
    {
@@ -1774,18 +1750,6 @@ SCIP_RETCODE SCIPbendersExitsol(
          /* freeing the independent subproblem */
          SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
       }
-   }
-
-   /* releasing the transferred constraints that have not been added and freeing the storage array */
-   if( benders->transferconsssize > 0 )
-   {
-      while( benders->ntransferconss > 0 )
-      {
-         benders->ntransferconss--;
-         SCIP_CALL( SCIPreleaseCons(set->scip, &benders->transferconss[benders->ntransferconss]) );
-      }
-
-      SCIPfreeBlockMemoryArray(set->scip, &benders->transferconss, benders->transferconsssize);
    }
 
    /* call solving process deinitialization method of Benders' decomposition */
@@ -4706,34 +4670,6 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->mastervarscont[probnumber];
-}
-
-/** adds the transfer constraint to the main SCIP instance
- *  The transfer constraints are collected from the LNS heuristics
- */
-extern
-SCIP_RETCODE SCIPbendersAddTransferConss(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            success             /**< were any constraints added to the main SCIP instance? */
-   )
-{
-   assert(benders != NULL);
-   assert(set != NULL);
-
-   (*success) = FALSE;
-
-   while( benders->ntransferconss > 0)
-   {
-      benders->ntransferconss--;
-
-      SCIP_CALL( SCIPaddCons(set->scip, benders->transferconss[benders->ntransferconss]) );
-      SCIP_CALL( SCIPreleaseCons(set->scip, &benders->transferconss[benders->ntransferconss]) );
-
-      (*success) = TRUE;
-   }
-
-   return SCIP_OKAY;
 }
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */

@@ -80,9 +80,6 @@ struct SCIP_Benders
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
    SCIP_Bool             iscopy;             /**< is the Benders' decomposition struct a copy */
    SCIP_HASHMAP*         mastervarsmap;      /**< hash map for the master variables from the subscip to the master */
-   SCIP_CONS**           transferconss;      /**< constraints from LNS heuristics that will be transferred to the sourcescip */
-   int                   transferconsssize;  /**< size of the transfer constraints array */
-   int                   ntransferconss;     /**< the number of constraints to transfer */
 
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
