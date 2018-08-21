@@ -36,6 +36,11 @@
 extern "C" {
 #endif
 
+/** sets up the problem data */
+EXTERN
+SCIP_RETCODE SCIPprobdataSetDefaultParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** sets up the problem data */
 EXTERN

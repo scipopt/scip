@@ -1926,6 +1926,64 @@ SCIP_DECL_PROBDELTRANS(probdeltransStp)
  */
 
 /** sets up the problem data */
+SCIP_RETCODE SCIPprobdataSetDefaultParams(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+
+   SCIP_CALL( SCIPsetSubscipsOff(scip, TRUE) );
+
+   /* set STP-specific default parameters */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "limits/maxsol", 400) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 30) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxroundsroot", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );   // todo tune
+
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
+
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/alns/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/farkasdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/guideddiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/linesearchdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/nlpdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/objpscostdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/pscostdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/randrounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rootsoldiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/shiftandpropagate/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/shifting/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/veclendiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zirounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/locks/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
+   SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
+
+   // todo test properly; normal dfs?
+   SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
+
+   return SCIP_OKAY;
+}
+
+/** sets up the problem data */
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
@@ -3656,6 +3714,9 @@ void initReceivedSubproblem(
    int nnodes;
 
    assert(scip != NULL);
+
+   SCIP_CALL( SCIPprobdataSetDefaultParams(scip) );
+
    probdata = SCIPgetProbData(scip);
 
    graph = SCIPprobdataGetGraph(probdata);
