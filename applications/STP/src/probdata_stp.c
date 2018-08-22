@@ -3715,7 +3715,7 @@ void initReceivedSubproblem(
 
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPprobdataSetDefaultParams(scip) );
+   SCIP_CALL_ABORT( SCIPprobdataSetDefaultParams(scip) );
 
    probdata = SCIPgetProbData(scip);
 
