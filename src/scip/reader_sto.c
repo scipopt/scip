@@ -2459,6 +2459,10 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
 
+   /* disabling aggregation since it can affect the mapping between the master and subproblem variables */
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotaggr", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotmultaggr", TRUE) );
+
    SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
 
    return SCIP_OKAY;
