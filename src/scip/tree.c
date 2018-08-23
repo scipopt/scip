@@ -46,6 +46,7 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/struct_scip.h"
 #include "scip/pub_message.h"
 #include "scip/struct_branch.h"
 #include "lpi/lpi.h"
@@ -1018,6 +1019,8 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* update the estimate of the child */
    SCIPnodeSetEstimate(*node, set, estimate);
 
+   tree->lastbranchparentid = tree->focusnode == NULL ? -1L : SCIPnodeGetNumber(tree->focusnode);
+
    /* output node creation to visualization file */
    SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
@@ -1046,6 +1049,21 @@ SCIP_RETCODE SCIPnodeFree(
    assert(tree != NULL);
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
+
+   /* Send event to indicate that the node has been taken out of the priority queue */
+   if( SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD ||
+         SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING ||
+         SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF ||
+         (SCIPnodeGetType(*node) == SCIP_NODETYPE_DEADEND && SCIPnodeGetNumber(*node) != tree->lastbranchparentid)
+      )
+   {
+      SCIP_EVENT event;
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PQNODEINFEASIBLE) );
+      SCIP_CALL( SCIPeventChgNode(&event, *node) );
+      /* We use an ugly hack below: we need eventfilter, and if we want it we have to add it as a parameter to dozens of cuntions in SCIP and change the corresponding calls to these functions throughout the solver. */
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
+   }
 
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
@@ -4753,6 +4771,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathsize = 0;
    (*tree)->effectiverootdepth = 0;
    (*tree)->appliedeffectiverootdepth = 0;
+   (*tree)->lastbranchparentid = -1L;
    (*tree)->correctlpdepth = -1;
    (*tree)->cutoffdepth = INT_MAX;
    (*tree)->repropdepth = INT_MAX;

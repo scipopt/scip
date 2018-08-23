@@ -876,7 +876,6 @@ SCIP_RETCODE SCIPgetNodeProbability(
    TSEtree* treenode;
    TSEtree* parentnode;
    SCIP_Longint parentnodenum;
-   SCIP_Bool isleftchild;
    SCIP_Real probaleft;
    SCIP_Real branchbound;
    SCIP_BOUNDTYPE boundtype;

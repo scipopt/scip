@@ -37,7 +37,7 @@
 
 #define EVENTHDLR_NAME         "restart"
 #define EVENTHDLR_DESC         "event handler for restart event"
-#define EVENTTYPE_RESTART      SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_PQNODEINFEASIBLE
+#define EVENTTYPE_RESTART      SCIP_EVENTTYPE_PQNODEINFEASIBLE
 
 /*
  * Data structures
@@ -68,9 +68,14 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define PROGRESS_CHAR_FIXED               'f' /**< should the search progress be measured using fixed, ratio based probabilities? */
 
 #define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
+#define MAX_WINDOWSIZE                   500  /**< window size for search progress */
 #define DEFAULT_DES_ALPHA               0.15  /**< default level smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_BETA                0.15   /**< default trend smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< should the trend be used in the level update? */
+
+#define FORECAST_BACKTRACKESTIM           'b' /**< use backtrack estimation for forecasting */
+#define FORECAST_LINEAR                   'l' /**< use linear trends based on double exponential smoothing for forecasting */
+#define FORECAST_WINDOW                   'w' /**< use either linear or quadratic trends within window for forecasting */
 
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
@@ -97,15 +102,30 @@ struct SearchProgress
 
 typedef struct SearchProgress SEARCHPROGRESS;
 
+/** estimation of tree size that is updated at every leaf node */
+struct BacktrackEstim
+{
+   SCIP_Real             numerator;          /**< weighted sample sizes based on the path probability */
+   SCIP_Real             denominator;        /**< sum of weights (aka progress) */
+   char                  progressmethod;     /**< 'f'ixed or 'u'niform? */
+};
+typedef struct BacktrackEstim BACKTRACKESTIM;
+
 /** event handler data */
 struct SCIP_EventhdlrData
 {
    SEARCHPROGRESS*       ratioprogress;      /**< ratio progress data structure */
+   BACKTRACKESTIM*       backtrackestim;     /**< backtrack estimator for tree size */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimationparam;    /**< parameter to select the estimation method */
    char                  progressparam;      /**< progress method to use */
+   char                  forecastparam;      /**< method used for forecasting */
+   int                   windowsize;         /**< the window size used */
+   SCIP_Bool             useacceleration;    /**< consider also acceleration within window? */
    int                   restartlimit;       /**< how often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
+   int                   restarthitcounter;  /**< the number of successive samples that would trigger a restart */
+   int                   hitcounterlim;      /**< limit on the number of successive samples to really trigger a restart */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
    SCIP_Real             estim_factor;       /**< factor by which the estimated number of nodes should exceed the current number of nodes */
@@ -198,8 +218,8 @@ SCIP_RETCODE createSearchprogress(
    assert(progress != NULL);
 
    SCIP_ALLOC( BMSallocMemory(progress) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, DEFAULT_WINDOWSIZE) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->resourcearray, DEFAULT_WINDOWSIZE) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, MAX_WINDOWSIZE) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->resourcearray, MAX_WINDOWSIZE) );
 
    resetSearchprogress(*progress);
 
@@ -232,7 +252,7 @@ void addSampleSearchprogress(
 {
    assert(progress != NULL);
    progress->nobservations++;
-   progress->curr = (progress->curr + 1) % DEFAULT_WINDOWSIZE;
+   progress->curr = (progress->curr + 1) % MAX_WINDOWSIZE;
    progress->progressarray[progress->curr] = obs;
    progress->resourcearray[progress->curr] = res;
 
@@ -250,7 +270,7 @@ SCIP_Real getCurrentProgress(
    if( progress->curr == -1 )
       return 0.0;
 
-   assert(0 <= progress->curr && progress->curr <= DEFAULT_WINDOWSIZE - 1);
+   assert(0 <= progress->curr && progress->curr <= MAX_WINDOWSIZE - 1);
 
    return progress->progressarray[progress->curr];
 }
@@ -275,8 +295,10 @@ SCIP_Real forecastRemainingResources(
    )
 {
    SCIP_Real progresstrend;
-   SCIP_Real resourcetrend;
+   /*SCIP_Real resourcetrend;*/
    SCIP_Real remprogress;
+   SCIP_Real remleaves;
+   SCIP_Real totalleaves;
 
    assert(progress != NULL);
 
@@ -291,7 +313,7 @@ SCIP_Real forecastRemainingResources(
       return SCIP_REAL_MAX;
 
    progresstrend = getTrendDoubleexpsmooth(&progress->desprogress);
-   resourcetrend = getTrendDoubleexpsmooth(&progress->desresources);
+   /*resourcetrend = getTrendDoubleexpsmooth(&progress->desresources);*/
 
    if( progresstrend == 0.0 )
       return SCIP_REAL_MAX;
@@ -299,7 +321,11 @@ SCIP_Real forecastRemainingResources(
    /* the remaining progress to the target level will be reached in approximately remprogress /progresstrend
     * many samples. The corresponding resource trend per time step yields the remaining ressources
     */
-   return remprogress * resourcetrend / progresstrend;
+   remleaves = remprogress / progresstrend;
+   totalleaves = remleaves + progress->nobservations;
+
+   /* the total number of nodes is the 2 * N (leave number) - 1 */
+   return 2 * totalleaves - 1 - getCurrentResources(progress);
 }
 
 /** measure the velocity between the indices at t1 and t2 */
@@ -322,11 +348,11 @@ SCIP_Real forecastRollingAverageWindow(
    SCIP_Bool             useacceleration     /**< should the acceleration within the window in speed be taken into account? */
    )
 {
-   assert(progress != NULL);
    SCIP_Real remprogress;
    int windowstart;
    int windowend;
 
+   assert(progress != NULL);
    windowsize = MIN(windowsize, progress->nobservations);
 
    /* we need at least 3 observations in our window to compute the acceleration */
@@ -339,11 +365,11 @@ SCIP_Real forecastRollingAverageWindow(
       return 0.0;
 
    windowend = progress->curr;
-   assert(progress->curr == (progress->nobservations - 1) % DEFAULT_WINDOWSIZE);
+   assert(progress->curr == (progress->nobservations - 1) % MAX_WINDOWSIZE);
 
    /* compute the start index of the window */
-   if( progress->nobservations > DEFAULT_WINDOWSIZE )
-      windowstart = (progress->curr - windowsize + 1 + DEFAULT_WINDOWSIZE) % DEFAULT_WINDOWSIZE;
+   if( progress->nobservations > MAX_WINDOWSIZE )
+      windowstart = (progress->curr - windowsize + 1 + MAX_WINDOWSIZE) % MAX_WINDOWSIZE;
    else
       windowstart = progress->curr - windowsize + 1;
 
@@ -363,13 +389,13 @@ SCIP_Real forecastRollingAverageWindow(
       SCIP_Real remres2;
       SCIP_Real v;
       SCIP_Real s0;
-      int windowmid = ((windowstart + windowsize) / 2) % DEFAULT_WINDOWSIZE;
+      int windowmid = ((windowstart + windowsize) / 2) % MAX_WINDOWSIZE;
       SCIP_Real w1 = progress->resourcearray[windowstart];
       SCIP_Real w3 = progress->resourcearray[windowend];
       SCIP_Real w2 = progress->resourcearray[windowmid];
       SCIP_Real vel1 = measureVelocity(progress, windowstart, windowmid);
-      SCIP_Real vel2 = measureVelocity(progress, windowmid, windowend);
       SCIP_Real velwindow = measureVelocity(progress, windowstart, windowend);
+      SCIP_Real discriminant;
 
       /* coefficient a, the acceleration, in the above formula */
       SCIP_Real acceleration = (velwindow - vel1) / (w3 - w2) * 2.0;
@@ -378,17 +404,25 @@ SCIP_Real forecastRollingAverageWindow(
       v = vel1 - .5 * acceleration * (w1 + w2);
       s0 = progress->progressarray[windowstart] - v * w1 - .5 * acceleration * w1 * w1;
 
-      /* solve the quadratic equation s(r) = targetlevel = s_0 + v * r + 0.5 * a * r^2
-       *
-       * r1/2 = 2 / a * (-v +/- sqrt(v^2 - 2 * a * (s_0 - targetlevel)))
-       * */
-      SCIP_Real discriminant = v * v - 2 * acceleration * (s0 - targetlevel);
-      discriminant = MAX(0, discriminant);
-      rootdiscriminant = sqrt(discriminant);
-      remres1 = 2 * (-v + rootdiscriminant) / acceleration;
-      remres2 = 2 * (-v - rootdiscriminant) / acceleration;
+      if( ! EPSZ(acceleration, 1e-9) )
+      {
+         /* solve the quadratic equation s(r) = targetlevel = s_0 + v * r + 0.5 * a * r^2
+          *
+          * r1/2 = 2 / a * (-v +/- sqrt(v^2 - 2 * a * (s_0 - targetlevel)))
+          * */
+         discriminant = v * v - 2 * acceleration * (s0 - targetlevel);
+         discriminant = MAX(0, discriminant);
+         rootdiscriminant = sqrt(discriminant);
+         remres1 = (-v + rootdiscriminant) / acceleration;
+         remres2 = (-v - rootdiscriminant) / acceleration;
 
-      return MAX(remres1, remres2);
+         return MAX(remres1, remres2);
+      }
+      else
+      {
+         /* solve the linear displacement formula because the acceleration is 0 */
+         return remprogress / v;
+      }
    }
    else
    {
@@ -399,6 +433,113 @@ SCIP_Real forecastRollingAverageWindow(
 
    return 0.0;
 }
+
+/** reset a backtrack estimator */
+static
+void resetBacktrackestim(
+   BACKTRACKESTIM*       backtrackestim      /**< backtrack estimator */
+   )
+{
+   BMSclearMemory(backtrackestim);
+
+   return;
+}
+
+/** create a backtrack estimator */
+static
+SCIP_RETCODE createBacktrackestim(
+   BACKTRACKESTIM**      backtrackestim,     /**< pointer to store backtrack estimator */
+   char                  progressmethod      /**< 'f'ixed or 'u'niform? */
+   )
+{
+   assert(backtrackestim != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(backtrackestim) );
+
+   resetBacktrackestim(*backtrackestim);
+
+   return SCIP_OKAY;
+}
+
+/** free a backtrack estimator */
+static
+void freeBacktrackestim(
+   BACKTRACKESTIM**      backtrackestim      /**< pointer to store backtrack estimator */
+   )
+{
+   assert(backtrackestim != NULL);
+
+   if( *backtrackestim == NULL )
+      return;
+
+   BMSfreeMemory(backtrackestim);
+}
+
+/** update backtrack estimator by a new leaf node */
+static
+void updateBacktrackestim(
+   BACKTRACKESTIM*       backtrackestim,     /**< backtrack estimator */
+   SCIP_NODE*            leafnode            /**< new, previously unseen leaf node */
+   )
+{
+   SCIP_Real probability;
+   SCIP_Real num;
+   SCIP_Real arcprobability;
+   SCIP_Real pathprobability;
+   SCIP_NODE* parent;
+   SCIP_NODE* current;
+
+
+   assert(backtrackestim != NULL);
+   assert(leafnode != NULL);
+
+   switch (backtrackestim->progressmethod) {
+      case PROGRESS_CHAR_FIXED:
+         probability = SCIPnodeGetFixedProbability(leafnode);
+         pathprobability = probability;
+
+         current = leafnode;
+         num = 1.0;
+         /* loop back along all arcs along the path */
+         while( (parent = SCIPnodeGetParent(current)) != NULL )
+         {
+            arcprobability = SCIPnodeGetFixedProbability(current) / SCIPnodeGetFixedProbability(parent);
+            num += probability / pathprobability;
+            pathprobability /= arcprobability;
+
+            current = parent;
+         }
+         break;
+      case PROGRESS_CHAR_UNIFORM:
+         probability = pow(0.5, SCIPnodeGetDepth(leafnode));
+         num = 2 - probability;
+         break;
+      default:
+         SCIPerrorMessage("Unsupported progress type <%c> for backtrack estimation\n");
+         SCIPABORT();
+
+         break;
+   }
+
+   backtrackestim->numerator += num;
+   backtrackestim->denominator += probability;
+}
+
+/** estimate the total tree size using the backtrack estimation */
+static
+SCIP_Real estimateTreesizeBacktrackestim(
+   BACKTRACKESTIM*       backtrackestim      /**< backtrack estimator */
+   )
+{
+   assert(backtrackestim != NULL);
+
+   if( backtrackestim->denominator == 0.0 )
+      return -1;
+
+   return backtrackestim->numerator / backtrackestim->denominator;
+}
+
+
 
 /*
  * Callback methods of event handler
@@ -428,6 +569,8 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
 
    freeSearchprogress(&eventhdlrdata->ratioprogress);
 
+   freeBacktrackestim(&eventhdlrdata->backtrackestim);
+
    SCIPfreeMemory(scip, &eventhdlrdata);
 
    return SCIP_OKAY;
@@ -437,7 +580,7 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
 static
 SCIP_DECL_EVENTINIT(eventInitRestart)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
@@ -466,22 +609,30 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 
    resetSearchprogress(eventhdlrdata->ratioprogress);
 
+   resetBacktrackestim(eventhdlrdata->backtrackestim);
+
+   /* backtrack estimator only allows fixed or uniform progress */
+   if( eventhdlrdata->progressparam == PROGRESS_CHAR_FIXED )
+      eventhdlrdata->backtrackestim->progressmethod = PROGRESS_CHAR_FIXED;
+   else
+      eventhdlrdata->backtrackestim->progressmethod = PROGRESS_CHAR_UNIFORM;
+
+   eventhdlrdata->restarthitcounter = 0;
+
+   SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of restart event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( SCIPdropEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
-#else
-#define eventExitsolRestart NULL
-#endif
 
 /** frees specific event data */
 #if 0
@@ -588,6 +739,33 @@ SCIP_Bool shouldApplyRestartEstimation(
    return FALSE;
 }
 
+/** forecast the number of remaining nodes depending on the selected user parameters */
+static
+SCIP_Real forecastRemainingNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+
+   switch (eventhdlrdata->forecastparam) {
+      case FORECAST_BACKTRACKESTIM:
+         return MAX(0.0, estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim) - SCIPgetNNodes(scip));
+         break;
+      case FORECAST_LINEAR:
+         return forecastRemainingResources(eventhdlrdata->ratioprogress, 1.0);
+         break;
+      case FORECAST_WINDOW:
+         return forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0,
+                  eventhdlrdata->windowsize,
+                  eventhdlrdata->useacceleration);
+         break;
+      default:
+         break;
+   }
+
+   return -1.0;
+}
+
 /** should a restart be applied based on the current progress? */
 static
 SCIP_Bool shouldApplyRestartProgress(
@@ -595,6 +773,27 @@ SCIP_Bool shouldApplyRestartProgress(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
+
+   SCIP_Real estimation;
+   SCIP_Real remainnodes;
+
+   remainnodes = forecastRemainingNodes(scip, eventhdlrdata);
+
+   if( remainnodes < 0.0 )
+      return FALSE;
+
+   estimation = SCIPgetNNodes(scip) + remainnodes;
+
+   /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
+   if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
+               estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
+      return TRUE;
+   }
+
+   return FALSE;
 
 
 
@@ -645,6 +844,7 @@ SCIP_RETCODE updateSearchProgress(
 
    searchprogress = eventhdlrdata->ratioprogress;
 
+
    switch (eventhdlrdata->progressparam) {
       case PROGRESS_CHAR_GAP:
          currentprogress = 1.0 - MIN(SCIPgetGap(scip), 1.0);
@@ -670,8 +870,15 @@ SCIP_RETCODE updateSearchProgress(
     */
    addSampleSearchprogress(searchprogress, currentprogress, SCIPgetNNodes(scip));
 
+   updateBacktrackestim(eventhdlrdata->backtrackestim, leafnode);
+
+   SCIPdebugMsg(scip, "Update search progress by leaf %lld at depth %d: %g\n",
+      SCIPnodeGetNumber(leafnode), SCIPnodeGetDepth(leafnode), pow(0.5, SCIPnodeGetDepth(leafnode)));
+
    return SCIP_OKAY;
 }
+
+
 
 /** execution method of event handler */
 static
@@ -679,6 +886,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA*   eventhdlrdata;
    SCIP_Bool isleaf;
+   SCIP_Bool isleafbit;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -687,29 +895,36 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    assert(eventhdlrdata != NULL);
 
    /* update the search progress at leaf nodes */
-   isleaf = (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE | SCIP_EVENTTYPE_PQNODEINFEASIBLE));
+   isleaf = (SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEFEASIBLE ||
+            SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEINFEASIBLE ||
+            SCIPeventGetType(event) == SCIP_EVENTTYPE_PQNODEINFEASIBLE);
+
+   isleafbit = 0 != (SCIPeventGetType(event) & (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE | SCIP_EVENTTYPE_PQNODEINFEASIBLE));
+
+   if( isleaf != isleafbit )
+   {
+      SCIPABORT();
+   }
+
    if( isleaf )
    {
       SCIP_Real remainnodes;
       SCIP_CALL( updateSearchProgress(scip, eventhdlrdata, SCIPeventGetNode(event)) );
 
-      remainnodes = forecastRemainingResources(eventhdlrdata->ratioprogress, 1.0);
+      remainnodes = forecastRemainingNodes(scip, eventhdlrdata);
       SCIPdebugMsg(scip, "Updated search progress to %.8f tree size estimation %g (%lld + %g)\n",
          getCurrentProgress(eventhdlrdata->ratioprogress),
          SCIPgetNNodes(scip) + remainnodes,
          SCIPgetNNodes(scip), remainnodes);
-      SCIPdebugMsg(scip, "Remaining nodes forecast at node %lld: %g %g %g (window sizes 2, 10, 100)\n",
-         SCIPgetNNodes(scip),
-         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 2, FALSE),
-         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 10, FALSE),
-         forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0, 100, FALSE)
-         );
    }
 
    /* if nodes have been pruned, this is usually an indication that things are progressing, don't restart */
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_PQNODEINFEASIBLE )
    {
-      SCIPdebugMsg(scip, "PQ node %lld infeasible\n", SCIPnodeGetNumber(SCIPeventGetNode(event)));
+      SCIPdebugMsg(scip, "PQ node %lld (depth %d) infeasible, isleaf: %u\n",
+               SCIPnodeGetNumber(SCIPeventGetNode(event)),
+               SCIPnodeGetDepth(SCIPeventGetNode(event)),
+               isleaf);
       return SCIP_OKAY;
 
    }
@@ -721,15 +936,23 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 
    /* author bzfhende
     *
-    * TODO comment
+    * test if a restart should be applied
     */
 
    if( shouldApplyRestart(scip, eventhdlrdata) )
    {
-      eventhdlrdata->nrestartsperformed++;
+      eventhdlrdata->restarthitcounter++;
 
+      if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
+      {
+         eventhdlrdata->nrestartsperformed++;
 
-      SCIPrestartSolve(scip);
+         SCIPrestartSolve(scip);
+      }
+   }
+   else
+   {
+      eventhdlrdata->restarthitcounter = 0;
    }
 
    return SCIP_OKAY;
@@ -756,6 +979,8 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    BMSclearMemory(eventhdlrdata);
 
    SCIP_CALL( createSearchprogress(&eventhdlrdata->ratioprogress) );
+
+   SCIP_CALL( createBacktrackestim(&eventhdlrdata->backtrackestim, PROGRESS_CHAR_UNIFORM) );
 
    eventhdlr = NULL;
 
@@ -794,6 +1019,19 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/factor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->estim_factor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "restarts/forecast", "method used for forecasting",
+         &eventhdlrdata->forecastparam, FALSE, FORECAST_LINEAR, "blw", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "restarts/windowsize", "the window size for window forecasting",
+         &eventhdlrdata->windowsize, FALSE, DEFAULT_WINDOWSIZE, 2, MAX_WINDOWSIZE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/useacceleration", "consider also acceleration within window?",
+         &eventhdlrdata->useacceleration, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
+         &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

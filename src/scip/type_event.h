@@ -79,7 +79,6 @@ extern "C" {
 #define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x00080000)  /**< the focus node has been proven to be infeasible or was bounded */
 #define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x00100000)  /**< the focus node has been solved by branching */
 
-#define SCIP_EVENTTYPE_PQNODEINFEASIBLE UINT64_C(0x200000000) /**< A node in the Priority Queue has been proven to be infeasible or was bounded (the node is about to be freed) */
 
 /* LP events */
 #define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x00200000)  /**< the node's initial LP was solved */
@@ -100,6 +99,7 @@ extern "C" {
 
 /* sync event */
 #define SCIP_EVENTTYPE_SYNC             UINT64_C(0x100000000) /**< synchronization event */
+#define SCIP_EVENTTYPE_PQNODEINFEASIBLE UINT64_C(0x200000000) /**< A node in the Priority Queue has been proven to be infeasible or was bounded (the node is about to be freed) */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
