@@ -925,8 +925,6 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
                SCIPnodeGetNumber(SCIPeventGetNode(event)),
                SCIPnodeGetDepth(SCIPeventGetNode(event)),
                isleaf);
-      return SCIP_OKAY;
-
    }
 
    /* check if all conditions are met such that the event handler should run */
@@ -947,7 +945,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       {
          eventhdlrdata->nrestartsperformed++;
 
-         SCIPrestartSolve(scip);
+         SCIP_CALL( SCIPrestartSolve(scip) );
       }
    }
    else
