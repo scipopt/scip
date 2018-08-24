@@ -1223,6 +1223,83 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    return SCIP_OKAY;
 }
 
+/** checks whether given (multi)-aggregation is valid for the debugging solution */
+SCIP_RETCODE SCIPdebugCheckAggregation(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_VAR**            aggrvars,           /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   int                   naggrvars           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   )
+{
+   SCIP_Real solval;
+   SCIP_Real val;
+   int i;
+
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(aggrvars != NULL);
+   assert(scalars != NULL);
+   assert(naggrvars >= 1);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( !SCIPdebugSolIsEnabled(set->scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
+   /* get solution value of x variable */
+   SCIP_CALL( getSolutionValue(set, var, &solval) );
+
+   if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+      return SCIP_OKAY;
+
+   val = constant;
+
+   for( i = 0; i < naggrvars; i++ )
+   {
+      SCIP_Real aggrsolval;
+
+      /* get solution value of y variable */
+      SCIP_CALL( getSolutionValue(set, aggrvars[i], &aggrsolval) );
+
+      if( aggrsolval == SCIP_UNKNOWN ) /*lint !e777*/
+         return SCIP_OKAY;
+
+      val += scalars[i] * aggrsolval;
+   }
+
+   /* print debug message if the aggregation violates the debugging solution */
+   if( !SCIPsetIsEQ(set, solval, val) )
+   {
+      if( naggrvars == 1 )
+      {
+         SCIP_Real aggrsolval;
+
+         /* get solution value of y variable */
+         SCIP_CALL( getSolutionValue(set, aggrvars[0], &aggrsolval) );
+
+         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution\n",
+            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant);
+      }
+      else
+      {
+         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution\n",
+            SCIPvarGetName(var), solval, naggrvars, constant);
+      }
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
 /** check whether given clique is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckClique(
    SCIP_SET*             set,                /**< global SCIP settings */

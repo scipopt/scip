@@ -3965,7 +3965,7 @@ void SCIPsortedvecDelPosDownLong(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from three two arrays of Long/pointer, sorted by the first array in non-increasing order */
+/** delete the element at the given position from two arrays of Long/pointer, sorted by the first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */
