@@ -145,11 +145,29 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
    expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(iterator->queue);
    assert(expr != NULL);
 
-   /* add all children to the queue */
+   assert(iterator->visitedtag == 0 || iterator->iterindex >= 0);
+   assert(iterator->visitedtag == 0 || iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+   /* we should have set the visitedtag when adding the expression to the queue */
+   assert(iterator->visitedtag == 0 || expr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag);
+
+   /* add all (possibly non-visited) children to the queue */
    for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
    {
       SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
       assert(child != NULL);
+
+      if( iterator->visitedtag != 0 )
+      {
+         assert(iterator->iterindex >= 0);
+         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+
+         /* skip children that have already been visited or have already been added to the queue */
+         if( child->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
+            continue;
+
+         /* mark child as being in the queue (will be inserted next) */
+         child->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+      }
 
       /* add child to the queue */
       SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, child) );
@@ -256,6 +274,16 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
       assert(iterator->queue != NULL);
       SCIPqueueClear(iterator->queue);
       SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
+
+      if( iterator->visitedtag != 0 )
+      {
+         assert(iterator->iterindex >= 0);
+         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+         assert(expr->iterdata[iterator->iterindex].visitedtag != iterator->visitedtag);
+
+         /* mark expression as being in the queue */
+         expr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+      }
    }
    else
    {
