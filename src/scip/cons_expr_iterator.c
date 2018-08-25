@@ -303,11 +303,40 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
 {
    /* move to the next expression according to iterator type */
    if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
+   {
       iterator->curr = doBfsNext(iterator);
+   }
    else
    {
       assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
-      iterator->curr = doReverseTopologicalNext(iterator);
+
+      if( iterator->visitedtag != 0 )
+      {
+         assert(iterator->iterindex >= 0);
+         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+
+         /* skip already visited expressions */
+         while( iterator->curr != NULL )
+         {
+            if( iterator->curr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
+            {
+               /* if curr has already been visited, get next one
+                * TODO this isn't really efficient, since we still walk through already visited expressions
+                */
+               iterator->curr = doReverseTopologicalNext(iterator);
+            }
+            else
+            {
+               /* curr has not been visted yet, so mark it as visited and interrupt loop */
+               iterator->curr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+               break;
+            }
+         }
+      }
+      else
+      {
+         iterator->curr = doReverseTopologicalNext(iterator);
+      }
    }
 
    return iterator->curr;
