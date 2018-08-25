@@ -1052,7 +1052,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Longint greedysolweight;
    SCIP_Real greedysolvalue;
    SCIP_Bool eqweights;
-   const size_t maxsize_t = (size_t)(-1);
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1350,7 +1349,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
     */
-   if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) ) /*lint !e571*/
+   if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (SIZE_MAX / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) ) /*lint !e571*/
    {
       SCIPdebugMsg(scip, "Too much memory (%lu) would be consumed.\n", (unsigned long) (((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues))); /*lint !e571*/
 
