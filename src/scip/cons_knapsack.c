@@ -1076,8 +1076,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* produces optimal solution by following the table */
-   if( solitems != NULL)
+   /* init solution information */
+   if( solitems != NULL )
    {
       assert(items != NULL);
       assert(nsolitems != NULL);
@@ -1101,32 +1101,25 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( j = 0; j < nitems; ++j )
    {
       assert(0 <= weights[j] && weights[j] < SCIP_LONGINT_MAX);
-      /* items does not fit */
+
+      /* item does not fit */
       if( weights[j] > capacity )
       {
-         if( solitems != NULL)
-         {
-            nonsolitems[*nnonsolitems] = items[j];
-            ++(*nnonsolitems);
-         }
+         if( solitems != NULL )
+            nonsolitems[(*nnonsolitems)++] = items[j];
       }
-      /* items we does not want */
+      /* item is not profitable */
       else if( profits[j] <= 0.0 )
       {
-         if( solitems != NULL)
-         {
-            nonsolitems[*nnonsolitems] = items[j];
-            ++(*nnonsolitems);
-         }
+         if( solitems != NULL )
+            nonsolitems[(*nnonsolitems)++] = items[j];
       }
-      /* items which always fit */
+      /* item always fits */
       else if( weights[j] == 0 )
       {
-         if( solitems != NULL)
-         {
-            solitems[*nsolitems] = items[j];
-            ++(*nsolitems);
-         }
+         if( solitems != NULL )
+            solitems[(*nsolitems)++] = items[j];
+
          if( solval != NULL )
             *solval += profits[j];
       }
@@ -1150,25 +1143,24 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       }
    }
 
-   /* no item is left then goto end */
+   /* if no item is left then goto end */
    if( nmyitems == 0 )
    {
       SCIPdebugMsg(scip, "After preprocessing no items are left.\n");
 
       goto TERMINATE;
    }
+
    /* if all items fit, we also do not need to do the expensive stuff later on */
-   else if( weightsum > 0 && weightsum <= capacity )
+   if( weightsum > 0 && weightsum <= capacity )
    {
       SCIPdebugMsg(scip, "After preprocessing all items fit into knapsack.\n");
 
       for( j = nmyitems - 1; j >= 0; --j )
       {
          if( solitems != NULL )
-         {
-            solitems[*nsolitems] = myitems[j];
-            ++(*nsolitems);
-         }
+            solitems[(*nsolitems)++] = myitems[j];
+
          if( solval != NULL )
             *solval += myprofits[j];
       }
@@ -1176,9 +1168,11 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   assert(minweight > 0);
-   assert(maxweight > 0);
+   assert(0 < minweight && minweight <= capacity );
+   assert(0 < maxweight && maxweight <= capacity);
 
+   /* make weights relatively prime */
+   eqweights = TRUE;
    if( maxweight > 1 )
    {
       /* determine greatest common divisor */
@@ -1191,7 +1185,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* divide by greatest common divisor */
       if( gcd > 1 )
       {
-         eqweights = TRUE;
          for( j = nmyitems - 1; j >= 0; --j )
          {
             myweights[j] /= gcd;
@@ -1203,15 +1196,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       else
          eqweights = FALSE;
    }
-   else
-   {
-      assert(maxweight == 1);
-      eqweights = TRUE;
-   }
-
    assert(minweight <= capacity);
 
-   /* only one item fits, than take the best */
+   /* if only one item fits, then take the best */
    if( minweight > capacity / 2 )
    {
       int p;
@@ -1222,20 +1209,20 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       /* find best item */
       for( j = nmyitems - 2; j >= 0; --j )
+      {
          if( myprofits[j] > myprofits[p] )
             p = j;
+      }
 
       /* update solution information */
-      if( solitems != NULL)
+      if( solitems != NULL )
       {
-         solitems[*nsolitems] = myitems[p];
-         ++(*nsolitems);
+         solitems[(*nsolitems)++] = myitems[p];
          for( j = nmyitems - 1; j >= 0; --j )
+         {
             if( j != p )
-            {
-               nonsolitems[*nnonsolitems] = myitems[j];
-               ++(*nnonsolitems);
-            }
+               nonsolitems[(*nnonsolitems)++] = myitems[j];
+         }
       }
       /* update solution value */
       if( solval != NULL )
@@ -1244,16 +1231,15 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   /* all items have the same weight, than take the best */
+   /* if all items have the same weight, then take the best */
    if( eqweights )
    {
-      SCIP_Real addval;
+      SCIP_Real addval = 0.0;
 
       SCIPdebugMsg(scip, "All weights are equal, so take the best.\n");
 
       SCIPsortDownRealIntLong(myprofits, myitems, myweights, nmyitems);
 
-      addval = 0.0;
       /* update solution information */
       if( solitems != NULL || solval != NULL )
       {
@@ -1265,25 +1251,16 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
          {
-            if( solitems != NULL)
-            {
-               assert(nonsolitems != NULL);
-               solitems[*nsolitems] = myitems[i];
-               ++(*nsolitems);
-            }
+            if( solitems != NULL )
+               solitems[(*nsolitems)++] = myitems[i];
             addval += myprofits[i];
          }
 
-         if( solitems != NULL)
+         if( solitems != NULL )
          {
-            assert(nonsolitems != NULL);
-
             /* the rest are not in the solution */
             for( i = nmyitems - 1; i >= capacity; --i )
-            {
-               nonsolitems[*nnonsolitems] = myitems[i];
-               ++(*nnonsolitems);
-            }
+               nonsolitems[(*nnonsolitems)++] = myitems[i];
          }
       }
       /* update solution value */
@@ -1314,7 +1291,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(nmyitems > 0);
    assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
 
-   /* this condition checks if we will try to allocate a correct number of bytes and do not have an overflow, while
+   /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
     */
    if( intcap < 0 || (intcap > 0 && (((size_t)nmyitems) > (maxsize_t / (size_t)intcap / sizeof(*optvalues)) || ((size_t)nmyitems) * ((size_t)intcap) * sizeof(*optvalues) > ((size_t)INT_MAX) )) ) /*lint !e571*/
@@ -1325,7 +1302,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
-   /* allocate temporary memory and check for memory exceeding */
+   /* allocate temporary memory and check for memory exceedance */
    retcode = SCIPallocBufferArray(scip, &optvalues, nmyitems * intcap);
    if( retcode == SCIP_NOMEMORY )
    {
@@ -1340,7 +1317,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* sort myitems (plus corresponding arrays myweights and myprofits) such that
-    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only use for greedy solution
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only used for the greedy solution
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
    for( j = nmyitems - 1; j >= 0; --j )
@@ -1386,7 +1363,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       greedysolweight = 0;
 
       /* update solution information */
-      if( solitems != NULL)
+      if( solitems != NULL )
       {
          /* take the first best items into the solution */
          for( j = 0; j < nmyitems; ++j )
@@ -1394,15 +1371,11 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             /* take all fitting items */
             if( myweights[j] + greedysolweight <= greedycap )
             {
-               solitems[*nsolitems] = myitems[j];
-               ++(*nsolitems);
+               solitems[(*nsolitems)++] = myitems[j];
                greedysolweight += myweights[j];
             }
             else
-            {
-               nonsolitems[*nnonsolitems] = myitems[j];
-               ++(*nnonsolitems);
-            }
+               nonsolitems[(*nnonsolitems)++] = myitems[j];
          }
       }
       /* update solution value */
@@ -1421,8 +1394,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIPdebugMsg(scip, "Start real exact algorithm.\n");
 
    /* we memorize at each step the current minimal weight to later on know which value in our optvalues matrix is valid;
-    * all values entries of the j-th row of optvalues is valid if the index is >= allcurrminweight[j], otherwise it is
-    * invalid, a second possibility would be to clear the whole optvalues, which should be more expensive than storing
+    * each value entries of the j-th row of optvalues is valid if the index is >= allcurrminweight[j], otherwise it is
+    * invalid; a second possibility would be to clear the whole optvalues, which should be more expensive than storing
     * 'nmyitem' values
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &allcurrminweight, nmyitems) );
@@ -1433,6 +1406,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* fills first row of dynamic programming table with optimal values */
    for( d = currminweight; d < intcap; ++d )
       optvalues[d] = myprofits[0];
+
    /* fills dynamic programming table with optimal values */
    for( j = 1; j < nmyitems; ++j )
    {
@@ -1449,13 +1423,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update corresponding row */
       for( d = intweight; d < intcap; ++d )
       {
-         /* if index d is smaller the the current minweight then optvalues[IDX(j-1,d)] is not initialized, i.e. should
-          * be 0
-          */
+         /* if index d < current minweight then optvalues[IDX(j-1,d)] is not initialized, i.e. should be 0 */
          if( d < currminweight )
-         {
             optvalues[IDX(j,d)] = myprofits[j];
-         }
          else
          {
             SCIP_Real sumprofit;
@@ -1476,7 +1446,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* update optimal solution by following the table */
-   if( solitems != NULL)
+   if( solitems != NULL )
    {
       d = intcap - 1;
 
@@ -1485,20 +1455,18 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* insert all items in (non-) solution vector */
       for( j = nmyitems - 1; j > 0; --j )
       {
-         /* if we cannot find any item anymore which is in our solution stop, if the following condition holds this
-          * means all remaining items does not fit anymore
-          */
+         /* if the following condition holds this means all remaining items does not fit anymore */
          if( d < allcurrminweight[j] )
          {
             /* we cannot have exceeded our capacity */
             assert((SCIP_Longint) d >= -minweight);
             break;
          }
+
          /* collect solution items, first condition means that no next item can fit anymore, but this does */
          if( d < allcurrminweight[j-1] || optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
          {
-            solitems[*nsolitems] = myitems[j];
-            ++(*nsolitems);
+            solitems[(*nsolitems)++] = myitems[j];
 
             /* check that we do not have an underflow */
             assert(myweights[j] <= (INT_MAX + (SCIP_Longint) d));
@@ -1506,18 +1474,14 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          }
          /* collect non-solution items */
          else
-         {
-            nonsolitems[*nnonsolitems] = myitems[j];
-            ++(*nnonsolitems);
-         }
+            nonsolitems[(*nnonsolitems)++] = myitems[j];
       }
 
       /* insert remaining items */
       if( d >= allcurrminweight[j] )
       {
          assert(j == 0);
-         solitems[*nsolitems] = myitems[j];
-         ++(*nsolitems);
+         solitems[(*nsolitems)++] = myitems[j];
       }
       else
       {
@@ -1525,10 +1489,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          assert(d < allcurrminweight[j]);
 
          for( ; j >= 0; --j )
-         {
-            nonsolitems[*nnonsolitems] = myitems[j];
-            ++(*nnonsolitems);
-         }
+            nonsolitems[(*nnonsolitems)++] = myitems[j];
       }
 
       assert(*nsolitems + *nnonsolitems == nitems);
