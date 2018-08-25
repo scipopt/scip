@@ -168,6 +168,7 @@ struct SCIP_ConshdlrData
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
 
    SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
+   int                      nactiveiter;     /**< number of currently active iterators */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -9624,6 +9625,72 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
 
    return SCIP_OKAY;
 }
+
+/** creates an expression iterator to walk an expression (sub)graph */
+SCIP_RETCODE SCIPcreateConsExprExprIterator(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
+   SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
+   SCIP_CONSEXPR_EXPR*        root,          /**< the root expression from where to start the walk */
+   SCIP_CONSEXPRITERATOR_TYPE type           /**< type of expression iterator */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(iterator != NULL);
+   assert(root != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->nactiveiter + 1 >= SCIP_CONSEXPR_MAXNITER )
+   {
+      SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
+      return SCIP_MAXDEPTHLEVEL;
+   }
+
+   /* TODO maybe just store an array of SCIP_CONSEXPR_MAXNITER in conshdlrdata and reuse */
+   SCIP_CALL( SCIPexpriteratorCreate(iterator, SCIPblkmem(scip), type) );
+   assert(*iterator != NULL);
+
+   /* store which iterator data this iterator can access and increase count on active iterators */
+   (*iterator)->iterindex = conshdlrdata->nactiveiter++;
+
+   return SCIP_OKAY;
+}
+
+/** frees an expression iterator */
+SCIP_RETCODE SCIPfreeConsExprExprIterator(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
+   SCIP_CONSEXPR_ITERATOR**   iterator       /**< iterator to free */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(iterator != NULL);
+   assert(*iterator != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   if( (*iterator)->iterindex >= 0 )
+   {
+      /* if an iterindex is set, then it must be the one of the last created iterator */
+      assert((*iterator)->iterindex == conshdlrdata->nactiveiter-1);
+
+      --conshdlrdata->nactiveiter;
+   }
+
+   SCIPexpriteratorFree(iterator);
+
+   return SCIP_OKAY;
+}
+
 
 /** Gives the parent of an expression in an expression graph walk.
  *

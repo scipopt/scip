@@ -831,6 +831,24 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    void*                 data                          /**< data to be passed on to callback methods, or NULL */
    );
 
+/** creates an expression iterator to walk an expression (sub)graph */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprIterator(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
+   SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
+   SCIP_CONSEXPR_EXPR*        root,          /**< the root expression from where to start the walk */
+   SCIP_CONSEXPRITERATOR_TYPE type           /**< type of expression iterator */
+   );
+
+/** frees an expression iterator */
+EXTERN
+SCIP_RETCODE SCIPfreeConsExprExprIterator(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
+   SCIP_CONSEXPR_ITERATOR**   iterator       /**< iterator to free */
+   );
+
 /** Gives the parent of an expression in an expression graph walk.
  *
  * During an expression walk, this function returns the expression from which the given expression has been accessed.

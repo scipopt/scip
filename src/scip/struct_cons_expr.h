@@ -77,6 +77,14 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)); /**< integrality detection callback (can be NULL) */
 };
 
+/* expression iteration data */
+struct SCIP_ConsExpr_Expr_IterData
+{
+   SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in expression walk */
+   int                      currentchild; /**< child that is currently visited (or will be visited next) by expression walk */
+   SCIP_CONSEXPREXPRWALK_IO userdata;     /**< space for iteration user to store some (temporary) data */
+};
+
 /** a node in the expression graph that is handled by the expression constraint handler */
 struct SCIP_ConsExpr_Expr
 {
@@ -128,6 +136,8 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
    int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */
    SCIP_CONSEXPREXPRWALK_IO walkio;       /**< space for walker callback to store some (temporary) data, e.g., to simulate input or output values of a recursive call */
+
+   SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPR_MAXNITER];  /**< data for expression iterators */
 
    /* curvature information */
    SCIP_EXPRCURV           curvature;     /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
@@ -198,6 +208,7 @@ struct SCIP_ConsExpr_Iterator
    int                         dfsnexprs;    /**< total number of expression in stack */
    int                         dfssize;      /**< size DFS stack */
    SCIP_QUEUE*                 queue;        /**< BFS queue */
+   int                         iterindex;    /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
 };
 
 #ifdef __cplusplus

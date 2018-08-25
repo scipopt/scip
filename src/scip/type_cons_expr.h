@@ -466,6 +466,12 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* isintegral)
 
+/** maximal number of iterators that can be active on an expression graph concurrently
+ *
+ * How often an expression graph iteration can be started within an active iteration, plus one.
+ */
+#define SCIP_CONSEXPR_MAXNITER 4
+
 /* maybe should make this a parameter (was cutmaxrange in other conshdlr)
  * maybe should derive this from the current feastol (e.g., 10/feastol)
  */
@@ -887,6 +893,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+typedef struct SCIP_ConsExpr_Expr_IterData SCIP_CONSEXPR_EXPR_ITERDATA; /**< expression tree iterator data for a specific expression */
 typedef struct SCIP_ConsExpr_Iterator    SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
 
 #ifdef __cplusplus

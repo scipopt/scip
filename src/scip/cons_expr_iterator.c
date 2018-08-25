@@ -172,11 +172,11 @@ SCIP_RETCODE SCIPexpriteratorCreate(
    assert(iterator != NULL);
    assert(blkmem  != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, iterator) );
-   BMSclearMemory(*iterator);
+   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iterator) );
 
    (*iterator)->itertype = itertype;
    (*iterator)->blkmem = blkmem;
+   (*iterator)->iterindex = -1;
 
    /* allocate memory for DFS or BFS data structure */
    if( itertype == SCIP_CONSEXPRITERATOR_BFS )
