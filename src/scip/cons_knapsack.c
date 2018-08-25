@@ -1049,7 +1049,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Longint minweight;
    SCIP_Longint maxweight;
    int currminweight;
-   SCIP_Longint greedycap;
    SCIP_Longint greedysolweight;
    SCIP_Real greedysolvalue;
    SCIP_Bool eqweights;
@@ -1272,6 +1271,64 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       goto TERMINATE;
    }
 
+   SCIPdebugMsg(scip, "Determine greedy solution.\n");
+
+   /* sort myitems (plus corresponding arrays myweights and myprofits) such that
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only used for the greedy solution
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
+   for( j = nmyitems - 1; j >= 0; --j )
+      tempsort[j] = myprofits[j]/((SCIP_Real) myweights[j]);
+
+   SCIPsortDownRealLongRealInt(tempsort, myweights, myprofits, myitems, nmyitems);
+
+   /* initialize values for greedy solution information */
+   greedysolweight = 0;
+   greedysolvalue = 0.0;
+
+   /* determine greedy solution */
+   for( j = 0; j < nmyitems && myweights[j] + greedysolweight <= capacity; ++j )
+   {
+      assert(myweights[j] <= capacity);
+
+      /* update greedy solution weight and value */
+      greedysolweight += myweights[j];
+      greedysolvalue += myprofits[j];
+   }
+
+   assert(0 < greedysolweight && greedysolweight <= capacity );
+   assert(greedysolvalue > 0.0);
+
+   /* The greedy solution is optimal if it reaches the capacity, because it then corresponds to an optimal LP solution. */
+   if( greedysolweight == capacity )
+   {
+      assert(greedysolweight == capacity);
+
+      SCIPdebugMsg(scip, "Greedy solution is optimal.\n");
+
+      /* update solution information */
+      if( solitems != NULL )
+      {
+         int l;
+
+         /* collect items */
+         for( l = 0; l < j; ++l )
+            solitems[(*nsolitems)++] = myitems[l];
+         for ( ; l < nmyitems; ++l )
+            nonsolitems[(*nnonsolitems)++] = myitems[l];
+      }
+      /* update solution value */
+      if( solval != NULL )
+      {
+         assert(greedysolvalue > 0.0);
+         *solval += greedysolvalue;
+      }
+
+      SCIPfreeBufferArray(scip, &tempsort);
+
+      goto TERMINATE;
+   }
+
    /* in the following table we do not need the first minweight columns */
    capacity -= (minweight - 1);
 
@@ -1313,66 +1370,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    else
    {
       SCIP_CALL( retcode );
-   }
-
-   /* sort myitems (plus corresponding arrays myweights and myprofits) such that
-    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only used for the greedy solution
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
-   for( j = nmyitems - 1; j >= 0; --j )
-      tempsort[j] = myprofits[j]/((SCIP_Real) myweights[j]);
-
-   SCIPsortDownRealLongRealInt(tempsort, myweights, myprofits, myitems, nmyitems);
-
-   /* initialize values for greedy solution information */
-   greedysolweight = 0;
-   greedysolvalue = 0.0;
-   greedycap = capacity + (minweight - 1);
-
-   SCIPdebugMsg(scip, "Determine greedy solution.\n");
-
-   /* determine greedy solution */
-   for( j = 0; j < nmyitems && myweights[j] + greedysolweight <= greedycap; ++j )
-   {
-      assert(myweights[j] <= greedycap);
-
-      /* update greedy solution weight and value */
-      greedysolweight += myweights[j];
-      greedysolvalue += myprofits[j];
-   }
-
-   assert(0 < greedysolweight && greedysolweight <= greedycap );
-   assert(greedysolvalue > 0.0);
-
-   /* The greedy solution is optimal if it reaches the capacity, because it then corresponds to an optimal LP solution. */
-   if( greedysolweight == greedycap )
-   {
-      assert(greedysolweight == greedycap);
-
-      SCIPdebugMsg(scip, "Greedy solution is optimal.\n");
-
-      /* update solution information */
-      if( solitems != NULL )
-      {
-         int l;
-
-         /* collect items */
-         for( l = 0; l < j; ++l )
-            solitems[(*nsolitems)++] = myitems[l];
-         for ( ; l < nmyitems; ++l )
-            nonsolitems[(*nnonsolitems)++] = myitems[l];
-      }
-      /* update solution value */
-      if( solval != NULL )
-      {
-         assert(greedysolvalue > 0.0);
-         *solval += greedysolvalue;
-      }
-
-      SCIPfreeBufferArray(scip, &tempsort);
-      SCIPfreeBufferArray(scip, &optvalues);
-
-      goto TERMINATE;
    }
 
    SCIPdebugMsg(scip, "Start real exact algorithm.\n");
