@@ -190,3 +190,50 @@ Test(solveknapsackexactly, test2)
    cr_assert( nonsolitems[0] == 2 );
    cr_assert_float_eq(solval, 5, EPS);
 }
+
+
+/** general test */
+Test(solveknapsackexactly, test3)
+{
+   int nitems;
+   SCIP_Longint weights[6];
+   SCIP_Real profits[6];
+   int items[6];
+   int solitems[6];
+   int nonsolitems[6];
+   SCIP_Longint capacity;
+   SCIP_Bool success;
+   SCIP_Real solval;
+   int nnonsolitems;
+   int nsolitems;
+
+   nitems = 6;
+   items[0] = 0;
+   items[1] = 1;
+   items[2] = 2;
+   items[3] = 3;
+   items[4] = 4;
+   items[5] = 5;
+
+   capacity = 13LL;
+   weights[0] = 7LL;
+   weights[1] = 2LL;
+   weights[2] = 7LL;
+   weights[3] = 5LL;
+   weights[4] = 1LL;
+   weights[5] = 3LL;
+
+   profits[0] = 1.0;
+   profits[1] = 1.0;
+   profits[2] = 1.0;
+   profits[3] = 1.0;
+   profits[4] = 1.0;
+   profits[5] = 1.0;
+
+   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   cr_assert( success );
+   cr_assert( nsolitems == 4 );
+   cr_assert( nnonsolitems == 2 );
+   cr_assert( (nonsolitems[0] == 0 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 0) );
+   cr_assert_float_eq(solval, 4.0, EPS);
+}
