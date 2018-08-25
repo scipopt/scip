@@ -1053,7 +1053,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Longint greedysolweight;
    SCIP_Real greedysolvalue;
    SCIP_Bool eqweights;
-   SCIP_Bool isoptimal;
    const size_t maxsize_t = (size_t)(-1);
 
    assert(weights != NULL);
@@ -1328,55 +1327,40 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* initialize values for greedy solution information */
    greedysolweight = 0;
    greedysolvalue = 0.0;
-   isoptimal = TRUE;
    greedycap = capacity + (minweight - 1);
 
    SCIPdebugMsg(scip, "Determine greedy solution.\n");
 
    /* determine greedy solution */
-   for( j = 0; j < nmyitems; ++j )
+   for( j = 0; j < nmyitems && myweights[j] + greedysolweight <= greedycap; ++j )
    {
       assert(myweights[j] <= greedycap);
 
-      /* take all fitting items */
-      if( myweights[j] + greedysolweight <= greedycap )
-      {
-         /* update greedy solution weight and value */
-         greedysolweight += myweights[j];
-         greedysolvalue += myprofits[j];
-         continue;
-      }
-      else if( greedysolweight < greedycap )
-         isoptimal = FALSE;
-      break;
+      /* update greedy solution weight and value */
+      greedysolweight += myweights[j];
+      greedysolvalue += myprofits[j];
    }
-   assert(greedysolweight > 0);
+
+   assert(0 < greedysolweight && greedysolweight <= greedycap );
    assert(greedysolvalue > 0.0);
 
-   /* greedy solution is optimal */
-   if( isoptimal )
+   /* The greedy solution is optimal if it reaches the capacity, because it then corresponds to an optimal LP solution. */
+   if( greedysolweight == greedycap )
    {
       assert(greedysolweight == greedycap);
 
       SCIPdebugMsg(scip, "Greedy solution is optimal.\n");
 
-      greedysolweight = 0;
-
       /* update solution information */
       if( solitems != NULL )
       {
-         /* take the first best items into the solution */
-         for( j = 0; j < nmyitems; ++j )
-         {
-            /* take all fitting items */
-            if( myweights[j] + greedysolweight <= greedycap )
-            {
-               solitems[(*nsolitems)++] = myitems[j];
-               greedysolweight += myweights[j];
-            }
-            else
-               nonsolitems[(*nnonsolitems)++] = myitems[j];
-         }
+         int l;
+
+         /* collect items */
+         for( l = 0; l < j; ++l )
+            solitems[(*nsolitems)++] = myitems[l];
+         for ( ; l < nmyitems; ++l )
+            nonsolitems[(*nnonsolitems)++] = myitems[l];
       }
       /* update solution value */
       if( solval != NULL )
