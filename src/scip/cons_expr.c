@@ -169,6 +169,7 @@ struct SCIP_ConshdlrData
 
    SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
    int                      nactiveiter;     /**< number of currently active iterators */
+   unsigned int             lastvisitedtag;  /**< last visited tag used by iterators */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -9652,11 +9653,8 @@ SCIP_RETCODE SCIPcreateConsExprExprIterator(
    }
 
    /* TODO maybe just store an array of SCIP_CONSEXPR_MAXNITER in conshdlrdata and reuse */
-   SCIP_CALL( SCIPexpriteratorCreate(iterator, SCIPblkmem(scip), type) );
+   SCIP_CALL( SCIPexpriteratorCreate2(iterator, SCIPblkmem(scip), type, conshdlrdata->nactiveiter++, ++conshdlrdata->lastvisitedtag) );
    assert(*iterator != NULL);
-
-   /* store which iterator data this iterator can access and increase count on active iterators */
-   (*iterator)->iterindex = conshdlrdata->nactiveiter++;
 
    return SCIP_OKAY;
 }

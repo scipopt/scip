@@ -44,6 +44,16 @@ SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPRITERATOR_TYPE  type         /**< type of expression iterator */
    );
 
+/** creates a more powerful expression iterator */
+EXTERN
+SCIP_RETCODE SCIPexpriteratorCreate2(
+   SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
+   BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
+   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
+   int                         iterindex,   /**< index of iteration data in expressions */
+   unsigned int                visitedtag   /**< tag to mark or recognize visited expressions, or 0 if allow revisiting */
+   );
+
 /** frees an expression iterator */
 EXTERN
 void SCIPexpriteratorFree(

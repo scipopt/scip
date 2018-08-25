@@ -82,6 +82,7 @@ struct SCIP_ConsExpr_Expr_IterData
 {
    SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in expression walk */
    int                      currentchild; /**< child that is currently visited (or will be visited next) by expression walk */
+   unsigned int             visitedtag;   /**< tag to identify whether an expression has been visited already */
    SCIP_CONSEXPREXPRWALK_IO userdata;     /**< space for iteration user to store some (temporary) data */
 };
 
@@ -209,6 +210,7 @@ struct SCIP_ConsExpr_Iterator
    int                         dfssize;      /**< size DFS stack */
    SCIP_QUEUE*                 queue;        /**< BFS queue */
    int                         iterindex;    /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
+   unsigned int                visitedtag;   /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
 };
 
 #ifdef __cplusplus
