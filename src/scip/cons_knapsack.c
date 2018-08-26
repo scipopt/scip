@@ -1418,6 +1418,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
          }
       }
+
       /* update currminweight */
       if( intweight < currminweight )
          currminweight = intweight;
@@ -1443,7 +1444,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
             break;
          }
 
-         /* collect solution items, first condition means that no next item can fit anymore, but this does */
+         /* collect solution items; the first condition means that no further item can fit anymore, but this does */
          if( d < allcurrminweight[j-1] || optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
          {
             solitems[(*nsolitems)++] = myitems[j];
