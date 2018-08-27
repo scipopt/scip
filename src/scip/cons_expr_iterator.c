@@ -355,6 +355,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    assert(iterator != NULL);
    assert(expr != NULL);
 
+   /* FIXME if this iterator was used already, then we should use a new visitedtag */
+
    switch( iterator->itertype )
    {
       case SCIP_CONSEXPRITERATOR_BFS:

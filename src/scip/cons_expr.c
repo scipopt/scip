@@ -9632,7 +9632,8 @@ SCIP_RETCODE SCIPcreateConsExprExprIterator(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
    SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
-   SCIP_CONSEXPRITERATOR_TYPE type           /**< type of expression iterator */
+   SCIP_CONSEXPRITERATOR_TYPE type,          /**< type of expression iterator */
+   SCIP_Bool                  norevisit      /**< whether to visit every expression only once */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -9651,7 +9652,7 @@ SCIP_RETCODE SCIPcreateConsExprExprIterator(
    }
 
    /* TODO maybe just store an array of SCIP_CONSEXPR_MAXNITER in conshdlrdata and reuse */
-   SCIP_CALL( SCIPexpriteratorCreate2(iterator, SCIPblkmem(scip), type, conshdlrdata->nactiveiter++, ++conshdlrdata->lastvisitedtag) );
+   SCIP_CALL( SCIPexpriteratorCreate2(iterator, SCIPblkmem(scip), type, conshdlrdata->nactiveiter++, norevisit ? ++conshdlrdata->lastvisitedtag : 0) );
    assert(*iterator != NULL);
 
    return SCIP_OKAY;

@@ -837,7 +837,8 @@ SCIP_RETCODE SCIPcreateConsExprExprIterator(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
    SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
-   SCIP_CONSEXPRITERATOR_TYPE type           /**< type of expression iterator */
+   SCIP_CONSEXPRITERATOR_TYPE type,          /**< type of expression iterator */
+   SCIP_Bool                  norevisit      /**< whether to visit every expression only once */
    );
 
 /** frees an expression iterator */
