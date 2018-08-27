@@ -187,6 +187,9 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
    assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
    assert(iterator->iterindex >= 0);
 
+   if( iterator->curr == NULL )
+      return NULL;
+
    iterdata = &iterator->curr->iterdata[iterator->iterindex];
 
    switch( iterator->dfsstage )
@@ -364,12 +367,16 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
             /* mark expression as being in the queue */
             expr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
          }
+
+         iterator->curr = SCIPexpriteratorGetNext(iterator);
          break;
       }
 
       case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
       {
          reverseTopologicalInsert(iterator, expr);
+
+         iterator->curr = SCIPexpriteratorGetNext(iterator);
          break;
       }
 
@@ -386,8 +393,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
       }
    }
 
-   /* return next expression */
-   iterator->curr = SCIPexpriteratorGetNext(iterator);
+   /* return current expression */
    return iterator->curr;
 }
 
@@ -441,7 +447,16 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
       {
          assert(iterator->iterindex >= 0);
 
-         iterator->curr = doDfsNext(iterator);
+         /* get next until we are in enterexpr state again
+          * this will give every expression only once at time it is first "entered"
+          * TODO the user should customize which stages it want's to see
+          */
+         do
+         {
+            iterator->curr = doDfsNext(iterator);
+         }
+         while( iterator->curr != NULL && iterator->dfsstage != SCIP_CONSEXPREXPRWALK_ENTEREXPR );
+
          break;
       }
    }

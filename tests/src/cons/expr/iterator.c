@@ -39,6 +39,7 @@ static SCIP_VAR* y;
 static SCIP_VAR* z;
 static SCIP_CONSEXPR_ITERATOR* bfs;
 static SCIP_CONSEXPR_ITERATOR* rtopological;
+static SCIP_CONSEXPR_ITERATOR* dfs;
 static SCIP_CONSEXPR_EXPR* expr;
 
 static
@@ -81,6 +82,7 @@ void setup(void)
    /* create iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
    SCIP_CALL( SCIPexpriteratorCreate(&rtopological, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
+   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &dfs, SCIP_CONSEXPRITERATOR_DFS) );
 
    /* NULL expression in order to free it in teardown() */
    expr = NULL;
@@ -95,6 +97,7 @@ void teardown(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
+   SCIPexpriteratorFree(&dfs);
    SCIPexpriteratorFree(&rtopological);
    SCIPexpriteratorFree(&bfs);
 
@@ -273,3 +276,17 @@ Test(iterator, rtopological_general)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
 }
 
+
+/* test DFS iterator on a tree containing a single expression */
+Test(iterator, dfs_single)
+{
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
+
+   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
+   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(dfs));
+   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
+
+   /* reinitialize again */
+   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
+}
