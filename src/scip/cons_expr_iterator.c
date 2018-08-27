@@ -196,9 +196,16 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
    {
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
       {
-         /* goto start visiting children */
-         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
-         assert(iterdata->currentchild == 0);
+         /* if there is a child, then go into visitingchild stage, otherwise go to leave stage */
+         if( iterator->curr->nchildren > 0 )
+         {
+            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+            assert(iterdata->currentchild == 0);
+         }
+         else
+         {
+            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+         }
 
          return iterator->curr;
       }
@@ -207,12 +214,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       {
          SCIP_CONSEXPR_EXPR* child;
 
-         /* if there are no more children to visit, goto leave */
-         if( iterdata->currentchild >= iterator->curr->nchildren )
-         {
-            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
-            break;
-         }
+         assert(iterdata->currentchild < iterator->curr->nchildren);
 
          /* remember the parent and set the first child that should be visited of the new root */
          child = iterator->curr->children[iterdata->currentchild];
@@ -227,18 +229,22 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
 
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
       {
-         /* visit next child (if any) */
-         ++iterdata->currentchild;
-
-         /* goto visiting (next) */
-         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+         /* visit next child, if any, otherwise leave expr */
+         if( ++iterdata->currentchild < iterator->curr->nchildren )
+         {
+            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+         }
+         else
+         {
+            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+         }
 
          return iterator->curr;
       }
 
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
       {
-         /* goto visited */
+         /* go back to parent expression, be in visitedchild stage */
          iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
 
          return iterdata->parent;
@@ -247,9 +253,8 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       default:
          /* unknown stage */
          SCIPABORT();
+         return NULL;
    }
-
-   return NULL;
 }
 
 /*
@@ -394,6 +399,14 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    }
 
    /* return current expression */
+   return iterator->curr;
+}
+
+/** gets the current expression that the expression iterator points to */
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
    return iterator->curr;
 }
 
