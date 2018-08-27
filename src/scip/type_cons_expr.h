@@ -510,7 +510,8 @@ typedef union
 typedef enum
 {
    SCIP_CONSEXPRITERATOR_RTOPOLOGIC,         /**< reverse topological order */
-   SCIP_CONSEXPRITERATOR_BFS                 /**< breadth-first search */
+   SCIP_CONSEXPRITERATOR_BFS,                /**< breadth-first search */
+   SCIP_CONSEXPRITERATOR_DFS                 /**< depth-first search */
 } SCIP_CONSEXPRITERATOR_TYPE;
 
 /** monotonicity of an expression */

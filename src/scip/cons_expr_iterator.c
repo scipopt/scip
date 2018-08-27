@@ -176,6 +176,79 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
    return expr;
 }
 
+static
+SCIP_CONSEXPR_EXPR* doDfsNext(
+   SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
+   )
+{
+   SCIP_CONSEXPR_EXPR_ITERDATA* iterdata;
+
+   assert(iterator != NULL);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->iterindex >= 0);
+
+   iterdata = &iterator->curr->iterdata[iterator->iterindex];
+
+   switch( iterator->dfsstage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+      {
+         /* goto start visiting children */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+         assert(iterdata->currentchild == 0);
+
+         return iterator->curr;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+      {
+         SCIP_CONSEXPR_EXPR* child;
+
+         /* if there are no more children to visit, goto leave */
+         if( iterdata->currentchild >= iterator->curr->nchildren )
+         {
+            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+            break;
+         }
+
+         /* remember the parent and set the first child that should be visited of the new root */
+         child = iterator->curr->children[iterdata->currentchild];
+         child->iterdata[iterator->iterindex].parent = iterator->curr;
+         child->iterdata[iterator->iterindex].currentchild = 0;
+
+         /* visit child */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+
+         return child;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+      {
+         /* visit next child (if any) */
+         ++iterdata->currentchild;
+
+         /* goto visiting (next) */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+
+         return iterator->curr;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+      {
+         /* goto visited */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
+
+         return iterdata->parent;
+      }
+
+      default:
+         /* unknown stage */
+         SCIPABORT();
+   }
+
+   return NULL;
+}
+
 /*
  * Interface methods
  */
@@ -209,6 +282,11 @@ SCIP_RETCODE SCIPexpriteratorCreate(
       case SCIP_CONSEXPRITERATOR_BFS:
       {
          SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
+         break;
+      }
+
+      case SCIP_CONSEXPRITERATOR_DFS:
+      {
          break;
       }
    }
@@ -294,6 +372,18 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
          reverseTopologicalInsert(iterator, expr);
          break;
       }
+
+      case SCIP_CONSEXPRITERATOR_DFS :
+      {
+         assert(iterator->iterindex >= 0);
+
+         iterator->curr = expr;
+         expr->iterdata[iterator->iterindex].currentchild = 0;
+         expr->iterdata[iterator->iterindex].parent = NULL;
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+
+         break;
+      }
    }
 
    /* return next expression */
@@ -344,6 +434,14 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
          {
             iterator->curr = doReverseTopologicalNext(iterator);
          }
+         break;
+      }
+
+      case SCIP_CONSEXPRITERATOR_DFS :
+      {
+         assert(iterator->iterindex >= 0);
+
+         iterator->curr = doDfsNext(iterator);
          break;
       }
    }
