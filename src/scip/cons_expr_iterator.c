@@ -194,18 +194,29 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
 
    switch( iterator->dfsstage )
    {
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         /* consider next child */
+         ++iterdata->currentchild;
+         /* fall through */
+         /* no break */
+
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
       {
-         /* if there is a child, then go into visitingchild stage, otherwise go to leave stage */
-         if( iterator->curr->nchildren > 0 )
+         /* if there is an unvisited child (left), then go into visitingchild stage, otherwise go to leave stage */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;  /* expect that we will leave expr, and change mind to visitingchild below */
+         while( iterdata->currentchild < iterator->curr->nchildren )
          {
-            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
-            assert(iterdata->currentchild == 0);
+            if( iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag )
+            {
+               /* if visitedtag is not used or child "currentchild" has not been visited yet, then go into visitingchild stage for this child */
+               iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+               break;
+            }
+            ++iterdata->currentchild;
          }
-         else
-         {
-            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
-         }
+         assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || iterdata->currentchild == iterator->curr->nchildren); /* if leaving expr, then currentchild should be at nchildren */
+         assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR || iterdata->currentchild < iterator->curr->nchildren); /* if visiting child, then currentchild should be a valid index */
+         assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR || iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag); /* if visiting child, then either we don't care whether we visited it already or it has not been visited yet */
 
          return iterator->curr;
       }
@@ -227,24 +238,14 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
          return child;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-      {
-         /* visit next child, if any, otherwise leave expr */
-         if( ++iterdata->currentchild < iterator->curr->nchildren )
-         {
-            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
-         }
-         else
-         {
-            iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
-         }
-
-         return iterator->curr;
-      }
-
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
       {
-         /* go back to parent expression, be in visitedchild stage */
+         /* go back to parent expression */
+
+         /* remember that this expression has been visited */
+         iterdata->visitedtag = iterator->visitedtag;
+
+         /* be in visitedchild stage for the parent */
          iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
 
          return iterdata->parent;
