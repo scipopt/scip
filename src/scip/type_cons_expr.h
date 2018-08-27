@@ -470,7 +470,7 @@ extern "C" {
  *
  * How often an expression graph iteration can be started within an active iteration, plus one.
  */
-#define SCIP_CONSEXPR_MAXNITER 4
+#define SCIP_CONSEXPR_MAXNITER 5
 
 /* maybe should make this a parameter (was cutmaxrange in other conshdlr)
  * maybe should derive this from the current feastol (e.g., 10/feastol)

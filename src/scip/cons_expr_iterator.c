@@ -429,6 +429,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
 
       case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
       {
+         iterator->curr = doReverseTopologicalNext(iterator);
          if( iterator->visitedtag != 0 )
          {
             assert(iterator->iterindex >= 0);
@@ -451,10 +452,6 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
                   break;
                }
             }
-         }
-         else
-         {
-            iterator->curr = doReverseTopologicalNext(iterator);
          }
          break;
       }

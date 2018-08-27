@@ -38,7 +38,9 @@ static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
 static SCIP_CONSEXPR_ITERATOR* bfs;
+static SCIP_CONSEXPR_ITERATOR* bfs2;
 static SCIP_CONSEXPR_ITERATOR* rtopological;
+static SCIP_CONSEXPR_ITERATOR* rtopological2;
 static SCIP_CONSEXPR_ITERATOR* dfs;
 static SCIP_CONSEXPR_ITERATOR* dfs2;
 static SCIP_CONSEXPR_EXPR* expr;
@@ -82,7 +84,9 @@ void setup(void)
 
    /* create iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
+   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &bfs2, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
    SCIP_CALL( SCIPexpriteratorCreate(&rtopological, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
+   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &rtopological2, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
    SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &dfs, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &dfs2, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
 
@@ -101,7 +105,9 @@ void teardown(void)
 
    SCIPexpriteratorFree(&dfs2);
    SCIPexpriteratorFree(&dfs);
+   SCIPexpriteratorFree(&rtopological2);
    SCIPexpriteratorFree(&rtopological);
+   SCIPexpriteratorFree(&bfs2);
    SCIPexpriteratorFree(&bfs);
 
    /* free scip and check for memory leaks */
@@ -162,7 +168,8 @@ Test(iterator, bfs_general)
 
    /* create and store expressions for exp(x+y) * sin(x+y)
     *
-    * expected BFS order: product, exp, sin, sum, sum, x, y, x, y
+    * expected BFS order if allowing multiple visits: product, exp, sin, sum, sum, x, y, x, y
+    * expected BFS order if disallowing multiple visits: product, exp, sin, sum, x, y
     */
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
@@ -182,6 +189,15 @@ Test(iterator, bfs_general)
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_x);
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(bfs));
+
+   cr_expect(SCIPexpriteratorInit(bfs2, expr_prod) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_y);
    cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(bfs));
 
@@ -246,8 +262,8 @@ Test(iterator, rtopological_general)
 
    /* create and store expressions for exp(x+y) * sin(x+y)
     *
-    * expected RTOPOLOGICAL order: x, y, sum, exp, x, y, sum, sin, product
-    *
+    * expected RTOPOLOGICAL order if allowing multiple visits: x, y, sum, exp, x, y, sum, sin, product
+    * expected RTOPOLOGICAL order if disallowing multiple visits: x, y, sum, exp, sin, product
     */
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
@@ -269,6 +285,15 @@ Test(iterator, rtopological_general)
    cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_prod);
    cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(rtopological));
+
+   cr_expect(SCIPexpriteratorInit(rtopological2, expr_prod) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(rtopological2) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(rtopological2));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
@@ -349,8 +374,8 @@ Test(iterator, dfs_general)
 
    /* create and store expressions for exp(x+y) * sin(x+y)
     *
-    * expected DFS order: product, exp, sum, x, y, sin, sum, x, y
-    *
+    * expected DFS order if allowing multiple visits: product, exp, sum, x, y, sin, sum, x, y
+    * expected DFS order if disallowing multiple visits: product, exp, sum, x, y, sin
     */
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
