@@ -38,7 +38,7 @@ static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
 static SCIP_CONSEXPR_ITERATOR* bfs;
-static SCIP_CONSEXPR_ITERATOR* dfs;
+static SCIP_CONSEXPR_ITERATOR* rtopological;
 static SCIP_CONSEXPR_EXPR* expr;
 
 static
@@ -80,7 +80,7 @@ void setup(void)
 
    /* create iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-   SCIP_CALL( SCIPexpriteratorCreate(&dfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
+   SCIP_CALL( SCIPexpriteratorCreate(&rtopological, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    /* NULL expression in order to free it in teardown() */
    expr = NULL;
@@ -95,7 +95,7 @@ void teardown(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-   SCIPexpriteratorFree(&dfs);
+   SCIPexpriteratorFree(&rtopological);
    SCIPexpriteratorFree(&bfs);
 
    /* free scip and check for memory leaks */
@@ -188,22 +188,22 @@ Test(iterator, bfs_general)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
 }
 
-/* test DFS iterator on a tree containing a single expression */
-Test(iterator, dfs_single)
+/* test RTOPOLOGICAL iterator on a tree containing a single expression */
+Test(iterator, rtopological_single)
 {
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
-   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs));
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
+   cr_expect(SCIPexpriteratorInit(rtopological, expr) == expr);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(rtopological));
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
+   cr_expect(SCIPexpriteratorInit(rtopological, expr) == expr);
 }
 
-/* test DFS iterator on a tree expression */
-Test(iterator, dfs_tree)
+/* test RTOPOLOGICAL iterator on a tree expression */
+Test(iterator, rtopological_tree)
 {
    SCIP_CONSEXPR_EXPR* exprs[6];
    SCIP_CONSEXPR_EXPR* tmp;
@@ -220,15 +220,15 @@ Test(iterator, dfs_tree)
    exprs[5] = SCIPgetConsExprExprChildren(exprs[2])[2]; /* z */
 
    /* loop over the whole tree; please enjoy the beauty of this code */
-   for( tmp = SCIPexpriteratorInit(dfs, expr); !SCIPexpriteratorIsEnd(dfs); tmp = SCIPexpriteratorGetNext(dfs) )
+   for( tmp = SCIPexpriteratorInit(rtopological, expr); !SCIPexpriteratorIsEnd(rtopological); tmp = SCIPexpriteratorGetNext(rtopological) )
    {
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
    }
 }
 
-/* test DFS iterator on an expression with common sub-expressions */
-Test(iterator, dfs_general)
+/* test RTOPOLOGICAL iterator on an expression with common sub-expressions */
+Test(iterator, rtopological_general)
 {
    SCIP_CONSEXPR_EXPR* expr_prod;
    SCIP_CONSEXPR_EXPR* expr_sin;
@@ -240,7 +240,7 @@ Test(iterator, dfs_general)
 
    /* create and store expressions for exp(x+y) * sin(x+y)
     *
-    * expected DFS order: x, y, sum, exp, x, y, sum, sin, product
+    * expected RTOPOLOGICAL order: x, y, sum, exp, x, y, sum, sin, product
     *
     */
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
@@ -252,17 +252,17 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_exp, 1.0) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sin) );
 
-   cr_expect(SCIPexpriteratorInit(dfs, expr_prod) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs));
+   cr_expect(SCIPexpriteratorInit(rtopological, expr_prod) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(rtopological));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
@@ -272,3 +272,4 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
 }
+
