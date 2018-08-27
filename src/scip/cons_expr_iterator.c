@@ -197,13 +197,21 @@ SCIP_RETCODE SCIPexpriteratorCreate(
    (*iterator)->iterindex = -1;
    (*iterator)->visitedtag = 0;
 
-   /* allocate memory for DFS or BFS data structure */
-   if( type == SCIP_CONSEXPRITERATOR_BFS )
+   /* allocate memory for type-specific data structure */
+   switch( type )
    {
-      SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
+      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC:
+      {
+         ensureStackSize(*iterator, MINDFSSIZE);
+         break;
+      }
+
+      case SCIP_CONSEXPRITERATOR_BFS:
+      {
+         SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
+         break;
+      }
    }
-   else
-      ensureStackSize(*iterator, MINDFSSIZE);
 
    return SCIP_OKAY;
 }
@@ -220,20 +228,12 @@ SCIP_RETCODE SCIPexpriteratorCreate2(
    assert(iterator != NULL);
    assert(blkmem  != NULL);
 
-   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iterator) );
+   SCIP_CALL( SCIPexpriteratorCreate(iterator, blkmem, type) );
+   assert(*iterator != NULL);
 
-   (*iterator)->itertype = type;
-   (*iterator)->blkmem = blkmem;
+   /* remember where in the expressions we find our data and what marker to use to mark expr as visisted */
    (*iterator)->iterindex = iterindex;
    (*iterator)->visitedtag = visitedtag;
-
-   /* allocate memory for DFS or BFS data structure */
-   if( type == SCIP_CONSEXPRITERATOR_BFS )
-   {
-      SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
-   }
-   else
-      ensureStackSize(*iterator, MINDFSSIZE);
 
    return SCIP_OKAY;
 }
@@ -269,26 +269,31 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    assert(iterator != NULL);
    assert(expr != NULL);
 
-   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
+   switch( iterator->itertype )
    {
-      assert(iterator->queue != NULL);
-      SCIPqueueClear(iterator->queue);
-      SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
-
-      if( iterator->visitedtag != 0 )
+      case SCIP_CONSEXPRITERATOR_BFS:
       {
-         assert(iterator->iterindex >= 0);
-         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
-         assert(expr->iterdata[iterator->iterindex].visitedtag != iterator->visitedtag);
+         assert(iterator->queue != NULL);
+         SCIPqueueClear(iterator->queue);
+         SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
 
-         /* mark expression as being in the queue */
-         expr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+         if( iterator->visitedtag != 0 )
+         {
+            assert(iterator->iterindex >= 0);
+            assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+            assert(expr->iterdata[iterator->iterindex].visitedtag != iterator->visitedtag);
+
+            /* mark expression as being in the queue */
+            expr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+         }
+         break;
       }
-   }
-   else
-   {
-      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
-      reverseTopologicalInsert(iterator, expr);
+
+      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
+      {
+         reverseTopologicalInsert(iterator, expr);
+         break;
+      }
    }
 
    /* return next expression */
@@ -302,40 +307,44 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
    )
 {
    /* move to the next expression according to iterator type */
-   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
+   switch( iterator->itertype )
    {
-      iterator->curr = doBfsNext(iterator);
-   }
-   else
-   {
-      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
-
-      if( iterator->visitedtag != 0 )
+      case SCIP_CONSEXPRITERATOR_BFS:
       {
-         assert(iterator->iterindex >= 0);
-         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+         iterator->curr = doBfsNext(iterator);
+         break;
+      }
 
-         /* skip already visited expressions */
-         while( iterator->curr != NULL )
+      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
+      {
+         if( iterator->visitedtag != 0 )
          {
-            if( iterator->curr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
+            assert(iterator->iterindex >= 0);
+            assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+
+            /* skip already visited expressions */
+            while( iterator->curr != NULL )
             {
-               /* if curr has already been visited, get next one
-                * TODO this isn't really efficient, since we still walk through already visited expressions
-                */
-               iterator->curr = doReverseTopologicalNext(iterator);
-            }
-            else
-            {
-               /* curr has not been visted yet, so mark it as visited and interrupt loop */
-               iterator->curr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
-               break;
+               if( iterator->curr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
+               {
+                  /* if curr has already been visited, get next one
+                   * TODO this isn't really efficient, since we still walk through already visited expressions
+                   */
+                  iterator->curr = doReverseTopologicalNext(iterator);
+               }
+               else
+               {
+                  /* curr has not been visited yet, so mark it as visited and interrupt loop */
+                  iterator->curr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
+                  break;
+               }
             }
          }
-      }
-      else
-      {
-         iterator->curr = doReverseTopologicalNext(iterator);
+         else
+         {
+            iterator->curr = doReverseTopologicalNext(iterator);
+         }
+         break;
       }
    }
 
