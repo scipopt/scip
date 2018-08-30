@@ -1549,18 +1549,16 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; ++j )
    {
       if( solitems != NULL )
-      {
-         solitems[*nsolitems] = items[j];
-         (*nsolitems)++;
-      }
+         solitems[(*nsolitems)++] = items[j];
+
       if( solval != NULL )
          (*solval) += profits[j];
       solitemsweight += weights[j];
    }
-   for( ; j < nitems && solitems != NULL; j++ )
+   if ( solitems != NULL )
    {
-      nonsolitems[*nnonsolitems] = items[j];
-      (*nnonsolitems)++;
+      for( ; j < nitems; j++ )
+         nonsolitems[(*nnonsolitems)++] = items[j];
    }
 
    SCIPfreeBufferArray(scip, &realweights);
