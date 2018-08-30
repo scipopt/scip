@@ -189,6 +189,23 @@ Test(solveknapsackexactly, test2)
    cr_assert( (solitems[0] == 0 && solitems[1] == 1) || (solitems[0] == 1 && solitems[1] == 0) );
    cr_assert( nonsolitems[0] == 2 );
    cr_assert_float_eq(solval, 5, EPS);
+
+   /* test whether greedy solution is equal to the rounded LP value */
+   capacity = 4LL;
+   weights[0] = 1LL;
+   weights[1] = 2LL;
+   weights[2] = 2LL;
+
+   profits[0] = 3.0;
+   profits[1] = 1.0;
+   profits[2] = 1.0;
+
+   /* the solution packs one item and is optimal, since the LP optimal value is 1.5 */
+   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   cr_assert( success );
+   cr_assert( nsolitems == 2 );
+   cr_assert( nnonsolitems == 1 );
+   cr_assert_float_eq(solval, 4.0, EPS);
 }
 
 
@@ -236,4 +253,54 @@ Test(solveknapsackexactly, test3)
    cr_assert( nnonsolitems == 2 );
    cr_assert( (nonsolitems[0] == 0 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 0) );
    cr_assert_float_eq(solval, 4.0, EPS);
+}
+
+
+/** large test */
+Test(solveknapsackexactly, test4)
+{
+   int nitems;
+   SCIP_Longint* weights;
+   SCIP_Real* profits;
+   int* items;
+   int* solitems;
+   int* nonsolitems;
+   SCIP_Longint capacity;
+   SCIP_Bool success;
+   SCIP_Real solval;
+   int nnonsolitems;
+   int nsolitems;
+   int j;
+
+   nitems = 1000;
+   SCIP_CALL( SCIPallocBufferArray(scip, &items, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &profits, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solitems, nitems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonsolitems, nitems) );
+
+   for (j = 0; j < nitems/2; ++j)
+   {
+      items[j] = j;
+      weights[j] = 2LL;
+      profits[j] = j;
+   }
+   for (j = nitems/2; j < nitems; ++j)
+   {
+      items[j] = j;
+      weights[j] = 1LL;
+      profits[j] = j;
+   }
+   capacity = nitems + 1;
+
+   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   cr_assert( success );
+   cr_assert( nsolitems == 750 );
+   cr_assert( nnonsolitems == nitems - 750 );
+
+   SCIPfreeBufferArray(scip, &nonsolitems);
+   SCIPfreeBufferArray(scip, &solitems);
+   SCIPfreeBufferArray(scip, &profits);
+   SCIPfreeBufferArray(scip, &weights);
+   SCIPfreeBufferArray(scip, &items);
 }
