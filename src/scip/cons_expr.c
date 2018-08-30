@@ -167,7 +167,6 @@ struct SCIP_ConshdlrData
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
 
-   SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
    int                      nactiveiter;     /**< number of currently active iterators */
    unsigned int             lastvisitedtag;  /**< last visited tag used by iterators */
 
@@ -3784,7 +3783,10 @@ SCIP_RETCODE canonicalizeConstraints(
    /* check whether all locks of each expression have been removed */
    {
       SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      SCIP_CONSEXPR_ITERATOR* it;
       assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
       for( i = 0; i < nconss; ++i )
       {
@@ -3793,15 +3795,16 @@ SCIP_RETCODE canonicalizeConstraints(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
-         for( expr = SCIPexpriteratorInit(conshdlrdata->iterator, consdata->expr);
-            !SCIPexpriteratorIsEnd(conshdlrdata->iterator);
-            expr = SCIPexpriteratorGetNext(conshdlrdata->iterator) ) /*lint !e441*/
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+         for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
             assert(expr != NULL);
             assert(expr->nlocksneg == 0);
             assert(expr->nlockspos == 0);
          }
       }
+
+      SCIPexpriteratorFree(&it);
    }
 #endif
 
@@ -6328,10 +6331,6 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
    conshdlrdata->nlhdlrssize = 0;
-
-   /* free expression iterator */
-   assert(conshdlrdata->iterator != NULL);
-   SCIPexpriteratorFree(&conshdlrdata->iterator);
 
    /* free upgrade functions */
    for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
@@ -9627,20 +9626,16 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    return SCIP_OKAY;
 }
 
-/** creates an expression iterator to walk an expression (sub)graph */
-SCIP_RETCODE SCIPcreateConsExprExprIterator(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
-   SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
-   SCIP_CONSEXPRITERATOR_TYPE type,          /**< type of expression iterator */
-   SCIP_Bool                  norevisit      /**< whether to visit every expression only once */
+/** gets the index an expression iterator can use to store iterator specific data in an expression */
+SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int*                       iterindex       /**< buffer to store iteration index */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert(scip != NULL);
    assert(consexprhdlr != NULL);
-   assert(iterator != NULL);
+   assert(iterindex != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
@@ -9651,43 +9646,45 @@ SCIP_RETCODE SCIPcreateConsExprExprIterator(
       return SCIP_MAXDEPTHLEVEL;
    }
 
-   /* TODO maybe just store an array of SCIP_CONSEXPR_MAXNITER in conshdlrdata and reuse */
-   SCIP_CALL( SCIPexpriteratorCreate2(iterator, SCIPblkmem(scip), type, conshdlrdata->nactiveiter++, norevisit ? ++conshdlrdata->lastvisitedtag : 0) );
-   assert(*iterator != NULL);
+   *iterindex = conshdlrdata->nactiveiter++;
 
    return SCIP_OKAY;
 }
 
-/** frees an expression iterator */
-SCIP_RETCODE SCIPfreeConsExprExprIterator(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
-   SCIP_CONSEXPR_ITERATOR**   iterator       /**< iterator to free */
+/** returns the index that an expression iterator used to store iterator specific data in an expression */
+void SCIPdeactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int                        iterindex       /**< iteration index that is not used anymore */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert(scip != NULL);
    assert(consexprhdlr != NULL);
-   assert(iterator != NULL);
-   assert(*iterator != NULL);
+   assert(iterindex >= 0);
 
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   if( (*iterator)->iterindex >= 0 )
-   {
-      /* if an iterindex is set, then it must be the one of the last created iterator */
-      assert((*iterator)->iterindex == conshdlrdata->nactiveiter-1);
+   /* the iterindex must be the one of the last initialized iterator */
+   assert(iterindex == conshdlrdata->nactiveiter-1);
 
-      --conshdlrdata->nactiveiter;
-   }
-
-   SCIPexpriteratorFree(iterator);
-
-   return SCIP_OKAY;
+   --conshdlrdata->nactiveiter;
 }
 
+/** get a new tag that can be used to mark an expression as visited */
+unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   return ++conshdlrdata->lastvisitedtag;
+}
 
 /** Gives the parent of an expression in an expression graph walk.
  *
@@ -9744,9 +9741,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
-
-   /* create expression iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&conshdlrdata->iterator, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,

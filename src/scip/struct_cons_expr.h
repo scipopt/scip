@@ -201,8 +201,11 @@ struct SCIP_ConsExpr_ExprEnfo
 /** expression tree iterator */
 struct SCIP_ConsExpr_Iterator
 {
-   SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
+   SCIP_CONSHDLR*              consexprhdlr; /**< expr constraint handler */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
+
+   SCIP_Bool                   initialized;  /**< whether the iterator has been initialized, that is, is in use */
+   SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
    SCIP_CONSEXPR_EXPR*         curr;         /**< current expression of the iterator */
    int                         iterindex;    /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
    unsigned int                visitedtag;   /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */

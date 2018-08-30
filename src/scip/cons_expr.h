@@ -831,22 +831,24 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    void*                 data                          /**< data to be passed on to callback methods, or NULL */
    );
 
-/** creates an expression iterator to walk an expression (sub)graph */
+/** gets the index an expression iterator can use to store iterator specific data in an expression */
 EXTERN
-SCIP_RETCODE SCIPcreateConsExprExprIterator(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
-   SCIP_CONSEXPR_ITERATOR**   iterator,      /**< buffer to store expression iterator */
-   SCIP_CONSEXPRITERATOR_TYPE type,          /**< type of expression iterator */
-   SCIP_Bool                  norevisit      /**< whether to visit every expression only once */
+SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int*                       iterindex       /**< buffer to store iteration index */
    );
 
-/** frees an expression iterator */
+/** returns the index that an expression iterator used to store iterator specific data in an expression */
 EXTERN
-SCIP_RETCODE SCIPfreeConsExprExprIterator(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr,  /**< expression constraint handler */
-   SCIP_CONSEXPR_ITERATOR**   iterator       /**< iterator to free */
+void SCIPdeactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int                        iterindex       /**< iteration index that is not used anymore */
+   );
+
+/** get a new tag that can be used to mark an expression as visited */
+EXTERN
+unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
 /** Gives the parent of an expression in an expression graph walk.

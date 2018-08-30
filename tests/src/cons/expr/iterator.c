@@ -37,13 +37,8 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
-static SCIP_CONSEXPR_ITERATOR* bfs;
-static SCIP_CONSEXPR_ITERATOR* bfs2;
-static SCIP_CONSEXPR_ITERATOR* rtopological;
-static SCIP_CONSEXPR_ITERATOR* rtopological2;
-static SCIP_CONSEXPR_ITERATOR* dfs;
-static SCIP_CONSEXPR_ITERATOR* dfs2;
 static SCIP_CONSEXPR_EXPR* expr;
+static SCIP_CONSEXPR_ITERATOR* it;
 
 static
 void setup(void)
@@ -74,6 +69,9 @@ void setup(void)
    /* goto presolving */
    TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE);
 
+   /* create an iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    /* get transformed vars and release vars */
    SCIP_CALL( SCIPgetTransformedVar(scip, xo, &x) );
    SCIP_CALL( SCIPgetTransformedVar(scip, yo, &y) );
@@ -81,14 +79,6 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &xo) );
    SCIP_CALL( SCIPreleaseVar(scip, &yo) );
    SCIP_CALL( SCIPreleaseVar(scip, &zo) );
-
-   /* create iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &bfs2, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
-   SCIP_CALL( SCIPexpriteratorCreate(&rtopological, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
-   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &rtopological2, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
-   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &dfs, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIP_CALL( SCIPcreateConsExprExprIterator(scip, conshdlr, &dfs2, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
 
    /* NULL expression in order to free it in teardown() */
    expr = NULL;
@@ -103,12 +93,7 @@ void teardown(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-   SCIPexpriteratorFree(&dfs2);
-   SCIPexpriteratorFree(&dfs);
-   SCIPexpriteratorFree(&rtopological2);
-   SCIPexpriteratorFree(&rtopological);
-   SCIPexpriteratorFree(&bfs2);
-   SCIPexpriteratorFree(&bfs);
+   SCIPexpriteratorFree(&it);
 
    /* free scip and check for memory leaks */
    SCIP_CALL( SCIPfree(&scip) );
@@ -120,15 +105,18 @@ TestSuite(iterator, .init = setup, .fini = teardown);
 /* test BFS iterator on a tree containing single expression */
 Test(iterator, bfs_single)
 {
+
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
-   cr_expect(SCIPexpriteratorInit(bfs, expr) == expr);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(bfs));
-   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(bfs, expr) == expr);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
 }
 
 /* test BFS iterator on a tree expression */
@@ -148,7 +136,8 @@ Test(iterator, bfs_tree)
    exprs[5] = SCIPgetConsExprExprChildren(exprs[2])[2]; /* z */
 
    /* loop over the whole tree; please enjoy the beauty of this code */
-   for( tmp = SCIPexpriteratorInit(bfs, expr); !SCIPexpriteratorIsEnd(bfs); tmp = SCIPexpriteratorGetNext(bfs) )
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
+   for( tmp = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
       cr_expect(tmp == exprs[i]);
       ++i;
@@ -180,26 +169,28 @@ Test(iterator, bfs_general)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_exp, 1.0) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sin) );
 
-   cr_expect(SCIPexpriteratorInit(bfs, expr_prod) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(bfs));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_BFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
-   cr_expect(SCIPexpriteratorInit(bfs2, expr_prod) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(bfs2) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(bfs));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
@@ -215,13 +206,15 @@ Test(iterator, rtopological_single)
 {
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
-   cr_expect(SCIPexpriteratorInit(rtopological, expr) == expr);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(rtopological));
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(rtopological, expr) == expr);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
 }
 
 /* test RTOPOLOGICAL iterator on a tree expression */
@@ -242,7 +235,8 @@ Test(iterator, rtopological_tree)
    exprs[5] = SCIPgetConsExprExprChildren(exprs[2])[2]; /* z */
 
    /* loop over the whole tree; please enjoy the beauty of this code */
-   for( tmp = SCIPexpriteratorInit(rtopological, expr); !SCIPexpriteratorIsEnd(rtopological); tmp = SCIPexpriteratorGetNext(rtopological) )
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+   for( tmp = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
@@ -274,26 +268,28 @@ Test(iterator, rtopological_general)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_exp, 1.0) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sin) );
 
-   cr_expect(SCIPexpriteratorInit(rtopological, expr_prod) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(rtopological) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(rtopological));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
-   cr_expect(SCIPexpriteratorInit(rtopological2, expr_prod) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(rtopological2) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(rtopological2));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
@@ -310,22 +306,26 @@ Test(iterator, dfs_single)
 {
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
-   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs));
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
 
 
-   cr_expect(SCIPexpriteratorInit(dfs2, expr) == expr);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs2));
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == NULL);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(dfs2, expr) == expr);
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
 
 }
 
@@ -347,14 +347,16 @@ Test(iterator, dfs_tree)
    exprs[5] = SCIPgetConsExprExprChildren(exprs[2])[2]; /* z */
 
    /* loop over the whole tree; please enjoy the beauty of this code */
-   for( tmp = SCIPexpriteratorInit(dfs, expr); !SCIPexpriteratorIsEnd(dfs); tmp = SCIPexpriteratorGetNext(dfs) )
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   for( tmp = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
    }
 
-   /* loop over the whole tree using dfs2; same beauty as before */
-   for( tmp = SCIPexpriteratorInit(dfs2, expr), i = 0; !SCIPexpriteratorIsEnd(dfs2); tmp = SCIPexpriteratorGetNext(dfs2) )
+   /* loop over the whole tree without revisits; same beauty as before */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
@@ -386,26 +388,28 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_prod, 1, &expr_exp, 1.0) );
    SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_prod, expr_sin) );
 
-   cr_expect(SCIPexpriteratorInit(dfs, expr_prod) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
-   cr_expect(SCIPexpriteratorInit(dfs2, expr_prod) == expr_prod);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == expr_exp);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == expr_sum);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == expr_x);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == expr_y);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == expr_sin);
-   cr_expect(SCIPexpriteratorGetNext(dfs2) == NULL);
-   cr_expect(SCIPexpriteratorIsEnd(dfs2));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );

@@ -40,18 +40,8 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
-   SCIP_CONSEXPRITERATOR_TYPE  type         /**< type of expression iterator */
-   );
-
-/** creates a more powerful expression iterator */
-EXTERN
-SCIP_RETCODE SCIPexpriteratorCreate2(
-   SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
-   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
-   int                         iterindex,   /**< index of iteration data in expressions */
-   unsigned int                visitedtag   /**< tag to mark or recognize visited expressions, or 0 if allow revisiting */
+   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler */
+   BMS_BLKMEM*                 blkmem       /**< block memory used to store hash map entries */
    );
 
 /** frees an expression iterator */
@@ -62,9 +52,11 @@ void SCIPexpriteratorFree(
 
 /** initializes an expression iterator */
 EXTERN
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
+SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr         /**< expression of the iterator */
+   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
+   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
+   SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    );
 
 /** gets the current expression that the expression iterator points to */

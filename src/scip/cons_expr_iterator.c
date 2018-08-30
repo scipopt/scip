@@ -37,7 +37,7 @@
 
 /** ensures minimum stack size of iterator's data */
 static
-void ensureStackSize(
+SCIP_RETCODE ensureStackSize(
    SCIP_CONSEXPR_ITERATOR*    iterator,     /**< expression iterator */
    int                        size          /**< minimum requires size */
    )
@@ -51,9 +51,56 @@ void ensureStackSize(
    {
       int newsize = size * 2;
 
-      SCIP_ALLOC_ABORT( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsexprs, iterator->dfssize, newsize) );
-      SCIP_ALLOC_ABORT( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsnvisited, iterator->dfssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsexprs, iterator->dfssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsnvisited, iterator->dfssize, newsize) );
       iterator->dfssize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void deinit(
+   SCIP_CONSEXPR_ITERATOR*    iterator      /**< expression iterator */
+   )
+{
+   assert(iterator != NULL );
+
+   if( !iterator->initialized )
+      return;
+
+   if( iterator->iterindex >= 0 )
+   {
+      /* tell conshdlr that this iterator is no longer active */
+      SCIPdeactivateConsExprExprHdlrIterator(iterator->consexprhdlr, iterator->iterindex);
+      iterator->iterindex = -1;
+   }
+
+   switch( iterator->itertype )
+   {
+      case SCIP_CONSEXPRITERATOR_BFS :
+      {
+         assert(iterator->queue != NULL);
+
+         SCIPqueueFree(&iterator->queue);
+
+         break;
+      }
+
+      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
+      {
+         assert(iterator->dfsnvisited != NULL);
+         assert(iterator->dfsexprs != NULL);
+
+         /* free dfs arrays */
+         BMSfreeBlockMemoryArray(iterator->blkmem, &iterator->dfsnvisited, iterator->dfssize);
+         BMSfreeBlockMemoryArray(iterator->blkmem, &iterator->dfsexprs, iterator->dfssize);
+         iterator->dfssize = 0;
+
+         break;
+      }
+
+      default: break;
    }
 }
 
@@ -67,7 +114,7 @@ void reverseTopologicalInsert(
    assert(iterator != NULL);
    assert(expr != NULL);
 
-   ensureStackSize(iterator, iterator->dfsnexprs + 1);
+   SCIP_CALL_ABORT( ensureStackSize(iterator, iterator->dfsnexprs + 1) );
    iterator->dfsexprs[iterator->dfsnexprs] = expr;
    iterator->dfsnvisited[iterator->dfsnexprs] = 0;
    ++(iterator->dfsnexprs);
@@ -265,8 +312,8 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
 /** creates an expression iterator */
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
-   SCIP_CONSEXPRITERATOR_TYPE  type         /**< type of expression iterator */
+   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler */
+   BMS_BLKMEM*                 blkmem       /**< block memory used to store hash map entries */
    )
 {
    assert(iterator != NULL);
@@ -274,53 +321,8 @@ SCIP_RETCODE SCIPexpriteratorCreate(
 
    SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iterator) );
 
-   (*iterator)->itertype = type;
    (*iterator)->blkmem = blkmem;
-   (*iterator)->iterindex = -1;
-   (*iterator)->visitedtag = 0;
-
-   /* allocate memory for type-specific data structure */
-   switch( type )
-   {
-      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC:
-      {
-         ensureStackSize(*iterator, MINDFSSIZE);
-         break;
-      }
-
-      case SCIP_CONSEXPRITERATOR_BFS:
-      {
-         SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
-         break;
-      }
-
-      case SCIP_CONSEXPRITERATOR_DFS:
-      {
-         break;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** creates a more powerful expression iterator */
-SCIP_RETCODE SCIPexpriteratorCreate2(
-   SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
-   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
-   int                         iterindex,   /**< index of iteration data in expressions */
-   unsigned int                visitedtag   /**< tag to mark or recognize visited expressions, or 0 if allow revisiting */
-   )
-{
-   assert(iterator != NULL);
-   assert(blkmem  != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(iterator, blkmem, type) );
-   assert(*iterator != NULL);
-
-   /* remember where in the expressions we find our data and what marker to use to mark expr as visisted */
-   (*iterator)->iterindex = iterindex;
-   (*iterator)->visitedtag = visitedtag;
+   (*iterator)->consexprhdlr = consexprhdlr;
 
    return SCIP_OKAY;
 }
@@ -334,37 +336,59 @@ void SCIPexpriteratorFree(
    assert(*iterator != NULL);
    assert((*iterator)->blkmem != NULL);
 
-   if( (*iterator)->queue != NULL )
-   {
-      SCIPqueueFree(&(*iterator)->queue);
-   }
+   deinit(*iterator);
 
-   /* free iterator arrays */
-   BMSfreeBlockMemoryArrayNull((*iterator)->blkmem, &(*iterator)->dfsnvisited, (*iterator)->dfssize);
-   BMSfreeBlockMemoryArrayNull((*iterator)->blkmem, &(*iterator)->dfsexprs, (*iterator)->dfssize);
+   assert((*iterator)->queue == NULL);
+   assert((*iterator)->dfsnvisited == NULL);
+   assert((*iterator)->dfsexprs == NULL);
 
    /* free iterator */
    BMSfreeBlockMemory((*iterator)->blkmem, iterator);
 }
 
 /** initializes an expression iterator */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
-   SCIP_CONSEXPR_ITERATOR*    iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*        expr         /**< expression of the iterator */
+SCIP_RETCODE SCIPexpriteratorInit(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
+   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
+   SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    )
 {
    assert(iterator != NULL);
    assert(expr != NULL);
 
-   /* FIXME if this iterator was used already, then we should use a new visitedtag */
+   deinit(iterator);
+
+   /* store the new type of the iterator */
+   iterator->itertype = type;
+
+   /* get iterindex, if necessary */
+   if( !allowrevisit || type == SCIP_CONSEXPRITERATOR_DFS )
+   {
+      assert(iterator->consexprhdlr != NULL);
+
+      SCIP_CALL( SCIPactivateConsExprExprHdlrIterator(iterator->consexprhdlr, &iterator->iterindex) );
+   }
+   else
+   {
+      iterator->iterindex = -1;
+   }
+
+   /* get new tag to recognize visited expressions */
+   if( !allowrevisit )
+      iterator->visitedtag = SCIPgetConsExprExprHdlrNewVisitedTag(iterator->consexprhdlr);
+   else
+      iterator->visitedtag = 0;
 
    switch( iterator->itertype )
    {
       case SCIP_CONSEXPRITERATOR_BFS:
       {
+         SCIP_CALL( SCIPqueueCreate(&iterator->queue, MINBFSSIZE, 2.0) );
+
          assert(iterator->queue != NULL);
          SCIPqueueClear(iterator->queue);
-         SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
+         SCIP_CALL( SCIPqueueInsert(iterator->queue, expr) );
 
          if( iterator->visitedtag != 0 )
          {
@@ -382,6 +406,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
 
       case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
       {
+         SCIP_CALL( ensureStackSize(iterator, MINDFSSIZE) );
+
          reverseTopologicalInsert(iterator, expr);
 
          iterator->curr = SCIPexpriteratorGetNext(iterator);
@@ -401,8 +427,9 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
       }
    }
 
-   /* return current expression */
-   return iterator->curr;
+   iterator->initialized = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** gets the current expression that the expression iterator points to */
