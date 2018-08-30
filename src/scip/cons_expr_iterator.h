@@ -68,7 +68,10 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
-/** gets the next expression according to the mode of the expression iterator */
+/** moves the iterator to the next expression according to the mode of the expression iterator
+ *
+ * @return the next expression, if any, and NULL otherwise
+ */
 EXTERN
 SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
