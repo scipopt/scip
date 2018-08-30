@@ -312,7 +312,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
 /** creates an expression iterator */
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler */
+   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler, might be NULL */
    BMS_BLKMEM*                 blkmem       /**< block memory used to store hash map entries */
    )
 {
@@ -346,7 +346,10 @@ void SCIPexpriteratorFree(
    BMSfreeBlockMemory((*iterator)->blkmem, iterator);
 }
 
-/** initializes an expression iterator */
+/** initializes an expression iterator
+ *
+ * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ */
 SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
@@ -376,9 +379,14 @@ SCIP_RETCODE SCIPexpriteratorInit(
 
    /* get new tag to recognize visited expressions */
    if( !allowrevisit )
+   {
+      assert(iterator->consexprhdlr != NULL);
       iterator->visitedtag = SCIPgetConsExprExprHdlrNewVisitedTag(iterator->consexprhdlr);
+   }
    else
+   {
       iterator->visitedtag = 0;
+   }
 
    switch( iterator->itertype )
    {

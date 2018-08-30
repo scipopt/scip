@@ -40,7 +40,7 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler */
+   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler, might be NULL */
    BMS_BLKMEM*                 blkmem       /**< block memory used to store hash map entries */
    );
 
@@ -50,7 +50,10 @@ void SCIPexpriteratorFree(
    SCIP_CONSEXPR_ITERATOR**    iterator     /**< pointer to the expression iterator */
    );
 
-/** initializes an expression iterator */
+/** initializes an expression iterator
+ *
+ * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ */
 EXTERN
 SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
