@@ -523,6 +523,44 @@ Test(iterator, dfs_general)
    cr_expect(SCIPexpriteratorGetNext(it) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(it));
 
+
+   /* now try out skip in enterexpr stage */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+
+   /* now try out skip in enterexpr stage, allow revisits */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+
+   /* now try out skip in visitingchild stage */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_x);
+   cr_expect(SCIPexpriteratorSkipDFS(it) == expr_sum);  /* we skip over x and so should be sum now, looking at the next child */
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);  /* sum (as child of sin) already visited, so we are done */
+   cr_expect(SCIPexpriteratorIsEnd(it));
+
+
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_prod) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sin) );

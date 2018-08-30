@@ -634,6 +634,53 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
    return iterator->curr;
 }
 
+/** moves a DFS iterator to one of the next expressions
+ *
+ * If in ENTEREXPR stage, then all children of that expression will be skipped.
+ *   If LEAVEEXPR is one of the stopstages, then it will be the next stage. Otherwise, the iterator will move further on (go the parent, etc).
+ * If in VISITINGCHILD stage, then the child that was going to be visited next will be skipped and the iterator will be moved on to the next child (if any).
+ * If in VISITEDCHILD stage, then all remaining children will be skipped and we move on to the LEAVEEXPR stage (if a stop stage, otherwise further on).
+ * It is not allowed to call this function when in LEAVEEXPR stage.
+ *
+ * @return the next expression, if any, and NULL otherwise
+ */
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorSkipDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->iterindex >= 0);
+
+   switch( iterator->dfsstage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      {
+         /* move directly to leaveexpr */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+         /* if leaveexpr is not a stopstage, then move on */
+         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 )
+            iterator->curr = doDfsNext(iterator);
+         return iterator->curr;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         /* skip the child to be visited */
+         /* pretend we just visited this child and get next */
+         iterator->dfsstage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
+         return SCIPexpriteratorGetNext(iterator);
+      }
+
+      default:
+         SCIPerrorMessage("SCIPexpriteratorSkipDFS called in invalid stage %d", iterator->dfsstage);
+         SCIPABORT();
+         return iterator->curr;
+   }
+}
+
 /** returns whether the iterator visited all expressions already */
 SCIP_Bool SCIPexpriteratorIsEnd(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
