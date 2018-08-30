@@ -221,6 +221,7 @@ struct SCIP_ConsExpr_Iterator
 
    /* data for DFS mode */
    SCIP_CONSEXPREXPRWALK_STAGE dfsstage;     /**< stage in DFS walk */
+   unsigned int                stopstages;   /**< stages in which to interrupt the walk */
 };
 
 #ifdef __cplusplus

@@ -238,9 +238,21 @@ Test(iterator, rtopological_tree)
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
    for( tmp = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
+      cr_assert(i < 6);
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
    }
+
+   /* loop over the whole tree using DFS with stop at leave; should be same beauty as RTOPOLOGICAL */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
+   {
+      cr_assert(i < 6);
+      cr_expect(tmp == exprs[targetidx[i]]);
+      ++i;
+   }
+
 }
 
 /* test RTOPOLOGICAL iterator on an expression with common sub-expressions */
@@ -312,10 +324,6 @@ Test(iterator, dfs_single)
    cr_expect(SCIPexpriteratorIsEnd(it));
    cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
-   /* reinitialize again */
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
-
 
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
@@ -323,10 +331,16 @@ Test(iterator, dfs_single)
    cr_expect(SCIPexpriteratorIsEnd(it));
    cr_expect(SCIPexpriteratorGetNext(it) == NULL);
 
-   /* reinitialize again */
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
-
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   cr_expect(SCIPexpriteratorGetNext(it) == expr);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
 }
 
 /* test DFS iterator on a tree expression */
@@ -335,6 +349,7 @@ Test(iterator, dfs_tree)
    SCIP_CONSEXPR_EXPR* exprs[6];
    SCIP_CONSEXPR_EXPR* tmp;
    int targetidx[6] = { 0, 1, 2, 3, 4, 5 };
+   int targetidx2[12] = { 0, 1, 2, 3, 3, 4, 4, 5, 5, 2, 1, 0 };
    int i = 0;
 
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "sin((<t_x> + <t_y> + <t_z>)^2)", NULL, &expr) );
@@ -350,6 +365,7 @@ Test(iterator, dfs_tree)
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    for( tmp = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
+      cr_assert(i < 6);
       cr_expect(tmp == exprs[targetidx[i]]);
       ++i;
    }
@@ -358,7 +374,18 @@ Test(iterator, dfs_tree)
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
    {
+      cr_assert(i < 6);
       cr_expect(tmp == exprs[targetidx[i]]);
+      ++i;
+   }
+
+   /* loop over the whole tree without revisits but stop on enter & leave; more beauty */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
+   {
+      cr_assert(i < 12);
+      cr_expect(tmp == exprs[targetidx2[i]]);
       ++i;
    }
 }
@@ -408,6 +435,65 @@ Test(iterator, dfs_general)
    cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetNext(it) == NULL);
+   cr_expect(SCIPexpriteratorIsEnd(it));
+
+   /* same again, but stop when visiting a child or visited a child only */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+
+   cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_exp);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_sum);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_x);
+
+   /* next will not stop at x, because it doesn't have a child */
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_x);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 1);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_y);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 1);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_y);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_sum);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 0);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_exp);
+
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 1);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_sin);
+
+   /* next will not stop at sin, since all its children have been visited already */
+   cr_expect(SCIPexpriteratorGetNext(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   cr_expect(SCIPexpriteratorGetChildIdxDFS(it) == 1);
+   cr_expect(SCIPexpriteratorGetChildExprDFS(it) == expr_sin);
+
    cr_expect(SCIPexpriteratorGetNext(it) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(it));
 

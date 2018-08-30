@@ -480,11 +480,12 @@ extern "C" {
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {
-   SCIP_CONSEXPREXPRWALK_ENTEREXPR,          /**< an expression is visited the first time (before any of its children are visited) */
-   SCIP_CONSEXPREXPRWALK_VISITINGCHILD,      /**< a child of an expression is to be visited */
-   SCIP_CONSEXPREXPRWALK_VISITEDCHILD,       /**< a child of an expression has been visited */
-   SCIP_CONSEXPREXPRWALK_LEAVEEXPR           /**< an expression is to be left (all of its children have been processed) */
+   SCIP_CONSEXPREXPRWALK_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
+   SCIP_CONSEXPREXPRWALK_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
+   SCIP_CONSEXPREXPRWALK_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
+   SCIP_CONSEXPREXPRWALK_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
 } SCIP_CONSEXPREXPRWALK_STAGE;
+#define SCIP_CONSEXPREXPRWALK_ALLSTAGES (SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR)
 
 /** feedback from expression walker callback to expression walker to direct the walk
  *

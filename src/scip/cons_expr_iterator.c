@@ -349,6 +349,8 @@ void SCIPexpriteratorFree(
 /** initializes an expression iterator
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ *
+ * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
  */
 SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
@@ -430,6 +432,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
          expr->iterdata[iterator->iterindex].currentchild = 0;
          expr->iterdata[iterator->iterindex].parent = NULL;
          iterator->dfsstage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+         iterator->stopstages = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
 
          break;
       }
@@ -440,12 +443,80 @@ SCIP_RETCODE SCIPexpriteratorInit(
    return SCIP_OKAY;
 }
 
+/** specifies in which stages to stop a DFS iterator
+ *
+ * @param stopstages should be a bitwise OR of different SCIP_CONSEXPREXPRWALK_STAGE values
+ */
+void SCIPexpriteratorSetStagesDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   unsigned int                stopstages   /**< the stages in which to stop when iterating via DFS */
+   )
+{
+   assert(iterator != NULL);
+
+   if( (iterator->dfsstage & stopstages) == 0 )
+   {
+      iterator->stopstages = stopstages;
+      (void) SCIPexpriteratorGetNext(iterator);
+   }
+   else
+   {
+      iterator->stopstages = stopstages;
+   }
+}
+
 /** gets the current expression that the expression iterator points to */
 SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    )
 {
+   assert(iterator != NULL);
+
    return iterator->curr;
+}
+
+/** gets the current stage that the expression iterator is in when using DFS
+ *
+ * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
+ */
+SCIP_CONSEXPREXPRWALK_STAGE SCIPexpriteratorGetStageDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+
+   return iterator->dfsstage;
+}
+
+/** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+int SCIPexpriteratorGetChildIdxDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert((iterator->dfsstage & (SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD)) != 0);
+
+   return iterator->curr->iterdata[iterator->iterindex].currentchild;
+}
+
+/** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert((iterator->dfsstage & (SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD)) != 0);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
+
+   return iterator->curr->children[iterator->curr->iterdata[iterator->iterindex].currentchild];
 }
 
 /** moves the iterator to the next expression according to the mode of the expression iterator
@@ -498,15 +569,16 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
       {
          assert(iterator->iterindex >= 0);
 
-         /* get next until we are in enterexpr state again
-          * this will give every expression only once at time it is first "entered"
-          * TODO the user should customize which stages it want's to see
+         /* get next until we are in a stopstage again
+          * this might give expressions more than once, depending on what the stopstages are
           */
          do
          {
+//            printf("curr: %p stage %d ", iterator->curr, iterator->dfsstage);
             iterator->curr = doDfsNext(iterator);
+//            printf("next: %p stage %d stopstage? %d stopstages: %d\n", iterator->curr, iterator->dfsstage, (iterator->dfsstage & iterator->stopstages) != 0, iterator->stopstages);
          }
-         while( iterator->curr != NULL && iterator->dfsstage != SCIP_CONSEXPREXPRWALK_ENTEREXPR );
+         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 );
 
          break;
       }

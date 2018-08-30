@@ -53,6 +53,8 @@ void SCIPexpriteratorFree(
 /** initializes an expression iterator
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ *
+ * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
  */
 EXTERN
 SCIP_RETCODE SCIPexpriteratorInit(
@@ -62,9 +64,42 @@ SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    );
 
+/** specifies in which stages to stop a DFS iterator
+ *
+ * @param stopstages should be a bitwise OR of different SCIP_CONSEXPREXPRWALK_STAGE values
+ *
+ * If the current stage is not one of the stopstages, then the iterator will be moved on.
+ */
+EXTERN
+void SCIPexpriteratorSetStagesDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   unsigned int                stopstages   /**< the stages in which to stop when iterating via DFS */
+   );
+
 /** gets the current expression that the expression iterator points to */
 EXTERN
 SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
+/** gets the current stage that the expression iterator is in when using DFS
+ *
+ * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
+ */
+EXTERN
+SCIP_CONSEXPREXPRWALK_STAGE SCIPexpriteratorGetStageDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
+/** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+EXTERN
+int SCIPexpriteratorGetChildIdxDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
+/** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+EXTERN
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
