@@ -100,6 +100,7 @@ void deinit(
          break;
       }
 
+      case SCIP_CONSEXPRITERATOR_DFS :
       default: break;
    }
 }
@@ -244,8 +245,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
          /* consider next child */
          ++iterdata->currentchild;
-         /* fall through */
-         /* no break */
+         /* fall through */ /* no break */ /*lint -fallthrough*/
 
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
       {
@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
          expr->iterdata[iterator->iterindex].currentchild = 0;
          expr->iterdata[iterator->iterindex].parent = NULL;
          iterator->dfsstage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-         iterator->stopstages = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+         iterator->stopstages = (unsigned int)SCIP_CONSEXPREXPRWALK_ENTEREXPR;
 
          break;
       }
@@ -454,7 +454,7 @@ void SCIPexpriteratorSetStagesDFS(
 {
    assert(iterator != NULL);
 
-   if( (iterator->dfsstage & stopstages) == 0 )
+   if( ((unsigned int)iterator->dfsstage & stopstages) == 0 )
    {
       iterator->stopstages = stopstages;
       (void) SCIPexpriteratorGetNext(iterator);
@@ -498,7 +498,7 @@ int SCIPexpriteratorGetChildIdxDFS(
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
    assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert((iterator->dfsstage & (SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD)) != 0);
+   assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
 
    return iterator->curr->iterdata[iterator->iterindex].currentchild;
 }
@@ -512,7 +512,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
    assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert((iterator->dfsstage & (SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD)) != 0);
+   assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
 
@@ -621,11 +621,9 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
           */
          do
          {
-//            printf("curr: %p stage %d ", iterator->curr, iterator->dfsstage);
             iterator->curr = doDfsNext(iterator);
-//            printf("next: %p stage %d stopstage? %d stopstages: %d\n", iterator->curr, iterator->dfsstage, (iterator->dfsstage & iterator->stopstages) != 0, iterator->stopstages);
          }
-         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 );
+         while( iterator->curr != NULL && ((unsigned int)iterator->dfsstage & iterator->stopstages) == 0 );
 
          break;
       }
@@ -661,7 +659,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorSkipDFS(
          /* move directly to leaveexpr */
          iterator->dfsstage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
          /* if leaveexpr is not a stopstage, then move on */
-         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 )
+         while( iterator->curr != NULL && ((unsigned int)iterator->dfsstage & iterator->stopstages) == 0 )
             iterator->curr = doDfsNext(iterator);
          return iterator->curr;
       }
@@ -674,7 +672,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorSkipDFS(
          return SCIPexpriteratorGetNext(iterator);
       }
 
-      default:
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      default :
          SCIPerrorMessage("SCIPexpriteratorSkipDFS called in invalid stage %d", iterator->dfsstage);
          SCIPABORT();
          return iterator->curr;
