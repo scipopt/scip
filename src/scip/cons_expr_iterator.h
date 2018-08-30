@@ -103,6 +103,34 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
+/** gives the parent of the current expression of an expression iteration if in DFS mode
+ *
+ * @return the expression from which the current expression has been accessed
+ */
+EXTERN
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
+/** gives the iterator specific user data of the current expression
+ *
+ * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+EXTERN
+SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
+/** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode
+ *
+ * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+EXTERN
+void SCIPexpriteratorSetUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored */
+   );
+
 /** moves the iterator to the next expression according to the mode of the expression iterator
  *
  * @return the next expression, if any, and NULL otherwise

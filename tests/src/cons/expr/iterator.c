@@ -382,11 +382,28 @@ Test(iterator, dfs_tree)
    /* loop over the whole tree without revisits but stop on enter & leave; more beauty */
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-   for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it) )
+   for( tmp = SCIPexpriteratorGetCurrent(it), i = 0; !SCIPexpriteratorIsEnd(it); tmp = SCIPexpriteratorGetNext(it), ++i )
    {
       cr_assert(i < 12);
       cr_expect(tmp == exprs[targetidx2[i]]);
-      ++i;
+
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         {
+            SCIP_CONSEXPREXPRWALK_IO userdata = { .ptrval = tmp };
+            SCIPexpriteratorSetUserData(it, userdata);
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+            cr_expect(SCIPexpriteratorGetUserData(it).ptrval == tmp);
+            break;
+
+         default:
+            cr_assert(0, "unexpected stage");
+            break;
+      }
    }
 }
 
@@ -417,14 +434,23 @@ Test(iterator, dfs_general)
 
    SCIP_CALL( SCIPexpriteratorInit(it, expr_prod, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    cr_expect(SCIPexpriteratorGetCurrent(it) == expr_prod);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == NULL);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_exp);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_prod);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_exp);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_sum);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_sum);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_sin);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_prod);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_sum);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_sin);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_x);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_sum);
    cr_expect(SCIPexpriteratorGetNext(it) == expr_y);
+   cr_expect(SCIPexpriteratorGetParentDFS(it) == expr_sum);
    cr_expect(SCIPexpriteratorGetNext(it) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(it));
 

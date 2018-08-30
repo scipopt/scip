@@ -519,6 +519,53 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
    return iterator->curr->children[iterator->curr->iterdata[iterator->iterindex].currentchild];
 }
 
+/** gives the parent of the current expression of an expression iteration if in DFS mode
+ *
+ * @return the expression from which the current expression has been accessed
+ */
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+
+   return iterator->curr->iterdata[iterator->iterindex].parent;
+}
+
+/** gives the iterator specific user data of the current expression
+ *
+ * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+
+   return iterator->curr->iterdata[iterator->iterindex].userdata;
+}
+
+/** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode
+ *
+ * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+void SCIPexpriteratorSetUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+
+   iterator->curr->iterdata[iterator->iterindex].userdata = userdata;
+}
+
 /** moves the iterator to the next expression according to the mode of the expression iterator
  *
  * @return the next expression, if any, and NULL otherwise
