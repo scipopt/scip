@@ -957,11 +957,11 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a value */
       if( isValue(scip, opbinput, &coef) )
       {
-         /* all but the first coefficient need a sign */
+         /* coefficients without a sign are treated as "+" */
          if( (*nlincoefs > 0 || *ntermcoefs > 0 || ntmpcoefs > 0) && !havesign )
          {
-            syntaxError(scip, opbinput, "expected sign ('+' or '-') or sense ('<' or '>')");
-            goto TERMINATE;
+            coefsign = 1;
+            havesign = TRUE;
          }
 
          SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", opbinput->linenumber, coef, coefsign);
