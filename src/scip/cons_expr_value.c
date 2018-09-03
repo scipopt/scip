@@ -71,7 +71,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
       SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
-      if( v < 0.0 && EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr)  )
+      if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
       }

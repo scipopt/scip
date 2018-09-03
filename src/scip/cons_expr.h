@@ -190,6 +190,12 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
 );
 
+/** returns whether expression handler implements the print callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrPrint(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the simplification callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
@@ -310,6 +316,10 @@ EXTERN
 SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
+
+/** calls the print callback of an expression handler */
+extern
+SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr);
 
 /** calls the simplification method of an expression handler */
 extern
@@ -513,6 +523,7 @@ void SCIPsetConsExprExprData(
 EXTERN
 SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
@@ -621,6 +632,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
 EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */

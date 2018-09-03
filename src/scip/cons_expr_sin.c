@@ -918,41 +918,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
    return SCIP_OKAY;
 }
 
-/** expression print callback */
-static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   switch( stage )
-   {
-   case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-   {
-      /* print function with opening parenthesis */
-      SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-   {
-      assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-   {
-      /* print closing parenthesis */
-      SCIPinfoMessage(scip, file, ")");
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-   default: ;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
@@ -1259,7 +1224,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, NULL, estimateSin) );

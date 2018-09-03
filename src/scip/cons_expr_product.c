@@ -1298,7 +1298,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -1306,7 +1306,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print coefficient, if not one */
          if( exprdata->coefficient != 1.0 )
          {
-            if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
+            if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > parentprecedence )
             {
                SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
             }
@@ -1320,10 +1320,8 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
-         int childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
-
          /* print multiplication sign, if not first factor */
-         if( exprdata->coefficient != 1.0 || childidx > 0 )
+         if( exprdata->coefficient != 1.0 || currentchild > 0 )
          {
             SCIPinfoMessage(scip, file, "*");
          }
@@ -1338,7 +1336,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, ")");
          }

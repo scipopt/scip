@@ -93,7 +93,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* print simplified expression */
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check name of the corresponding expression handler */

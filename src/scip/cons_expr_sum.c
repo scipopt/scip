@@ -735,7 +735,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -750,17 +750,15 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
-         int childidx;
          SCIP_Real coef;
 
-         childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
-         coef = exprdata->coefficients[childidx];
+         coef = exprdata->coefficients[currentchild];
 
          /* print coefficient, if necessary */
          if( coef == 1.0 )
          {
             /* if coefficient is 1.0, then print only "+" if not the first term */
-            if( exprdata->constant != 0.0 || childidx > 0 )
+            if( exprdata->constant != 0.0 || currentchild > 0 )
             {
                SCIPinfoMessage(scip, file, "+");
             }
@@ -773,7 +771,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          else
          {
             /* force "+" sign on positive coefficient if not the first term */
-            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || childidx > 0) ? "%+g*" : "%g*", coef);
+            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || currentchild > 0) ? "%+g*" : "%g*", coef);
          }
 
          break;
@@ -782,7 +780,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, ")");
          }

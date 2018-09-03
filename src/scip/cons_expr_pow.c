@@ -1275,7 +1275,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
-         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+         assert(currentchild == 0);
          break;
       }
 

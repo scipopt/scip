@@ -109,7 +109,7 @@ SCIP_RETCODE createExpr(
       exprhdlrname, SCIPgetConsExprExprHdlrName(exprhdlr));
 
    /* print simplified expression */
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    return SCIP_OKAY;
@@ -139,7 +139,7 @@ SCIP_RETCODE testMonotonicity(
    cr_assert(i < SCIPgetConsExprExprNChildren(expr));
 
    /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
 
    /* check curvature */
    cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "expect %d, got %d",

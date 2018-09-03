@@ -226,6 +226,7 @@ typedef struct
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)); /**< function to call to evaluate interval of variable, or NULL to take intervals verbatim */
    void*                 intevalvardata;     /**< data to be passed to intevalvar call */
    int                   ntightenings;       /**< number of tightenings found */
+   SCIP_CONSHDLR*        consexprhdlr;       /**< expression constraint handler */
 } FORWARDPROP_DATA;
 
 /** data passed on during collecting all expression variables */
@@ -989,68 +990,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
    }
 }
 
-/** expression walk callback to print an expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
-{
-   FILE* file;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-
-   file = (FILE*)data;
-
-   if( expr->exprhdlr->print == NULL )
-   {
-      /* default: <hdlrname>(<child1>, <child2>, ...) */
-      switch( stage )
-      {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         {
-            SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
-            if( expr->nchildren > 0 )
-            {
-               SCIPinfoMessage(scip, file, "(");
-            }
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-         {
-            if( SCIPgetConsExprExprWalkCurrentChild(expr) < expr->nchildren-1 )
-            {
-               SCIPinfoMessage(scip, file, ", ");
-            }
-            else
-            {
-               SCIPinfoMessage(scip, file, ")");
-            }
-
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-         default: ;
-      }
-   }
-   else
-   {
-      /* redirect to expression callback */
-      SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, file) );
-   }
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to print an expression in dot format */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-   SCIP_CONSEXPR_EXPR* parentbackup;
    SCIP_Real color;
    int c;
 
@@ -1084,24 +1028,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
 
    if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
    {
-      /* print expression string as label */
-      parentbackup = expr->walkparent;
-      expr->walkparent = NULL;
-      assert(expr->walkcurrentchild == 0); /* as we are in enterexpr */
-
-      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, (void*)dotdata->file, result) );
+      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, -1, 0, dotdata->file) );
       for( c = 0; c < expr->nchildren; ++c )
       {
-         expr->walkcurrentchild = c;
-         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, (void*)dotdata->file, result) );
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, c, 0, dotdata->file) );
          SCIPinfoMessage(scip, dotdata->file, "c%d", c);
-         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, (void*)dotdata->file, result) );
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, c, 0, dotdata->file) );
       }
-      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, (void*)dotdata->file, result) );
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
+      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, -1, 0, dotdata->file) );
 
-      expr->walkcurrentchild = 0;
-      expr->walkparent = parentbackup;
+      SCIPinfoMessage(scip, dotdata->file, "\\n");
    }
 
    if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
@@ -1482,7 +1418,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
          SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->intevalvar, propdata->intevalvardata) );
          SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
 #ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
          SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
 
@@ -1497,7 +1433,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
       SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
 #endif
    }
@@ -2327,7 +2263,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    assert(conshdlr != NULL);
 
    /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
 
    /* compute curvatures */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
@@ -2573,6 +2509,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 static
 SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
@@ -2604,6 +2541,7 @@ SCIP_RETCODE forwardPropExpr(
    propdata.intevalvar = intevalvar;
    propdata.intevalvardata = intevalvardata;
    propdata.ntightenings = (ntightenings == NULL) ? -1 : 0;
+   propdata.consexprhdlr = consexprhdlr;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, forwardPropExprVisitChild, NULL, forwardPropExprLeaveExpr,
       &propdata) );
@@ -2682,7 +2620,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
@@ -2811,7 +2749,7 @@ SCIP_RETCODE reversePropConss(
             /* call the reverseprop of the nlhdlr */
 #ifdef SCIP_DEBUG
             SCIPdebugMsg(scip, "call reverse propagation for ");
-            SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+            SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
             SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
 
@@ -2828,7 +2766,7 @@ SCIP_RETCODE reversePropConss(
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "call reverse propagation for ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
 #endif
 
@@ -3149,7 +3087,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
@@ -3574,7 +3512,7 @@ SCIP_RETCODE addLocks(
    /* call interval evaluation when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, SCIPconsGetHdlr(cons), consdata->expr, 0, NULL, NULL) );
    }
 
    /* remember locks */
@@ -7106,7 +7044,7 @@ SCIP_DECL_CONSPRINT(consPrintExpr)
    /* print expression */
    if( consdata->expr != NULL )
    {
-      SCIP_CALL( SCIPprintConsExprExpr(scip, consdata->expr, file) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, consdata->expr, file) );
    }
    else
    {
@@ -7664,6 +7602,16 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    return SCIP_OKAY;
 }
 
+/** returns whether expression handler implements the print callback */
+SCIP_Bool SCIPhasConsExprExprHdlrPrint(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->print != NULL;
+}
+
 /** returns whether expression handler implements the simplification callback */
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -7864,6 +7812,55 @@ SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    assert(exprhdlr != NULL);
 
    return exprhdlr->data;
+}
+
+/** calls the print callback of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   if( SCIPhasConsExprExprHdlrPrint(expr->exprhdlr) )
+   {
+      SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, currentchild, parentprecedence, file) );
+   }
+   else
+   {
+      /* default: <hdlrname>(<child1>, <child2>, ...) */
+      switch( stage )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         {
+            SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+            if( SCIPgetConsExprExprNChildren(expr) > 0 )
+            {
+               SCIPinfoMessage(scip, file, "(");
+            }
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         {
+            if( currentchild < SCIPgetConsExprExprNChildren(expr)-1 )
+            {
+               SCIPinfoMessage(scip, file, ", ");
+            }
+            else
+            {
+               SCIPinfoMessage(scip, file, ")");
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** calls the simplification method of an expression handler */
@@ -8672,13 +8669,45 @@ void SCIPsetConsExprExprData(
 /** print an expression as info-message */
 SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
    FILE*                   file              /**< file to print to, or NULL for stdout */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPREXPRWALK_STAGE stage;
+   int currentchild;
+   unsigned int parentprecedence;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExpr, printExpr, printExpr, printExpr, (void*)file) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      assert(expr->exprhdlr != NULL);
+      stage = SCIPexpriteratorGetStageDFS(it);
+
+      if( stage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+         currentchild = SCIPexpriteratorGetChildIdxDFS(it);
+      else
+         currentchild = -1;
+
+      if( SCIPexpriteratorGetParentDFS(it) != NULL )
+         parentprecedence = SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPexpriteratorGetParentDFS(it)));
+      else
+         parentprecedence = 0;
+
+      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, stage, currentchild, parentprecedence, file) );
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -8957,6 +8986,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
  */
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
@@ -8965,7 +8995,7 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
 {
    assert(expr != NULL);
 
-   SCIP_CALL( forwardPropExpr(scip, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
+   SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
 
    return SCIP_OKAY;
 }

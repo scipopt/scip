@@ -187,12 +187,16 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
  *  - stage: stage of expression print walk
+ *  - currentchild: index of current child if in stage visitingchild or visitedchild
+ *  - parentprecedence: precedence of parent
  *  - file : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   int currentchild, \
+   unsigned int parentprecedence, \
    FILE* file)
 
 /** expression parse callback

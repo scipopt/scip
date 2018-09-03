@@ -522,7 +522,7 @@ Test(propagate, complicated_expression)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &rootexpr, 2, exprs, 1.0) );
 
    SCIPinfoMessage(scip, NULL, "test more complicated expression: ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, rootexpr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, rootexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
@@ -579,7 +579,7 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(SCIPconsIsActive(cons));
 
    SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, TRUE, 0, &infeasible, &redundant, &ntightenings) );
@@ -598,7 +598,7 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(SCIPconsIsActive(cons));
 
    SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, TRUE, 0, &infeasible, &redundant, &ntightenings) );
@@ -619,7 +619,7 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(SCIPconsIsActive(cons));
 
    SCIPinfoMessage(scip, NULL, "test expressions with unbounded sub-expression: ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    SCIP_CALL( forwardPropCons(scip, conshdlr, cons, TRUE, 0, &infeasible, &redundant, &ntightenings) );

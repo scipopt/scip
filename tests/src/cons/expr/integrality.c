@@ -83,7 +83,7 @@ SCIP_RETCODE checkIntegrality(
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* print simplified expression */
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* compute and check integrality information */
