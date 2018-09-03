@@ -420,7 +420,7 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
    /* evaluate main expression, print it, and check values for sub-expressions */
    printf("evaluate and check expressions\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
-   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EVALTAG) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EVALTAG) );
    SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, mainexpr) );
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
    checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1);

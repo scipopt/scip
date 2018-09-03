@@ -290,8 +290,9 @@ typedef struct
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
+   SCIP_CONSEXPR_ITERATOR* iterator;         /**< iterator to use */
    SCIP_Bool               closefile;        /**< whether file need to be closed when finished printing */
-   SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
+   SCIP_HASHMAP*           leaveexprs;       /**< hashmap storing leave (no children) expressions */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
 
@@ -988,108 +989,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
          return SCIP_OKAY;
       }
    }
-}
-
-/** expression walk callback to print an expression in dot format */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-   SCIP_Real color;
-   int c;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-   assert(data != NULL);
-
-   dotdata = (SCIP_CONSEXPR_PRINTDOTDATA*)data;
-
-   /* skip expressions that have been printed already */
-   if( SCIPhashmapExists(dotdata->visitedexprs, (void*)expr) )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* print expression as dot node */
-
-   /* make up some color from the expression type (it's name) */
-   color = 0.0;
-   for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
-      color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
-   color = SCIPfrac(scip, color);
-   SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
-   {
-      SCIPinfoMessage(scip, dotdata->file, "%s\\n", SCIPgetConsExprExprHdlrName(expr->exprhdlr));
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
-   {
-      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, -1, 0, dotdata->file) );
-      for( c = 0; c < expr->nchildren; ++c )
-      {
-         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, c, 0, dotdata->file) );
-         SCIPinfoMessage(scip, dotdata->file, "c%d", c);
-         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, c, 0, dotdata->file) );
-      }
-      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, -1, 0, dotdata->file) );
-
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
-   {
-      /* print number of uses */
-      SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
-   {
-      /* print number of locks */
-      SCIPinfoMessage(scip, dotdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
-   {
-      /* print eval value */
-      SCIPinfoMessage(scip, dotdata->file, "val=%g", expr->evalvalue);
-
-      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALTAG) == SCIP_CONSEXPR_PRINTDOT_EVALTAG )
-      {
-         /* print also eval tag */
-         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->evaltag);
-      }
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
-   {
-      /* print interval value */
-      SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
-
-      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
-      {
-         /* print also interval eval tag */
-         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
-      }
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-   }
-
-   SCIPinfoMessage(scip, dotdata->file, "\"]\n");  /* end of label and end of node */
-
-   /* add edges from expr to its children */
-   for( c = 0; c < expr->nchildren; ++c )
-      SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
-
-   /* remember that we have printed this expression */
-   SCIP_CALL( SCIPhashmapInsert(dotdata->visitedexprs, (void*)expr, NULL) );
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
 }
 
 /** expression walk callback when evaluating expression, called before child is visited */
@@ -8715,11 +8614,14 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 /** initializes printing of expressions in dot format */
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
    )
 {
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
    assert(dotdata != NULL);
 
    if( file == NULL )
@@ -8728,9 +8630,10 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP_CALL( SCIPallocBlockMemory(scip, dotdata) );
 
    (*dotdata)->file = file;
+   SCIP_CALL( SCIPexpriteratorCreate(&(*dotdata)->iterator, consexprhdlr, SCIPblkmem(scip)) );
    (*dotdata)->closefile = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->visitedexprs, SCIPblkmem(scip), 1000) );
    (*dotdata)->whattoprint = whattoprint;
+   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->leaveexprs, SCIPblkmem(scip), 100) );
 
    SCIPinfoMessage(scip, file, "strict digraph exprgraph {\n");
    SCIPinfoMessage(scip, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
@@ -8741,6 +8644,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
 /** initializes printing of expressions in dot format to a file with given filename */
 SCIP_RETCODE SCIPprintConsExprExprDotInit2(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    const char*             filename,         /**< name of file to print to */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
@@ -8758,7 +8662,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit2(
       return SCIP_FILECREATEERROR;
    }
 
-   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, dotdata, f, whattoprint) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, consexprhdlr, dotdata, f, whattoprint) );
    (*dotdata)->closefile = TRUE;
 
    return SCIP_OKAY;
@@ -8770,10 +8674,97 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
    )
 {
+   SCIP_Real color;
+   int c;
+
+   assert(scip != NULL);
    assert(dotdata != NULL);
    assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExprDot, NULL, NULL, NULL, (void*)dotdata) );
+   SCIP_CALL( SCIPexpriteratorInit(dotdata->iterator, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   while( !SCIPexpriteratorIsEnd(dotdata->iterator) )
+   {
+      /* print expression as dot node */
+
+      if( SCIPgetConsExprExprNChildren(expr) == 0 )
+      {
+         SCIP_CALL( SCIPhashmapInsert(dotdata->leaveexprs, (void*)expr, NULL) );
+      }
+
+      /* make up some color from the expression type (it's name) */
+      color = 0.0;
+      for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
+         color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+      color = SCIPfrac(scip, color);
+      SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
+      {
+         SCIPinfoMessage(scip, dotdata->file, "%s\\n", SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
+      {
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, -1, 0, dotdata->file) );
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, c, 0, dotdata->file) );
+            SCIPinfoMessage(scip, dotdata->file, "c%d", c);
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, c, 0, dotdata->file) );
+         }
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, -1, 0, dotdata->file) );
+
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+      {
+         /* print number of uses */
+         SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+      {
+         /* print number of locks */
+         SCIPinfoMessage(scip, dotdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
+      {
+         /* print eval value */
+         SCIPinfoMessage(scip, dotdata->file, "val=%g", expr->evalvalue);
+
+         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALTAG) == SCIP_CONSEXPR_PRINTDOT_EVALTAG )
+         {
+            /* print also eval tag */
+            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->evaltag);
+         }
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
+      {
+         /* print interval value */
+         SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
+
+         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
+         {
+            /* print also interval eval tag */
+            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
+         }
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      SCIPinfoMessage(scip, dotdata->file, "\"]\n");  /* end of label and end of node */
+
+      /* add edges from expr to its children */
+      for( c = 0; c < expr->nchildren; ++c )
+         SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
+
+      expr = SCIPexpriteratorGetNext(dotdata->iterator);
+   }
 
    return SCIP_OKAY;
 }
@@ -8797,24 +8788,26 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
 
    /* iterate through all entries of the map */
    SCIPinfoMessage(scip, file, "{rank=same;");
-   for( i = 0; i < SCIPhashmapGetNEntries((*dotdata)->visitedexprs); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries((*dotdata)->leaveexprs); ++i )
    {
-      entry = SCIPhashmapGetEntry((*dotdata)->visitedexprs, i);
+      entry = SCIPhashmapGetEntry((*dotdata)->leaveexprs, i);
 
       if( entry != NULL )
       {
          expr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetOrigin(entry);
          assert(expr != NULL);
+         assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-         if( SCIPgetConsExprExprNChildren(expr) == 0 )
-            SCIPinfoMessage(scip, file, " n%p", expr);
+         SCIPinfoMessage(scip, file, " n%p", expr);
       }
    }
    SCIPinfoMessage(scip, file, "}\n");
 
    SCIPinfoMessage(scip, file, "}\n");
 
-   SCIPhashmapFree(&(*dotdata)->visitedexprs);
+   SCIPhashmapFree(&(*dotdata)->leaveexprs);
+
+   SCIPexpriteratorFree(&(*dotdata)->iterator);
 
    if( (*dotdata)->closefile )
       fclose((*dotdata)->file);
@@ -8854,7 +8847,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    }
 
    /* print all of the expression into the pipe */
-   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
    SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, expr) );
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
 
