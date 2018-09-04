@@ -106,7 +106,7 @@ static int nextlpid                 =  1;
 #define WRITE_DUAL                   0
 #define WRITE_PRIMAL                 0
 #define WRITE_INTPNT                 0
-#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0
+#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0 || FORCE_MOSEK_LOG > 0 || FORCE_MOSEK_SUMMARY > 0
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
@@ -3282,7 +3282,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
-   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
+   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS || (prosta == MSK_PRO_STA_DUAL_INFEAS && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
