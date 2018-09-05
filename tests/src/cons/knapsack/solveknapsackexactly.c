@@ -24,15 +24,32 @@
 #include "include/scip_test.h"
 
 #define EPS 1e-06
+#define MAX_ARRAYLEN 1000
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip;
+static SCIP_Longint weights[MAX_ARRAYLEN];
+static int nitems;
+static SCIP_Real profits[MAX_ARRAYLEN];
+static int items[MAX_ARRAYLEN];
+static int solitems[MAX_ARRAYLEN];
+static int nonsolitems[MAX_ARRAYLEN];
+static SCIP_Longint capacity;
+static SCIP_Bool success;
+static SCIP_Real solval;
+static int nnonsolitems;
+static int nsolitems = -1;
 
 /* TEST SUITE */
 static
 void setup(void)
 {
+   int i;
    SCIPcreate(&scip);
+
+   /* assign items */
+   for( i = 0; i < MAX_ARRAYLEN; ++i )
+      items[i] = i;
 }
 
 static
@@ -41,32 +58,57 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
+/** run exact knapsack algorithm on the given data  */
+static
+SCIP_RETCODE solveKnapsack(
+   void
+   )
+{
+   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+
+   return SCIP_OKAY;
+}
+
+/** is set1 contained in set2? */
+static
+SCIP_Bool checkSetContainment(
+   int*                  set1,
+   int*                  set2,
+   int                   len1,
+   int                   len2
+   )
+{
+   int j;
+   int sortedset2 [MAX_ARRAYLEN];
+   cr_assert(len1 <= MAX_ARRAYLEN);
+   cr_assert(len2 <= MAX_ARRAYLEN);
+
+   if( len1 > len2 )
+      return FALSE;
+
+   BMScopyMemoryArray(sortedset2, set2, len2);
+   SCIPsortInt(sortedset2, len2);
+
+   /* find each item of set 1 in set 2 */
+   for( j = 0; j < len1; ++j )
+   {
+      int pos;
+      if( ! SCIPsortedvecFindInt(sortedset2, set1[j], len2, &pos) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 TestSuite(solveknapsackexactly, .init = setup, .fini = teardown);
 
 /* TESTS  */
 
-/** test trivial cases */
-Test(solveknapsackexactly, test1)
+/*
+ * test trivial cases
+ */
+Test(solveknapsackexactly, test1, .description="check whether the case that all items are redundant is caught correctly")
 {
-   int nitems;
-   SCIP_Longint weights[5];
-   SCIP_Real profits[5];
-   int items[5];
-   int solitems[5];
-   int nonsolitems[5];
-   SCIP_Longint capacity;
-   SCIP_Bool success;
-   SCIP_Real solval;
-   int nnonsolitems;
-   int nsolitems;
-
-   items[0] = 0;
-   items[1] = 1;
-   items[2] = 2;
-   items[3] = 3;
-   items[4] = 4;
-
-   /* check whether the case that all items are redundant is caught correctly */
    nitems = 2;
    capacity = 1LL;
    weights[0] = 2LL;
@@ -74,14 +116,17 @@ Test(solveknapsackexactly, test1)
    profits[0] = 1.0;   /* should not be taken, since capacity is too large */
    profits[1] = -1.0;  /* should not be taken, since profit is negative */
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 0 );
    cr_assert( nnonsolitems == 2 );
    cr_assert_float_eq(solval, 0.0, EPS);
+}
 
-   /* test whether the correct items are sorted out (weight == 0 or negative profit) - also tests whether the case of
-    * all items fitting into the knapsack is caught correctly. */
+Test(solveknapsackexactly, test2, .description="test whether the correct items are sorted out (weight == 0 or negative profit)")
+{
+   /* also tests whether the case of all items fitting into the knapsack is caught correctly. */
    nitems = 5;
    capacity = 1LL;
    weights[0] = 0LL;
@@ -93,10 +138,11 @@ Test(solveknapsackexactly, test1)
    profits[0] = 1.0;   /* should take item 1, since weight is 0 */
    profits[1] = -1.0;  /* should not take item 1, since profit is negative, although weight is 0 */
    profits[2] = 1.0;   /* should not take item 2, since weight is too large */
-   profits[3] = -1.0;  /* should not take item 2, since weight is too large */
+   profits[3] = -1.0;  /* should not take item 3, since weight is too large and profit is negative */
    profits[4] = 1.0;   /* should take item */
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 2 );
    cr_assert( nnonsolitems == 3 );
@@ -106,8 +152,10 @@ Test(solveknapsackexactly, test1)
    cr_assert( nonsolitems[1] == 2 );
    cr_assert( nonsolitems[2] == 3 );
    cr_assert_float_eq(solval, 2.0, EPS);
+}
 
-   /* test whether the case of all equal weights is handled correctly */
+Test(solveknapsackexactly, test3, .description="test whether the case of all equal weights is handled correctly")
+{
    nitems = 4;
    capacity = 4LL;
    weights[0] = 2LL;
@@ -120,15 +168,18 @@ Test(solveknapsackexactly, test1)
    profits[2] = 3.0;
    profits[3] = 4.0;
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 2 );
    cr_assert( nnonsolitems == 2 );
    cr_assert( (solitems[0] == 2 && solitems[1] == 3) || (solitems[0] == 3 && solitems[1] == 2) );
    cr_assert( (nonsolitems[0] == 0 && nonsolitems[1] == 1) || (nonsolitems[0] == 1 && nonsolitems[1] == 0) );
    cr_assert_float_eq(solval, 7.0, EPS);
+}
 
-   /* test whether the case that only one item fits into the knapsack is handled correctly */
+Test(solveknapsackexactly, test4, .description="test whether the case that only one item fits into the knapsack is handled correctly")
+{
    nitems = 3;
    capacity = 3LL;
    weights[0] = 2LL;
@@ -139,7 +190,8 @@ Test(solveknapsackexactly, test1)
    profits[1] = 2.0;
    profits[2] = 1.0;
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 1 );
    cr_assert( nnonsolitems == 2 );
@@ -148,28 +200,10 @@ Test(solveknapsackexactly, test1)
    cr_assert_float_eq(solval, 3.0, EPS);
 }
 
-
-/** test greedy algorithm */
-Test(solveknapsackexactly, test2)
+Test(solveknapsackexactly, test_greedy1, .description="test greedy algorithm")
 {
-   int nitems;
-   SCIP_Longint weights[3];
-   SCIP_Real profits[3];
-   int items[3];
-   int solitems[3];
-   int nonsolitems[3];
-   SCIP_Longint capacity;
-   SCIP_Bool success;
-   SCIP_Real solval;
-   int nnonsolitems;
-   int nsolitems;
-
-   nitems = 3;
-   items[0] = 0;
-   items[1] = 1;
-   items[2] = 2;
-
    capacity = 3LL;
+   nitems = 3;
    weights[0] = 1LL;
    weights[1] = 2LL;
    weights[2] = 1LL;
@@ -182,16 +216,20 @@ Test(solveknapsackexactly, test2)
     * optimal, since we used all the capacity and this solution is an integral optimal solution. So the greedy algorithm
     * should allow to terminate the process. Note, however, that this cannot be seen from the outside, so, e.g., a
     * debugger has to be used. */
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 2 );
    cr_assert( nnonsolitems == 1 );
    cr_assert( (solitems[0] == 0 && solitems[1] == 1) || (solitems[0] == 1 && solitems[1] == 0) );
    cr_assert( nonsolitems[0] == 2 );
    cr_assert_float_eq(solval, 5, EPS);
+}
 
-   /* test whether greedy solution is equal to the rounded LP value */
+Test(solveknapsackexactly, test_greedy2, .description="test whether greedy solution is equal to the rounded LP value")
+{
    capacity = 4LL;
+   nitems = 3;
    weights[0] = 1LL;
    weights[1] = 2LL;
    weights[2] = 2LL;
@@ -200,39 +238,19 @@ Test(solveknapsackexactly, test2)
    profits[1] = 1.0;
    profits[2] = 1.0;
 
-   /* the solution packs one item and is optimal, since the LP optimal value is 1.5 */
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
+   /* the solution packs two items and is optimal, since the LP optimal value is 4.5 */
    cr_assert( success );
    cr_assert( nsolitems == 2 );
    cr_assert( nnonsolitems == 1 );
    cr_assert_float_eq(solval, 4.0, EPS);
 }
 
-
-/** general test */
-Test(solveknapsackexactly, test3)
+Test(solveknapsackexactly, test_general, .description="general test")
 {
-   int nitems;
-   SCIP_Longint weights[6];
-   SCIP_Real profits[6];
-   int items[6];
-   int solitems[6];
-   int nonsolitems[6];
-   SCIP_Longint capacity;
-   SCIP_Bool success;
-   SCIP_Real solval;
-   int nnonsolitems;
-   int nsolitems;
-
-   nitems = 6;
-   items[0] = 0;
-   items[1] = 1;
-   items[2] = 2;
-   items[3] = 3;
-   items[4] = 4;
-   items[5] = 5;
-
    capacity = 13LL;
+   nitems = 6;
    weights[0] = 7LL;
    weights[1] = 2LL;
    weights[2] = 7LL;
@@ -247,7 +265,8 @@ Test(solveknapsackexactly, test3)
    profits[4] = 1.0;
    profits[5] = 1.0;
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
    cr_assert( nsolitems == 4 );
    cr_assert( nnonsolitems == 2 );
@@ -255,52 +274,34 @@ Test(solveknapsackexactly, test3)
    cr_assert_float_eq(solval, 4.0, EPS);
 }
 
-
-/** large test */
-Test(solveknapsackexactly, test4)
+/* large test */
+Test(solveknapsackexactly, test_large, .description="large test")
 {
-   int nitems;
-   SCIP_Longint* weights;
-   SCIP_Real* profits;
-   int* items;
-   int* solitems;
-   int* nonsolitems;
-   SCIP_Longint capacity;
-   SCIP_Bool success;
-   SCIP_Real solval;
-   int nnonsolitems;
-   int nsolitems;
    int j;
 
    nitems = 1000;
-   SCIP_CALL( SCIPallocBufferArray(scip, &items, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &profits, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &solitems, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nonsolitems, nitems) );
 
+   capacity = nitems + 1;
+   /* half of the items have a weight of 2 and a smaller profit */
    for (j = 0; j < nitems/2; ++j)
    {
-      items[j] = j;
       weights[j] = 2LL;
       profits[j] = j;
    }
+
+   /* the remaining half of the items have a weight of 1 but a larger profit. All of them should be selected */
    for (j = nitems/2; j < nitems; ++j)
    {
-      items[j] = j;
       weights[j] = 1LL;
       profits[j] = j;
    }
-   capacity = nitems + 1;
 
-   SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, weights, profits, capacity, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, &solval, &success) );
+   solveKnapsack();
+
    cr_assert( success );
-   cr_assert( nsolitems == 750 );
+   cr_assert( nsolitems == 750 ); /* the 500 latter items with higher profit, and 250 of the less profitable items */
    cr_assert( nnonsolitems == nitems - 750 );
-
-   SCIPfreeBufferArray(scip, &nonsolitems);
-   SCIPfreeBufferArray(scip, &solitems);
-   SCIPfreeBufferArray(scip, &profits);
-   SCIPfreeBufferArray(scip, &weights);
-   SCIPfreeBufferArray(scip, &items);
+   cr_assert( checkSetContainment(&items[nitems/2], solitems, nitems / 2, nsolitems) );
+   cr_assert( checkSetContainment(&items[250], solitems, 250, nsolitems) );
+   cr_assert( checkSetContainment(items, nonsolitems, 250, nnonsolitems) );
 }
