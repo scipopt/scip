@@ -13,6 +13,8 @@ Features
 Performance improvements
 ------------------------
 
+- extended cut presolving staff by removing variable that have already be fixed at their bounds from the cut
+
 Examples and applications
 -------------------------
 
@@ -43,6 +45,13 @@ Interface changes
 
 ### Data structures
 
+### Build system
+
+- The default value for DFLAGS in the non-cmake buildsystem has changed from -MM to -MMD. This will break the
+  generation of depend.* files if that was done by a compiler call that relied on -MM. The new preferred way
+  to handle compilation dependencies is to additionally use $(DFLAGS) when compiling the object files (.o) and
+  to include the generated .d files in the Makefile, see also "Build system / Makefile" below.
+
 Deleted files
 -------------
 
@@ -58,6 +67,10 @@ Build system
 ### Cmake
 
 ### Makefile
+
+- Removed static object compilation dependency files (depend.*). If using a GCC compatible compiler, then dependency
+  files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
+  file (.o) in the corresponding obj subdirectory.
 
 Fixed bugs
 ----------
@@ -75,6 +88,8 @@ Known bugs
 
 Features
 --------
+
+- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
 Performance improvements
 ------------------------
@@ -115,12 +130,17 @@ Build system
 
 ### Cmake
 
+- add missing GMP dependency when compiling with SYM=bliss
+- add DL library when linking to CPLEX to avoid linker errors
+
 ### Makefile
 
 Fixed bugs
 ----------
 
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
+- fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
+- the STO reader is capable of handling scenarios defined using lower case "rhs"
 
 Miscellaneous
 -------------

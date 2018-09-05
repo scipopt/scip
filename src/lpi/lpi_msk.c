@@ -51,7 +51,9 @@
 #define scipmskobjsen MSKobjsensee
 #define SENSE2MOSEK(objsen) (((objsen)==SCIP_OBJSEN_MINIMIZE)?(MSK_OBJECTIVE_SENSE_MINIMIZE):(MSK_OBJECTIVE_SENSE_MAXIMIZE))
 
-#define MOSEK_CALL(x)  do                                                                                     \
+typedef enum MSKoptimizertype_enum MSKoptimizertype;
+
+#define MOSEK_CALL(x)  do                                               \
                        {  /*lint --e{641}*/                                                                   \
                           MSKrescodee _restat_;                                                               \
                           _restat_ = (x);                                                                     \
@@ -105,7 +107,7 @@ static int nextlpid                 =  1;
 #define WRITE_DUAL                   0
 #define WRITE_PRIMAL                 0
 #define WRITE_INTPNT                 0
-#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0
+#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0 || FORCE_MOSEK_LOG > 0 || FORCE_MOSEK_SUMMARY > 0
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
@@ -141,6 +143,7 @@ struct SCIP_LPi
    int                   itercount;          /**< iteration count of last optimization run */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting */
    int                   lpid;               /**< id for LP within same task */
+   MSKoptimizertype      lastalgo;           /**< algorithm type of last solving call */
    MSKstakeye*           skx;                /**< basis status for columns */
    MSKstakeye*           skc;                /**< basis status for rows */
    MSKboundkeye*         bkx;                /**< bound keys for columns */
@@ -845,6 +848,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lpid = nextlpid++;
+   (*lpi)->lastalgo = MSK_OPTIMIZER_FREE;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
    (*lpi)->bkx = NULL;
@@ -2448,6 +2452,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 #endif
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_PRIMAL_SIMPLEX) );
+   lpi->lastalgo = MSK_OPTIMIZER_PRIMAL_SIMPLEX;
 
 #if WRITE_PRIMAL > 0
    if( optimizecount > WRITE_ABOVE )
@@ -2519,6 +2524,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->clearstate = FALSE;
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_DUAL_SIMPLEX) );
+   lpi->lastalgo = MSK_OPTIMIZER_DUAL_SIMPLEX;
 
 #if WRITE_DUAL > 0
    if( optimizecount > WRITE_ABOVE )
@@ -2604,7 +2610,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_BASIS, crossover ? MSK_BI_ALWAYS : MSK_BI_NEVER) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_INTPNT) );
-
+   lpi->lastalgo = MSK_OPTIMIZER_INTPNT;
 
 #if WRITE_INTPNT > 0
    if( optimizecount > WRITE_ABOVE )
@@ -3167,9 +3173,13 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
       *primalfeasible = FALSE;
       *dualfeasible = TRUE;
       break;
+   case MSK_PRO_STA_DUAL_INFEAS:
+      /* assume that we have a primal solution if we used the primal simplex */
+      *primalfeasible = (lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX);
+      *dualfeasible = FALSE;
+      break;
    case MSK_PRO_STA_UNKNOWN:
    case MSK_PRO_STA_PRIM_INFEAS:
-   case MSK_PRO_STA_DUAL_INFEAS:
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
@@ -3234,11 +3244,16 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   MSKsolstae solsta;
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return FALSE;
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
+
+   /* assume primal solution and ray is available if we used the primal simplex and the dual is proven to be infeasible */
+   return (solsta == MSK_SOL_STA_DUAL_INFEAS_CER && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3268,7 +3283,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
-   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
+   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS || (prosta == MSK_PRO_STA_DUAL_INFEAS && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3504,6 +3519,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
+   MSKsolstae solsta;
    double* sux = NULL;
    int ncols = 0;
    int i;
@@ -3525,8 +3541,57 @@ SCIP_RETCODE SCIPlpiGetSol(
       SCIP_ALLOC( BMSallocMemoryArray(&sux, ncols) );
    }
 
-   MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
-         primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+   if ( primsol != NULL && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX )
+   {
+      /* If the status shows that the dual is infeasible this is due to the primal being unbounded. In this case, we need
+       * to compute a feasible solution by setting the objective to 0.
+       */
+      MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
+      if ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER )
+      {
+         SCIP_Real* objcoefs;
+         int j;
+
+         MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
+         SCIP_ALLOC( BMSallocMemoryArray(&objcoefs, ncols) );
+
+         /* store old objective coefficients and set them to 0 */
+         for (j = 0; j < ncols; ++j)
+         {
+            MOSEK_CALL( MSK_getcj(lpi->task, j, &objcoefs[j]) );
+            MOSEK_CALL( MSK_putcj(lpi->task, j, 0.0) );
+         }
+
+         /* solve problem again */
+         SCIP_CALL( SolveWSimplex(lpi) );
+
+         /* At this point we assume that the problem is feasible, since we previously ran the primal simplex and it
+          * produced a ray.
+          */
+
+         /* get primal solution */
+         MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+               primsol, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+         /* restore objective */
+         MOSEK_CALL( MSK_putcslice(lpi->task, 0, ncols, objcoefs) );
+
+         /* resolve to restore original status */
+         SCIP_CALL( SolveWSimplex(lpi) );
+
+         BMSfreeMemoryArray(&objcoefs);
+      }
+      else
+      {
+         MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+               primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+      }
+   }
+   else
+   {
+      MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+            primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+   }
 
    /* the reduced costs are given by the difference of the slx and sux variables (third and second to last parameters) */
    if( redcost )

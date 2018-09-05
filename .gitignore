@@ -29,6 +29,7 @@ doc/inc/parameters.set
 doc/**/*.tmp
 .cproject
 .project
+.vscode/
 .settings/
 hooks/
 build/
