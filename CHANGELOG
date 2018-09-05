@@ -7,7 +7,7 @@
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/enableafterrestart" one can now decide to recompute symmetries after a
+- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
   restart or not. Previously one could just turn off symmetry computation after a restart.
 - when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
