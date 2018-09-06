@@ -44,11 +44,11 @@
  *
  * @pre All non-strict settings are global settings, since otherwise, we cannot (efficiently) take care of them.
  *
- * @pre No strict setting algorithm is interrupted early (e.g., by a time or iteration limit), since this may lead to
+ * @pre No non-strict setting algorithm is interrupted early (e.g., by a time or iteration limit), since this may lead to
  * wrong decisions by orbital fixing as well. For example, if cons_setppc in the above toy example starts by fixing
  * \f$x_2 = 0\f$ and is interrupted afterwards, orbital fixing detects that the orbit \f$\{x_1, x_2\}\f$ contains
  * one variable that is fixed to 0, and thus, it fixes \f$x_1\f$ to 0 as well. Thus, after these reductions, every
- * feasible solution has objective 0 which is not optimal. This situation would not occur if the strict setting is
+ * feasible solution has objective 0 which is not optimal. This situation would not occur if the non-strict setting is
  * complete, because then \f$x_1\f$ is globally fixed to 1, and thus, is stabilized in orbital fixing.
  *
  * Note that orbital fixing might lead to wrong results if it is called in repropagation of a node, because the path
