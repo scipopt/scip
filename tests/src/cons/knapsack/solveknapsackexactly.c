@@ -16,6 +16,7 @@
 /**@file   solveknapsackexactly.c
  * @brief  unit tests for exact dynamic programming algorithm for knapsack problem
  * @author Marc Pfetsch
+ * @author Gregor Hendel
  */
 
 #include "scip/cons_knapsack.h"
@@ -26,7 +27,7 @@
 #define EPS 1e-06
 #define MAX_ARRAYLEN 1000
 
-/** GLOBAL VARIABLES **/
+/* GLOBAL VARIABLES */
 static SCIP* scip;
 static SCIP_Longint weights[MAX_ARRAYLEN];
 static int nitems;
@@ -45,6 +46,7 @@ static
 void setup(void)
 {
    int i;
+
    SCIPcreate(&scip);
 
    /* assign items */
@@ -80,6 +82,7 @@ SCIP_Bool checkSetContainment(
 {
    int j;
    int sortedset2 [MAX_ARRAYLEN];
+
    cr_assert(len1 <= MAX_ARRAYLEN);
    cr_assert(len2 <= MAX_ARRAYLEN);
 
@@ -202,8 +205,8 @@ Test(solveknapsackexactly, test4, .description="test whether the case that only 
 
 Test(solveknapsackexactly, test_greedy1, .description="test greedy algorithm")
 {
-   capacity = 3LL;
    nitems = 3;
+   capacity = 3LL;
    weights[0] = 1LL;
    weights[1] = 2LL;
    weights[2] = 1LL;
@@ -228,8 +231,8 @@ Test(solveknapsackexactly, test_greedy1, .description="test greedy algorithm")
 
 Test(solveknapsackexactly, test_greedy2, .description="test whether greedy solution is equal to the rounded LP value")
 {
-   capacity = 4LL;
    nitems = 3;
+   capacity = 4LL;
    weights[0] = 1LL;
    weights[1] = 2LL;
    weights[2] = 2LL;
@@ -249,8 +252,8 @@ Test(solveknapsackexactly, test_greedy2, .description="test whether greedy solut
 
 Test(solveknapsackexactly, test_general, .description="general test")
 {
-   capacity = 13LL;
    nitems = 6;
+   capacity = 13LL;
    weights[0] = 7LL;
    weights[1] = 2LL;
    weights[2] = 7LL;
@@ -280,8 +283,8 @@ Test(solveknapsackexactly, test_large, .description="large test")
    int j;
 
    nitems = 1000;
-
    capacity = nitems + 1;
+
    /* half of the items have a weight of 2 and a smaller profit */
    for (j = 0; j < nitems/2; ++j)
    {
@@ -289,7 +292,7 @@ Test(solveknapsackexactly, test_large, .description="large test")
       profits[j] = j;
    }
 
-   /* the remaining half of the items have a weight of 1 but a larger profit. All of them should be selected */
+   /* the remaining half of the items have a weight of 1 but a larger profit; all of them should be selected */
    for (j = nitems/2; j < nitems; ++j)
    {
       weights[j] = 1LL;
