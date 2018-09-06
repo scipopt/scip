@@ -681,7 +681,7 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    assert(propdata != NULL);
 
    if( propdata->skipprop || SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip)
-      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowObjProp(scip) || SCIPgetNNlpis(scip) == 0 )
+      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowWeakDualReds(scip) || SCIPgetNNlpis(scip) == 0 )
    {
       SCIPdebugMsg(scip, "skip nlobbt propagator\n");
       return SCIP_OKAY;

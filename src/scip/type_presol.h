@@ -125,8 +125,8 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
  *  @note the counters state the changes since the last call including the changes of this presolver during its last
  *        last call
  *
- *  @note if the presolver uses dual information it is nesassary to check via calling SCIPallowDualReds if dual
- *        reductions are allowed.
+ *  @note if the presolver uses dual information it is nesassary to check via calling SCIPallowWeakDualReds and
+ *        SCIPallowStrongDualReds if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers

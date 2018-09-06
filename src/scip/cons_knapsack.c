@@ -12640,7 +12640,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
          if( SCIPconsIsActive(cons) )
          {
-            if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+            if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
             {
                /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the
                 * dual reduction

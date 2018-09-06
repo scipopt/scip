@@ -8170,7 +8170,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8209,11 +8209,11 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
     */
    if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
       && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
-         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip)
+         || (conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip)
                && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
       SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
-            && SCIPallowDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            && SCIPallowStrongDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
             naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )
