@@ -145,7 +145,7 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
    for( i = 0; i < 4; ++i )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, entropyexpr, sol, 0) );
 
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), results[i]));
    }
@@ -156,10 +156,10 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
       randnum = SCIPrandomGetReal(rndgen, 0.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, entropyexpr, sol, 0) );
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, negprodexpr, sol, 0) );
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(negprodexpr), -randnum * log(randnum)));
    }
 }
@@ -304,7 +304,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, expr1));
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), -5.0 * log(5.0)));

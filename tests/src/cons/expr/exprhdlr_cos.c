@@ -141,7 +141,7 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
    for (i = 0; i < 5; ++i)
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), results[i]));
    }
@@ -151,7 +151,7 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
    {
       randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), COS(randnum)));
    }
@@ -203,7 +203,7 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, cosexpr, 0, NULL, NULL) );
 
       interval = SCIPgetConsExprExprInterval(cosexpr);
@@ -216,7 +216,7 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, cosexpr, 0, NULL, NULL) );
 
       interval = SCIPgetConsExprExprInterval(cosexpr);
@@ -290,7 +290,7 @@ Test(cos, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0) );
    SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, expr1) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3) );
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), COS(5.0)));

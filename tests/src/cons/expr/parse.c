@@ -164,7 +164,7 @@ Test(parse, eval)
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, x, vals[p][0]) );
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, y, vals[p][1]) );
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, crazyexpr, crazysol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, crazyexpr, crazysol, 0) );
       SCIPinfoMessage(scip, NULL, "value for x=%g y=%g is %g, expected: %g\n", vals[p][0], vals[p][1], SCIPgetConsExprExprValue(crazyexpr), expvalue);
       if( SCIPgetConsExprExprValue(crazyexpr) == SCIP_INVALID )
          cr_expect(!SCIPisFinite(expvalue));

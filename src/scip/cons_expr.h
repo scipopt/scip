@@ -579,7 +579,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 
 /** evaluate an expression in a point
  *
- * Initiates an expression walk to also evaluate children, if necessary.
+ * Iterates over expressions to also evaluate children, if necessary.
  * Value can be received via SCIPgetConsExprExprEvalValue().
  * If an evaluation error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
@@ -593,6 +593,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 EXTERN
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */

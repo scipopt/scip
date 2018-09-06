@@ -285,6 +285,7 @@ typedef struct
    SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
    unsigned int            brscoretag;       /**< branching score tag */
    SCIP_Bool               evalauxvalues;    /**< whether auxiliary values of expressions need to be evaluated */
+   SCIP_CONSHDLR*          consexprhdlr;     /**< expression constraint handler */
 } BRSCORE_DATA;
 
 struct SCIP_ConsExpr_PrintDotData
@@ -989,66 +990,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
          return SCIP_OKAY;
       }
    }
-}
-
-/** expression walk callback when evaluating expression, called before child is visited */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
-{  /*lint --e{715}*/
-   EXPREVAL_DATA* evaldata;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-
-   evaldata = (EXPREVAL_DATA*)data;
-
-   /* skip child if it has been evaluated for that solution already */
-   if( evaldata->soltag != 0 && evaldata->soltag == expr->children[expr->walkcurrentchild]->evaltag )
-   {
-      if( expr->children[expr->walkcurrentchild]->evalvalue == SCIP_INVALID ) /*lint !e777*/
-      {
-         evaldata->aborted = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      }
-      else
-      {
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      }
-   }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback when evaluating expression, called when expression is left */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
-{  /*lint --e{715}*/
-   EXPREVAL_DATA* evaldata;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-   assert(expr->exprhdlr->eval != NULL);
-
-   evaldata = (EXPREVAL_DATA*)data;
-
-   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, evaldata->sol) );
-   expr->evaltag = evaldata->soltag;
-
-   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
-   {
-      evaldata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-   }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
-
-   return SCIP_OKAY;
 }
 
 /** interval evaluation of variables as used in bound tightening
@@ -3161,7 +3102,7 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, sol, soltag) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, sol, soltag) );
    activity = SCIPgetConsExprExprValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
@@ -4533,7 +4474,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
    }
 
    /* make sure expression has been evaluated, so evalvalue makes sense */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, brscoredata->sol, brscoredata->soltag) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, brscoredata->consexprhdlr, expr, brscoredata->sol, brscoredata->soltag) );
 
    auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
 
@@ -4677,6 +4618,7 @@ SCIP_RETCODE computeBranchingScores(
    brscoredata.minviolation = minviolation;
    brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
    brscoredata.evalauxvalues = evalauxvalues;
+   brscoredata.consexprhdlr = conshdlr;
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -5064,7 +5006,7 @@ SCIP_RETCODE detectNlhdlrs(
             /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
              * in SCIPcreateConsExprExprAuxVar()
              */
-            SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0) );
          }
       }
 #endif
@@ -5391,7 +5333,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       auxvarvalue = SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
 
       /* make sure that this expression has been evaluated */
-      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sepadata->sol, sepadata->soltag) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->soltag) );
 
       /* compute violation and decide whether under- or overestimate is required */
       if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
@@ -8861,7 +8803,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 
 /** evaluate an expression in a point
  *
- * Initiates an expression walk to also evaluate children, if necessary.
+ * Iterates over expressions to also evaluate children, if necessary.
  * Value can be received via SCIPgetConsExprExprEvalValue().
  * If an evaluation error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
@@ -8874,28 +8816,81 @@ SCIP_RETCODE SCIPshowConsExprExpr(
  */
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
-   EXPREVAL_DATA evaldata;
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
 
    /* if value is up-to-date, then nothing to do */
    if( soltag != 0 && expr->evaltag == soltag )
       return SCIP_OKAY;
 
-   evaldata.sol = sol;
-   evaldata.soltag = soltag;
-   evaldata.aborted = FALSE;
+   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
+    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
+    */
+   expr->evalvalue = SCIP_INVALID;
+   expr->evaltag = soltag;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, evalExprVisitChild, NULL, evalExprLeaveExpr, &evaldata) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
-   if( evaldata.aborted )
+   while( !SCIPexpriteratorIsEnd(it) )
    {
-      expr->evalvalue = SCIP_INVALID;
-      expr->evaltag = soltag;
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            if( soltag == 0 )
+               break;
+
+            /* check whether child has been evaluated for that solution already */
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( soltag == child->evaltag )
+            {
+               if( child->evalvalue == SCIP_INVALID ) /*lint !e777*/
+                  goto TERMINATE;
+
+               /* skip this child
+                * this already returns the next one, so continue with loop
+                */
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         {
+            SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
+            expr->evaltag = soltag;
+
+            if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+               goto TERMINATE;
+
+            break;
+         }
+
+         default :
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
    }
+
+TERMINATE:
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -8922,7 +8917,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    /* evaluate expression if necessary */
    if( soltag == 0 || expr->evaltag != soltag )
    {
-      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, soltag) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, expr, sol, soltag) );
    }
 
    /* check if expression could not be evaluated */
