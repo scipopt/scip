@@ -3675,7 +3675,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       * dval=0   No time limit
       */
       assert( dval > 0.0 );
-      ival = (int) -floor(dval);
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
       break;
