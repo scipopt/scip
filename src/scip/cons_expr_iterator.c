@@ -539,7 +539,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
  *
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetUserData(
+SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    )
 {
@@ -548,6 +548,41 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetUserData(
    assert(iterator->iterindex >= 0);
 
    return iterator->curr->iterdata[iterator->iterindex].userdata;
+}
+
+/** gives the iterator specific user data of the current expressions current child
+ *
+ * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ */
+SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetChildUserDataDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
+
+   return iterator->curr->children[iterator->curr->iterdata[iterator->iterindex].currentchild]->iterdata[iterator->iterindex].userdata;
+}
+
+/** gives the iterator specific user data of a given expression
+ *
+ * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(expr != NULL);
+   assert(iterator->iterindex >= 0);
+
+   return expr->iterdata[iterator->iterindex].userdata;
 }
 
 /** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode

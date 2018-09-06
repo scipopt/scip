@@ -397,7 +397,7 @@ Test(iterator, dfs_tree)
          }
 
          case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-            cr_expect(SCIPexpriteratorGetUserData(it).ptrval == tmp);
+            cr_expect(SCIPexpriteratorGetCurrentUserData(it).ptrval == tmp);
             break;
 
          default:

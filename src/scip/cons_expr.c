@@ -201,14 +201,6 @@ struct SCIP_ConshdlrData
    int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
 };
 
-/** data passed on during expression evaluation in a point */
-typedef struct
-{
-   SCIP_SOL*             sol;                /**< solution that is evaluated */
-   unsigned int          soltag;             /**< solution tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
-} EXPREVAL_DATA;
-
 /** data passed on during backward automatic differentiation of an expression at a point */
 typedef struct
 {
@@ -691,83 +683,108 @@ SCIP_RETCODE presolveUpgrade(
  * @{
  */
 
-/** expression walk callback to copy an expression
+/** copies an expression including subexpressions
  *
- * In expr->walkio is given the targetexpr which is expected to hold the copy of expr.
+ * \note If copying fails due to missing copy callbacks, then *targetexpr will be set to NULL.
  */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
+SCIP_RETCODE copyExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  targetexpr,         /**< buffer to store pointer to copy of source expression */
+   SCIP_CONSEXPR_EXPR*   sourceexpr,         /**< expression to be copied */
+   COPY_DATA*            copydata            /**< parametrization of copy */
+   )
 {
-   assert(expr != NULL);
+   SCIP_CONSHDLR* targetconsexprhdlr = NULL;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPREXPRWALK_IO expriteruserdata;
+   SCIP_CONSEXPR_EXPR* expr;
 
-   switch( stage )
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(targetexpr != NULL);
+   assert(sourceexpr != NULL);
+   assert(copydata != NULL);
+
+   if( copydata->targetscip != scip )
+      targetconsexprhdlr = SCIPfindConshdlr(copydata->targetscip, CONSHDLR_NAME);
+   else
+      targetconsexprhdlr = consexprhdlr;
+   assert(targetconsexprhdlr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, sourceexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /*TODO use FALSE, i.e., don't duplicate common subexpr? */
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+
+   expr = sourceexpr;
+   while( !SCIPexpriteratorIsEnd(it) )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         /* create expr that will hold the copy */
-         SCIP_CONSEXPR_EXPR*     targetexpr;
-         SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr;
-         SCIP_CONSEXPR_EXPRDATA* targetexprdata;
-         COPY_DATA* copydata;
-
-         copydata = (COPY_DATA*)data;
-
-         /* get the exprhdlr of the target scip */
-         if( copydata->targetscip != scip )
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
          {
-            SCIP_CONSHDLR* targetconsexprhdlr;
+            /* create expr that will hold the copy */
+            SCIP_CONSEXPR_EXPR* exprcopy;
 
-            targetconsexprhdlr = SCIPfindConshdlr(copydata->targetscip, "expr");
-            assert(targetconsexprhdlr != NULL);
-
-            targetexprhdlr = SCIPfindConsExprExprHdlr(targetconsexprhdlr,
-                  SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-
-            if( targetexprhdlr == NULL )
+            /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
+            if( SCIPisConsExprExprVar(expr) )
             {
-               /* expression handler not in target scip (probably did not have a copy callback) -> abort */
-               expr->walkio.ptrval = NULL;
-               *result = SCIP_CONSEXPREXPRWALK_SKIP;
-               return SCIP_OKAY;
-            }
-         }
-         else
-         {
-            targetexprhdlr = SCIPgetConsExprExprHdlr(expr);
-         }
-         assert(targetexprhdlr != NULL);
+               SCIP_VAR* sourcevar;
+               SCIP_VAR* targetvar;
 
-         /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
-         if( SCIPisConsExprExprVar(expr) )
-         {
-            SCIP_VAR* sourcevar;
-            SCIP_VAR* targetvar;
+               sourcevar = SCIPgetConsExprExprVarVar(expr);
+               assert(sourcevar != NULL);
+               targetvar = NULL;
 
-            sourcevar = SCIPgetConsExprExprVarVar(expr);
-            assert(sourcevar != NULL);
-            targetvar = NULL;
+               /* get the corresponding variable in the target SCIP */
+               if( copydata->mapvar != NULL )
+               {
+                  SCIP_CALL( copydata->mapvar(copydata->targetscip, &targetvar, scip, sourcevar, copydata->mapvardata) );
+                  SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, targetconsexprhdlr, &exprcopy, targetvar) );
 
-            /* get the corresponding variable in the target SCIP */
-            if( copydata->mapvar != NULL )
-            {
-               SCIP_CALL( copydata->mapvar(copydata->targetscip, &targetvar, scip, sourcevar, copydata->mapvardata) );
-               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
-
-               /* we need to release once since it has been captured by the mapvar() and SCIPcreateConsExprExprVar() call */
-               SCIP_CALL( SCIPreleaseVar(copydata->targetscip, &targetvar) );
+                  /* we need to release once since it has been captured by the mapvar() and SCIPcreateConsExprExprVar() call */
+                  SCIP_CALL( SCIPreleaseVar(copydata->targetscip, &targetvar) );
+               }
+               else
+               {
+                  targetvar = sourcevar;
+                  SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, targetconsexprhdlr, &exprcopy, targetvar) );
+               }
             }
             else
             {
-               targetvar = sourcevar;
-               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
-            }
-         }
-         else
-         {
-            /* copy expression data */
-            if( expr->exprhdlr->copydata != NULL )
-            {
-               SCIP_CALL( expr->exprhdlr->copydata(
+               SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr;
+               SCIP_CONSEXPR_EXPRDATA* targetexprdata;
+
+               /* get the exprhdlr of the target scip */
+               if( copydata->targetscip != scip )
+               {
+                  assert(targetconsexprhdlr != NULL);
+
+                  targetexprhdlr = SCIPfindConsExprExprHdlr(targetconsexprhdlr,
+                     SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+
+                  if( targetexprhdlr == NULL )
+                  {
+                     /* expression handler not in target scip (probably did not have a copy callback) -> abort */
+                     expriteruserdata.ptrval = NULL;
+                     SCIPexpriteratorSetUserData(it, expriteruserdata);
+
+                     expr = SCIPexpriteratorSkipDFS(it);
+                     continue;
+                  }
+               }
+               else
+               {
+                  targetexprhdlr = SCIPgetConsExprExprHdlr(expr);
+               }
+               assert(targetexprhdlr != NULL);
+
+               /* copy expression data */
+               if( expr->exprhdlr->copydata != NULL )
+               {
+                  SCIP_CALL( expr->exprhdlr->copydata(
                      copydata->targetscip,
                      targetexprhdlr,
                      &targetexprdata,
@@ -775,92 +792,86 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
                      expr,
                      copydata->mapvar,
                      copydata->mapvardata) );
-            }
-            else if( expr->exprdata != NULL )
-            {
-               /* no copy callback for expression data implemented -> abort
-                * (we could also just copy the exprdata pointer, but for now let's say that
-                *  an expression handler should explicitly implement this behavior, if desired)
-                */
-               expr->walkio.ptrval = NULL;
-               *result = SCIP_CONSEXPREXPRWALK_SKIP;
-               return SCIP_OKAY;
-            }
-            else
-            {
-               targetexprdata = NULL;
+               }
+               else if( expr->exprdata != NULL )
+               {
+                  /* no copy callback for expression data implemented -> abort
+                   * (we could also just copy the exprdata pointer, but for now let's say that
+                   *  an expression handler should explicitly implement this behavior, if desired)
+                   */
+                  expriteruserdata.ptrval = NULL;
+                  SCIPexpriteratorSetUserData(it, expriteruserdata);
+
+                  expr = SCIPexpriteratorSkipDFS(it);
+                  continue;
+               }
+               else
+               {
+                  targetexprdata = NULL;
+               }
+
+               /* create in targetexpr an expression of the same type as expr, but without children for now */
+               SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL) );
             }
 
-            /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr, targetexprhdlr, targetexprdata, 0, NULL) );
+            /* store targetexpr */
+            expriteruserdata.ptrval = exprcopy;
+            SCIPexpriteratorSetUserData(it, expriteruserdata);
+
+            break;
          }
 
-         /* store targetexpr */
-         expr->walkio.ptrval = targetexpr;
-
-         /* continue */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      {
-         /* just visited child so a copy of himself should be available; append it */
-         SCIP_CONSEXPR_EXPR* child;
-         SCIP_CONSEXPR_EXPR* targetchild;
-         SCIP_CONSEXPR_EXPR* targetexpr;
-         COPY_DATA* copydata;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-
-         child = expr->children[expr->walkcurrentchild];
-         copydata = (COPY_DATA*)data;
-
-         /* get copy of child */
-         targetchild = (SCIP_CONSEXPR_EXPR*)child->walkio.ptrval;
-
-         if( targetchild == NULL )
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
          {
-            /* release targetexpr (should free also the already copied children) */
-            SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, (SCIP_CONSEXPR_EXPR**)&expr->walkio.ptrval) );
+            /* just visited child so a copy of himself should be available; append it */
+            SCIP_CONSEXPR_EXPR* exprcopy;
+            SCIP_CONSEXPR_EXPR* childcopy;
 
-            /* abort */
-            *result = SCIP_CONSEXPREXPRWALK_SKIP;
-            return SCIP_OKAY;
+            exprcopy = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetCurrentUserData(it).ptrval;
+
+            /* get copy of child */
+            childcopy = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            if( childcopy == NULL )
+            {
+               /* abort */
+               /* release exprcopy (should free also the already copied children) */
+               SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, (SCIP_CONSEXPR_EXPR**)&exprcopy) );
+
+               expriteruserdata.ptrval = NULL;
+               SCIPexpriteratorSetUserData(it, expriteruserdata);
+
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            /* append child to exprcopy */
+            SCIP_CALL( SCIPappendConsExprExpr(copydata->targetscip, exprcopy, childcopy) );
+
+            /* release childcopy (still captured by exprcopy) */
+            SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, &childcopy) );
+
+            break;
          }
 
-         /* append child to copyexpr */
-         targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
-         SCIP_CALL( SCIPappendConsExprExpr(copydata->targetscip, targetexpr, targetchild) );
-
-         /* release targetchild (captured by targetexpr) */
-         SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, &targetchild) );
-
-         return SCIP_OKAY;
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            /* we should never be called in this stage */
+            SCIPABORT();
+            break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         COPY_DATA* copydata;
-
-         /* store the copied expression in the copydata, in case this expression was the root, for which the walkio will be cleared */
-         copydata = (COPY_DATA*)data;
-         copydata->targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      default:
-      {
-         SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
+      expr = SCIPexpriteratorGetNext(it);
    }
+
+   /* the target expression should be stored in the userdata of the sourceexpr (can be NULL if aborted) */
+   *targetexpr = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, sourceexpr).ptrval;
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
 }
+
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
@@ -6419,8 +6430,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
    copydata.mapvardata = NULL;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   targetexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(scip, conshdlr, &targetexpr, sourceexpr, &copydata) );
 
    if( targetexpr == NULL )
    {
@@ -6933,8 +6943,7 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    copydata.mapvardata = &mapvardata;
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   targetexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(sourcescip, sourceconshdlr, &targetexpr, sourceexpr, &copydata) );
 
    if( targetexpr == NULL )
    {
@@ -8526,7 +8535,7 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ALLSTAGES);
 
    while( !SCIPexpriteratorIsEnd(it) )
    {
@@ -8840,7 +8849,7 @@ SCIP_RETCODE SCIPevalConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
 
    while( !SCIPexpriteratorIsEnd(it) )
    {
@@ -8881,7 +8890,10 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             break;
          }
 
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
          default :
+            /* we should never be here */
             SCIPABORT();
             break;
       }
@@ -10270,6 +10282,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
  */
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
    )
@@ -10280,8 +10293,7 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    copydata.mapvar = NULL;
    copydata.mapvardata = NULL;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   *copyexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(scip, consexprhdlr, copyexpr, expr, &copydata) );
 
    return SCIP_OKAY;
 }
