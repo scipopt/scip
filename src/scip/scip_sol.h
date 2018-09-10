@@ -1141,7 +1141,7 @@ SCIP_RETCODE SCIPretransformSol(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** reads a given solution file, problem has to be transformed in advance
+/** reads a given solution file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
