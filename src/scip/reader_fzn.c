@@ -3976,7 +3976,7 @@ SCIP_RETCODE appendBuffer(
    }
 
    /* append extension to linebuffer - safe to use strcpy */
-   (void)strcpy((*buffer) + (*bufferpos), extension);
+   (void)SCIPstrncpy((*buffer) + (*bufferpos), extension, (int)strlen(extension));
    *bufferpos = newpos;
 
    return SCIP_OKAY;
