@@ -3919,11 +3919,19 @@ SCIP_RETCODE getActiveVariables(
       }
    }
    else
+   {
+      if( *nvars > 0 && (vars == NULL || scalars == NULL) )
+      {
+         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
       {
-         assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
       }
+   }
 
    return SCIP_OKAY;
 }
