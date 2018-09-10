@@ -8480,7 +8480,7 @@ SCIP_Bool SCIPallowDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
 }
 
 /** returns whether strong dual reductions are allowed during propagation and presolving
@@ -8495,7 +8495,7 @@ SCIP_Bool SCIPallowStrongDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
 }
 
 /** returns whether propagation w.r.t. current objective is allowed
@@ -8508,7 +8508,7 @@ SCIP_Bool SCIPallowObjProp(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** returns whether weak dual reductions are allowed during propagation and presolving
@@ -8522,7 +8522,7 @@ SCIP_Bool SCIPallowWeakDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** marks the variable that it must not be multi-aggregated
