@@ -6491,12 +6491,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    if ( rowlb != NULL )
    {
       SCIP_Bool useboundvar;
-      int cnt;
+      int cnt = 0;
       int j;
 
       /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
        * case then the bound constraint can be strengthened */
-      cnt = 0;
       locallbs = local;
       useboundvar = strengthen;
       for (j = 0; j < nnodes; ++j)
@@ -6525,7 +6524,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
                {
                   locallbs = TRUE;
-                  val = SCIPvarGetUbLocal(var);
+                  val = SCIPvarGetLbLocal(var);
                }
             }
          }
