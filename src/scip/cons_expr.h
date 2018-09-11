@@ -655,7 +655,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
 /** adds branching score to an expression

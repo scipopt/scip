@@ -208,19 +208,6 @@ typedef struct
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
 } EXPRBWDIFF_DATA;
 
-/** data passed on during expression forward propagation */
-typedef struct
-{
-   unsigned int          boxtag;             /**< box tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
-   SCIP_Bool             force;              /**< force tightening even if below bound strengthening tolerance */
-   SCIP_Bool             tightenauxvars;     /**< should the bounds of auxiliary variables be tightened? */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)); /**< function to call to evaluate interval of variable, or NULL to take intervals verbatim */
-   void*                 intevalvardata;     /**< data to be passed to intevalvar call */
-   int                   ntightenings;       /**< number of tightenings found */
-   SCIP_CONSHDLR*        consexprhdlr;       /**< expression constraint handler */
-} FORWARDPROP_DATA;
-
 /** data passed on during collecting all expression variables */
 typedef struct
 {
@@ -891,17 +878,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
    return SCIP_OKAY;
 }
 
-
-/** @name Walking methods
- *
- * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
- * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
- * To avoid this issue, the method SCIPwalkConsExprExprDF is introduced to traverse the tree and execute callbacks
- * at different places. Here are the callbacks needed for performing the mentioned operations.
- *
- * @{
- */
-
 /** interval evaluation of variables as used in bound tightening
  *
  * Returns slightly relaxed local variable bounds of a variable as interval.
@@ -1006,7 +982,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    return interval;
 }
 
-
 /** interval evaluation of variables as used in redundancy check
  *
  * Returns local variable bounds of a variable, relaxed by feastol, as interval.
@@ -1044,195 +1019,15 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
-/** expression walk callback for forward propagation, called before child is visited */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprVisitChild)
-{  /*lint --e{715}*/
-   FORWARDPROP_DATA* propdata;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-
-   propdata = (FORWARDPROP_DATA*)data;
-
-   /* skip child if it has been evaluated already */
-   if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag && !expr->hastightened )
-   {
-      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->children[expr->walkcurrentchild]->interval) )
-      {
-         propdata->aborted = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      }
-      else
-      {
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      }
-   }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback for forward propagation, called when expression is left */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   FORWARDPROP_DATA* propdata;
-   SCIP_INTERVAL interval;
-   SCIP_INTERVAL nlhdlrinterval;
-   SCIP_Bool intersect;
-   int ntightenings = 0;
-   int e;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-
-   propdata = (FORWARDPROP_DATA*)data;
-
-   /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
-    * far, i.e., expr->intevaltag != propdata->boxtag
-    */
-   if( propdata->boxtag == 0 || expr->intevaltag != propdata->boxtag )
-   {
-      expr->intevaltag = propdata->boxtag;
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
-      expr->hastightened = FALSE;
-      intersect = FALSE;
-   }
-   else
-   {
-      assert(expr->intevaltag == propdata->boxtag);
-
-      /* the interval of the expression is valid, but did not change since the last call -> skip this expression */
-      if( !expr->hastightened )
-      {
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      /* intersect result with existing interval */
-      intersect = TRUE;
-   }
-
-   if( intersect )
-   {
-      /* start with interval that is stored in expression */
-      interval = expr->interval;
-
-      /* intersect with the interval of the auxiliary variable, if available */
-      if( expr->auxvar != NULL )
-      {
-         SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
-         SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
-         SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
-         SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
-         SCIP_INTERVAL auxinterval;
-
-         SCIPintervalSetBounds(&auxinterval, inf, sup);
-         SCIPintervalIntersect(&interval, interval, auxinterval);
-
-         /* check whether resulting interval is already empty */
-         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
-         {
-            *result = SCIP_CONSEXPREXPRWALK_ABORT;
-            propdata->aborted = TRUE;
-            return SCIP_OKAY;
-         }
-      }
-   }
-   else
-   {
-      /* start with infinite interval [-inf,+inf] */
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   }
-
-   assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
-   if( expr->nenfos > 0 )
-   {
-      /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
-      for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
-      {
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         assert(nlhdlr != NULL);
-
-         /* skip nlhdlr if it does not provide interval evaluation */
-         if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
-            continue;
-
-         /* let nlhdlr evaluate current expression */
-         nlhdlrinterval = interval;
-         SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->intevalvar, propdata->intevalvardata) );
-         SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
-         SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
-#endif
-
-         /* intersect with interval */
-         SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
-      }
-   }
-   else
-   {
-      /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, propdata->intevalvar, propdata->intevalvardata) );
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
-      SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
-#endif
-   }
-
-   if( intersect )
-   {
-      /* make sure resulting interval is subset of expr->interval, if intersect is true
-       * even though we passed expr->interval as input to the inteval callbacks,
-       * these callbacks might not have taken it into account (most do not, actually)
-       */
-      SCIPintervalIntersect(&interval, interval, expr->interval);
-   }
-
-   /* check whether the resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
-   {
-      SCIPintervalSetEmpty(&expr->interval);
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      propdata->aborted = TRUE;
-      return SCIP_OKAY;
-   }
-
-   if( propdata->tightenauxvars )
-   {
-      /* tighten bounds of expression interval and the auxiliary variable */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, propdata->force, NULL, &propdata->aborted, &ntightenings) );
-
-      if( propdata->aborted )
-      {
-         SCIPintervalSetEmpty(&expr->interval);
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      /* update expression interval */
-      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
-   }
-
-   /* continue with forward propagation */
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* update statistics */
-   if( propdata->ntightenings != -1 )
-      propdata->ntightenings += ntightenings;
-
-   return SCIP_OKAY;
-}
+/** @name Walking methods
+ *
+ * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
+ * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
+ * To avoid this issue, the method SCIPwalkConsExprExprDF is introduced to traverse the tree and execute callbacks
+ * at different places. Here are the callbacks needed for performing the mentioned operations.
+ *
+ * @{
+ */
 
 /** expression walker callback for propagating expression locks */
 static
@@ -2260,7 +2055,7 @@ static
 SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable, or NULL */
@@ -2270,10 +2065,12 @@ SCIP_RETCODE forwardPropExpr(
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
    )
 {
-   FORWARDPROP_DATA propdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool aborted;
 
    assert(scip != NULL);
-   assert(expr != NULL);
+   assert(rootexpr != NULL);
 
    if( infeasible != NULL )
       *infeasible = FALSE;
@@ -2281,36 +2078,197 @@ SCIP_RETCODE forwardPropExpr(
       *ntightenings = 0;
 
    /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && expr->intevaltag == boxtag && !expr->hastightened )
+   if( boxtag != 0 && rootexpr->intevaltag == boxtag && !rootexpr->hastightened )
       return SCIP_OKAY;
 
-   propdata.aborted = FALSE;
-   propdata.boxtag = boxtag;
-   propdata.force = force;
-   propdata.tightenauxvars = tightenauxvars;
-   propdata.intevalvar = intevalvar;
-   propdata.intevalvardata = intevalvardata;
-   propdata.ntightenings = (ntightenings == NULL) ? -1 : 0;
-   propdata.consexprhdlr = consexprhdlr;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, forwardPropExprVisitChild, NULL, forwardPropExprLeaveExpr,
-      &propdata) );
+   for( expr = SCIPexpriteratorGetCurrent(it), aborted = FALSE; !SCIPexpriteratorIsEnd(it) && !aborted;  )
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( boxtag != 0 && boxtag == child->intevaltag && !expr->hastightened )
+            {
+               /* skip child if it has been evaluated already and current expr is not tightened */
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->interval) )
+               {
+                  aborted = TRUE;
+                  break;
+               }
+
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         {
+            SCIP_Bool intersect;
+            SCIP_INTERVAL interval;
+
+            /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
+             * far, i.e., expr->intevaltag != boxtag
+             */
+            if( boxtag == 0 || expr->intevaltag != boxtag )
+            {
+               expr->intevaltag = boxtag;
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
+               expr->hastightened = FALSE;
+               intersect = FALSE;
+            }
+            else
+            {
+               assert(expr->intevaltag == boxtag);
+
+               /* the interval of the expression is valid, but did not change since the last call -> done with this expression */
+               if( !expr->hastightened )
+                  break;
+
+               /* intersect result with existing interval */
+               intersect = TRUE;
+            }
+
+            if( intersect )
+            {
+               /* start with interval that is stored in expression */
+               interval = expr->interval;
+
+               /* intersect with the interval of the auxiliary variable, if available */
+               if( expr->auxvar != NULL )
+               {
+                  SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
+                  SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
+                  /* TODO use intevalvar? */
+                  SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
+                  SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
+                  SCIP_INTERVAL auxinterval;
+
+                  SCIPintervalSetBounds(&auxinterval, inf, sup);
+                  SCIPintervalIntersect(&interval, interval, auxinterval);
+
+                  /* check whether resulting interval is already empty */
+                  if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+                  {
+                     aborted = TRUE;
+                     break;
+                  }
+               }
+            }
+            else
+            {
+               /* start with infinite interval [-inf,+inf] */
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+            }
+
+            assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+            if( expr->nenfos > 0 )
+            {
+               SCIP_CONSEXPR_NLHDLR* nlhdlr;
+               SCIP_INTERVAL nlhdlrinterval;
+               int e;
+
+               /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
+               for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+               {
+                  nlhdlr = expr->enfos[e]->nlhdlr;
+                  assert(nlhdlr != NULL);
+
+                  /* skip nlhdlr if it does not provide interval evaluation */
+                  if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
+                     continue;
+
+                  /* let nlhdlr evaluate current expression */
+                  nlhdlrinterval = interval;
+                  SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, intevalvar, intevalvardata) );
+                  SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
+#ifdef SCIP_DEBUG
+                  SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
+                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
+#endif
+
+                  /* intersect with interval */
+                  SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+               }
+            }
+            else
+            {
+               /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, intevalvar, intevalvardata) );
+
+#ifdef SCIP_DEBUG
+               SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
+               SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
+               SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
+#endif
+            }
+
+            if( intersect )
+            {
+               /* make sure resulting interval is subset of expr->interval, if intersect is true
+                * even though we passed expr->interval as input to the inteval callbacks,
+                * these callbacks might not have taken it into account (most do not, actually)
+                */
+               SCIPintervalIntersect(&interval, interval, expr->interval);
+            }
+
+            /* check whether the resulting interval is empty */
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+            {
+               SCIPintervalSetEmpty(&expr->interval);
+               aborted = TRUE;
+               break;
+            }
+
+            if( tightenauxvars )
+            {
+               /* tighten bounds of expression interval and the auxiliary variable */
+               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &aborted, ntightenings) );
+
+               if( aborted )
+               {
+                  SCIPintervalSetEmpty(&expr->interval);
+                  break;
+               }
+            }
+            else
+            {
+               /* update expression interval */
+               SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
 
    /* evaluation leads to an empty interval -> detected infeasibility */
-   if( propdata.aborted )
+   if( aborted )
    {
-      SCIPintervalSetEmpty(&expr->interval);
-      expr->intevaltag = boxtag;
+      SCIPintervalSetEmpty(&rootexpr->interval);
+      rootexpr->intevaltag = boxtag;
 
       if( infeasible != NULL)
          *infeasible = TRUE;
    }
 
-   if( ntightenings != NULL )
-   {
-      assert(propdata.ntightenings >= 0);
-      *ntightenings = propdata.ntightenings;
-   }
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2499,7 +2457,7 @@ SCIP_RETCODE reversePropConss(
             /* call the reverseprop of the nlhdlr */
 #ifdef SCIP_DEBUG
             SCIPdebugMsg(scip, "call reverse propagation for ");
-            SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
+            SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
             SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
 
@@ -2516,7 +2474,7 @@ SCIP_RETCODE reversePropConss(
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "call reverse propagation for ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, propdata->consexprhdlr, expr, NULL) );
+         SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
 #endif
 
@@ -8977,7 +8935,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    )
 {
    SCIP_Real oldlb;
@@ -8990,7 +8948,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
-   assert(ntightenings != NULL);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval));
 
    oldlb = SCIPintervalGetInf(expr->interval);
@@ -9067,7 +9024,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
             if( tightened )
             {
-               ++*ntightenings;
+               if( ntightenings != NULL )
+                  ++*ntightenings;
                SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %g\n", SCIPvarGetName(var), newlb);
             }
 
@@ -9081,7 +9039,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
             if( tightened )
             {
-               ++*ntightenings;
+               if( ntightenings != NULL )
+                  ++*ntightenings;
                SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %g\n", SCIPvarGetName(var), newub);
             }
 
