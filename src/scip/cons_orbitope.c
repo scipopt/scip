@@ -1542,12 +1542,13 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
    }
 
    for (i = 0; i < nrowsused; ++i)
    {
-      int origrow = dynamic ? roworder[i] : i;
+      /* roworder is initialized if dynamic is TRUE */
+      int origrow = dynamic ? roworder[i] : i; /*lint !e644*/
       int lexminrow = dynamic ? nrowsused - 1 - i : i;
 
       for (j = 0; j < n; ++j)
@@ -1629,7 +1630,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
    }
 
    for (i = 0; i < nrowsused; ++i)
@@ -1860,7 +1861,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
    }
 
    /* store minimum fixed row for each column */
@@ -1869,7 +1870,8 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
    for (i = 0; i < nrowsused; ++i)
    {
-      int origrow = dynamic ? roworder[i] : i;
+      /* roworder is initialized if dynamic is TRUE */
+      int origrow = dynamic ? roworder[i] : i; /*lint !e644*/
       int lexminrow = dynamic ? nrowsused - 1 - i : i;
 
       for (j = 0; j < n; ++j)
@@ -1961,7 +1963,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
    }
 
    /* store minimum fixed row for each column */
