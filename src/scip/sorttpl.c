@@ -805,8 +805,6 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    int i;
    SCIP_Real weightsum = 0.0;
 
-   printf("%d %d\n", medianpos, len);
-
    for( i = 0; i < len; i++ )
    {
       SCIP_Real weight = weights != NULL ? weights[i] : 1.0;
