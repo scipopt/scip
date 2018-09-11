@@ -392,7 +392,7 @@ Test(iterator, dfs_tree)
          case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
          {
             SCIP_CONSEXPREXPRWALK_IO userdata = { .ptrval = tmp };
-            SCIPexpriteratorSetUserData(it, userdata);
+            SCIPexpriteratorSetCurrentUserData(it, userdata);
             break;
          }
 

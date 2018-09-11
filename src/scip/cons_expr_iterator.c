@@ -589,7 +589,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
  *
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-void SCIPexpriteratorSetUserData(
+void SCIPexpriteratorSetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
    SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored */
    )
@@ -599,6 +599,26 @@ void SCIPexpriteratorSetUserData(
    assert(iterator->iterindex >= 0);
 
    iterator->curr->iterdata[iterator->iterindex].userdata = userdata;
+}
+
+/** sets the iterator specific user data of the current expressions current child
+ *
+ * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ */
+void SCIPexpriteratorSetChildUserData(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored in current child */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->curr != NULL);
+   assert(iterator->iterindex >= 0);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
+   assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
+
+   iterator->curr->children[iterator->curr->iterdata[iterator->iterindex].currentchild]->iterdata[iterator->iterindex].userdata = userdata;
 }
 
 /** moves the iterator to the next expression according to the mode of the expression iterator
