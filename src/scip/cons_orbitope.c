@@ -1726,7 +1726,6 @@ SCIP_RETCODE propagateFullOrbitopeCons(
 
             SCIP_CALL( SCIPinferBinvarCons(scip, vars[origrow][j], (SCIP_Bool) lexminfixes[i][j],
                   cons, 0, infeasible, &success) );
-            /* SCIP_CALL( SCIPfixVar(scip, vars[origrow][j], (SCIP_Real) lexminfixes[i][j], infeasible, &success) ); */
 
             if ( success )
                *nfixedvars += 1;
