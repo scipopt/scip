@@ -4987,7 +4987,7 @@ SCIP_RETCODE exprparseReadVariable(
 
       /* store index of variable and variable name in varnames buffer */
       **varnames = varidx;
-      strcpy((char*)(*varnames + 1), varname);
+      strncpy((char*)(*varnames + 1), varname, strlen(varname));
 
       /* insert variable into hashtable */
       SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
