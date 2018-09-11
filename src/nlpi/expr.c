@@ -11846,6 +11846,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
       break;
    }
@@ -11854,6 +11855,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
       break;
    }
@@ -11867,6 +11869,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 2);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11885,6 +11888,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }
@@ -11944,6 +11948,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
       else
          userdata = exprdata->userdata;
 
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
@@ -12042,6 +12047,7 @@ void exprgraphNodeCheckSeparabilityComponent(
          varcomps[i] = varcomps[varidx];
    for( i = 0; i < nchildcomps; ++i )
       if( childcomps[i] == *compnr )
+         /* coverity[copy_paste_error] */
          childcomps[i] = varcomps[varidx];
    *compnr = varcomps[varidx];
 }
@@ -15398,6 +15404,7 @@ SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
       assert(exprtrees[0] != NULL);
       assert(exprtrees[0]->vars != NULL || exprtrees[0]->nvars == 0);
 
+      /* coverity[var_deref_model] */
       SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[0]->root, exprtrees[0]->vars, exprtrees[0]->params, rootnode, rootnodeisnew) );
    }
    else
