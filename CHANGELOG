@@ -1,5 +1,4 @@
 
-
 @page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
@@ -41,6 +40,9 @@ Interface changes
 ### Interfaces to external software
 
 ### Changed parameters
+
+- Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
+- Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 
 ### New parameters
 
