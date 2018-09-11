@@ -1012,7 +1012,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    /* the capacity is not exceeded by the elements in the array */
    if( j == len )
    {
-      assert(residualcapacity > 0);
+      assert(residualcapacity >= 0);
       localmedianpos = len;
    }
 
