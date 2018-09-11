@@ -2975,7 +2975,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run in: presolving, repropagation, probing mode, if no objective propagation is allowed  */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowObjProp(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* do not run propagator in a sub-SCIP */
@@ -2998,7 +2998,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       return SCIP_OKAY;
    }
 
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

@@ -1,5 +1,4 @@
 
-
 @page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
@@ -30,13 +29,20 @@ Interface changes
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
 
+- SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+
 ### New API functions
+
+- SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
 
 ### Command line interface
 
 ### Interfaces to external software
 
 ### Changed parameters
+
+- Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
+- Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 
 ### New parameters
 

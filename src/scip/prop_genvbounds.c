@@ -2319,7 +2319,7 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -2517,7 +2517,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run if propagation w.r.t. current objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

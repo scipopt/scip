@@ -1013,7 +1013,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 
    *nfixedvars = 0;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1509,7 +1509,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    *infeasible = FALSE;
 
    /* @todo Can the following be removed? */
-   if ( ! SCIPallowDualReds(scip) )
+   if ( ! SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);

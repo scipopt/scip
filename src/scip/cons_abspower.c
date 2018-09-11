@@ -6515,7 +6515,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          continue;
       }
 
-      if( conshdlrdata->dualpresolve && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) )
       {
          /* check if a variable can be fixed because it appears in no other constraint */
          SCIP_CALL( presolveDual(scip, conss[c], &infeas, ndelconss, nfixedvars) );  /*lint !e613*/
@@ -6533,7 +6533,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       }
 
       /* propagate variable bound constraints */
-      if( !consdata->propvarbounds && SCIPallowObjProp(scip) )
+      if( !consdata->propvarbounds && SCIPallowWeakDualReds(scip) )
       {
          SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds, naddconss) );  /*lint !e613*/
 
