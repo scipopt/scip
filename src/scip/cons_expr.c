@@ -902,94 +902,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
  * @{
  */
 
-/** expression walk callback to free an expression including its children (if not used anywhere else) */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   /* expression should be used by its parent and maybe by the walker (only the root!)
-    * in VISITEDCHILD we assert that expression is only used by its parent
-    */
-   assert(0 <= expr->nuses && expr->nuses <= 2);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         /* check whether a child needs to be visited (nuses == 1)
-          * if not, then we still have to release it
-          */
-         SCIP_CONSEXPR_EXPR* child;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-         assert(expr->children != NULL);
-         child = expr->children[expr->walkcurrentchild];
-         if( child->nuses > 1 )
-         {
-            /* child is not going to be freed: just release it */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
-            *result = SCIP_CONSEXPREXPRWALK_SKIP;
-         }
-         else
-         {
-            assert(child->nuses == 1);
-
-            /* free child's enfodata and expression data when entering child */
-            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
-
-            if( child->exprdata != NULL )
-            {
-               if( child->exprhdlr->freedata != NULL )
-               {
-                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
-                  assert(child->exprdata == NULL);
-               }
-               else
-               {
-                  child->exprdata = NULL;
-               }
-            }
-
-            *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         }
-
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      {
-         /* free child after visiting it */
-         SCIP_CONSEXPR_EXPR* child;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-
-         child = expr->children[expr->walkcurrentchild];
-         /* child should only be used by its parent */
-         assert(child->nuses == 1);
-
-         /* child should have no data associated */
-         assert(child->exprdata == NULL);
-
-         /* free child expression */
-         SCIP_CALL( freeExpr(scip, &child) );
-         expr->children[expr->walkcurrentchild] = NULL;
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      default:
-      {
-         SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
-   }
-}
-
 /** interval evaluation of variables as used in bound tightening
  *
  * Returns slightly relaxed local variable bounds of a variable as interval.
@@ -8374,33 +8286,115 @@ void SCIPcaptureConsExprExpr(
 /** releases an expression (decrements usage count and possibly frees expression) */
 SCIP_RETCODE SCIPreleaseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
+   SCIP_CONSEXPR_EXPR**  rootexpr            /**< pointer to expression to be released */
    )
 {
-   assert(expr != NULL);
-   assert(*expr != NULL);
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
 
-   if( (*expr)->nuses == 1 )
+   assert(rootexpr != NULL);
+   assert(*rootexpr != NULL);
+   assert((*rootexpr)->nuses > 0);
+
+   if( (*rootexpr)->nuses > 1 )
    {
-      /* handle the root expr separately: free enfodata and expression data here */
-      SCIP_CALL( freeEnfoData(scip, *expr, TRUE) );
-
-      if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
-      {
-         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
-      }
-
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExprWalk, freeExprWalk, NULL,  NULL) );
-
-      /* handle the root expr separately: free its children and itself here */
-      SCIP_CALL( freeExpr(scip, expr) );
+      --(*rootexpr)->nuses;
+      *rootexpr = NULL;
 
       return SCIP_OKAY;
    }
 
-   --(*expr)->nuses;
-   assert((*expr)->nuses > 0);
-   *expr = NULL;
+   /* handle the root expr separately: free enfodata and expression data here */
+   SCIP_CALL( freeEnfoData(scip, *rootexpr, TRUE) );
+
+   if( (*rootexpr)->exprdata != NULL && (*rootexpr)->exprhdlr->freedata != NULL )
+   {
+      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
+   }
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, *rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) ; )
+   {
+      /* expression should be used by its parent and maybe by the iterator (only the root!)
+       * in VISITEDCHILD we assert that expression is only used by its parent
+       */
+      assert(expr != NULL);
+      assert(0 <= expr->nuses && expr->nuses <= 2);
+
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            /* check whether a child needs to be visited (nuses == 1)
+             * if not, then we still have to release it
+             */
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( child->nuses > 1 )
+            {
+               /* child is not going to be freed: just release it */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            assert(child->nuses == 1);
+
+            /* free child's enfodata and expression data when entering child */
+            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
+
+            if( child->exprdata != NULL )
+            {
+               if( child->exprhdlr->freedata != NULL )
+               {
+                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+                  assert(child->exprdata == NULL);
+               }
+               else
+               {
+                  child->exprdata = NULL;
+               }
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         {
+            /* free child after visiting it */
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            /* child should only be used by its parent */
+            assert(child->nuses == 1);
+
+            /* child should have no data associated */
+            assert(child->exprdata == NULL);
+
+            /* free child expression */
+            SCIP_CALL( freeExpr(scip, &child) );
+            expr->children[SCIPexpriteratorGetChildIdxDFS(it)] = NULL;
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   /* handle the root expr separately: free its children and itself here */
+   SCIP_CALL( freeExpr(scip, rootexpr) );
 
    return SCIP_OKAY;
 }
