@@ -24,6 +24,8 @@ Interface changes
 
 ### New API functions
 
+- SCIPhashmapInsertInt(), SCIPhashmapSetImageInt(), and SCIPhashmapGetImageInt() to use integer values as images in hashmaps
+
 ### Command line interface
 
 ### Interfaces to external software

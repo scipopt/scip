@@ -2755,7 +2755,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          int componentidx;
 
          /* get its index */
-         componentidx = ((int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e776*/
+         componentidx = (SCIPhashmapGetImageInt(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e571 !e776*/
          assert(componentidx >= 0);
          assert(propdata->startcomponents[componentidx] == component);
 
@@ -2773,8 +2773,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          propdata->startindices[componentidx] = startidx;
 
          /* store component in hashmap */
-         SCIP_CALL( SCIPhashmapInsert(propdata->startmap, (void*)(size_t) (component + 1),
-               (void*)(size_t) (componentidx + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->startmap, (void*)(size_t) (component + 1), componentidx + 1) ); /*lint !e571 !e776*/
 
          /* increase number of starting indices */
          propdata->nindices++;
