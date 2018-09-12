@@ -15238,6 +15238,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       {
          assert(lininds != NULL);
          assert(linvals != NULL);
+         /* coverity[var_deref_op] */
          lininds[lincnt] = idx1;
          linvals[lincnt] = consdata->quadvarterms[j].lincoef;
          ++lincnt;
@@ -15247,6 +15248,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       {
          assert(quadcnt < nquadelems);
          assert(quadelems != NULL);
+         /* coverity[var_deref_op] */
          quadelems[quadcnt].idx1 = idx1;
          quadelems[quadcnt].idx2 = idx1;
          quadelems[quadcnt].coef = consdata->quadvarterms[j].sqrcoef;
@@ -15264,6 +15266,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
          assert(quadelems != NULL);
          assert(SCIPhashmapExists(scipvar2nlpivar, othervar));
          idx2 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, othervar);
+         /* coverity[var_deref_op] */
          quadelems[quadcnt].idx1 = MIN(idx1, idx2);
          quadelems[quadcnt].idx2 = MAX(idx1, idx2);
          quadelems[quadcnt].coef = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].coef;
