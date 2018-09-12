@@ -1853,13 +1853,11 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       {
          SCIPprobdataWriteLogLine(scip, "Threads %d\n", probdata->nSolvers);
          SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * probdata->ugDual);
       }
       else
       {
          SCIPprobdataWriteLogLine(scip, "Threads 1\n");
          SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * SCIPgetDualbound(scip));
       }
       SCIPprobdataWriteLogLine(scip, "Primal %16.9f\n", factor * SCIPgetPrimalbound(scip));
       SCIPprobdataWriteLogLine(scip, "End\n");
