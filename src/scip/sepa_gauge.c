@@ -329,7 +329,7 @@ SCIP_RETCODE computeInteriorPoint(
 
             /* @todo: filter zero? */
             SCIP_CALL( SCIPsetSolVal(scip, sepadata->intsol, var,
-                     nlpisol[(int)(size_t)SCIPhashmapGetImage(var2nlpiidx, (void *)var)]) );
+                     nlpisol[SCIPhashmapGetImageInt(var2nlpiidx, (void *)var)]) );
          }
 
          sepadata->isintsolavailable = TRUE;

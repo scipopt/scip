@@ -1648,7 +1648,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       for( v = conshdlrdata->nvars - 1; v >= 0; --v )
       {
          assert(SCIPvarGetProbindex(conshdlrdata->vars[v]) == v);
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, conshdlrdata->vars[v], (void*) (size_t)(v+1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->hashmap, conshdlrdata->vars[v], v+1) );
          SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
       }
 
@@ -2237,7 +2237,7 @@ SCIP_RETCODE writeExpandedSolutions(
             for( i = 0; i < nvars; ++i )
             {
                assert(SCIPhashmapExists(hashmap, vars[i]));
-               idx = ((int) (size_t)SCIPhashmapGetImage(hashmap, vars[i])) - 1;
+               idx = SCIPhashmapGetImageInt(hashmap, vars[i]) - 1;
                assert(0 <= idx && idx < nactivevars);
                assert(activevars[idx] == vars[i]); /*lint !e613*/
 
