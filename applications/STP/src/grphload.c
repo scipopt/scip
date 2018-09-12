@@ -1360,7 +1360,7 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_TF :
                   assert(g != NULL);
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
-                  g->prize[(int)para[0].n - 1] = BLOCKED;
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
                   if( g->prize == NULL )
                   {
                      stp_type = STP_RPCSPG;
@@ -1369,6 +1369,7 @@ SCIP_RETCODE graph_load(
                   else
                      assert(stp_type == STP_RPCSPG);
 
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
                   termcount++;
                   break;
                case KEY_TERMINALS_TG :
