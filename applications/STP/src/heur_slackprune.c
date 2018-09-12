@@ -626,15 +626,11 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
    BMScopyMemoryArray(globalsoledge, soledge, nedges);
 
-
    if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
       g->stp_type = STP_SPG;
 
    /* copy the graph */
    SCIP_CALL( graph_copy(scip, g, &prunegraph) );
-
-   if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
-      g->stp_type = probtype;
 
    /* set ancestors of the new graph */
    SCIP_CALL( graph_init_history(scip, prunegraph) );
@@ -794,6 +790,10 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &solnode);
+
+
+   if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
+      g->stp_type = probtype;
 
    return SCIP_OKAY;
 }

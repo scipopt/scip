@@ -678,9 +678,6 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    /* copy the graph */
    SCIP_CALL( graph_copy(scip, g, &prunegraph) );
 
-   if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
-      g->stp_type = probtype;
-
    if( vars != NULL )
    {
       prunegraph->norgmodeledges = prunegraph->edges;
@@ -899,6 +896,9 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &solnode);
    SCIPfreeBufferArray(scip, &globalsoledge);
+
+   if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
+      g->stp_type = probtype;
 
    return SCIP_OKAY;
 }

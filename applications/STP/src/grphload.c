@@ -123,6 +123,7 @@ struct key
 #define KEY_TERMINALS_TG         3007
 #define KEY_TERMINALS_GROUPS     3008
 #define KEY_TERMINALS_TR         3009
+#define KEY_TERMINALS_TF         3010
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -236,6 +237,7 @@ static const struct key keyword_table[] =
       {  "terminals.rootp",          KEY_TERMINALS_ROOTP,        "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
+      {  "terminals.tf",             KEY_TERMINALS_TF,           "n"        },
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
@@ -1310,7 +1312,7 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_GROUPS :
                   assert(stp_type == STP_GSTP);
                   tgroups = (int)para[0].n;
-                  presol->fixed -= tgroups * 1e+8;
+                  presol->fixed -= tgroups * BLOCKED;
                   for( i = 0; i < tgroups; i++ )
                   {
                      graph_knot_add(g, 0);
@@ -1355,10 +1357,24 @@ SCIP_RETCODE graph_load(
                   else
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
+               case KEY_TERMINALS_TF :
+                  assert(g != NULL);
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  g->prize[(int)para[0].n - 1] = BLOCKED;
+                  if( g->prize == NULL )
+                  {
+                     stp_type = STP_RPCSPG;
+                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                  }
+                  else
+                     assert(stp_type == STP_RPCSPG);
+
+                  termcount++;
+                  break;
                case KEY_TERMINALS_TG :
                   assert(g != NULL);
                   assert(tgroups > 0);
-                  graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
+                  graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, BLOCKED,  BLOCKED);
                   assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
                   break;
                case KEY_TERMINALS_TP :
