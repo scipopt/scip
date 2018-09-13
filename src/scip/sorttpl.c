@@ -856,13 +856,31 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int lo;
    int j;
    int recursiondepth;
-   int localmedianpos;
+   int localmedianpos = -1;
+   SCIP_Real totalweightsum = 0.0;
    SCIP_Real residualcapacity;
 
    lo = 0;
    hi = len - 1;
    residualcapacity = capacity;
    recursiondepth = 0;
+
+   /* compute the total weight and stop if all items fit */
+   if( weights != NULL )
+   {
+      for( j = 0; j < len; ++j )
+         totalweightsum += weights[j];
+
+   }
+   else
+      totalweightsum = len;
+
+   if( totalweightsum <= capacity )
+   {
+      localmedianpos = len;
+
+      goto CHECKANDRETURN;
+   }
 
    while( hi - lo + 1 > SORTTPL_SHELLSORTMAX )
    {
@@ -994,6 +1012,11 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          lo, hi);
    }
 
+   /* it is impossible for lo or high to reach the end of the array. In this case, the item weights sum up to
+    * less than the capacity, which is handled at the top of this method.
+    */
+   assert(lo < len);
+   assert(hi < len);
    /* determine the median position among the remaining elements */
    for( j = lo; j <= MAX(lo, hi); ++j )
    {
@@ -1007,13 +1030,6 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       }
       else
          residualcapacity -= weight;
-   }
-
-   /* the capacity is not exceeded by the elements in the array */
-   if( j == len )
-   {
-      assert(residualcapacity >= 0);
-      localmedianpos = len;
    }
 
 CHECKANDRETURN:
