@@ -17,6 +17,7 @@
  * @brief  template functions for sorting
  * @author Michael Winkler
  * @author Tobias Achterberg
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +36,7 @@
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
  */
 #include "scip/def.h"
-#define SORTTPL_SHELLSORTMAX 25
+#define SORTTPL_SHELLSORTMAX    25 /* maximal size for shell sort */
 #define SORTTPL_MINSIZENINTHER 729 /* minimum input size to use ninther (median of nine) for pivot selection */
 
 #ifndef SORTTPL_NAMEEXT
@@ -231,7 +232,7 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
    }
 }
 
-/** returns the index a,b, or c of the median element among key[a], key[b], and key[c] */
+/** returns the index a, b, or c of the median element among key[a], key[b], and key[c] */
 static
 int SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
 (
@@ -250,7 +251,8 @@ int SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
    assert(a != b);
    assert(b != c);
    assert(c != a);
-   /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
+
+   /* let the elements in the unsorted order be a, b, c at positions start, mid, and end */
    if( SORTTPL_ISBETTER( key[a], key[b]) ) /* a <= b */
    {
       if( SORTTPL_ISBETTER( key[b], key[c]) ) /* b <= c */
@@ -282,7 +284,8 @@ int SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
          return b;
    }
 }
-/* guess a median for the key array [start, ..., end] by using the median of the first, last, and middle element */
+
+/** guess a median for the key array [start, ..., end] by using the median of the first, last, and middle element */
 static
 int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
 (
@@ -622,7 +625,8 @@ void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
 }
 
 
-/** SCIPsortedvecInsert...(): adds an element to a sorted multi-vector;
+/** SCIPsortedvecInsert...(): adds an element to a sorted multi-vector
+ *
  *  This method does not do any memory allocation! It assumes that the arrays are large enough
  *  to store the additional values.
  */
@@ -830,7 +834,7 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
 #endif
 
 /** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
- *  in the same way.
+ *  in the same way
  *
  *  If no weights-array is passed, the algorithm assumes weights equal to 1.
  */
@@ -949,8 +953,8 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
 
       if( weights != NULL )
       {
-         betterweightsum = 0.0;
          /* collect weights of elements larger than the pivot  */
+         betterweightsum = 0.0;
          for( i = lo; i < bt; ++i )
          {
             assert(SORTTPL_ISBETTER(key[i], pivot));
@@ -971,11 +975,12 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       else
       {
          SCIP_Real weightsum = betterweightsum;
+
          /* loop through duplicates of pivot element and check if one is the weighted median */
          for( p = bt; p <= wt; ++p )
          {
             assert(SORTTPL_CMP(key[p], pivot) == 0);
-            pivotweight = weights != NULL ? weights[p] : 1;
+            pivotweight = weights != NULL ? weights[p] : 1.0;
             weightsum += pivotweight;
 
             /* the element at index p is exactly the weighted median */
@@ -1017,10 +1022,12 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
     */
    assert(lo < len);
    assert(hi < len);
+
    /* determine the median position among the remaining elements */
    for( j = lo; j <= MAX(lo, hi); ++j )
    {
-      SCIP_Real weight = (weights != NULL ? weights[j] : 1);
+      SCIP_Real weight = (weights != NULL ? weights[j] : 1.0);
+
       /* we finally found the median element */
       if( weight > residualcapacity )
       {

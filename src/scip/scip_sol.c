@@ -2057,25 +2057,20 @@ SCIP_RETCODE SCIPgetDualSolVal(
       else
       {
          SCIP_VAR** vars;
-         SCIP_Real varsolval;
+         SCIP_Real* vals;
+         SCIP_Real activity;
 
-         /* allocate buffer memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
+         vars = SCIPgetVarsLinear(scip, cons);
+         vals = SCIPgetValsLinear(scip, cons);
 
-         assert(vars != NULL);
-         SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, 1, &success) );
-
-         varsolval = SCIPvarGetLPSol(vars[0]);
+         activity = SCIPvarGetLPSol(vars[0]) * vals[0];
 
          /* return the reduced cost of the variable if the constraint would be tight */
-         if( SCIPsetIsEQ(scip->set, varsolval, SCIPgetRhsLinear(scip, cons))
-          || SCIPsetIsEQ(scip->set, varsolval, SCIPgetLhsLinear(scip, cons)) )
+         if( SCIPsetIsEQ(scip->set, activity, SCIPgetRhsLinear(scip, cons))
+          || SCIPsetIsEQ(scip->set, activity, SCIPgetLhsLinear(scip, cons)) )
             (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]);
          else
             (*dualsolval) = 0.0;
-
-         /* free buffer memory */
-         SCIPfreeBufferArray(scip, &vars);
       }
    }
    assert(*dualsolval != SCIP_INVALID); /*lint !e777*/
@@ -2597,7 +2592,7 @@ SCIP_RETCODE SCIPretransformSol(
    return SCIP_OKAY;
 }
 
-/** reads a given solution file, problem has to be transformed in advance
+/** reads a given solution file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

@@ -12775,14 +12775,14 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                   {
                      int image;
 
-                     image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
-                     SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image + 1)) );/*lint !e776*/
-                     assert( image + 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                     image = SCIPhashmapGetImageInt(varhash, vars[v]);
+                     SCIP_CALL( SCIPhashmapSetImageInt(varhash, vars[v], image + 1) );
+                     assert( image + 1 == SCIPhashmapGetImageInt(varhash, vars[v]) );
                   }
                   else
                   {
-                     SCIP_CALL( SCIPhashmapInsert(varhash, vars[v], (void*) (size_t) 1) );/*lint !e571*/
-                     assert( 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                     SCIP_CALL( SCIPhashmapInsertInt(varhash, vars[v], 1) );
+                     assert( 1 == SCIPhashmapGetImageInt(varhash, vars[v]) );
                      assert( SCIPhashmapExists(varhash, vars[v]) );
                   }
                }
@@ -12796,7 +12796,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                for (v = 0; v < nvars; ++v)
                {
                   assert( SCIPhashmapExists(varhash, vars[v]) );
-                  if ( SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
+                  if ( SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) != SCIPhashmapGetImageInt(varhash, vars[v]) )
                      break;
                }
                if ( v < nvars )
@@ -12840,9 +12840,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                   int image;
 
                   assert ( SCIPhashmapExists(varhash, vars[v]) );
-                  image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
-                  SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image - 1)) );
-                  assert( image - 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                  image = SCIPhashmapGetImageInt(varhash, vars[v]);
+                  SCIP_CALL( SCIPhashmapSetImageInt(varhash, vars[v], image - 1) );
+                  assert( image - 1 == SCIPhashmapGetImageInt(varhash, vars[v]) );
                }
             }
          }
