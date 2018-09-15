@@ -1053,9 +1053,11 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int intcap;
    int d;
    int j;
+   int greedymedianpos;
    SCIP_Longint weightsum;
    int* myitems;
    SCIP_Longint* myweights;
+   SCIP_Real* realweights;
    int* allcurrminweight;
    SCIP_Real* myprofits;
    int nmyitems;
@@ -1291,10 +1293,19 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n, this is only used for the greedy solution
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nmyitems) );
-   for( j = nmyitems - 1; j >= 0; --j )
-      tempsort[j] = myprofits[j]/((SCIP_Real) myweights[j]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &realweights, nmyitems) );
 
-   SCIPsortDownRealLongRealInt(tempsort, myweights, myprofits, myitems, nmyitems);
+   for( j = 0; j < nmyitems; ++j )
+   {
+      tempsort[j] = myprofits[j]/((SCIP_Real) myweights[j]);
+      realweights[j] = (SCIP_Real)myweights[j];
+   }
+
+   SCIPselectWeightedDownRealLongRealInt(tempsort, myweights, myprofits, myitems, realweights,
+      capacity, nmyitems, &greedymedianpos);
+
+   SCIPfreeBufferArray(scip, &realweights);
+   SCIPfreeBufferArray(scip, &tempsort);
 
    /* initialize values for greedy solution information */
    greedysolweight = 0;
@@ -1338,8 +1349,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          assert(greedysolvalue > 0.0);
          *solval += greedysolvalue;
       }
-
-      SCIPfreeBufferArray(scip, &tempsort);
 
       goto TERMINATE;
    }
@@ -1495,11 +1504,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* update solution value */
    if( solval != NULL )
       *solval += optvalues[IDX(nmyitems-1,intcap-1)];
-
    SCIPfreeBufferArray(scip, &allcurrminweight);
 
    /* free all temporary memory */
-   SCIPfreeBufferArray(scip, &tempsort);
    SCIPfreeBufferArray(scip, &optvalues);
 
  TERMINATE:
