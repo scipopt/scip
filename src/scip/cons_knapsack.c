@@ -1015,7 +1015,21 @@ SCIP_RETCODE checkCons(
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
  *
- * @note in case you provide the solitems or nonsolitems array you also have to provide the counter part as well
+ * @note in case you provide the solitems or nonsolitems array you also have to provide the counter part, as well
+ *
+ * @note the algorithm will first compute a greedy solution and terminate
+ *       if the greedy solution is proven to be optimal.
+ *       The dynamic programming algorithm runs with a time and space complexity
+ *       of O(nitems * capacity).
+ *
+ * @todo If only the objective is relevant, it is easy to change the code to use only one slice with O(capacity) space.
+ *       There are recursive methods (see the book by Kellerer et al.) that require O(capacity) space, but it remains
+ *       to be checked whether they are faster and whether they can reconstruct the solution.
+ *       Dembo and Hammer (see Kellerer et al. Section 5.1.3, page 126) found a method that relies on a fast probing method.
+ *       This fixes additional elements to 0 or 1 similar to a reduced cost fixing.
+ *       This could be implemented, however, it would be technically a bit cumbersome,
+ *       since one needs the greedy solution and the LP-value for this.
+ *       This is currently only available after the redundant items have already been sorted out.
  */
 SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP*                 scip,               /**< SCIP data structure */
