@@ -1019,6 +1019,74 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
+/** hashes an expression using an already existing iterator
+ *
+ * The iterator must by of type DFS with allowrevisit=FALSE and the only leaveexpr stage enabled.
+ * The hashes of all visited expressions will be stored in the iterators expression data.
+ */
+static
+SCIP_RETCODE hashExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to hash */
+   SCIP_CONSEXPR_ITERATOR* hashiterator,     /**< iterator to use for hashing */
+   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
+   )
+{
+   SCIP_CONSEXPREXPRWALK_IO walkiodata;
+   unsigned int* childrenhashes;
+   int childrenhashessize;
+   unsigned int exprhash;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(hashiterator != NULL);
+
+   childrenhashessize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenhashes, childrenhashessize) );
+
+   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
+   {
+      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+      if( nvisitedexprs != NULL )
+         ++*nvisitedexprs;
+
+      /* collect hashes of children */
+      if( childrenhashessize < expr->nchildren )
+      {
+         childrenhashessize = SCIPcalcMemGrowSize(scip, expr->nchildren);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childrenhashes, childrenhashessize) );
+      }
+      for( i = 0; i < expr->nchildren; ++i )
+         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
+
+      if( expr->exprhdlr->hash != NULL )
+      {
+         SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, &exprhash, childrenhashes) );
+      }
+      else
+      {
+         /* compute hash from expression handler name if callback is not implemented
+          * this can lead to more collisions and thus a larger number of expensive expression compare calls
+          * TODO shouldn't the children hashkeys be involved here, too?
+          */
+         exprhash = 0;
+         for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+            exprhash += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+
+         exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
+      }
+
+      walkiodata.uintval = exprhash;
+      SCIPexpriteratorSetCurrentUserData(hashiterator, walkiodata);
+   }
+
+   SCIPfreeBufferArray(scip, &childrenhashes);
+
+   return SCIP_OKAY;
+}
+
 /** @name Walking methods
  *
  * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
@@ -1028,68 +1096,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
  *
  * @{
  */
-
-/** expression walk callback to skip expression which have already been hashed */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitingExpr)
-{
-   SCIP_HASHMAP* expr2key;
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-
-   expr2key = (SCIP_HASHMAP*) data;
-   assert(expr2key != NULL);
-
-   assert(expr->walkcurrentchild < expr->nchildren);
-   child = expr->children[expr->walkcurrentchild];
-   assert(child != NULL);
-
-   /* skip child if the expression is already in the map */
-   *result = SCIPhashmapExists(expr2key, (void*) child) ? SCIP_CONSEXPREXPRWALK_SKIP : SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to compute an hash value for an expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
-{
-   SCIP_HASHMAP* expr2key;
-   unsigned int hashkey;
-   int i;
-
-   assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   expr2key = (SCIP_HASHMAP*) data;
-   assert(expr2key != NULL);
-   assert(!SCIPhashmapExists(expr2key, (void*) expr));
-
-   hashkey = 0;
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   if( expr->exprhdlr->hash != NULL )
-   {
-      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, expr2key, &hashkey) );
-   }
-   else
-   {
-      /* compute hash from expression handler name if callback is not implemented
-       * this can lead to more collisions and thus a larger number of expensive expression compare calls
-       */
-      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
-         hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
-
-      hashkey = SCIPcalcFibHash((SCIP_Real)hashkey);
-   }
-
-   /* put the hash key into expr2key map */
-   SCIP_CALL( SCIPhashmapInsert(expr2key, (void*)expr, (void*)(size_t)hashkey) );
-
-   return SCIP_OKAY;
-}
 
 /** expression walk callback to replace common sub-expression */
 static
@@ -3180,16 +3186,15 @@ static
 SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* hashiterator;
 
    expr = (SCIP_CONSEXPR_EXPR*) key;
    assert(expr != NULL);
 
-   expr2key = (SCIP_HASHMAP*) userptr;
-   assert(expr2key != NULL);
-   assert(SCIPhashmapExists(expr2key, (void*)expr));
+   hashiterator = (SCIP_CONSEXPR_ITERATOR*) userptr;
+   assert(hashiterator != NULL);
 
-   return (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
 /* export this function here, so it can be used by unittests but is not really part of the API */
@@ -3213,17 +3218,20 @@ SCIP_RETCODE replaceCommonSubexpressions(
    int                   nconss              /**< total number of constraints */
    )
 {
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* hashiterator;
    SCIP_MULTIHASH* key2expr;
    SCIP_CONSDATA* consdata;
    int i;
+   int nexprs = 0;
 
    assert(scip != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
 
-   /* create empty map to store all sub-expression hashes */
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&hashiterator, SCIPconsGetHdlr(conss[0]), SCIPblkmem(scip)) );
 
    /* compute all hashes for each sub-expression */
    for( i = 0; i < nconss; ++i )
@@ -3233,17 +3241,22 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* don't hash (root) expressions which are already in the hash map */
-      if( consdata->expr != NULL && !SCIPhashmapExists(expr2key, (void*)consdata->expr) )
+      if( consdata->expr == NULL )
+         continue;
+
+      if( !SCIPexpriteratorIsInit(hashiterator) )
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr,
-               (void*)expr2key) );
+         /* first constraint with non-NULL expr: initialize iterator (set type and stopstage) */
+         SCIP_CALL( SCIPexpriteratorInit(hashiterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+         SCIPexpriteratorSetStagesDFS(hashiterator, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
       }
+
+      SCIP_CALL( hashExpr(scip, consdata->expr, hashiterator, &nexprs) );
    }
 
    /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), SCIPhashmapGetNEntries(expr2key),
-         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
+   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), nexprs,
+         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)hashiterator) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -3279,7 +3292,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
    /* free memory */
    SCIPmultihashFree(&key2expr);
-   SCIPhashmapFree(&expr2key);
+   SCIPexpriteratorFree(&hashiterator);
 
    return SCIP_OKAY;
 }
@@ -9110,25 +9123,28 @@ void SCIPsetConsExprExprEvalInterval(
    expr->intevaltag = tag;
 }
 
-/** returns the hash key of an expression */
-SCIP_RETCODE SCIPgetConsExprExprHashkey(
+/** returns the hash value of an expression */
+SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   unsigned int*           hashkey           /**< pointer to store the hash key */
+   unsigned int*           hashval           /**< pointer to store the hash value */
    )
 {
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* it;
 
+   assert(scip != NULL);
    assert(expr != NULL);
+   assert(hashval != NULL);
 
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+   SCIP_CALL( hashExpr(scip, expr, it, NULL) );
 
-   assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
-   *hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   *hashval = SCIPexpriteratorGetExprUserData(it, expr).uintval;
 
-   SCIPhashmapFree(&expr2key);
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -10154,7 +10170,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
 
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {

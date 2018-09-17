@@ -720,12 +720,12 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
-/** returns the hash key of an expression */
+/** returns the hash value of an expression */
 EXTERN
-SCIP_RETCODE SCIPgetConsExprExprHashkey(
+SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   unsigned int*           hashkey           /**< pointer to store the hash key */
+   unsigned int*           hashval           /**< pointer to store the hash value */
    );
 
 /** sets the evaluation interval */

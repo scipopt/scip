@@ -50,6 +50,12 @@ void SCIPexpriteratorFree(
    SCIP_CONSEXPR_ITERATOR**    iterator     /**< pointer to the expression iterator */
    );
 
+/** returns whether expression iterator is current initialized */
+EXTERN
+SCIP_Bool SCIPexpriteratorIsInit(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   );
+
 /** initializes an expression iterator
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
@@ -62,6 +68,26 @@ SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
    SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
    SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
+   );
+
+/** restarts an already initialized expression iterator in DFS mode
+ *
+ * The expression iterator will continue from the given expression, not revisiting expressions that
+ * this iterator has already been visited (if initialized with allowrevisit==FALSE) and giving access
+ * to the same iterator specified expression data that may have been set already.
+ * Also the stop-stages are not reset.
+ *
+ * If revisiting is forbidden and given expr has already been visited, then the iterator will behave
+ * as on the end of iteration (IsEnd() is TRUE).
+ * If the enterexpr stage is not one of the stop stages, then the iterator will be moved forward
+ * (GetNext() is called).
+ *
+ * @return The current expression.
+ */
+EXTERN
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*         expr         /**< expression of the iterator */
    );
 
 /** specifies in which stages to stop a DFS iterator

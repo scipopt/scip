@@ -500,19 +500,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropEntropy)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashEntropy)
 {  /*lint --e{715}*/
-   unsigned int childhash;
-
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-
-   assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
-
-   *hashkey ^= childhash;
+   *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
 }

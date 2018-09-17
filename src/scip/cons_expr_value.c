@@ -133,7 +133,6 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;

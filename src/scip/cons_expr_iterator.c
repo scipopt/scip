@@ -346,6 +346,16 @@ void SCIPexpriteratorFree(
    BMSfreeBlockMemory((*iterator)->blkmem, iterator);
 }
 
+/** returns whether expression iterator is current initialized */
+SCIP_Bool SCIPexpriteratorIsInit(
+   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+   )
+{
+   assert(iterator != NULL);
+
+   return iterator->initialized;
+}
+
 /** initializes an expression iterator
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
@@ -441,6 +451,48 @@ SCIP_RETCODE SCIPexpriteratorInit(
    iterator->initialized = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** restarts an already initialized expression iterator in DFS mode
+ *
+ * The expression iterator will continue from the given expression, not revisiting expressions that
+ * this iterator has already been visited (if initialized with allowrevisit==FALSE) and giving access
+ * to the same iterator specified expression data that may have been set already.
+ * Also the stop-stages are not reset.
+ *
+ * If revisiting is forbidden and given expr has already been visited, then the iterator will behave
+ * as on the end of iteration (IsEnd() is TRUE).
+ * If the enterexpr stage is not one of the stop stages, then the iterator will be moved forward
+ * (GetNext() is called).
+ *
+ * @return The current expression.
+ */
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
+   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*         expr         /**< expression of the iterator */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->initialized);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+
+   /* if we forbid revisiting and root expr has already been visited, then set curr to NULL, that is, be at end of iterator */
+   if( iterator->visitedtag > 0 && expr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
+   {
+      iterator->curr = NULL;
+      return NULL;
+   }
+
+   /* set current to given expr, make it the root, and set stage to enterexpr */
+   iterator->curr = expr;
+   expr->iterdata[iterator->iterindex].currentchild = 0;
+   expr->iterdata[iterator->iterindex].parent = NULL;
+   iterator->dfsstage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+
+   if( (iterator->stopstages & (unsigned int)SCIP_CONSEXPREXPRWALK_ENTEREXPR) == 0 )
+      return SCIPexpriteratorGetNext(iterator);
+
+   return iterator->curr;
 }
 
 /** specifies in which stages to stop a DFS iterator

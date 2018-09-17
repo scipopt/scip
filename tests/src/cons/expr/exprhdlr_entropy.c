@@ -279,9 +279,9 @@ Test(entropy, hash, .description = "Tests the expression hash.")
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, xexpr) );
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr3, yexpr) );
 
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1) );
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2) );
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr3, &hashkey3) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr1, &hashkey1) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr2, &hashkey2) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr3, &hashkey3) );
 
    cr_expect(hashkey1 != 0);
    cr_expect(hashkey2 != 0);

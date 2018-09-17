@@ -1356,8 +1356,8 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -1366,14 +1366,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
    *hashkey ^= SCIPcalcFibHash(exprdata->coefficient);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      unsigned int childhash;
-
-      assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
-      childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
-
-      *hashkey ^= childhash;
-   }
+      *hashkey ^= childrenhashes[c];
 
    return SCIP_OKAY;
 }

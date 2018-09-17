@@ -384,19 +384,20 @@ extern "C" {
 
 /** expression hash callback
  *
- * The method hashes an expression by taking the hash keys of its children into account.
+ * The method hashes an expression by taking the hashes of its children into account.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be hashed
- *  - expr2key : hash map containing keys for sub-expressions
- *  - hashkey: pointer to store the hash key
+ *  - hashkey : pointer to store the hash value
+ *  - childrenhashes : array with hash values of children
  */
 #define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_HASHMAP* expr2key, \
-   unsigned int* hashkey)
+   unsigned int* hashkey, \
+   unsigned int* childrenhashes)
+
 
 /** expression branching score callback
  *
@@ -508,6 +509,7 @@ typedef union
    SCIP_Real             realval;            /**< a floating-point value */
    int                   intval;             /**< an integer value */
    int                   intvals[2];         /**< two integer values */
+   unsigned int          uintval;            /**< an unsigned integer value */
    void*                 ptrval;             /**< a pointer */
 } SCIP_CONSEXPREXPRWALK_IO;
 
