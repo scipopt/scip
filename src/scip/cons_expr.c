@@ -1029,93 +1029,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
  * @{
  */
 
-/** prints structure a la Maple's dismantle */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
-{
-   assert(expr != NULL);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
-      {
-         int* depth;
-         int nspaces;
-         const char* type;
-
-         depth = (int*)data;
-         ++*depth;
-         nspaces = 3 * *depth;
-         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-         /* use depth of expression to align output */
-         SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
-
-         if(strcmp(type, "var") == 0)
-         {
-            SCIP_VAR* var;
-
-            var = SCIPgetConsExprExprVarVar(expr);
-            SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
-                  SCIPvarGetUbLocal(var));
-         }
-         else if(strcmp(type, "sum") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
-         else if(strcmp(type, "prod") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
-         else if(strcmp(type, "val") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
-         else if(strcmp(type, "pow") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
-         else if(strcmp(type, "exp") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else if(strcmp(type, "log") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else if(strcmp(type, "abs") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else
-            SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
-      {
-         int* depth;
-         int nspaces;
-         const char* type;
-
-         depth = (int*)data;
-         nspaces = 3 * *depth;
-         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-         if( strcmp(type, "sum") == 0 )
-         {
-            SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-            SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
-         }
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
-      {
-         int* depth;
-
-         depth = (int*)data;
-         --*depth;
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-      default:
-      {
-         /* shouldn't be here */
-         SCIPABORT();
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
-   }
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to skip expression which have already been hashed */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitingExpr)
@@ -10234,11 +10147,89 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    )
 {
-   int depth;
+   SCIP_CONSEXPR_ITERATOR* it;
+   int depth = -1;
 
-   depth = -1;
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, dismantleExpr, dismantleExpr, NULL, dismantleExpr, &depth) );
-   assert(depth == -1);
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         {
+            int nspaces;
+            const char* type;
+
+            ++depth;
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            /* use depth of expression to align output */
+            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+
+            if( strcmp(type, "var") == 0 )
+            {
+               SCIP_VAR* var;
+
+               var = SCIPgetConsExprExprVarVar(expr);
+               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var));
+            }
+            else if(strcmp(type, "sum") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
+            else if(strcmp(type, "prod") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
+            else if(strcmp(type, "val") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
+            else if(strcmp(type, "pow") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
+            else if(strcmp(type, "exp") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "log") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "abs") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else
+               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+         {
+            int nspaces;
+            const char* type;
+
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            if( strcmp(type, "sum") == 0 )
+            {
+               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         {
+            --depth;
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         default:
+            /* shouldn't be here */
+            SCIPABORT();
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
