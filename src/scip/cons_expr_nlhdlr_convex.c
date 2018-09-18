@@ -75,7 +75,7 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->varexprssize = nvars;
 
    /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
    assert((*nlhdlrexprdata)->nvarexprs > 0);
    assert((*nlhdlrexprdata)->nvarexprs == nvars);
 

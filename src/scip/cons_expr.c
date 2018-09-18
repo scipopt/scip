@@ -208,14 +208,6 @@ typedef struct
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
 } EXPRBWDIFF_DATA;
 
-/** data passed on during collecting all expression variables */
-typedef struct
-{
-   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array to store variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   SCIP_HASHMAP*         varexprsmap;        /**< map containing all visited variable expressions */
-} GETVARS_DATA;
-
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
 typedef struct
 {
@@ -1086,50 +1078,6 @@ SCIP_RETCODE hashExpr(
 
    return SCIP_OKAY;
 }
-
-/** @name Walking methods
- *
- * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
- * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
- * To avoid this issue, the method SCIPwalkConsExprExprDF is introduced to traverse the tree and execute callbacks
- * at different places. Here are the callbacks needed for performing the mentioned operations.
- *
- * @{
- */
-
-/** expression walk callback to collect all variable expressions */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
-{
-   GETVARS_DATA* getvarsdata;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   getvarsdata = (GETVARS_DATA*) data;
-   assert(getvarsdata != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* add variable expression if not seen so far; there is only one variable expression representing a variable */
-   if( SCIPisConsExprExprVar(expr) && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
-   {
-      assert(SCIPgetNTotalVars(scip) >= getvarsdata->nvarexprs + 1);
-
-      getvarsdata->varexprs[ getvarsdata->nvarexprs ] = expr;
-      assert(getvarsdata->varexprs[getvarsdata->nvarexprs] != NULL);
-      ++(getvarsdata->nvarexprs);
-      SCIP_CALL( SCIPhashmapInsert(getvarsdata->varexprsmap, (void*) expr, NULL) );
-
-      /* capture expression */
-      SCIPcaptureConsExprExpr(expr);
-   }
-
-   return SCIP_OKAY;
-}
-
-/**@} */  /* end of walking methods */
 
 /** @name Simplifying methods
  *
@@ -2610,37 +2558,48 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
 }
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
- * no two different variable expression sharing the same variable
+ * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
  */
 SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
    )
 {
-   GETVARS_DATA getvarsdata;
+   SCIP_CONSEXPR_ITERATOR* it;
 
    assert(expr != NULL);
    assert(varexprs != NULL);
    assert(nvarexprs != NULL);
 
-   getvarsdata.nvarexprs = 0;
-   getvarsdata.varexprs = varexprs;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
-   /* use a hash map to decide whether we have stored a variable expression already */
-   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
+   *nvarexprs = 0;
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   {
+      assert(expr != NULL);
 
-   /* collect all variable expressions */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
-   *nvarexprs = getvarsdata.nvarexprs;
+      if( SCIPisConsExprExprVar(expr) )
+      {
+         /* add variable expression to array and capture expr */
+         assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1);
+
+         varexprs[(*nvarexprs)++] = expr;
+
+         /* capture expression */
+         SCIPcaptureConsExprExpr(expr);
+      }
+   }
 
    /* @todo sort variable expressions here? */
 
-   SCIPhashmapFree(&getvarsdata.varexprsmap);
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2649,6 +2608,7 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
 static
 SCIP_RETCODE storeVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
@@ -2661,10 +2621,10 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
-   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
+   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
 
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
    assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
@@ -3408,7 +3368,7 @@ SCIP_RETCODE canonicalizeConstraints(
       }
       for( i = 0; i < nconss; ++i )
       {
-         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
          SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
       }
    }
@@ -5908,7 +5868,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
 
    for( i = 0; i < nconss; ++i )
    {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
@@ -6550,7 +6510,7 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
 
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(cons)) );
+      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(cons)) );
    }
 
    return SCIP_OKAY;

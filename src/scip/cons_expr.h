@@ -1054,13 +1054,15 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
    );
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
- * no two different variable expression sharing the same variable
+ * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
  */
+EXTERN
 SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
