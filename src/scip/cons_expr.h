@@ -982,6 +982,7 @@ int SCIPgetConsExprExprNLocksNeg(
 EXTERN
 SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

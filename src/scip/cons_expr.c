@@ -1543,43 +1543,38 @@ int SCIPgetConsExprExprNLocksNeg(
    return expr->nlocksneg;
 }
 
-/** expression walk callback for computing expression integrality */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeIntegrality)
-{
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(data == NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* TODO add a tag to store whether an expression has been visited already */
-   expr->isintegral = FALSE;
-
-   if( expr->exprhdlr->integrality != NULL )
-   {
-      /* get curvature from expression handler */
-      SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** computes integrality information of a given expression and all its subexpressions; the integrality information can
  * be accessed via SCIPisConsExprExprIntegral()
  */
 SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(expr != NULL);
 
-   /* compute integrality information */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeIntegrality, NULL) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -4726,7 +4721,7 @@ SCIP_RETCODE detectNlhdlrs(
 #endif
 
       /* compute integrality information for all subexpressions */
-      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, consdata->expr) );
+      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
       /* create auxiliary variable for root expression */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );

@@ -87,7 +87,7 @@ SCIP_RETCODE checkIntegrality(
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* compute and check integrality information */
-   SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, expr) );
+   SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, expr) );
    cr_expect( SCIPisConsExprExprIntegral(expr) == isintegral);
 
    /* release expression */
