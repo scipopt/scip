@@ -1043,12 +1043,12 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
- *       upper bound on the number of unique variables in an expression
+ * The function counts variables in common sub-expressions only once.
  */
 EXTERN
 SCIP_RETCODE SCIPgetConsExprExprNVars(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    int*                    nvars             /**< buffer to store the total number of variables */
    );

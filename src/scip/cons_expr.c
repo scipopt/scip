@@ -1097,26 +1097,6 @@ SCIP_RETCODE hashExpr(
  * @{
  */
 
-/** expression walk callback to count the number of variable expressions; common sub-expressions are counted
- * multiple times
- */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(getNVarsLeaveExpr)
-{
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(data != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   if( SCIPisConsExprExprVar(expr) )
-   {
-      int* nvars = (int*)data;
-      ++(*nvars);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to collect all variable expressions */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
@@ -2601,21 +2581,30 @@ SCIP_RETCODE checkRedundancyConss(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a decent
- *       upper bound on the number of unique variables in an expression
+ * The function counts variables in common sub-expressions only once.
  */
 SCIP_RETCODE SCIPgetConsExprExprNVars(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    int*                    nvars             /**< buffer to store the total number of variables */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nvars != NULL);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
    *nvars = 0;
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getNVarsLeaveExpr, (void*)nvars) );
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+      if( SCIPisConsExprExprVar(expr) )
+         ++(*nvars);
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
