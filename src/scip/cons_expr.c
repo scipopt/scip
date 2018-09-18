@@ -1455,38 +1455,6 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    return expr->curvature;
 }
 
-/** expression walk callback for computing expression curvatures */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_EXPRCURV curv;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   curv = SCIP_EXPRCURV_UNKNOWN;
-
-   conshdlr = (SCIP_CONSHDLR*)data;
-   assert(conshdlr != NULL);
-
-   /* TODO add a tag to store whether an expression has been visited already */
-
-   if( expr->exprhdlr->curvature != NULL )
-   {
-      /* get curvature from expression handler */
-      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
-   }
-
-   /* set curvature in expression */
-   SCIPsetConsExprExprCurvature(expr, curv);
-
-   return SCIP_OKAY;
-}
-
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
@@ -1496,7 +1464,9 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1507,8 +1477,25 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
 
-   /* compute curvatures */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   {
+      curv = SCIP_EXPRCURV_UNKNOWN;
+
+      if( expr->exprhdlr->curvature != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+      }
+
+      /* set curvature in expression */
+      SCIPsetConsExprExprCurvature(expr, curv);
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
