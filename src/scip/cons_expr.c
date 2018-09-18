@@ -1097,47 +1097,6 @@ SCIP_RETCODE hashExpr(
  * @{
  */
 
-/** expression walk callback to replace common sub-expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
-{
-   SCIP_MULTIHASH* key2expr;
-   SCIP_CONSEXPR_EXPR* newchild;
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-
-   key2expr = (SCIP_MULTIHASH*)data;
-   assert(key2expr != NULL);
-
-   assert(expr->walkcurrentchild < expr->nchildren);
-   child = expr->children[expr->walkcurrentchild];
-   assert(child != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* try to find an equivalent expression */
-   SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
-
-   /* replace child with newchild */
-   if( newchild != NULL )
-   {
-      assert(child != newchild);
-      assert(SCIPcompareConsExprExprs(child, newchild) == 0);
-
-      SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
-
-      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, expr->walkcurrentchild, newchild) );
-
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to count the number of variable expressions; common sub-expressions are counted
  * multiple times
  */
@@ -3219,6 +3178,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    )
 {
    SCIP_CONSEXPR_ITERATOR* hashiterator;
+   SCIP_CONSEXPR_ITERATOR* repliterator;
    SCIP_MULTIHASH* key2expr;
    SCIP_CONSDATA* consdata;
    int i;
@@ -3258,9 +3218,13 @@ SCIP_RETCODE replaceCommonSubexpressions(
    SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), nexprs,
          hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)hashiterator) );
 
+   SCIP_CALL( SCIPexpriteratorCreate(&repliterator, SCIPconsGetHdlr(conss[0]), SCIPblkmem(scip)) );
+
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CONSEXPR_EXPR* newroot;
+      SCIP_CONSEXPR_EXPR* newchild;
+      SCIP_CONSEXPR_EXPR* child;
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -3268,7 +3232,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
       if( consdata->expr == NULL )
          continue;
 
-      /* since the root has not been checked for equivalence, it has to be checked separately */
+      /* check the root for equivalence separately first */
       SCIP_CALL( findEqualExpr(scip, consdata->expr, key2expr, &newroot) );
 
       if( newroot != NULL )
@@ -3282,15 +3246,43 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
          consdata->expr = newroot;
          SCIPcaptureConsExprExpr(newroot);
+
+         continue;
       }
-      else
+
+      /* replace equivalent sub-expressions in the tree */
+      SCIP_CALL( SCIPexpriteratorInit(repliterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      SCIPexpriteratorSetStagesDFS(repliterator, (unsigned int)SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+      while( !SCIPexpriteratorIsEnd(repliterator) )
       {
-         /* replace equivalent sub-expressions in the tree */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, commonExprVisitingExpr, NULL, NULL, (void*)key2expr) );
+         child = SCIPexpriteratorGetChildExprDFS(repliterator);
+         assert(child != NULL);
+
+         /* try to find an equivalent expression */
+         SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
+
+         /* replace child with newchild */
+         if( newchild != NULL )
+         {
+            assert(child != newchild);
+            assert(SCIPcompareConsExprExprs(child, newchild) == 0);
+
+            SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, SCIPexpriteratorGetCurrent(repliterator), SCIPexpriteratorGetChildIdxDFS(repliterator), newchild) );
+
+            (void) SCIPexpriteratorSkipDFS(repliterator);
+         }
+         else
+         {
+            (void) SCIPexpriteratorGetNext(repliterator);
+         }
       }
    }
 
    /* free memory */
+   SCIPexpriteratorFree(&repliterator);
    SCIPmultihashFree(&key2expr);
    SCIPexpriteratorFree(&hashiterator);
 
