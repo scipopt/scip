@@ -11050,7 +11050,7 @@ SCIP_RETCODE presolveCons(
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
-   if( conshdlrdata->dualpresolve && SCIPallowDualReds(scip) )
+   if( conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) )
    {
       /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
@@ -13100,7 +13100,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    }
 
 #if 0
-   if( !cutoff && conshdlrdata->dualpresolve && SCIPallowDualReds(scip) && nconss > 1 )
+   if( !cutoff && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 )
    {
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
    }
@@ -13205,7 +13205,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       assert(checkDemands(scip, cons) || cutoff);
    }
 
-   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && SCIPallowDualReds(scip) && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
+   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE,
             nfixedvars, &cutoff, NULL) );

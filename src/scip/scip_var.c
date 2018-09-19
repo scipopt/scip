@@ -8472,8 +8472,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 
 /** returns whether dual reductions are allowed during propagation and presolving
  *
- *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ *  @deprecated Please use SCIPallowStrongDualReds()
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -8481,17 +8480,49 @@ SCIP_Bool SCIPallowDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
 }
 
-/** returns whether propagation w.r.t. current objective is allowed */
+/** returns whether strong dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
+ *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
+ *        locks.
+ */
+SCIP_Bool SCIPallowStrongDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
+}
+
+/** returns whether propagation w.r.t. current objective is allowed
+ *
+ *  @deprecated Please use SCIPallowWeakDualReds()
+ */
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** returns whether weak dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ */
+SCIP_Bool SCIPallowWeakDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** marks the variable that it must not be multi-aggregated

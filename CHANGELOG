@@ -1,5 +1,4 @@
 
-
 @page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
@@ -29,12 +28,14 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
-
 - Symmetry:
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
+- SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 
 ### New API functions
+
+- SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
 
 ### Command line interface
 
@@ -42,6 +43,8 @@ Interface changes
 
 ### Changed parameters
 
+- Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
+- Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation and separation frequency in cons_orbitope.c
 
 ### New parameters
