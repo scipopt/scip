@@ -1678,7 +1678,7 @@ SCIP_RETCODE graph_pc_2rpc(
       }
       else
       {
-         prize[k] = 0.0;
+         assert(prize[k] == FARAWAY || prize[k] == 0.0);
       }
    }
 
@@ -2208,6 +2208,17 @@ SCIP_Bool graph_pc_isPcMw(
    return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP);
 }
 
+
+/** is this graph a rooted prize-collecting or rooted maximum-weight variant? */
+SCIP_Bool graph_pc_isRootedPcMw(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const int type = g->stp_type;
+   assert(g != NULL);
+
+   return (type == STP_RPCSPG || type == STP_RMWCSP);
+}
 
 /** add a vertex */
 void graph_knot_add(
@@ -4013,7 +4024,7 @@ SCIP_RETCODE graph_pack(
    int    oldnedges;
    int    nnodes;
    int    nedges;
-   SCIP_Bool rmw;
+   SCIP_Bool rpcmw;
    SCIP_Bool pcmw;
 
    assert(scip      != NULL);
@@ -4099,23 +4110,24 @@ SCIP_RETCODE graph_pack(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
 
-   rmw = g->stp_type == STP_RMWCSP;
-   pcmw = (g->stp_type == STP_MWCSP || g->stp_type == STP_RPCSPG || g->stp_type == STP_PCSPG || g->stp_type == STP_RMWCSP);
+   rpcmw = (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP);
+   pcmw = (rpcmw || g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG);
+
    if( pcmw )
       SCIP_CALL( graph_pc_init(scip, q, nnodes, nnodes) );
 
    /* add nodes (of positive degree) */
-   if( rmw )
+
+   if( rpcmw )
    {
-      int i;
-      for( i = 0; i < oldnnodes; i++ )
+      for( int i = 0; i < oldnnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
       for( e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
       {
          if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[g->head[e]]) )
          {
-            i = g->head[e];
+            const int i = g->head[e];
             g->mark[i] = FALSE;
             assert(g->grad[i] == 2);
          }
@@ -4129,7 +4141,7 @@ SCIP_RETCODE graph_pack(
       {
          if( pcmw )
          {
-            if( !Is_term(g->term[i]) || (rmw && g->mark[i]) )
+            if( !Is_term(g->term[i]) || (rpcmw && g->mark[i]) )
                q->prize[q->knots] = g->prize[i];
             else
                q->prize[q->knots] = 0.0;
@@ -4143,8 +4155,8 @@ SCIP_RETCODE graph_pack(
 
    q->source = new[g->source];
 
-   if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      q->prize[q->source] = FARAWAY;
+   if( rpcmw )
+      assert(q->prize[q->source] = FARAWAY);
 
    /* add edges */
    for( int i = 0; i < oldnedges; i += 2 )

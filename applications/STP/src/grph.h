@@ -244,6 +244,7 @@ extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
+extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
 extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
 extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);
 
@@ -254,7 +255,7 @@ extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Re
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
-extern void   graph_path_st_rmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_rpcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_full(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);

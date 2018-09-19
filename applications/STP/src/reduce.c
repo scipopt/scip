@@ -1244,6 +1244,9 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
 
+   int deleteme;
+   return SCIP_OKAY;
+
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
 

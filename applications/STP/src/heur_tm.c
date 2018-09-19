@@ -173,22 +173,19 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    STP_Bool*             connected           /**< ST nodes */
    )
 {
-   PATH*  mst;
+   PATH* mst;
    int i;
    int j;
    int e1;
    int e2;
    int k1;
    int k2;
-   int root;
    int count;
-   int nnodes;
-   SCIP_Bool rmw = (g->stp_type == STP_RMWCSP);
-   SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
-   nnodes = g->knots;
-   root = g->source;
+   int root = g->source;
+   const int nnodes = g->knots;
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
-   if( rmw )
+   if( rpcmw )
    {
       for( i = 0; i < nnodes; i++ )
       {
@@ -199,15 +196,19 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       }
       if( !g->mark[root] )
       {
-         int nedges = g->edges;
+         const int nedges = g->edges;
          for( i = 0; i < nedges; i++ )
+         {
+            assert(0);
+
+            printf("FAIL i prune! \n");
             result[i] = CONNECT;
+         }
          return SCIP_OKAY;
       }
    }
    else
    {
-      /* compute the MST, exclude all terminals */
       for( i = 0; i < nnodes; i++ )
       {
          if( connected[i] && !Is_term(g->term[i]) )
@@ -217,11 +218,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       }
    }
 
-   if( rpc )
-   {
-      g->mark[root] = TRUE;
-   }
-   else if( !rmw )
+   if( !rpcmw )
    {
       int a;
       for( a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
@@ -272,9 +269,11 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    {
       if( Is_term(g->term[i]) && i != g->source )
       {
-         if( rmw )
-            if( g->mark[i] )
-               continue;
+         if( rpcmw && g->mark[i] )
+         {
+            assert(g->prize[i] == FARAWAY);
+            continue;
+         }
 
          e1 = g->inpbeg[i];
          assert(e1 >= 0);
@@ -310,7 +309,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
             }
          }
       }
-      else if( i == root && !rpc && !rmw )
+      else if( i == root && !rpcmw )
       {
          for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
             if( g->tail[e1] == g->source )
@@ -843,7 +842,7 @@ SCIP_RETCODE prune(
       for( int e = 0; e < nedges; e++ )
          result[e] = UNKNOWN;
 
-   if( g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
+   if( graph_pc_isPcMw(g) )
       SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, result, connected) );
    else
       SCIP_CALL( SCIPStpHeurTMPrune(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, 0, result, connected) );
@@ -895,10 +894,8 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
-   if( g->stp_type == STP_RMWCSP )
-      graph_path_st_rmw(scip, g, cost, dijkdist, dijkedge, start, connected);
-   else if( g->stp_type == STP_RPCSPG )
-      graph_path_st_rpc(scip, g, cost, dijkdist, dijkedge, start, connected);
+   if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
+      graph_path_st_rpcmw(scip, g, cost, dijkdist, dijkedge, start, connected);
    else
       graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, connected);
 
@@ -1646,6 +1643,157 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    return SCIP_OKAY;
 }
 
+/* submethod for SCIPStpHeurTMRun in PC or MW mode */
+static
+SCIP_RETCODE runPcMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best solution */
+   int*                  result,             /**< temporary array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int*                  best_result,        /**< final array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int*                  dijkedge,           /**< temp */
+   int                   maxruns,            /**< number of runs */
+   int                   bestincstart,       /**< best incumbent start vertex */
+   SCIP_Real*            dijkdist,           /**< temp */
+   SCIP_Real*            cost,               /**< arc costs */
+   SCIP_Real*            costrev,            /**< reversed arc costs */
+   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+   SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
+   SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune) */
+   )
+{
+   SCIP_Real* terminalprio;
+   SCIP_Real obj;
+   SCIP_Real min = FARAWAY;
+   int* terminalperm;
+   const SCIP_Bool rmw = (graph->stp_type == STP_RMWCSP);
+   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const int nterms = graph->terms;
+   int runs = maxruns;
+   int t;
+   STP_Bool* connected;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &terminalperm, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &terminalprio, nterms) );
+
+   /* initialize arrays */
+
+   t = 0;
+   if( nodepriority == NULL )
+   {
+      for( int k = 0; k < nnodes; k++ )
+         if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+         {
+            assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
+            terminalperm[t] = k;
+            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
+         }
+   }
+   else
+   {
+      for( int k = 0; k < nnodes; k++ )
+         if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+         {
+            assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
+            terminalperm[t] = k;
+            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
+         }
+   }
+
+   if( rmw || rpc )
+   {
+      SCIP_Real max = 0.0;
+
+      for( int k = 0; k < t; k++ )
+         if( SCIPisGT(scip, terminalprio[k], max) )
+            max = terminalprio[k];
+
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
+
+      for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( SCIPisGT(scip, graph->cost[e], 0.0) && Is_term(graph->term[graph->head[e]]) )
+         {
+            const int head = graph->head[e];
+            graph->mark[head] = FALSE;
+            assert(graph->grad[head] == 2);
+         }
+      }
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( Is_term(graph->term[k]) && graph->mark[k] )
+         {
+            if( k == root )
+               terminalprio[t] = FARAWAY;
+
+            terminalperm[t] = k;
+            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
+         }
+      }
+      assert(nterms == t);
+      SCIPsortRealInt(terminalprio, terminalperm, nterms);
+   }
+   else
+   {
+      SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
+   }
+
+   if( bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
+      terminalperm[nterms - 1] = bestincstart;
+
+   /* local main loop */
+   for( int r = runs - 1; r >= 0; --r )
+   {
+      const int start = terminalperm[r];
+
+      if( pcmwfull )
+      {
+         SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, cost, dijkdist, result, dijkedge, start, connected) );
+      }
+      else
+      {
+         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, dijkdist, result, dijkedge, start, connected) );
+      }
+
+      if( SCIPisStopped(scip) )
+         break;
+
+      /* compute objective value (wrt original costs) */
+      obj = 0.0;
+      for( int e = nedges - 1; e >= 0; e-- ) /* todo: save result array as char put into computeSteinerTreeDijkPcMw */
+         if( result[e] == CONNECT )
+            obj += graph->cost[e];
+
+      if( obj < min )
+      {
+         if( bestnewstart != NULL )
+            *bestnewstart = start;
+
+         min = obj;
+
+         SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) heurdata->nexecs, obj);
+
+         for( int e = 0; e < nedges; e++ )
+            best_result[e] = result[e];
+         (*success) = TRUE;
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &terminalprio);
+   SCIPfreeBufferArray(scip, &terminalperm);
+   SCIPfreeBufferArray(scip, &connected);
+
+   return SCIP_OKAY;
+}
+
 /** execute shortest paths heuristic to obtain a Steiner tree */
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1667,8 +1815,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 {
    SCIP_PQUEUE* pqueue = NULL;
    SCIP_Longint nexecs;
-   SCIP_Real obj;
-   SCIP_Real min = FARAWAY;
    SCIP_Real* dijkdist = NULL;
    SCIP_Real** pathdist = NULL;
    SCIP_Real** node_dist = NULL;
@@ -1678,11 +1824,11 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    int k;
    int r;
    int e;
-   int root;
    int mode;
-   int nedges;
-   int nnodes;
-   int nterms;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const int nterms = graph->terms;
    int* perm = NULL;
    int* start;
    int* vcount = NULL;
@@ -1694,7 +1840,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    int** node_base = NULL;
    int** node_edge = NULL;
    SCIP_Bool startsgiven;
-   STP_Bool* connected;
 
    assert(scip != NULL);
    assert(cost != NULL);
@@ -1709,10 +1854,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    }
 
    best = bestincstart;
-   root = graph->source;
-   nnodes = graph->knots;
-   nedges = graph->edges;
-   nterms = graph->terms;
    nexecs = heurdata->nexecs;
    (*success) = FALSE;
 
@@ -1740,7 +1881,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    assert(nexecs >= 0);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
 
@@ -1839,7 +1979,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       }
       else
       {
-         int randint = SCIPrandomGetInt(heurdata->randnumgen, 0, 2);
+         const int randint = SCIPrandomGetInt(heurdata->randnumgen, 0, 2);
          if( randint == 0 )
             best = -1;
          else if( randint == 1 )
@@ -1961,140 +2101,19 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    /* perform SPH computations, differentiate between STP variants */
    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
    {
-      SCIP_Real* terminalprio;
-      int* terminalperm;
-      int t;
-      const SCIP_Bool rmw = (graph->stp_type == STP_RMWCSP);
-      const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
-
-      /* allocate memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &terminalperm, nterms) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &terminalprio, nterms) );
-
-      /* initialize arrays */
-
-      t = 0;
-      if( nodepriority == NULL )
-      {
-         for( k = nnodes - 1; k >= 0; --k )
-            if( Is_pterm(graph->term[k]) && graph->grad[k] > 0 )
-            {
-               assert(SCIPisGT(scip, graph->prize[k], 0.0));
-               terminalperm[t] = k;
-               terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
-            }
-      }
-      else
-      {
-         for( k = nnodes - 1; k >= 0; --k )
-             if( Is_pterm(graph->term[k]) && graph->grad[k] > 0 )
-             {
-                assert(SCIPisGT(scip, graph->prize[k], 0.0));
-                terminalperm[t] = k;
-                terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
-             }
-      }
-
-      if( rmw )
-      {
-         SCIP_Real max = 0.0;
-         int head;
-         for( k = t - 1; k >= 0; --k )
-         {
-            if( SCIPisGT(scip, terminalprio[k], max) )
-               max = terminalprio[k];
-         }
-
-         for( k = nnodes - 1; k >= 0; --k )
-            graph->mark[k] = (graph->grad[k] > 0);
-
-         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            if( SCIPisGT(scip, graph->cost[e], 0.0) && Is_term(graph->term[graph->head[e]]) )
-            {
-               head = graph->head[e];
-               graph->mark[head] = FALSE;
-               assert(graph->grad[head] == 2);
-            }
-         }
-
-         for( k = nnodes - 1; k >= 0; --k )
-         {
-            if( Is_term(graph->term[k]) && graph->mark[k] )
-            {
-               assert(SCIPisGT(scip, graph->prize[k], 0.0));
-               terminalperm[t] = k;
-               terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
-            }
-         }
-         assert(nterms == t);
-         SCIPsortRealInt(terminalprio, terminalperm, nterms);
-      }
-      else
-      {
-         if( rpc )
-         {
-            terminalperm[t] = root;
-            terminalprio[t++] = FARAWAY;
-            runs++;
-
-            SCIPsortRealInt(terminalprio, terminalperm, nterms);
-         }
-         else
-         {
-            SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
-         }
-      }
-
-      if( best >= 0 && best < nnodes && Is_pterm(graph->term[best]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
-         terminalperm[nterms - 1] = best;
-
-      /* local main loop */
-      for( r = runs - 1; r >= 0; --r )
-      {
-         k = terminalperm[r];
-
-         if( pcmwfull )
-         {
-            SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, cost, dijkdist, result, dijkedge, k, connected) );
-         }
-         else
-         {
-            SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, dijkdist, result, dijkedge, k, connected) );
-         }
-
-         if( SCIPisStopped(scip) )
-            break;
-
-         /* compute objective value (wrt original costs) */
-         obj = 0.0;
-         for( e = nedges - 1; e >= 0; e-- ) /* todo: save result array as char put into computeSteinerTreeDijkPcMw */
-            if( result[e] == CONNECT )
-               obj += graph->cost[e];
-
-         if( SCIPisLT(scip, obj, min) )
-         {
-            if( bestnewstart != NULL )
-               *bestnewstart = k;
-            min = obj;
-
-            SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) nexecs, obj);
-
-            for( e = 0; e < nedges; e++ )
-               best_result[e] = result[e];
-            (*success) = TRUE;
-         }
-      }
-
-      /* free memory */
-      SCIPfreeBufferArray(scip, &terminalprio);
-      SCIPfreeBufferArray(scip, &terminalperm);
-   } /* STP_PCSPG or STP_(R)MWCSP */
+      /* STP_PCSPG or STP_(R)MWCSP */
+      SCIP_CALL( runPcMW(scip, heurdata, graph, bestnewstart, result, best_result, dijkedge, runs, best, dijkdist, cost, costrev, nodepriority, success, pcmwfull) );
+   }
    else
    {
+      SCIP_Real obj;
+      SCIP_Real min = FARAWAY;
       SCIP_Real* orgcost = NULL;
       int edgecount;
+      STP_Bool* connected;
       STP_Bool solfound = FALSE;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
 
       if( SCIPisLE(scip, maxcost, 0.0) )
          maxcost = 1.0;
@@ -2296,6 +2315,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
          }
          SCIPfreeBufferArray(scip, &orgcost);
       }
+
+      SCIPfreeBufferArray(scip, &connected);
    }
 
    /* free allocated memory */
@@ -2344,7 +2365,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    SCIPfreeBufferArray(scip, &result);
    SCIPfreeBufferArray(scip, &start);
-   SCIPfreeBufferArray(scip, &connected);
 
    return SCIP_OKAY;
 }
