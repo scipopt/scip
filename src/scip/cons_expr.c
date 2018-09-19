@@ -174,7 +174,6 @@ struct SCIP_ConshdlrData
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
    unsigned int             lastsepatag;     /**< last separation tag used to compute cuts */
-   unsigned int             lastinitsepatag; /**< last separation initialization flag used */
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             lastintevaltag;  /**< last interval evaluation tag used */
@@ -216,14 +215,6 @@ typedef struct
    SCIP_Bool               global;           /**< should a global or a local copy be created */
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
-
-/** data passed on during separation initialization */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-   SCIP_Bool               infeasible;       /**< pointer to store whether the problem is infeasible */
-   unsigned int            initsepatag;      /**< tag used for the separation initialization round */
-} INITSEPA_DATA;
 
 /** data passed on during separation */
 typedef struct
@@ -4788,76 +4779,6 @@ SCIP_RETCODE freeAuxVars(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for separation initialization */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
-{
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   INITSEPA_DATA* initsepadata;
-   int e;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   initsepadata = (INITSEPA_DATA*)data;
-   assert(initsepadata != NULL);
-   assert(initsepadata->conshdlr != NULL);
-   assert(!initsepadata->infeasible);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* skip expression if it has been considered already */
-   if( initsepadata->initsepatag == expr->initsepatag )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* call initsepa of all nlhdlrs in expr */
-   for( e = 0; e < expr->nenfos; ++e )
-   {
-      SCIP_Bool underestimate;
-      SCIP_Bool overestimate;
-      SCIP_Bool infeasible;
-      assert(expr->enfos[e] != NULL);
-
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
-
-      /* only init sepa if there is an initsepa callback */
-      if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
-         continue;
-
-      assert(!expr->enfos[e]->issepainit);
-
-      /* check whether expression needs to be under- or overestimated */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-      assert(underestimate || overestimate);
-
-      /* call the separation initialization callback of the nonlinear handler */
-      infeasible = FALSE;
-      SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, initsepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-         overestimate, underestimate, &infeasible) );
-      expr->enfos[e]->issepainit = TRUE;
-
-      if( infeasible )
-      {
-         /* stop walk if we detected infeasibility
-          * TODO here we'll still call the initsepa of this expr nlhdlrs, but maybe we should not abort the walk? otherwise, we may later call exitsepa for expressions for which initsepa was not called?
-          */
-         initsepadata->infeasible = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      }
-   }
-
-   /* store the initsepa tag */
-   expr->initsepatag = initsepadata->initsepatag;
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback for solve deinitialization (EXITSOL) */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
@@ -5126,8 +5047,9 @@ SCIP_RETCODE initSepa(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   INITSEPA_DATA initsepadata;
-   int c;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c, e;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5138,34 +5060,71 @@ SCIP_RETCODE initSepa(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    *infeasible = FALSE;
-
-   initsepadata.infeasible = FALSE;
-   initsepadata.conshdlr = conshdlr;
-   initsepadata.initsepatag = (++conshdlrdata->lastinitsepatag);
-
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && !*infeasible; ++c )
    {
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      /* call LP initialization callback for 'initial' constraints only */
-      if( SCIPconsIsInitial(conss[c]) )
+      /* call separation initialization callback for 'initial' constraints only */
+      if( !SCIPconsIsInitial(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      if( !SCIPexpriteratorIsInit(it) )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
 
-         /* walk through the expression tree and call separation initialization callbacks */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, initSepaEnterExpr, NULL, NULL, NULL, (void*)&initsepadata) );
-
-         if( initsepadata.infeasible )
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         /* call initsepa of all nlhdlrs in expr */
+         for( e = 0; e < expr->nenfos; ++e )
          {
-            SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
-            *infeasible = TRUE;
-            return SCIP_OKAY;
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            SCIP_Bool underestimate;
+            SCIP_Bool overestimate;
+            assert(expr->enfos[e] != NULL);
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* only init sepa if there is an initsepa callback */
+            if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
+               continue;
+
+            assert(!expr->enfos[e]->issepainit);
+
+            /* check whether expression needs to be under- or overestimated */
+            overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+            underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+            assert(underestimate || overestimate);
+
+            /* call the separation initialization callback of the nonlinear handler */
+            SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+               overestimate, underestimate, infeasible) );
+            expr->enfos[e]->issepainit = TRUE;
+
+            if( *infeasible )
+            {
+               /* stop everything if we detected infeasibility */
+               SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
+               break;
+            }
          }
       }
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -6126,7 +6085,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    if( *infeasible )
       return SCIP_OKAY;
 
-   /* call LP initialization callbacks of the expression handlers */
+   /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;

@@ -130,9 +130,6 @@ struct SCIP_ConsExpr_Expr
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
-   /* separation initialization */
-   unsigned int            initsepatag;   /**< flag to store whether an expression has been called during the separation initialization */
-
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
    int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */
