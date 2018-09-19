@@ -89,7 +89,7 @@ SCIP_RETCODE checkCurvature(
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
 
    /* simplify expression */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, origexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* print simplified expression */

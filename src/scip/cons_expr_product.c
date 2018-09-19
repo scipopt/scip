@@ -885,7 +885,7 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CONSEXPR_EXPR* simplifiedpower;
 
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, SCIPfindConshdlr(scip, "expr"), &power, base1, expo1 + expo2) );
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, power, &simplifiedpower) ); /* FIXME: call simplifyPow */
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), power, &simplifiedpower) ); /* FIXME: call simplifyPow */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &power) );
 
          /* replace tomergenode's expression with simplifiedpower */
@@ -1127,7 +1127,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
        * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
        */
-      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, aux, simplifiedexpr) ); /*FIXME: how to call simplifySum ? */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), aux, simplifiedexpr) ); /*FIXME: how to call simplifySum ? */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
    /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */

@@ -303,7 +303,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* expr1 = <5.0>, expr2 = entropy(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3));
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
@@ -316,7 +316,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of x and log(x) is transformed to sum of entropy expression
     * expr1 is buffer for simplification and expr2 is used to store children
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, prodexpr, &expr1));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1));
 
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPgetConsExprExprHdlrSum(conshdlr));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
@@ -333,7 +333,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of -x and log(x) is transformed to entropy expression
     * expr1 is buffer for simplification
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, negprodexpr, &expr1));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1));
 
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);

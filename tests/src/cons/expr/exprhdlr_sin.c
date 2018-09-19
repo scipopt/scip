@@ -289,7 +289,7 @@ Test(sin, simplify, .description = "Tests the expression simplification.")
    /* expr1 = <5.0>, expr2 = sin(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0) );
    SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr2, expr1) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
