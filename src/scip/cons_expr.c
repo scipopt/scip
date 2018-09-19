@@ -248,15 +248,6 @@ struct SCIP_ConsExpr_PrintDotData
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
 
-/** data passed on during registering nonlinear handlers */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
-   SCIP_Bool               infeasible;       /**< has infeasibility be detected */
-} NLHDLR_DETECT_DATA;
-
 /*
  * Local methods
  */
@@ -4457,13 +4448,18 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
 }
 
 
-/** expression walk callback to install nlhdlrs in expressions */
+/** install nlhdlrs in one expression */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
+SCIP_RETCODE detectNlhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
+   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
+   SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
-   NLHDLR_DETECT_DATA* detectdata;
    SCIP_Bool enforcedbelow;
    SCIP_Bool enforcedabove;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
@@ -4476,40 +4472,18 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    int nsuccess;
    int e, h;
 
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(data != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   detectdata = (NLHDLR_DETECT_DATA *)data;
-   conshdlr = detectdata->conshdlr;
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(detectdata->nlhdlrssuccess != NULL);
-   assert(detectdata->nlhdlrssuccessexprdata != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrssuccess != NULL);
+   assert(nlhdlrssuccessexprdata != NULL);
+   assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
 
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* if there is no auxiliary variable here, then there is no-one requiring that
-    * an auxvar equals (or approximates) to value of this expression
-    * thus, not need to find nlhdlrs
-    */
-   if( expr->auxvar == NULL )
-      return SCIP_OKAY;
-
-   if( expr->nenfos > 0 )
-   {
-      /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
-       * then also the subtree has been investigated already and we can stop walking further down
-       */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-
-      return SCIP_OKAY;
-   }
+   /* there should be no enforcer yet, i.e., detection should not have been run already */
+   assert(expr->nenfos == 0);
    assert(expr->enfos == NULL);
 
    /* analyze expression with nonlinear handlers
@@ -4524,7 +4498,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p (%s); start with below %d above %d\n",
       (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
 
-   for( h = 0; h < conshdlrdata->nnlhdlrs && !detectdata->infeasible; ++h )
+   for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
       SCIP_INTERVAL interval;
@@ -4567,8 +4541,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
 
       /* remember nlhdlr and its data */
-      detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
-      detectdata->nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
+      nlhdlrssuccess[nsuccess] = nlhdlr;
+      nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
       ++nsuccess;
 
       /* update enforcement flags */
@@ -4584,13 +4558,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &interval, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr)) );
       SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
       /* tighten bounds of expression interval and the auxiliary variable */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, &detectdata->infeasible, &ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, infeasible, &ntightenings) );
    }
 
    /* stop if the expression cannot be enforced
     * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
     */
-   if( (!enforcedbelow || !enforcedabove) && !detectdata->infeasible )
+   if( (!enforcedbelow || !enforcedabove) && !*infeasible )
    {
       SCIPerrorMessage("no nonlinear handler provided enforcement for %s expression %s auxvar\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
@@ -4603,14 +4577,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    for( e = 0; e < nsuccess; ++e )
    {
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
-      expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
-      expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
+      expr->enfos[e]->nlhdlr = nlhdlrssuccess[e];
+      expr->enfos[e]->nlhdlrexprdata = nlhdlrssuccessexprdata[e];
       expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
-
-   if( detectdata->infeasible )
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
 
    return SCIP_OKAY;
 }
@@ -4625,30 +4596,34 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    )
 {
-   NLHDLR_DETECT_DATA nlhdlrdetect;
+   SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess;   /* buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /* buffer for exprdata of nlhdlrs */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_Bool redundant;
    int ntightenings;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-
-   nlhdlrdetect.conshdlr = conshdlr;
-   nlhdlrdetect.infeasible = FALSE;
+   assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    /* allocate some buffer for temporary storage of nlhdlr detect result */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
    /* increase lastinteval tag */
    ++(conshdlrdata->lastintevaltag);
    assert(conshdlrdata->lastintevaltag > 0);
 
+   *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
    {
       assert(conss != NULL && conss[i] != NULL);
@@ -4697,12 +4672,37 @@ SCIP_RETCODE detectNlhdlrs(
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
       assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
 
-      /* detect non-linear handlers, might create auxiliary variables */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, detectNlhdlrsEnterExpr, NULL, NULL, NULL, &nlhdlrdetect) );
-      if( nlhdlrdetect.infeasible )
+      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      expr = SCIPexpriteratorGetCurrent(it);
+      while( !SCIPexpriteratorIsEnd(it) )
+      {
+         if( expr->nenfos > 0 )
+         {
+            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+             * then also the subtree has been investigated already and we can stop iterating further down
+             */
+            expr = SCIPexpriteratorSkipDFS(it);
+            continue;
+         }
+
+         /* if there is an auxiliary variable here, then there is some-one requiring that
+          * an auxvar equals (or approximates) to value of this expression
+          * thus, we need to find nlhdlrs
+          */
+         if( expr->auxvar != NULL )
+         {
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+
+            if( *infeasible )
+               break;
+         }
+
+         expr = SCIPexpriteratorGetNext(it);
+      }
+
+      if( *infeasible )
       {
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
-         *infeasible = TRUE;
          break;
       }
 
@@ -4714,6 +4714,7 @@ SCIP_RETCODE detectNlhdlrs(
                consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
          break;
       }
+
       SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
       if( *infeasible )
       {
@@ -4723,8 +4724,9 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
+   SCIPexpriteratorFree(&it);
+   SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
+   SCIPfreeBufferArray(scip, &nlhdlrssuccess);
 
    /* call reverse propagation for ALL expressions
     * This can ensure that auxiliary variables take only values that are within the domain of functions that use them
