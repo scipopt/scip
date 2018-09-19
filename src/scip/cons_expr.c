@@ -4764,28 +4764,6 @@ SCIP_RETCODE freeAuxVars(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for solve deinitialization (EXITSOL) */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-   assert(data != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
-
-   /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting
-    * (data is a pointer to a bool that indicates whether we are restarting)
-    */
-   SCIP_CALL( freeEnfoData(scip, expr, !*(SCIP_Bool*)data) );
-
-   return SCIP_OKAY;
-}
-
-
 /** calls separation initialization callback for each expression */
 static
 SCIP_RETCODE initSepa(
@@ -5941,11 +5919,15 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
    int c;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -5959,9 +5941,27 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* walk through the expression tree and call  */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, exitSolEnterExpr, NULL, NULL, NULL, (void*)&restart) );
+      if( !SCIPexpriteratorIsInit(it) )
+      {
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
+
+         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting
+          * (data is a pointer to a bool that indicates whether we are restarting)
+          */
+         SCIP_CALL( freeEnfoData(scip, expr, !restart) );
+      }
    }
+
+   SCIPexpriteratorFree(&it);
 
    /* deinitialize nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
