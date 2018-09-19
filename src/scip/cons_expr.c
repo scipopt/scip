@@ -199,13 +199,6 @@ struct SCIP_ConshdlrData
    int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
 };
 
-/** data passed on during backward automatic differentiation of an expression at a point */
-typedef struct
-{
-   unsigned int          difftag;            /**< differentiation tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
-} EXPRBWDIFF_DATA;
-
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
 typedef struct
 {
@@ -1571,117 +1564,6 @@ int nlhdlrCmp(
 
    return strcmp(h1->name, h2->name);
 }
-
-/** @name Differentiation methods
- * Automatic differentiation Backward mode:
- * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
- * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
- * f
- * |-----|
- * s     t
- * |--|  |--|
- * x  y  x  y
- * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
- * f
- * |   is d_s f [where d is actually \partial]
- * s
- * The weight of a path is the product of the weight of the edges in the path.
- * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
- * df/dx = d_s f * d_x s + d_t f * d_x t
- *
- * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
- * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
- * in the DAG and path in a tree diagram of a function.
- * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPwalkConsExprExprDF), for every expr that *has* children,
- * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
- * Example:
- * f->derivative = 1.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative = d_x s * s->derivative = d_x s * d_s f
- * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
- * and afterwards add, instead of overwrite the computed value.
- * The complete example would then be:
- * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative += d_x s * s->derivative = d_x s * d_s f
- * y->derivative += d_t s * s->derivative = d_t s * d_s f
- * t->derivative = d_t f * f->derivative = d_t f
- * x->derivative += d_x t * t->derivative = d_x t * d_t f
- * y->derivative += d_t t * t->derivative = d_t t * d_t f
- *
- * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
- *
- * @{
- */
-
-/** expression walk callback for computing derivatives with backward automatic differentiation, called before child is
- *  visited
- */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
-{  /*lint --e{715}*/
-   EXPRBWDIFF_DATA* bwdiffdata;
-   SCIP_Real derivative;
-
-   assert(expr != NULL);
-   assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
-   assert(expr->children[expr->walkcurrentchild] != NULL);
-
-   bwdiffdata = (EXPRBWDIFF_DATA*) data;
-   assert(bwdiffdata != NULL);
-
-   derivative = SCIP_INVALID;
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
-   if( expr->children[expr->walkcurrentchild]->difftag != bwdiffdata->difftag
-      && SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
-   {
-      expr->children[expr->walkcurrentchild]->derivative = 0.0;
-   }
-
-   /* update differentiation tag of the child */
-   expr->children[expr->walkcurrentchild]->difftag = bwdiffdata->difftag;
-
-   if( expr->exprhdlr->bwdiff == NULL )
-   {
-      bwdiffdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
-   }
-
-   /* call backward differentiation callback */
-   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "val") == 0 )
-   {
-      derivative = 0.0;
-   }
-   else
-   {
-      SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, expr->walkcurrentchild, &derivative) );
-   }
-
-   if( derivative == SCIP_INVALID ) /*lint !e777*/
-   {
-      bwdiffdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
-   }
-
-   /* update partial derivative stored in the child expression
-    * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
-    * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
-    */
-   if( !SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
-      expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
-   else
-      expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
-
-   return SCIP_OKAY;
-}
-
-/**@} */  /* end of differentiation methods */
 
 /** propagate bounds of the expressions in a given expression tree and tries to tighten the bounds of the auxiliary
  *  variables accordingly
@@ -8574,6 +8456,51 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+
+/** @name Differentiation methods
+ * Automatic differentiation Backward mode:
+ * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
+ * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
+ * f
+ * |-----|
+ * s     t
+ * |--|  |--|
+ * x  y  x  y
+ * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
+ * f
+ * |   is d_s f [where d is actually \partial]
+ * s
+ * The weight of a path is the product of the weight of the edges in the path.
+ * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
+ * df/dx = d_s f * d_x s + d_t f * d_x t
+ *
+ * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
+ * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
+ * in the DAG and path in a tree diagram of a function.
+ * Initially, we set root->derivative to 1.0.
+ * Then, traversing the tree in Depth First (see SCIPwalkConsExprExprDF), for every expr that *has* children,
+ * we store in its i-th child
+ * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
+ * Example:
+ * f->derivative = 1.0
+ * s->derivative = d_s f * f->derivative = d_s f
+ * x->derivative = d_x s * s->derivative = d_x s * d_s f
+ * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
+ * and afterwards add, instead of overwrite the computed value.
+ * The complete example would then be:
+ * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
+ * s->derivative = d_s f * f->derivative = d_s f
+ * x->derivative += d_x s * s->derivative = d_x s * d_s f
+ * y->derivative += d_t s * s->derivative = d_t s * d_s f
+ * t->derivative = d_t f * f->derivative = d_t f
+ * x->derivative += d_x t * t->derivative = d_x t * d_t f
+ * y->derivative += d_t t * t->derivative = d_t t * d_t f
+ *
+ * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
+ *
+ * @{
+ */
+
 /** computes the gradient for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
@@ -8584,55 +8511,103 @@ TERMINATE:
 SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real derivative;
+   unsigned int difftag;
+
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
-   assert(expr != NULL);
+   assert(rootexpr != NULL);
 
-   /* evaluate expression if necessary */
-   if( soltag == 0 || expr->evaltag != soltag )
-   {
-      SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, expr, sol, soltag) );
-   }
+   /* ensure expression is evaluated */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag) );
 
    /* check if expression could not be evaluated */
-   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
+   if( SCIPgetConsExprExprValue(rootexpr) == SCIP_INVALID ) /*lint !e777*/
    {
-      expr->derivative = SCIP_INVALID;
+      rootexpr->derivative = SCIP_INVALID;
       return SCIP_OKAY;
    }
 
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   if( rootexpr->exprhdlr == conshdlrdata->exprvalhdlr )
    {
-      expr->derivative = 0.0;
+      rootexpr->derivative = 0.0;
+      return SCIP_OKAY;
    }
-   else
+
+   difftag = ++(conshdlrdata->lastdifftag);
+
+   rootexpr->derivative = 1.0;
+   rootexpr->difftag = difftag;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      EXPRBWDIFF_DATA bwdiffdata;
-      SCIP_CONSHDLRDATA* conshdlrdata;
+      assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
-      conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-      assert(conshdlrdata != NULL);
+      if( expr->exprhdlr->bwdiff == NULL )
+      {
+         rootexpr->derivative = SCIP_INVALID;
+         break;
+      }
 
-      bwdiffdata.aborted = FALSE;
-      bwdiffdata.difftag = ++(conshdlrdata->lastdifftag);
+      child = SCIPexpriteratorGetChildExprDFS(it);
+      assert(child != NULL);
 
-      expr->derivative = 1.0;
-      expr->difftag = bwdiffdata.difftag;
+      /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+      if( child->difftag != difftag && SCIPisConsExprExprVar(child) )
+         child->derivative = 0.0;
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, bwdiffExprVisitChild, NULL, NULL, (void*)&bwdiffdata) );
+      /* update differentiation tag of the child */
+      child->difftag = difftag;
 
-      /* invalidate derivative if an error occurred */
-      if( bwdiffdata.aborted )
-         expr->derivative = SCIP_INVALID;
+      /* call backward differentiation callback */
+      if( child->exprhdlr == conshdlrdata->exprvalhdlr )
+      {
+         derivative = 0.0;
+      }
+      else
+      {
+         derivative = SCIP_INVALID;
+         SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+
+         if( derivative == SCIP_INVALID ) /*lint !e777*/
+         {
+            rootexpr->derivative = SCIP_INVALID;
+            break;
+         }
+      }
+
+      /* update partial derivative stored in the child expression
+       * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+       * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
+       */
+      if( !SCIPisConsExprExprVar(child) )
+         child->derivative = expr->derivative * derivative;
+      else
+         child->derivative += expr->derivative * derivative;
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
+
+/**@} */  /* end of differentiation methods */
 
 /** evaluates an expression over a box
  *
