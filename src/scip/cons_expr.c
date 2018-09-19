@@ -4739,24 +4739,6 @@ SCIP_RETCODE detectNlhdlrs(
    return SCIP_OKAY;
 }
 
-/** expression walk callback to free auxiliary variables created for the outer approximation */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
-{
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   assert((SCIP_CONSHDLR*)data != NULL);
-   assert(strcmp(SCIPconshdlrGetName((SCIP_CONSHDLR*)data), CONSHDLR_NAME) == 0);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   SCIP_CALL( freeAuxVar(scip, expr) );
-
-   return SCIP_OKAY;
-}
-
 /** frees auxiliary variables which have been added to compute an outer approximation */
 static
 SCIP_RETCODE freeAuxVars(
@@ -4766,24 +4748,42 @@ SCIP_RETCODE freeAuxVars(
    int                   nconss              /**< total number of constraints */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSDATA* consdata;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    for( i = 0; i < nconss; ++i )
    {
-      assert(conss != NULL && conss[i] != NULL);
+      assert(conss[i] != NULL);
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( consdata->expr != NULL )
+      if( consdata->expr == NULL )
+         continue;
+
+      if( !SCIPexpriteratorIsInit(it) )
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, freeAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+      {
+         SCIP_CALL( freeAuxVar(scip, expr) );
       }
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
