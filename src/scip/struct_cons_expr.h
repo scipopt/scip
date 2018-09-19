@@ -106,7 +106,6 @@ struct SCIP_ConsExpr_Expr
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
-   unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
    /* branching */
    SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
