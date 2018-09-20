@@ -17926,7 +17926,7 @@ SCIP_RETCODE computeRelIntPoint(
          if ( ! SCIPsetIsZero(set, col->ub) )
          {
             matinds[matidx] = lp->ncols;
-            matvals[matidx++] = -col->lb;
+            matvals[matidx++] = -col->ub;
             assert( matidx <= ntotnonz );
          }
 
