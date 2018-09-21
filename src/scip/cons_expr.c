@@ -10238,6 +10238,18 @@ void SCIPsetConsExprNlhdlrBranchscore(
    nlhdlr->branchscore = branchscore;
 }
 
+/** set the reformulate callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrReformulate(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->reformulate = reformulate;
+}
+
 /** gives name of nonlinear handler */
 const char* SCIPgetConsExprNlhdlrName(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */

@@ -183,6 +183,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore));    /**< branching scoring callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate));    /**< reformulation callback (can be NULL) */
 };
 
 /** enforcement data of an expression */

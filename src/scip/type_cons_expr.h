@@ -898,6 +898,25 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    unsigned int brscoretag, \
    SCIP_Bool* success)
 
+/** nonlinear handler callback for reformulation
+ *
+ * The method is called for each expression during SCIP's presolving.
+ * It shall reformulate a given expression by another one.
+ * It shall store the reformulated expression in the refexpr pointer.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression to be reformulated
+ * output:
+ *  - simplifiedexpr : the simplified expression (NULL if expr can not be reformulated)
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_EXPR** refexpr)
+
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
