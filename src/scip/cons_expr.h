@@ -1024,6 +1024,18 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    );
 
+/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
+ *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
+ *  callback
+ */
+EXTERN
+SCIP_RETCODE SCIPreformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    refrootexor       /**< buffer to store reformulated expression */
+   );
+
 /** prints structure of an expression a la Maple's dismantle */
 EXTERN
 SCIP_RETCODE SCIPdismantleConsExprExpr(

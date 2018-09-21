@@ -9963,6 +9963,111 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    return SCIP_OKAY;
 }
 
+/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
+ *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
+ *  callback
+ */
+SCIP_RETCODE SCIPreformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    refrootexor       /**< buffer to store reformulated expression */
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+   assert(refrootexor != NULL);
+
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         {
+            SCIP_CONSEXPR_EXPR* newchild;
+
+            newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            assert(newchild != NULL);
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+
+            /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         {
+            SCIP_CONSEXPR_EXPR* refexpr = NULL;
+            SCIP_CONSHDLRDATA* conshdlrdata;
+            SCIP_CONSEXPREXPRWALK_IO walkio;
+            int k;
+
+            conshdlrdata = SCIPconshdlrGetData(conshdlr);
+            assert(conshdlrdata != NULL);
+
+            /* iterate through nonlinear handlers and call reformulation callbacks;
+             *
+             * TODO store nonlinear handlers that implement the reformulation callback separately
+             * TODO sort nonlinear handlers according to their priorities
+             */
+            for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
+            {
+               assert(conshdlrdata->nlhdlrs[k] != NULL);
+
+               if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
+               {
+                  SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlrdata->nlhdlrs[k], expr, &refexpr) );
+
+                  /* stop calling other nonlinear handlers as soon as the reformulation was successful */
+                  if( refexpr != NULL )
+                     break;
+               }
+            }
+
+            /* check whether no nonlinear handler could reformulate the expression; set refexpr expression to expr and
+             * capture it (see SCIPsimplifyConsExprExpr for more details)
+             */
+            if( refexpr == NULL )
+            {
+               refexpr = expr;
+               SCIPcaptureConsExprExpr(refexpr);
+            }
+
+            walkio.ptrval = (void*) refexpr;
+            SCIPexpriteratorSetCurrentUserData(it, walkio);
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *refrootexor = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
+   assert(*refrootexor != NULL);
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /** prints structure of an expression a la Maple's dismantle */
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
