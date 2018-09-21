@@ -24,7 +24,7 @@
 #include "scip/cons_expr.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "xzy"
+#define NLHDLR_NAME         "xyz"
 #define NLHDLR_DESC         "xyz handler for expressions"
 #define NLHDLR_PRIORITY     0
 
