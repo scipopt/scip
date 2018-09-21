@@ -22,6 +22,8 @@ Interface changes
 
 ### New and changed callbacks
 
+- extend SEPAEXEC{LP,SOL} callbacks by parameter "depth", which should be used within separation instead of SCIPgetCurrentDepth()
+
 ### Deleted and changed API methods
 
 - LPI:
@@ -30,6 +32,8 @@ Interface changes
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
 
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+
+- extend SCIPseparateSolCutpool() by parameter "pretendroot", which is passed to SCIPcutpoolSeparate() instead of SCIPtreeGetCurrentDepth(scip->tree) == 0
 
 ### New API functions
 
