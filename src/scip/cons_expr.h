@@ -1418,6 +1418,14 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
 );
 
+/** calls the reformulation callback of a nonlinear handler */
+SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
+   );
+
 /** calls the nonlinear handler branching score callback */
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);

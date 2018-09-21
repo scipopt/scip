@@ -5165,7 +5165,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5184,10 +5184,12 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nbranchscores);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nreformulates);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->sepatime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->reformulatetime));
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -5498,6 +5500,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->sepatime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->reformulatetime) );
 
       SCIPfreeMemory(scip, &nlhdlr->name);
       SCIPfreeMemoryNull(scip, &nlhdlr->desc);
@@ -5587,6 +5590,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->sepatime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->reformulatetime) );
    }
 
    /* reset statistics in constraint handler */
@@ -10124,6 +10128,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->reformulatetime) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/expr/nlhdlr/%s/enabled", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
@@ -10565,6 +10570,35 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    if( *infeasible )
       ++nlhdlr->ncutoffs;
    ++nlhdlr->npropcalls;
+
+   return SCIP_OKAY;
+}
+
+/** calls the reformulation callback of a nonlinear handler */
+SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
+   )
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->reformulatetime != NULL);
+
+   *refexpr = NULL;
+
+   if( nlhdlr->reformulate == NULL )
+      return SCIP_OKAY;
+
+   /* call reformulation callback */
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->reformulatetime) );
+   SCIP_CALL( nlhdlr->reformulate(scip, nlhdlr, expr, refexpr) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
+
+   /* check whether reformulation was successful */
+   if( *refexpr != NULL )
+      ++nlhdlr->nreformulates;
 
    return SCIP_OKAY;
 }
