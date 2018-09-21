@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_XYZ.h
- * @brief  XYZ nonlinear handler
+/**@file   cons_expr_nlhdlr_xyz.h
+ * @brief  xyz nonlinear handler
  * @author Benjamin Mueller
  */
 
