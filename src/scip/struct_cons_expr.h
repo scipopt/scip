@@ -163,11 +163,13 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_Longint                  ndomreds;   /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint                  ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
    SCIP_Longint                  nbranchscores; /**< number of times, branching scores were added by this nonlinear handler */
+   SCIP_Longint                  nreformulates; /**< number of times, an expression has been successfully reformulated by a nonlinear handler */
 
    SCIP_CLOCK*                   detecttime; /**< time used for detection */
    SCIP_CLOCK*                   sepatime;   /**< time used for separation or estimation */
    SCIP_CLOCK*                   proptime;   /**< time used for reverse propagation */
    SCIP_CLOCK*                   intevaltime;/**< time used for interval evaluation */
+   SCIP_CLOCK*                   reformulatetime;/**< time used for expression reformulation */
 
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata));  /**< callback to free data of handler (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata));  /**< callback to free expression specific data (can be NULL) */
@@ -183,6 +185,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore));    /**< branching scoring callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate));    /**< reformulation callback (can be NULL) */
 };
 
 /** enforcement data of an expression */

@@ -1024,6 +1024,18 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    );
 
+/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
+ *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
+ *  callback
+ */
+EXTERN
+SCIP_RETCODE SCIPreformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
+   );
+
 /** prints structure of an expression a la Maple's dismantle */
 EXTERN
 SCIP_RETCODE SCIPdismantleConsExprExpr(
@@ -1278,6 +1290,13 @@ void SCIPsetConsExprNlhdlrBranchscore(
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
 );
 
+/** set the reformulate callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrReformulate(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
+   );
+
 /** gives name of nonlinear handler */
 EXTERN
 const char* SCIPgetConsExprNlhdlrName(
@@ -1335,6 +1354,12 @@ SCIP_Bool SCIPhasConsExprNlhdlrInteval(
 /** returns whether nonlinear handler implements the reverse propagation callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the reformulation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
@@ -1410,6 +1435,15 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
 );
+
+/** calls the reformulation callback of a nonlinear handler */
+SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
+   );
 
 /** calls the nonlinear handler branching score callback */
 EXTERN

@@ -1473,7 +1473,7 @@ static
 int nlhdlrCmp(
    void*                 hdlr1,              /**< first handler */
    void*                 hdlr2               /**< second handler */
-)
+   )
 {
    SCIP_CONSEXPR_NLHDLR* h1;
    SCIP_CONSEXPR_NLHDLR* h2;
@@ -2983,6 +2983,141 @@ SCIP_RETCODE replaceCommonSubexpressions(
    return SCIP_OKAY;
 }
 
+/** helper function to either simplify or reformulate an expression and its subexpressions */
+static
+SCIP_RETCODE reformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_Bool               simplify,         /**< should the expression be simplified or reformulated? */
+   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+   assert(simplified != NULL);
+
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         {
+            SCIP_CONSEXPR_EXPR* newchild;
+
+            newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            assert(newchild != NULL);
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+
+            /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         {
+            SCIP_CONSEXPR_EXPR* refexpr = NULL;
+            SCIP_CONSEXPREXPRWALK_IO walkio;
+
+            /* use simplification of expression handlers */
+            if( simplify )
+            {
+               if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
+               {
+                  SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &refexpr) );
+               }
+               else
+               {
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") != 0);
+                  assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") != 0);
+
+                  /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
+                   * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
+                   */
+                  refexpr = expr;
+                  SCIPcaptureConsExprExpr(refexpr);
+               }
+               assert(refexpr != NULL);
+            }
+            else /* use nonlinear handler to reformulate the expression */
+            {
+               SCIP_CONSHDLRDATA* conshdlrdata;
+               int k;
+
+               conshdlrdata = SCIPconshdlrGetData(conshdlr);
+               assert(conshdlrdata != NULL);
+
+               /* iterate through nonlinear handlers and call reformulation callbacks;
+                *
+                * TODO store nonlinear handlers that implement the reformulation callback separately
+                * TODO sort nonlinear handlers according to their priorities
+                */
+               for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
+               {
+                  assert(conshdlrdata->nlhdlrs[k] != NULL);
+
+                  if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
+                  {
+                     SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k], expr, &refexpr) );
+                     assert(refexpr != NULL);
+
+                     /* stop calling other nonlinear handlers as soon as the reformulation was successful */
+                     if( refexpr != expr )
+                        break;
+                  }
+               }
+
+
+               /* no nonlinear handlers implements the reformulation callback -> capture expression manually */
+               if( refexpr == NULL )
+               {
+                  refexpr = expr;
+                  SCIPcaptureConsExprExpr(refexpr);
+               }
+            }
+
+            walkio.ptrval = (void*) refexpr;
+            SCIPexpriteratorSetCurrentUserData(it, walkio);
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *simplified = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
+   assert(*simplified != NULL);
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /** simplifies expressions and replaces common subexpressions for a set of constraints
  * @todo put the constant to the constraint sides
  */
@@ -2994,16 +3129,31 @@ SCIP_RETCODE canonicalizeConstraints(
    int                   nconss              /**< total number of constraints */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int* nlockspos;
    int* nlocksneg;
    SCIP_Bool havechange;
+   SCIP_Bool reformulate = FALSE;
    int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether at least one nonlinear handler implements the reformulation callback */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[i]) )
+      {
+         reformulate = TRUE;
+         break;
+      }
+   }
 
    havechange = FALSE;
 
@@ -3032,7 +3182,6 @@ SCIP_RETCODE canonicalizeConstraints(
 #ifndef NDEBUG
    /* check whether all locks of each expression have been removed */
    {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
       SCIP_CONSEXPR_ITERATOR* it;
       assert(conshdlrdata != NULL);
 
@@ -3058,12 +3207,12 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 #endif
 
-   /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
+      /* call simplify for each expression */
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
@@ -3093,14 +3242,38 @@ SCIP_RETCODE canonicalizeConstraints(
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
          }
       }
+
+      /* call reformulation callback of nonlinear handlers for each expression */
+      if( reformulate && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      {
+         SCIP_CONSEXPR_EXPR* refexpr;
+
+         if( consdata->expr != NULL )
+         {
+            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr) );
+
+            if( refexpr != consdata->expr )
+            {
+               /* release old expression */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+
+               /* store simplified expression */
+               consdata->expr = refexpr;
+            }
+            else
+            {
+               /* The reformulation captures simplified in any case, also if nothing has changed.
+                * Therefore, we have to release it here.
+                */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &refexpr) );
+            }
+         }
+      }
    }
 
    /* replace common subexpressions */
    if( havechange )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
       /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
@@ -5165,7 +5338,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "DetectTime", "SepaTime", "PropTime", "IntEvalTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5184,10 +5357,12 @@ void printNlhdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nbranchscores);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nreformulates);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->sepatime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->reformulatetime));
       SCIPinfoMessage(scip, file, "\n");
    }
 }
@@ -5498,6 +5673,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->sepatime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->reformulatetime) );
 
       SCIPfreeMemory(scip, &nlhdlr->name);
       SCIPfreeMemoryNull(scip, &nlhdlr->desc);
@@ -5587,6 +5763,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->sepatime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->reformulatetime) );
    }
 
    /* reset statistics in constraint handler */
@@ -9874,87 +10051,29 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_ITERATOR* it;
-
-   assert(scip != NULL);
    assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   /* simplify bottom up
-    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
-    * after the child was visited, it is replaced with the simplified expr
-    */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
 
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-   {
-      switch( SCIPexpriteratorGetStageDFS(it) )
-      {
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-         {
-            SCIP_CONSEXPR_EXPR* newchild;
+   return SCIP_OKAY;
+}
 
-            newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
-            assert(newchild != NULL);
+/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
+ *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
+ *  callback
+ */
+SCIP_RETCODE SCIPreformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
+   )
+{
+   assert(rootexpr != NULL);
+   assert(refrootexpr != NULL);
 
-            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
-
-            /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
-
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
-         {
-            SCIP_CONSEXPR_EXPR* simplifiedexpr;
-            SCIP_CONSEXPREXPRWALK_IO walkio;
-
-            if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
-            {
-               SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &simplifiedexpr) );
-            }
-            else
-            {
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") != 0);
-               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") != 0);
-
-               /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
-                * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
-                */
-               simplifiedexpr = expr;
-               SCIPcaptureConsExprExpr(simplifiedexpr);
-            }
-            assert(simplifiedexpr != NULL);
-
-            walkio.ptrval = (void*) simplifiedexpr;
-            SCIPexpriteratorSetCurrentUserData(it, walkio);
-
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-         default:
-            SCIPABORT(); /* we should never be called in this stage */
-            break;
-      }
-   }
-
-   *simplified = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
-   assert(*simplified != NULL);
-
-   SCIPexpriteratorFree(&it);
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
 
    return SCIP_OKAY;
 }
@@ -10124,6 +10243,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->reformulatetime) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/expr/nlhdlr/%s/enabled", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
@@ -10148,7 +10268,7 @@ void SCIPsetConsExprNlhdlrFreeHdlrData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10160,7 +10280,7 @@ void SCIPsetConsExprNlhdlrFreeExprData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10172,7 +10292,7 @@ void SCIPsetConsExprNlhdlrCopyHdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10185,7 +10305,7 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit_))    /**< deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10201,7 +10321,7 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
    assert(sepa != NULL || estimate != NULL);
@@ -10218,7 +10338,7 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10231,17 +10351,29 @@ void SCIPsetConsExprNlhdlrBranchscore(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
    nlhdlr->branchscore = branchscore;
 }
 
+/** set the reformulate callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrReformulate(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
+   )
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->reformulate = reformulate;
+}
+
 /** gives name of nonlinear handler */
 const char* SCIPgetConsExprNlhdlrName(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10251,7 +10383,7 @@ const char* SCIPgetConsExprNlhdlrName(
 /** gives description of nonlinear handler, can be NULL */
 const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10261,7 +10393,7 @@ const char* SCIPgetConsExprNlhdlrDesc(
 /** gives priority of nonlinear handler */
 unsigned int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10271,7 +10403,7 @@ unsigned int SCIPgetConsExprNlhdlrPriority(
 /** gives handler data of nonlinear handler */
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10281,7 +10413,7 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
 /** returns whether nonlinear handler implements the separation initialization callback */
 SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->initsepa != NULL;
 }
@@ -10289,7 +10421,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
 /** returns whether nonlinear handler implements the separation deinitialization callback */
 SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->exitsepa != NULL;
 }
@@ -10297,7 +10429,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
 /** returns whether nonlinear handler implements the separation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->sepa != NULL;
 }
@@ -10305,7 +10437,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrSepa(
 /** returns whether nonlinear handler implements the estimator callback */
 SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->estimate != NULL;
 }
@@ -10313,7 +10445,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
 /** returns whether nonlinear handler implements the interval evaluation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrInteval(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->inteval != NULL;
 }
@@ -10321,9 +10453,17 @@ SCIP_Bool SCIPhasConsExprNlhdlrInteval(
 /** returns whether nonlinear handler implements the reverse propagation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->reverseprop != NULL;
+}
+
+/** returns whether nonlinear handler implements the reformulation callback */
+SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+   )
+{
+   return nlhdlr->reformulate != NULL;
 }
 
 /** call the detect callback of a nonlinear handler */
@@ -10337,7 +10477,7 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    SCIP_Bool*                     enforcedabove,    /**< indicates whether an enforcement method for expr >= auxvar exists (to be updated by this call) or is not necessary */
    SCIP_Bool*                     success,          /**< buffer to store whether the nonlinear handler should be called for this expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10376,7 +10516,7 @@ SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
    SCIP_Bool                     overestimate,     /**< whether the expression needs to be overestimated */
    SCIP_Bool                     underestimate,    /**< whether the expression needs to be underestimated */
    SCIP_Bool*                    infeasible        /**< pointer to store whether an infeasibility was detected */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10406,7 +10546,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
    SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< expression data of nonlinear handler */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10502,7 +10642,7 @@ SCIP_RETCODE SCIPintevalConsExprNlhdlr(
    SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)),   /**< function to call to evaluate interval of variable */
    void*                         intevalvardata    /**< data to be passed to intevalvar call */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10528,7 +10668,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10553,6 +10693,37 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    if( *infeasible )
       ++nlhdlr->ncutoffs;
    ++nlhdlr->npropcalls;
+
+   return SCIP_OKAY;
+}
+
+/** calls the reformulation callback of a nonlinear handler */
+SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
+   SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
+   )
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->reformulatetime != NULL);
+
+   *refexpr = NULL;
+
+   if( nlhdlr->reformulate == NULL )
+      return SCIP_OKAY;
+
+   /* call reformulation callback */
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->reformulatetime) );
+   SCIP_CALL( nlhdlr->reformulate(scip, conshdlr, nlhdlr, expr, refexpr) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
+
+   /* check whether reformulation was successful */
+   if( *refexpr != NULL )
+      ++nlhdlr->nreformulates;
 
    return SCIP_OKAY;
 }
