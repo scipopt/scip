@@ -1345,6 +1345,12 @@ SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
+/** returns whether nonlinear handler implements the reformulation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
 /** call the detect callback of a nonlinear handler */
 EXTERN
 SCIP_RETCODE SCIPdetectConsExprNlhdlr(
