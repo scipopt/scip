@@ -3129,16 +3129,31 @@ SCIP_RETCODE canonicalizeConstraints(
    int                   nconss              /**< total number of constraints */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int* nlockspos;
    int* nlocksneg;
    SCIP_Bool havechange;
+   SCIP_Bool reformulate = FALSE;
    int i;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether at least one nonlinear handler implements the reformulation callback */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[i]) )
+      {
+         reformulate = TRUE;
+         break;
+      }
+   }
 
    havechange = FALSE;
 
@@ -3167,7 +3182,6 @@ SCIP_RETCODE canonicalizeConstraints(
 #ifndef NDEBUG
    /* check whether all locks of each expression have been removed */
    {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
       SCIP_CONSEXPR_ITERATOR* it;
       assert(conshdlrdata != NULL);
 
@@ -3230,6 +3244,7 @@ SCIP_RETCODE canonicalizeConstraints(
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
+      if( reformulate )
       {
          SCIP_CONSEXPR_EXPR* refexpr;
 
@@ -3259,9 +3274,6 @@ SCIP_RETCODE canonicalizeConstraints(
    /* replace common subexpressions */
    if( havechange )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
       /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
