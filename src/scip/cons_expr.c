@@ -10722,7 +10722,7 @@ SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
 
    /* check whether reformulation was successful */
-   if( *refexpr != NULL )
+   if( *refexpr != NULL && *refexpr != expr )
       ++nlhdlr->nreformulates;
 
    return SCIP_OKAY;
