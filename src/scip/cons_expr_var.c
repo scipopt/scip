@@ -112,7 +112,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, sumexpr, simplifiedexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consexprhdlr, sumexpr, simplifiedexpr) );
 
    /* release no longer used sumexpr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
@@ -282,7 +282,6 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
 
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);

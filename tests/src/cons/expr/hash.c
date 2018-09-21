@@ -47,16 +47,16 @@ void checkHashkey(
    cr_assert_not_null(expr1);
 
    SCIPinfoMessage(scip, NULL, "hash key of expression: ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1));
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr1, NULL) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr1, &hashkey1));
    SCIPinfoMessage(scip, NULL, " = %u\n", hashkey1);
    cr_assert_neq(hashkey1, 0);
 
    if( expr2 != NULL )
    {
       SCIPinfoMessage(scip, NULL, "hash key of expression: ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr2, NULL) );
-      SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2));
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr2, NULL) );
+      SCIP_CALL( SCIPgetConsExprExprHash(scip, expr2, &hashkey2));
       SCIPinfoMessage(scip, NULL, " = %u\n", hashkey2);
       cr_assert_eq(hashkey1, hashkey2);
       cr_assert_neq(hashkey2, 0);

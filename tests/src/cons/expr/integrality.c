@@ -79,15 +79,15 @@ SCIP_RETCODE checkIntegrality(
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
 
    /* simplify expression */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, origexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* print simplified expression */
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* compute and check integrality information */
-   SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, expr) );
+   SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, expr) );
    cr_expect( SCIPisConsExprExprIntegral(expr) == isintegral);
 
    /* release expression */

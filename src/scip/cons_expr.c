@@ -167,13 +167,12 @@ struct SCIP_ConshdlrData
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
 
-   SCIP_CONSEXPR_ITERATOR*  iterator;        /**< expression iterator */
+   int                      nactiveiter;     /**< number of currently active iterators */
+   unsigned int             lastvisitedtag;  /**< last visited tag used by iterators */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
-   unsigned int             lastsepatag;     /**< last separation tag used to compute cuts */
-   unsigned int             lastinitsepatag; /**< last separation initialization flag used */
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             lastintevaltag;  /**< last interval evaluation tag used */
@@ -200,50 +199,6 @@ struct SCIP_ConshdlrData
    int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
 };
 
-/** data passed on during expression evaluation in a point */
-typedef struct
-{
-   SCIP_SOL*             sol;                /**< solution that is evaluated */
-   unsigned int          soltag;             /**< solution tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
-} EXPREVAL_DATA;
-
-/** data passed on during backward automatic differentiation of an expression at a point */
-typedef struct
-{
-   unsigned int          difftag;            /**< differentiation tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
-} EXPRBWDIFF_DATA;
-
-/** data passed on during expression forward propagation */
-typedef struct
-{
-   unsigned int          boxtag;             /**< box tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
-   SCIP_Bool             force;              /**< force tightening even if below bound strengthening tolerance */
-   SCIP_Bool             tightenauxvars;     /**< should the bounds of auxiliary variables be tightened? */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)); /**< function to call to evaluate interval of variable, or NULL to take intervals verbatim */
-   void*                 intevalvardata;     /**< data to be passed to intevalvar call */
-   int                   ntightenings;       /**< number of tightenings found */
-} FORWARDPROP_DATA;
-
-/** data passed on during collecting all expression variables */
-typedef struct
-{
-   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array to store variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   SCIP_HASHMAP*         varexprsmap;        /**< map containing all visited variable expressions */
-} GETVARS_DATA;
-
-/** data passed on during copying expressions */
-typedef struct
-{
-   SCIP*                   targetscip;                 /**< target SCIP pointer */
-   SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar));  /**< variable mapping function, or NULL for identity mapping (used in handler for var-expressions) */
-   void*                   mapvardata;                 /**< data of variable mapping function */
-   SCIP_CONSEXPR_EXPR*     targetexpr;                 /**< pointer that will hold the copied expression after the walk */
-} COPY_DATA;
-
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
 typedef struct
 {
@@ -253,54 +208,14 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
-/** data passed on during separation initialization */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-   SCIP_Bool               infeasible;       /**< pointer to store whether the problem is infeasible */
-   unsigned int            initsepatag;      /**< tag used for the separation initialization round */
-} INITSEPA_DATA;
-
-/** data passed on during separation */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-   SCIP_SOL*               sol;              /**< solution to separate (NULL for separating the LP solution) */
-   unsigned int            soltag;           /**< tag of solution */
-   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger separation */
-   SCIP_Real               mincutviolation;  /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT             result;           /**< buffer to store a result */
-   int                     ncuts;            /**< buffer to store the total number of added cuts */
-   SCIP_Real               maxauxviolation;  /**< buffer to store maximal violation w.r.t. auxvars */
-   unsigned int            sepatag;          /**< separation tag */
-} SEPA_DATA;
-
-/** data passed on during computing branching scores */
-typedef struct
-{
-   SCIP_SOL*               sol;              /**< solution (NULL for current the LP solution) */
-   unsigned int            soltag;           /**< solution tag */
-   SCIP_Real               minviolation;     /**< minimal violation w.r.t. auxvars to trigger branching score */
-   unsigned int            brscoretag;       /**< branching score tag */
-   SCIP_Bool               evalauxvalues;    /**< whether auxiliary values of expressions need to be evaluated */
-} BRSCORE_DATA;
-
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
+   SCIP_CONSEXPR_ITERATOR* iterator;         /**< iterator to use */
    SCIP_Bool               closefile;        /**< whether file need to be closed when finished printing */
-   SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
+   SCIP_HASHMAP*           leaveexprs;       /**< hashmap storing leave (no children) expressions */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
-
-/** data passed on during registering nonlinear handlers */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
-   SCIP_Bool               infeasible;       /**< has infeasibility be detected */
-} NLHDLR_DETECT_DATA;
 
 /*
  * Local methods
@@ -677,186 +592,190 @@ SCIP_RETCODE presolveUpgrade(
    return SCIP_OKAY;
 }
 
-/** @name Walking methods
+/** copies an expression including subexpressions
  *
- * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
- * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
- * To avoid this issue, the method SCIPwalkConsExprExprDF is introduced to traverse the tree and execute callbacks
- * at different places. Here are the callbacks needed for performing the mentioned operations.
- *
- * @{
- */
-
-/** expression walk callback to copy an expression
- *
- * In expr->walkio is given the targetexpr which is expected to hold the copy of expr.
+ * \note If copying fails due to missing copy callbacks, then *targetexpr will be set to NULL.
  */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
+SCIP_RETCODE copyExpr(
+   SCIP*                 sourcescip,         /**< SCIP data structure corresponding to source expression */
+   SCIP*                 targetscip,         /**< SCIP data structure where target expression will live */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   sourceexpr,         /**< expression to be copied */
+   SCIP_CONSEXPR_EXPR**  targetexpr,         /**< buffer to store pointer to copy of source expression */
+   SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar)),  /**< variable mapping function, or NULL for identity mapping */
+   void*                 mapvardata          /**< data of variable mapping function */
+   )
 {
-   assert(expr != NULL);
+   SCIP_CONSHDLR* targetconsexprhdlr = NULL;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPREXPRWALK_IO expriteruserdata;
+   SCIP_CONSEXPR_EXPR* expr;
 
-   switch( stage )
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+
+   if( targetscip != sourcescip )
+      targetconsexprhdlr = SCIPfindConshdlr(targetscip, CONSHDLR_NAME);
+   else
+      targetconsexprhdlr = consexprhdlr;
+   assert(targetconsexprhdlr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(sourcescip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, sourceexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /*TODO use FALSE, i.e., don't duplicate common subexpr? */
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+
+   expr = sourceexpr;
+   while( !SCIPexpriteratorIsEnd(it) )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         /* create expr that will hold the copy */
-         SCIP_CONSEXPR_EXPR*     targetexpr;
-         SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr;
-         SCIP_CONSEXPR_EXPRDATA* targetexprdata;
-         COPY_DATA* copydata;
-
-         copydata = (COPY_DATA*)data;
-
-         /* get the exprhdlr of the target scip */
-         if( copydata->targetscip != scip )
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
          {
-            SCIP_CONSHDLR* targetconsexprhdlr;
+            /* create expr that will hold the copy */
+            SCIP_CONSEXPR_EXPR* exprcopy;
 
-            targetconsexprhdlr = SCIPfindConshdlr(copydata->targetscip, "expr");
-            assert(targetconsexprhdlr != NULL);
-
-            targetexprhdlr = SCIPfindConsExprExprHdlr(targetconsexprhdlr,
-                  SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-
-            if( targetexprhdlr == NULL )
+            /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
+            if( SCIPisConsExprExprVar(expr) )
             {
-               /* expression handler not in target scip (probably did not have a copy callback) -> abort */
-               expr->walkio.ptrval = NULL;
-               *result = SCIP_CONSEXPREXPRWALK_SKIP;
-               return SCIP_OKAY;
-            }
-         }
-         else
-         {
-            targetexprhdlr = SCIPgetConsExprExprHdlr(expr);
-         }
-         assert(targetexprhdlr != NULL);
+               SCIP_VAR* sourcevar;
+               SCIP_VAR* targetvar;
 
-         /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
-         if( SCIPisConsExprExprVar(expr) )
-         {
-            SCIP_VAR* sourcevar;
-            SCIP_VAR* targetvar;
+               sourcevar = SCIPgetConsExprExprVarVar(expr);
+               assert(sourcevar != NULL);
+               targetvar = NULL;
 
-            sourcevar = SCIPgetConsExprExprVarVar(expr);
-            assert(sourcevar != NULL);
-            targetvar = NULL;
+               /* get the corresponding variable in the target SCIP */
+               if( mapvar != NULL )
+               {
+                  SCIP_CALL( mapvar(targetscip, &targetvar, sourcescip, sourcevar, mapvardata) );
+                  SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, targetconsexprhdlr, &exprcopy, targetvar) );
 
-            /* get the corresponding variable in the target SCIP */
-            if( copydata->mapvar != NULL )
-            {
-               SCIP_CALL( copydata->mapvar(copydata->targetscip, &targetvar, scip, sourcevar, copydata->mapvardata) );
-               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
-
-               /* we need to release once since it has been captured by the mapvar() and SCIPcreateConsExprExprVar() call */
-               SCIP_CALL( SCIPreleaseVar(copydata->targetscip, &targetvar) );
+                  /* we need to release once since it has been captured by the mapvar() and SCIPcreateConsExprExprVar() call */
+                  SCIP_CALL( SCIPreleaseVar(targetscip, &targetvar) );
+               }
+               else
+               {
+                  targetvar = sourcevar;
+                  SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, targetconsexprhdlr, &exprcopy, targetvar) );
+               }
             }
             else
             {
-               targetvar = sourcevar;
-               SCIP_CALL( SCIPcreateConsExprExprVar(copydata->targetscip, SCIPfindConshdlr(copydata->targetscip, "expr"), &targetexpr, targetvar) );
+               SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr;
+               SCIP_CONSEXPR_EXPRDATA* targetexprdata;
+
+               /* get the exprhdlr of the target scip */
+               if( targetscip != sourcescip )
+               {
+                  assert(targetconsexprhdlr != NULL);
+
+                  targetexprhdlr = SCIPfindConsExprExprHdlr(targetconsexprhdlr,
+                     SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+
+                  if( targetexprhdlr == NULL )
+                  {
+                     /* expression handler not in target scip (probably did not have a copy callback) -> abort */
+                     expriteruserdata.ptrval = NULL;
+                     SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
+
+                     expr = SCIPexpriteratorSkipDFS(it);
+                     continue;
+                  }
+               }
+               else
+               {
+                  targetexprhdlr = SCIPgetConsExprExprHdlr(expr);
+               }
+               assert(targetexprhdlr != NULL);
+
+               /* copy expression data */
+               if( expr->exprhdlr->copydata != NULL )
+               {
+                  SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr, mapvar, mapvardata) );
+               }
+               else if( expr->exprdata != NULL )
+               {
+                  /* no copy callback for expression data implemented -> abort
+                   * (we could also just copy the exprdata pointer, but for now let's say that
+                   *  an expression handler should explicitly implement this behavior, if desired)
+                   */
+                  expriteruserdata.ptrval = NULL;
+                  SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
+
+                  expr = SCIPexpriteratorSkipDFS(it);
+                  continue;
+               }
+               else
+               {
+                  targetexprdata = NULL;
+               }
+
+               /* create in targetexpr an expression of the same type as expr, but without children for now */
+               SCIP_CALL( SCIPcreateConsExprExpr(targetscip, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL) );
             }
+
+            /* store targetexpr */
+            expriteruserdata.ptrval = exprcopy;
+            SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
+
+            break;
          }
-         else
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
          {
-            /* copy expression data */
-            if( expr->exprhdlr->copydata != NULL )
+            /* just visited child so a copy of himself should be available; append it */
+            SCIP_CONSEXPR_EXPR* exprcopy;
+            SCIP_CONSEXPR_EXPR* childcopy;
+
+            exprcopy = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetCurrentUserData(it).ptrval;
+
+            /* get copy of child */
+            childcopy = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            if( childcopy == NULL )
             {
-               SCIP_CALL( expr->exprhdlr->copydata(
-                     copydata->targetscip,
-                     targetexprhdlr,
-                     &targetexprdata,
-                     scip,
-                     expr,
-                     copydata->mapvar,
-                     copydata->mapvardata) );
-            }
-            else if( expr->exprdata != NULL )
-            {
-               /* no copy callback for expression data implemented -> abort
-                * (we could also just copy the exprdata pointer, but for now let's say that
-                *  an expression handler should explicitly implement this behavior, if desired)
-                */
-               expr->walkio.ptrval = NULL;
-               *result = SCIP_CONSEXPREXPRWALK_SKIP;
-               return SCIP_OKAY;
-            }
-            else
-            {
-               targetexprdata = NULL;
+               /* abort */
+               /* release exprcopy (should free also the already copied children) */
+               SCIP_CALL( SCIPreleaseConsExprExpr(targetscip, (SCIP_CONSEXPR_EXPR**)&exprcopy) );
+
+               expriteruserdata.ptrval = NULL;
+               SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
+
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
             }
 
-            /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr, targetexprhdlr, targetexprdata, 0, NULL) );
+            /* append child to exprcopy */
+            SCIP_CALL( SCIPappendConsExprExpr(targetscip, exprcopy, childcopy) );
+
+            /* release childcopy (still captured by exprcopy) */
+            SCIP_CALL( SCIPreleaseConsExprExpr(targetscip, &childcopy) );
+
+            break;
          }
 
-         /* store targetexpr */
-         expr->walkio.ptrval = targetexpr;
-
-         /* continue */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            /* we should never be called in this stage */
+            SCIPABORT();
+            break;
       }
 
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      {
-         /* just visited child so a copy of himself should be available; append it */
-         SCIP_CONSEXPR_EXPR* child;
-         SCIP_CONSEXPR_EXPR* targetchild;
-         SCIP_CONSEXPR_EXPR* targetexpr;
-         COPY_DATA* copydata;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-
-         child = expr->children[expr->walkcurrentchild];
-         copydata = (COPY_DATA*)data;
-
-         /* get copy of child */
-         targetchild = (SCIP_CONSEXPR_EXPR*)child->walkio.ptrval;
-
-         if( targetchild == NULL )
-         {
-            /* release targetexpr (should free also the already copied children) */
-            SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, (SCIP_CONSEXPR_EXPR**)&expr->walkio.ptrval) );
-
-            /* abort */
-            *result = SCIP_CONSEXPREXPRWALK_SKIP;
-            return SCIP_OKAY;
-         }
-
-         /* append child to copyexpr */
-         targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
-         SCIP_CALL( SCIPappendConsExprExpr(copydata->targetscip, targetexpr, targetchild) );
-
-         /* release targetchild (captured by targetexpr) */
-         SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, &targetchild) );
-
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         COPY_DATA* copydata;
-
-         /* store the copied expression in the copydata, in case this expression was the root, for which the walkio will be cleared */
-         copydata = (COPY_DATA*)data;
-         copydata->targetexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      default:
-      {
-         SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
+      expr = SCIPexpriteratorGetNext(it);
    }
+
+   /* the target expression should be stored in the userdata of the sourceexpr (can be NULL if aborted) */
+   *targetexpr = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, sourceexpr).ptrval;
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
 }
+
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
@@ -896,321 +815,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 
    /* caller assumes that target variable has been captured */
    SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to free an expression including its children (if not used anywhere else) */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExprWalk)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   /* expression should be used by its parent and maybe by the walker (only the root!)
-    * in VISITEDCHILD we assert that expression is only used by its parent
-    */
-   assert(0 <= expr->nuses && expr->nuses <= 2);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         /* check whether a child needs to be visited (nuses == 1)
-          * if not, then we still have to release it
-          */
-         SCIP_CONSEXPR_EXPR* child;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-         assert(expr->children != NULL);
-         child = expr->children[expr->walkcurrentchild];
-         if( child->nuses > 1 )
-         {
-            /* child is not going to be freed: just release it */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
-            *result = SCIP_CONSEXPREXPRWALK_SKIP;
-         }
-         else
-         {
-            assert(child->nuses == 1);
-
-            /* free child's enfodata and expression data when entering child */
-            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
-
-            if( child->exprdata != NULL )
-            {
-               if( child->exprhdlr->freedata != NULL )
-               {
-                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
-                  assert(child->exprdata == NULL);
-               }
-               else
-               {
-                  child->exprdata = NULL;
-               }
-            }
-
-            *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         }
-
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      {
-         /* free child after visiting it */
-         SCIP_CONSEXPR_EXPR* child;
-
-         assert(expr->walkcurrentchild < expr->nchildren);
-
-         child = expr->children[expr->walkcurrentchild];
-         /* child should only be used by its parent */
-         assert(child->nuses == 1);
-
-         /* child should have no data associated */
-         assert(child->exprdata == NULL);
-
-         /* free child expression */
-         SCIP_CALL( freeExpr(scip, &child) );
-         expr->children[expr->walkcurrentchild] = NULL;
-
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      default:
-      {
-         SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
-   }
-}
-
-/** expression walk callback to print an expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
-{
-   FILE* file;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-
-   file = (FILE*)data;
-
-   if( expr->exprhdlr->print == NULL )
-   {
-      /* default: <hdlrname>(<child1>, <child2>, ...) */
-      switch( stage )
-      {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         {
-            SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
-            if( expr->nchildren > 0 )
-            {
-               SCIPinfoMessage(scip, file, "(");
-            }
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-         {
-            if( SCIPgetConsExprExprWalkCurrentChild(expr) < expr->nchildren-1 )
-            {
-               SCIPinfoMessage(scip, file, ", ");
-            }
-            else
-            {
-               SCIPinfoMessage(scip, file, ")");
-            }
-
-            break;
-         }
-
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-         default: ;
-      }
-   }
-   else
-   {
-      /* redirect to expression callback */
-      SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, file) );
-   }
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to print an expression in dot format */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-   SCIP_CONSEXPR_EXPR* parentbackup;
-   SCIP_Real color;
-   int c;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-   assert(data != NULL);
-
-   dotdata = (SCIP_CONSEXPR_PRINTDOTDATA*)data;
-
-   /* skip expressions that have been printed already */
-   if( SCIPhashmapExists(dotdata->visitedexprs, (void*)expr) )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* print expression as dot node */
-
-   /* make up some color from the expression type (it's name) */
-   color = 0.0;
-   for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
-      color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
-   color = SCIPfrac(scip, color);
-   SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
-   {
-      SCIPinfoMessage(scip, dotdata->file, "%s\\n", SCIPgetConsExprExprHdlrName(expr->exprhdlr));
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
-   {
-      /* print expression string as label */
-      parentbackup = expr->walkparent;
-      expr->walkparent = NULL;
-      assert(expr->walkcurrentchild == 0); /* as we are in enterexpr */
-
-      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, (void*)dotdata->file, result) );
-      for( c = 0; c < expr->nchildren; ++c )
-      {
-         expr->walkcurrentchild = c;
-         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, (void*)dotdata->file, result) );
-         SCIPinfoMessage(scip, dotdata->file, "c%d", c);
-         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, (void*)dotdata->file, result) );
-      }
-      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, (void*)dotdata->file, result) );
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-
-      expr->walkcurrentchild = 0;
-      expr->walkparent = parentbackup;
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
-   {
-      /* print number of uses */
-      SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
-   {
-      /* print number of locks */
-      SCIPinfoMessage(scip, dotdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
-   {
-      /* print eval value */
-      SCIPinfoMessage(scip, dotdata->file, "val=%g", expr->evalvalue);
-
-      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALTAG) == SCIP_CONSEXPR_PRINTDOT_EVALTAG )
-      {
-         /* print also eval tag */
-         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->evaltag);
-      }
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-   }
-
-   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
-   {
-      /* print interval value */
-      SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
-
-      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
-      {
-         /* print also interval eval tag */
-         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
-      }
-      SCIPinfoMessage(scip, dotdata->file, "\\n");
-   }
-
-   SCIPinfoMessage(scip, dotdata->file, "\"]\n");  /* end of label and end of node */
-
-   /* add edges from expr to its children */
-   for( c = 0; c < expr->nchildren; ++c )
-      SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
-
-   /* remember that we have printed this expression */
-   SCIP_CALL( SCIPhashmapInsert(dotdata->visitedexprs, (void*)expr, NULL) );
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback when evaluating expression, called before child is visited */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
-{  /*lint --e{715}*/
-   EXPREVAL_DATA* evaldata;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-
-   evaldata = (EXPREVAL_DATA*)data;
-
-   /* skip child if it has been evaluated for that solution already */
-   if( evaldata->soltag != 0 && evaldata->soltag == expr->children[expr->walkcurrentchild]->evaltag )
-   {
-      if( expr->children[expr->walkcurrentchild]->evalvalue == SCIP_INVALID ) /*lint !e777*/
-      {
-         evaldata->aborted = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      }
-      else
-      {
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      }
-   }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback when evaluating expression, called when expression is left */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
-{  /*lint --e{715}*/
-   EXPREVAL_DATA* evaldata;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-   assert(expr->exprhdlr->eval != NULL);
-
-   evaldata = (EXPREVAL_DATA*)data;
-
-   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, evaldata->sol) );
-   expr->evaltag = evaldata->soltag;
-
-   if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
-   {
-      evaldata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-   }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1319,7 +923,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
    return interval;
 }
 
-
 /** interval evaluation of variables as used in redundancy check
  *
  * Returns local variable bounds of a variable, relaxed by feastol, as interval.
@@ -1357,548 +960,73 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
-/** expression walk callback for forward propagation, called before child is visited */
+/** hashes an expression using an already existing iterator
+ *
+ * The iterator must by of type DFS with allowrevisit=FALSE and the only leaveexpr stage enabled.
+ * The hashes of all visited expressions will be stored in the iterators expression data.
+ */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprVisitChild)
-{  /*lint --e{715}*/
-   FORWARDPROP_DATA* propdata;
+SCIP_RETCODE hashExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to hash */
+   SCIP_CONSEXPR_ITERATOR* hashiterator,     /**< iterator to use for hashing */
+   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
+   )
+{
+   SCIP_CONSEXPREXPRWALK_IO walkiodata;
+   unsigned int* childrenhashes;
+   int childrenhashessize;
+   unsigned int exprhash;
+   int i;
 
+   assert(scip != NULL);
    assert(expr != NULL);
-   assert(data != NULL);
+   assert(hashiterator != NULL);
 
-   propdata = (FORWARDPROP_DATA*)data;
+   childrenhashessize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenhashes, childrenhashessize) );
 
-   /* skip child if it has been evaluated already */
-   if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag && !expr->hastightened )
+   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
    {
-      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->children[expr->walkcurrentchild]->interval) )
+      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+      if( nvisitedexprs != NULL )
+         ++*nvisitedexprs;
+
+      /* collect hashes of children */
+      if( childrenhashessize < expr->nchildren )
       {
-         propdata->aborted = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+         childrenhashessize = SCIPcalcMemGrowSize(scip, expr->nchildren);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childrenhashes, childrenhashessize) );
+      }
+      for( i = 0; i < expr->nchildren; ++i )
+         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
+
+      if( expr->exprhdlr->hash != NULL )
+      {
+         SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, &exprhash, childrenhashes) );
       }
       else
       {
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
+         /* compute hash from expression handler name if callback is not implemented
+          * this can lead to more collisions and thus a larger number of expensive expression compare calls
+          * TODO shouldn't the children hashkeys be involved here, too?
+          */
+         exprhash = 0;
+         for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+            exprhash += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+
+         exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
       }
+
+      walkiodata.uintval = exprhash;
+      SCIPexpriteratorSetCurrentUserData(hashiterator, walkiodata);
    }
-   else
-   {
-      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   }
+
+   SCIPfreeBufferArray(scip, &childrenhashes);
 
    return SCIP_OKAY;
 }
-
-/** expression walk callback for forward propagation, called when expression is left */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(forwardPropExprLeaveExpr)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   FORWARDPROP_DATA* propdata;
-   SCIP_INTERVAL interval;
-   SCIP_INTERVAL nlhdlrinterval;
-   SCIP_Bool intersect;
-   int ntightenings = 0;
-   int e;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-
-   propdata = (FORWARDPROP_DATA*)data;
-
-   /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
-    * far, i.e., expr->intevaltag != propdata->boxtag
-    */
-   if( propdata->boxtag == 0 || expr->intevaltag != propdata->boxtag )
-   {
-      expr->intevaltag = propdata->boxtag;
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
-      expr->hastightened = FALSE;
-      intersect = FALSE;
-   }
-   else
-   {
-      assert(expr->intevaltag == propdata->boxtag);
-
-      /* the interval of the expression is valid, but did not change since the last call -> skip this expression */
-      if( !expr->hastightened )
-      {
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-
-      /* intersect result with existing interval */
-      intersect = TRUE;
-   }
-
-   if( intersect )
-   {
-      /* start with interval that is stored in expression */
-      interval = expr->interval;
-
-      /* intersect with the interval of the auxiliary variable, if available */
-      if( expr->auxvar != NULL )
-      {
-         SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
-         SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
-         SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
-         SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
-         SCIP_INTERVAL auxinterval;
-
-         SCIPintervalSetBounds(&auxinterval, inf, sup);
-         SCIPintervalIntersect(&interval, interval, auxinterval);
-
-         /* check whether resulting interval is already empty */
-         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
-         {
-            *result = SCIP_CONSEXPREXPRWALK_ABORT;
-            propdata->aborted = TRUE;
-            return SCIP_OKAY;
-         }
-      }
-   }
-   else
-   {
-      /* start with infinite interval [-inf,+inf] */
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   }
-
-   assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
-   if( expr->nenfos > 0 )
-   {
-      /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
-      for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
-      {
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         assert(nlhdlr != NULL);
-
-         /* skip nlhdlr if it does not provide interval evaluation */
-         if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
-            continue;
-
-         /* let nlhdlr evaluate current expression */
-         nlhdlrinterval = interval;
-         SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, propdata->intevalvar, propdata->intevalvardata) );
-         SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-         SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
-#endif
-
-         /* intersect with interval */
-         SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
-      }
-   }
-   else
-   {
-      /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, propdata->intevalvar, propdata->intevalvardata) );
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
-#endif
-   }
-
-   if( intersect )
-   {
-      /* make sure resulting interval is subset of expr->interval, if intersect is true
-       * even though we passed expr->interval as input to the inteval callbacks,
-       * these callbacks might not have taken it into account (most do not, actually)
-       */
-      SCIPintervalIntersect(&interval, interval, expr->interval);
-   }
-
-   /* check whether the resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
-   {
-      SCIPintervalSetEmpty(&expr->interval);
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      propdata->aborted = TRUE;
-      return SCIP_OKAY;
-   }
-
-   if( propdata->tightenauxvars )
-   {
-      /* tighten bounds of expression interval and the auxiliary variable */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, propdata->force, NULL, &propdata->aborted, &ntightenings) );
-
-      if( propdata->aborted )
-      {
-         SCIPintervalSetEmpty(&expr->interval);
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      /* update expression interval */
-      SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
-   }
-
-   /* continue with forward propagation */
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* update statistics */
-   if( propdata->ntightenings != -1 )
-      propdata->ntightenings += ntightenings;
-
-   return SCIP_OKAY;
-}
-
-/** expression walker callback for propagating expression locks */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
-{
-   int nlockspos;
-   int nlocksneg;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   /* collect locks */
-   nlockspos = expr->walkio.intvals[0];
-   nlocksneg = expr->walkio.intvals[1];
-
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
-   {
-      SCIP_CONSEXPR_EXPRHDLR* varhdlr = (SCIP_CONSEXPR_EXPRHDLR*)data;
-      assert(varhdlr != NULL);
-
-      if( SCIPgetConsExprExprHdlr(expr) == varhdlr )
-      {
-         /* if a variable, then also add nlocksneg/nlockspos via SCIPaddVarLocks() */
-         SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), nlocksneg, nlockspos) );
-      }
-
-      /* add locks to expression */
-      expr->nlockspos += nlockspos;
-      expr->nlocksneg += nlocksneg;
-
-      /* add monotonicity information if expression has been locked for the first time */
-      if( expr->nlockspos == nlockspos && expr->nlocksneg == nlocksneg && expr->nchildren > 0
-         && expr->exprhdlr->monotonicity != NULL )
-      {
-         int i;
-
-         assert(expr->monotonicity == NULL);
-         assert(expr->monotonicitysize == 0);
-
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->monotonicity, expr->nchildren) );
-         expr->monotonicitysize = expr->nchildren;
-
-         /* store the monotonicity for each child */
-         for( i = 0; i < expr->nchildren; ++i )
-         {
-            SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, expr, i, &expr->monotonicity[i]) );
-         }
-      }
-   }
-   else if( stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR )
-   {
-      /* remove monotonicity information if expression has been unlocked */
-      if( expr->nlockspos == 0 && expr->nlocksneg == 0 && expr->monotonicity != NULL )
-      {
-         assert(expr->monotonicitysize > 0);
-         /* keep this assert for checking whether someone changed an expression without updating locks properly */
-         assert(expr->monotonicitysize == expr->nchildren);
-
-         SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
-         expr->monotonicitysize = 0;
-      }
-   }
-   else
-   {
-      SCIP_CONSEXPR_EXPR* child;
-      SCIP_MONOTONE monotonicity;
-      int idx;
-
-      assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-      assert(expr->nchildren > 0);
-      assert(expr->monotonicity != NULL || expr->exprhdlr->monotonicity == NULL);
-
-      /* get monotonicity of child */
-      idx = SCIPgetConsExprExprWalkCurrentChild(expr);
-      child = SCIPgetConsExprExprChildren(expr)[idx];
-
-      /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
-       * SCIPgetConsExprExprMonotonicity
-       */
-      monotonicity = expr->monotonicity != NULL ? expr->monotonicity[idx] : SCIP_MONOTONE_UNKNOWN;
-
-      /* compute resulting locks of the child expression */
-      switch( monotonicity )
-      {
-         case SCIP_MONOTONE_INC:
-            child->walkio.intvals[0] = nlockspos;
-            child->walkio.intvals[1] = nlocksneg;
-            break;
-         case SCIP_MONOTONE_DEC:
-            child->walkio.intvals[0] = nlocksneg;
-            child->walkio.intvals[1] = nlockspos;
-            break;
-         case SCIP_MONOTONE_UNKNOWN:
-            child->walkio.intvals[0] = nlockspos + nlocksneg;
-            child->walkio.intvals[1] = nlockspos + nlocksneg;
-            break;
-         case SCIP_MONOTONE_CONST:
-            child->walkio.intvals[0] = 0;
-            child->walkio.intvals[1] = 0;
-            break;
-      }
-   }
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** prints structure a la Maple's dismantle */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
-{
-   assert(expr != NULL);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
-      {
-         int* depth;
-         int nspaces;
-         const char* type;
-
-         depth = (int*)data;
-         ++*depth;
-         nspaces = 3 * *depth;
-         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-         /* use depth of expression to align output */
-         SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
-
-         if(strcmp(type, "var") == 0)
-         {
-            SCIP_VAR* var;
-
-            var = SCIPgetConsExprExprVarVar(expr);
-            SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
-                  SCIPvarGetUbLocal(var));
-         }
-         else if(strcmp(type, "sum") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
-         else if(strcmp(type, "prod") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
-         else if(strcmp(type, "val") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
-         else if(strcmp(type, "pow") == 0)
-            SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
-         else if(strcmp(type, "exp") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else if(strcmp(type, "log") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else if(strcmp(type, "abs") == 0)
-            SCIPinfoMessage(scip, NULL, "\n");
-         else
-            SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
-      {
-         int* depth;
-         int nspaces;
-         const char* type;
-
-         depth = (int*)data;
-         nspaces = 3 * *depth;
-         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-         if( strcmp(type, "sum") == 0 )
-         {
-            SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-            SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
-         }
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
-      {
-         int* depth;
-
-         depth = (int*)data;
-         --*depth;
-         break;
-      }
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-      default:
-      {
-         /* shouldn't be here */
-         SCIPABORT();
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
-   }
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to skip expression which have already been hashed */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitingExpr)
-{
-   SCIP_HASHMAP* expr2key;
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-
-   expr2key = (SCIP_HASHMAP*) data;
-   assert(expr2key != NULL);
-
-   assert(expr->walkcurrentchild < expr->nchildren);
-   child = expr->children[expr->walkcurrentchild];
-   assert(child != NULL);
-
-   /* skip child if the expression is already in the map */
-   *result = SCIPhashmapExists(expr2key, (void*) child) ? SCIP_CONSEXPREXPRWALK_SKIP : SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to compute an hash value for an expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
-{
-   SCIP_HASHMAP* expr2key;
-   unsigned int hashkey;
-   int i;
-
-   assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   expr2key = (SCIP_HASHMAP*) data;
-   assert(expr2key != NULL);
-   assert(!SCIPhashmapExists(expr2key, (void*) expr));
-
-   hashkey = 0;
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   if( expr->exprhdlr->hash != NULL )
-   {
-      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, expr2key, &hashkey) );
-   }
-   else
-   {
-      /* compute hash from expression handler name if callback is not implemented
-       * this can lead to more collisions and thus a larger number of expensive expression compare calls
-       */
-      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
-         hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
-
-      hashkey = SCIPcalcFibHash((SCIP_Real)hashkey);
-   }
-
-   /* put the hash key into expr2key map */
-   SCIP_CALL( SCIPhashmapInsert(expr2key, (void*)expr, (void*)(size_t)hashkey) );
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to replace common sub-expression */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
-{
-   SCIP_MULTIHASH* key2expr;
-   SCIP_CONSEXPR_EXPR* newchild;
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(data != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
-
-   key2expr = (SCIP_MULTIHASH*)data;
-   assert(key2expr != NULL);
-
-   assert(expr->walkcurrentchild < expr->nchildren);
-   child = expr->children[expr->walkcurrentchild];
-   assert(child != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* try to find an equivalent expression */
-   SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
-
-   /* replace child with newchild */
-   if( newchild != NULL )
-   {
-      assert(child != newchild);
-      assert(SCIPcompareConsExprExprs(child, newchild) == 0);
-
-      SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
-
-      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, expr->walkcurrentchild, newchild) );
-
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to count the number of variable expressions; common sub-expressions are counted
- * multiple times
- */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(getNVarsLeaveExpr)
-{
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(data != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   if( SCIPisConsExprExprVar(expr) )
-   {
-      int* nvars = (int*)data;
-      ++(*nvars);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to collect all variable expressions */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
-{
-   GETVARS_DATA* getvarsdata;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   getvarsdata = (GETVARS_DATA*) data;
-   assert(getvarsdata != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* add variable expression if not seen so far; there is only one variable expression representing a variable */
-   if( SCIPisConsExprExprVar(expr) && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
-   {
-      assert(SCIPgetNTotalVars(scip) >= getvarsdata->nvarexprs + 1);
-
-      getvarsdata->varexprs[ getvarsdata->nvarexprs ] = expr;
-      assert(getvarsdata->varexprs[getvarsdata->nvarexprs] != NULL);
-      ++(getvarsdata->nvarexprs);
-      SCIP_CALL( SCIPhashmapInsert(getvarsdata->varexprsmap, (void*) expr, NULL) );
-
-      /* capture expression */
-      SCIPcaptureConsExprExpr(expr);
-   }
-
-   return SCIP_OKAY;
-}
-
-/**@} */  /* end of walking methods */
 
 /** @name Simplifying methods
  *
@@ -2038,81 +1166,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *
  * @{
  */
-
-/** expression walk callback to simplify an expression
- * simplifies bottom up; when leaving an expression it simplifies it and stores the simplified expr in its walkio ptr
- * and the walk data;
- * after the child was visited, it is replaced with the simplified expr
- */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
-{
-   assert(expr != NULL);
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-      {
-         SCIP_CONSEXPR_EXPR* newchild;
-         int currentchild;
-
-         currentchild = SCIPgetConsExprExprWalkCurrentChild(expr);
-         newchild = (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval;
-
-         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, currentchild, newchild) );
-
-         /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
-         expr->children[currentchild]->walkio.ptrval = NULL;
-
-         /* continue */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
-      {
-         SCIP_CONSEXPR_EXPR* simplifiedexpr;
-
-         if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
-         {
-            SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &simplifiedexpr) );
-         }
-         else
-         {
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") != 0);
-            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") != 0);
-
-            /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
-             * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
-             */
-            simplifiedexpr = expr;
-            SCIPcaptureConsExprExpr(simplifiedexpr);
-         }
-         assert(simplifiedexpr != NULL);
-         expr->walkio.ptrval = (void *)simplifiedexpr;
-
-         *(SCIP_CONSEXPR_EXPR**)data = simplifiedexpr;
-
-         /* continue */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-         return SCIP_OKAY;
-      }
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      default:
-      {
-         SCIPABORT(); /* we should never be called in this stage */
-         *result = SCIP_CONSEXPREXPRWALK_CONTINUE; /*lint !e527*/
-         return SCIP_OKAY;
-      }
-   }
-}
 
 /** Implements OR5: default comparison method of expressions of the same type:
  * expr1 < expr2 if and only if expr1_i = expr2_i for all i < k and expr1_k < expr2_k.
@@ -2276,38 +1329,6 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    return expr->curvature;
 }
 
-/** expression walk callback for computing expression curvatures */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_EXPRCURV curv;
-
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   curv = SCIP_EXPRCURV_UNKNOWN;
-
-   conshdlr = (SCIP_CONSHDLR*)data;
-   assert(conshdlr != NULL);
-
-   /* TODO add a tag to store whether an expression has been visited already */
-
-   if( expr->exprhdlr->curvature != NULL )
-   {
-      /* get curvature from expression handler */
-      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
-   }
-
-   /* set curvature in expression */
-   SCIPsetConsExprExprCurvature(expr, curv);
-
-   return SCIP_OKAY;
-}
-
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
@@ -2317,7 +1338,9 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -2326,10 +1349,27 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    assert(conshdlr != NULL);
 
    /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
 
-   /* compute curvatures */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   {
+      curv = SCIP_EXPRCURV_UNKNOWN;
+
+      if( expr->exprhdlr->curvature != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+      }
+
+      /* set curvature in expression */
+      SCIPsetConsExprExprCurvature(expr, curv);
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2377,43 +1417,38 @@ int SCIPgetConsExprExprNLocksNeg(
    return expr->nlocksneg;
 }
 
-/** expression walk callback for computing expression integrality */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeIntegrality)
-{
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(data == NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* TODO add a tag to store whether an expression has been visited already */
-   expr->isintegral = FALSE;
-
-   if( expr->exprhdlr->integrality != NULL )
-   {
-      /* get curvature from expression handler */
-      SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** computes integrality information of a given expression and all its subexpressions; the integrality information can
  * be accessed via SCIPisConsExprExprIntegral()
  */
 SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(expr != NULL);
 
-   /* compute integrality information */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeIntegrality, NULL) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2455,124 +1490,14 @@ int nlhdlrCmp(
    return strcmp(h1->name, h2->name);
 }
 
-/** @name Differentiation methods
- * Automatic differentiation Backward mode:
- * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
- * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
- * f
- * |-----|
- * s     t
- * |--|  |--|
- * x  y  x  y
- * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
- * f
- * |   is d_s f [where d is actually \partial]
- * s
- * The weight of a path is the product of the weight of the edges in the path.
- * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
- * df/dx = d_s f * d_x s + d_t f * d_x t
- *
- * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
- * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
- * in the DAG and path in a tree diagram of a function.
- * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPwalkConsExprExprDF), for every expr that *has* children,
- * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
- * Example:
- * f->derivative = 1.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative = d_x s * s->derivative = d_x s * d_s f
- * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
- * and afterwards add, instead of overwrite the computed value.
- * The complete example would then be:
- * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative += d_x s * s->derivative = d_x s * d_s f
- * y->derivative += d_t s * s->derivative = d_t s * d_s f
- * t->derivative = d_t f * f->derivative = d_t f
- * x->derivative += d_x t * t->derivative = d_x t * d_t f
- * y->derivative += d_t t * t->derivative = d_t t * d_t f
- *
- * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
- *
- * @{
- */
-
-/** expression walk callback for computing derivatives with backward automatic differentiation, called before child is
- *  visited
- */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
-{  /*lint --e{715}*/
-   EXPRBWDIFF_DATA* bwdiffdata;
-   SCIP_Real derivative;
-
-   assert(expr != NULL);
-   assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
-   assert(expr->children[expr->walkcurrentchild] != NULL);
-
-   bwdiffdata = (EXPRBWDIFF_DATA*) data;
-   assert(bwdiffdata != NULL);
-
-   derivative = SCIP_INVALID;
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
-   if( expr->children[expr->walkcurrentchild]->difftag != bwdiffdata->difftag
-      && SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
-   {
-      expr->children[expr->walkcurrentchild]->derivative = 0.0;
-   }
-
-   /* update differentiation tag of the child */
-   expr->children[expr->walkcurrentchild]->difftag = bwdiffdata->difftag;
-
-   if( expr->exprhdlr->bwdiff == NULL )
-   {
-      bwdiffdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
-   }
-
-   /* call backward differentiation callback */
-   if( strcmp(expr->children[expr->walkcurrentchild]->exprhdlr->name, "val") == 0 )
-   {
-      derivative = 0.0;
-   }
-   else
-   {
-      SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, expr->walkcurrentchild, &derivative) );
-   }
-
-   if( derivative == SCIP_INVALID ) /*lint !e777*/
-   {
-      bwdiffdata->aborted = TRUE;
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
-   }
-
-   /* update partial derivative stored in the child expression
-    * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
-    * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
-    */
-   if( !SCIPisConsExprExprVar(expr->children[expr->walkcurrentchild]) )
-      expr->children[expr->walkcurrentchild]->derivative = expr->derivative * derivative;
-   else
-      expr->children[expr->walkcurrentchild]->derivative += expr->derivative * derivative;
-
-   return SCIP_OKAY;
-}
-
-/**@} */  /* end of differentiation methods */
-
 /** propagate bounds of the expressions in a given expression tree and tries to tighten the bounds of the auxiliary
  *  variables accordingly
  */
 static
 SCIP_RETCODE forwardPropExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable, or NULL */
@@ -2582,10 +1507,12 @@ SCIP_RETCODE forwardPropExpr(
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
    )
 {
-   FORWARDPROP_DATA propdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool aborted;
 
    assert(scip != NULL);
-   assert(expr != NULL);
+   assert(rootexpr != NULL);
 
    if( infeasible != NULL )
       *infeasible = FALSE;
@@ -2593,35 +1520,197 @@ SCIP_RETCODE forwardPropExpr(
       *ntightenings = 0;
 
    /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && expr->intevaltag == boxtag && !expr->hastightened )
+   if( boxtag != 0 && rootexpr->intevaltag == boxtag && !rootexpr->hastightened )
       return SCIP_OKAY;
 
-   propdata.aborted = FALSE;
-   propdata.boxtag = boxtag;
-   propdata.force = force;
-   propdata.tightenauxvars = tightenauxvars;
-   propdata.intevalvar = intevalvar;
-   propdata.intevalvardata = intevalvardata;
-   propdata.ntightenings = (ntightenings == NULL) ? -1 : 0;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, forwardPropExprVisitChild, NULL, forwardPropExprLeaveExpr,
-      &propdata) );
+   for( expr = SCIPexpriteratorGetCurrent(it), aborted = FALSE; !SCIPexpriteratorIsEnd(it) && !aborted;  )
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( boxtag != 0 && boxtag == child->intevaltag && !expr->hastightened )
+            {
+               /* skip child if it has been evaluated already and current expr is not tightened */
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->interval) )
+               {
+                  aborted = TRUE;
+                  break;
+               }
+
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         {
+            SCIP_Bool intersect;
+            SCIP_INTERVAL interval;
+
+            /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
+             * far, i.e., expr->intevaltag != boxtag
+             */
+            if( boxtag == 0 || expr->intevaltag != boxtag )
+            {
+               expr->intevaltag = boxtag;
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
+               expr->hastightened = FALSE;
+               intersect = FALSE;
+            }
+            else
+            {
+               assert(expr->intevaltag == boxtag);
+
+               /* the interval of the expression is valid, but did not change since the last call -> done with this expression */
+               if( !expr->hastightened )
+                  break;
+
+               /* intersect result with existing interval */
+               intersect = TRUE;
+            }
+
+            if( intersect )
+            {
+               /* start with interval that is stored in expression */
+               interval = expr->interval;
+
+               /* intersect with the interval of the auxiliary variable, if available */
+               if( expr->auxvar != NULL )
+               {
+                  SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
+                  SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
+                  /* TODO use intevalvar? */
+                  SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
+                  SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
+                  SCIP_INTERVAL auxinterval;
+
+                  SCIPintervalSetBounds(&auxinterval, inf, sup);
+                  SCIPintervalIntersect(&interval, interval, auxinterval);
+
+                  /* check whether resulting interval is already empty */
+                  if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+                  {
+                     aborted = TRUE;
+                     break;
+                  }
+               }
+            }
+            else
+            {
+               /* start with infinite interval [-inf,+inf] */
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+            }
+
+            assert((expr->nenfos > 0) == (expr->auxvar != NULL)); /* have auxvar, iff have enforcement */
+            if( expr->nenfos > 0 )
+            {
+               SCIP_CONSEXPR_NLHDLR* nlhdlr;
+               SCIP_INTERVAL nlhdlrinterval;
+               int e;
+
+               /* for nodes with enforcement (having auxvar, thus during solve), nlhdlrs take care of interval evaluation */
+               for( e = 0; e < expr->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval); ++e )
+               {
+                  nlhdlr = expr->enfos[e]->nlhdlr;
+                  assert(nlhdlr != NULL);
+
+                  /* skip nlhdlr if it does not provide interval evaluation */
+                  if( !SCIPhasConsExprNlhdlrInteval(nlhdlr) )
+                     continue;
+
+                  /* let nlhdlr evaluate current expression */
+                  nlhdlrinterval = interval;
+                  SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &nlhdlrinterval, intevalvar, intevalvardata) );
+                  SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
+#ifdef SCIP_DEBUG
+                  SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
+                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
+#endif
+
+                  /* intersect with interval */
+                  SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+               }
+            }
+            else
+            {
+               /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, intevalvar, intevalvardata) );
+
+#ifdef SCIP_DEBUG
+               SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
+               SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
+               SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
+#endif
+            }
+
+            if( intersect )
+            {
+               /* make sure resulting interval is subset of expr->interval, if intersect is true
+                * even though we passed expr->interval as input to the inteval callbacks,
+                * these callbacks might not have taken it into account (most do not, actually)
+                */
+               SCIPintervalIntersect(&interval, interval, expr->interval);
+            }
+
+            /* check whether the resulting interval is empty */
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
+            {
+               SCIPintervalSetEmpty(&expr->interval);
+               aborted = TRUE;
+               break;
+            }
+
+            if( tightenauxvars )
+            {
+               /* tighten bounds of expression interval and the auxiliary variable */
+               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &aborted, ntightenings) );
+
+               if( aborted )
+               {
+                  SCIPintervalSetEmpty(&expr->interval);
+                  break;
+               }
+            }
+            else
+            {
+               /* update expression interval */
+               SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
 
    /* evaluation leads to an empty interval -> detected infeasibility */
-   if( propdata.aborted )
+   if( aborted )
    {
-      SCIPintervalSetEmpty(&expr->interval);
-      expr->intevaltag = boxtag;
+      SCIPintervalSetEmpty(&rootexpr->interval);
+      rootexpr->intevaltag = boxtag;
 
       if( infeasible != NULL)
          *infeasible = TRUE;
    }
 
-   if( ntightenings != NULL )
-   {
-      assert(propdata.ntightenings >= 0);
-      *ntightenings = propdata.ntightenings;
-   }
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2681,7 +1770,7 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   SCIP_CALL( forwardPropExpr(scip, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
@@ -2810,7 +1899,7 @@ SCIP_RETCODE reversePropConss(
             /* call the reverseprop of the nlhdlr */
 #ifdef SCIP_DEBUG
             SCIPdebugMsg(scip, "call reverse propagation for ");
-            SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+            SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
             SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
 #endif
 
@@ -2827,7 +1916,7 @@ SCIP_RETCODE reversePropConss(
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "call reverse propagation for ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+         SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
 #endif
 
@@ -3148,7 +2237,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
@@ -3185,57 +2274,77 @@ SCIP_RETCODE checkRedundancyConss(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a decent
- *       upper bound on the number of unique variables in an expression
+ * The function counts variables in common sub-expressions only once.
  */
 SCIP_RETCODE SCIPgetConsExprExprNVars(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    int*                    nvars             /**< buffer to store the total number of variables */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nvars != NULL);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
    *nvars = 0;
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getNVarsLeaveExpr, (void*)nvars) );
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      if( SCIPisConsExprExprVar(expr) )
+         ++(*nvars);
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
- * no two different variable expression sharing the same variable
+ * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
  */
 SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
    )
 {
-   GETVARS_DATA getvarsdata;
+   SCIP_CONSEXPR_ITERATOR* it;
 
    assert(expr != NULL);
    assert(varexprs != NULL);
    assert(nvarexprs != NULL);
 
-   getvarsdata.nvarexprs = 0;
-   getvarsdata.varexprs = varexprs;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
-   /* use a hash map to decide whether we have stored a variable expression already */
-   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
+   *nvarexprs = 0;
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      assert(expr != NULL);
 
-   /* collect all variable expressions */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
-   *nvarexprs = getvarsdata.nvarexprs;
+      if( SCIPisConsExprExprVar(expr) )
+      {
+         /* add variable expression to array and capture expr */
+         assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1);
+
+         varexprs[(*nvarexprs)++] = expr;
+
+         /* capture expression */
+         SCIPcaptureConsExprExpr(expr);
+      }
+   }
 
    /* @todo sort variable expressions here? */
 
-   SCIPhashmapFree(&getvarsdata.varexprsmap);
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -3244,6 +2353,7 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
 static
 SCIP_RETCODE storeVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
@@ -3256,10 +2366,10 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
-   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNVars() */
+   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
 
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
    assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
    /* realloc array if there are less variable expression than variables */
@@ -3323,7 +2433,7 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, sol, soltag) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, sol, soltag) );
    activity = SCIPgetConsExprExprValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
@@ -3504,8 +2614,9 @@ SCIP_RETCODE propagateLocks(
    int                   nlocksneg           /**< number of negative locks */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
-   int oldintvals[2];
+   SCIP_CONSEXPREXPRWALK_IO ituserdata;
 
    assert(expr != NULL);
 
@@ -3516,21 +2627,121 @@ SCIP_RETCODE propagateLocks(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* remember old IO data */
-   oldintvals[0] = expr->walkio.intvals[0];
-   oldintvals[1] = expr->walkio.intvals[1];
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   assert(SCIPexpriteratorGetCurrent(it) == expr); /* iterator should not have moved */
 
    /* store locks in root node */
-   expr->walkio.intvals[0] = nlockspos;
-   expr->walkio.intvals[1] = nlocksneg;
+   ituserdata.intvals[0] = nlockspos;
+   ituserdata.intvals[1] = nlocksneg;
+   SCIPexpriteratorSetCurrentUserData(it, ituserdata);
 
-   /* propagate locks */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, lockVar, lockVar, NULL, lockVar,
-      (void*)SCIPgetConsExprExprHdlrVar(conshdlr)) );
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      /* collect locks */
+      ituserdata = SCIPexpriteratorGetCurrentUserData(it);
+      nlockspos = ituserdata.intvals[0];
+      nlocksneg = ituserdata.intvals[1];
 
-   /* restore old IO data */
-   expr->walkio.intvals[0] = oldintvals[0];
-   expr->walkio.intvals[1] = oldintvals[1];
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         {
+            if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+            {
+               /* if a variable, then also add nlocksneg/nlockspos via SCIPaddVarLocks() */
+               SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), nlocksneg, nlockspos) );
+            }
+
+            /* add locks to expression */
+            expr->nlockspos += nlockspos;
+            expr->nlocksneg += nlocksneg;
+
+            /* add monotonicity information if expression has been locked for the first time */
+            if( expr->nlockspos == nlockspos && expr->nlocksneg == nlocksneg && expr->nchildren > 0
+               && expr->exprhdlr->monotonicity != NULL )
+            {
+               int i;
+
+               assert(expr->monotonicity == NULL);
+               assert(expr->monotonicitysize == 0);
+
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->monotonicity, expr->nchildren) );
+               expr->monotonicitysize = expr->nchildren;
+
+               /* store the monotonicity for each child */
+               for( i = 0; i < expr->nchildren; ++i )
+               {
+                  SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, expr, i, &expr->monotonicity[i]) );
+               }
+            }
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         {
+            /* remove monotonicity information if expression has been unlocked */
+            if( expr->nlockspos == 0 && expr->nlocksneg == 0 && expr->monotonicity != NULL )
+            {
+               assert(expr->monotonicitysize > 0);
+               /* keep this assert for checking whether someone changed an expression without updating locks properly */
+               assert(expr->monotonicitysize == expr->nchildren);
+
+               SCIPfreeBlockMemoryArray(scip, &expr->monotonicity, expr->monotonicitysize);
+               expr->monotonicitysize = 0;
+            }
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            SCIP_MONOTONE monotonicity;
+
+            assert(expr->monotonicity != NULL || expr->exprhdlr->monotonicity == NULL);
+
+            /* get monotonicity of child */
+            /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
+             * SCIPgetConsExprExprMonotonicity
+             */
+            monotonicity = expr->monotonicity != NULL ? expr->monotonicity[SCIPexpriteratorGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
+
+            /* compute resulting locks of the child expression */
+            switch( monotonicity )
+            {
+               case SCIP_MONOTONE_INC:
+                  ituserdata.intvals[0] = nlockspos;
+                  ituserdata.intvals[1] = nlocksneg;
+                  break;
+               case SCIP_MONOTONE_DEC:
+                  ituserdata.intvals[0] = nlocksneg;
+                  ituserdata.intvals[1] = nlockspos;
+                  break;
+               case SCIP_MONOTONE_UNKNOWN:
+                  ituserdata.intvals[0] = nlockspos + nlocksneg;
+                  ituserdata.intvals[1] = nlockspos + nlocksneg;
+                  break;
+               case SCIP_MONOTONE_CONST:
+                  ituserdata.intvals[0] = 0;
+                  ituserdata.intvals[1] = 0;
+                  break;
+            }
+            /* set locks in child expression */
+            SCIPexpriteratorSetChildUserData(it, ituserdata);
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -3573,7 +2784,7 @@ SCIP_RETCODE addLocks(
    /* call interval evaluation when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, SCIPconsGetHdlr(cons), consdata->expr, 0, NULL, NULL) );
    }
 
    /* remember locks */
@@ -3628,16 +2839,15 @@ static
 SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* hashiterator;
 
    expr = (SCIP_CONSEXPR_EXPR*) key;
    assert(expr != NULL);
 
-   expr2key = (SCIP_HASHMAP*) userptr;
-   assert(expr2key != NULL);
-   assert(SCIPhashmapExists(expr2key, (void*)expr));
+   hashiterator = (SCIP_CONSEXPR_ITERATOR*) userptr;
+   assert(hashiterator != NULL);
 
-   return (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
 /* export this function here, so it can be used by unittests but is not really part of the API */
@@ -3661,17 +2871,21 @@ SCIP_RETCODE replaceCommonSubexpressions(
    int                   nconss              /**< total number of constraints */
    )
 {
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* hashiterator;
+   SCIP_CONSEXPR_ITERATOR* repliterator;
    SCIP_MULTIHASH* key2expr;
    SCIP_CONSDATA* consdata;
    int i;
+   int nexprs = 0;
 
    assert(scip != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
 
-   /* create empty map to store all sub-expression hashes */
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&hashiterator, SCIPconsGetHdlr(conss[0]), SCIPblkmem(scip)) );
 
    /* compute all hashes for each sub-expression */
    for( i = 0; i < nconss; ++i )
@@ -3681,21 +2895,30 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* don't hash (root) expressions which are already in the hash map */
-      if( consdata->expr != NULL && !SCIPhashmapExists(expr2key, (void*)consdata->expr) )
+      if( consdata->expr == NULL )
+         continue;
+
+      if( !SCIPexpriteratorIsInit(hashiterator) )
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr,
-               (void*)expr2key) );
+         /* first constraint with non-NULL expr: initialize iterator (set type and stopstage) */
+         SCIP_CALL( SCIPexpriteratorInit(hashiterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+         SCIPexpriteratorSetStagesDFS(hashiterator, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
       }
+
+      SCIP_CALL( hashExpr(scip, consdata->expr, hashiterator, &nexprs) );
    }
 
    /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), SCIPhashmapGetNEntries(expr2key),
-         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
+   SCIP_CALL( SCIPmultihashCreate(&key2expr, SCIPblkmem(scip), nexprs,
+         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)hashiterator) );
+
+   SCIP_CALL( SCIPexpriteratorCreate(&repliterator, SCIPconsGetHdlr(conss[0]), SCIPblkmem(scip)) );
 
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CONSEXPR_EXPR* newroot;
+      SCIP_CONSEXPR_EXPR* newchild;
+      SCIP_CONSEXPR_EXPR* child;
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -3703,7 +2926,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
       if( consdata->expr == NULL )
          continue;
 
-      /* since the root has not been checked for equivalence, it has to be checked separately */
+      /* check the root for equivalence separately first */
       SCIP_CALL( findEqualExpr(scip, consdata->expr, key2expr, &newroot) );
 
       if( newroot != NULL )
@@ -3717,17 +2940,45 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
          consdata->expr = newroot;
          SCIPcaptureConsExprExpr(newroot);
+
+         continue;
       }
-      else
+
+      /* replace equivalent sub-expressions in the tree */
+      SCIP_CALL( SCIPexpriteratorInit(repliterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      SCIPexpriteratorSetStagesDFS(repliterator, (unsigned int)SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+      while( !SCIPexpriteratorIsEnd(repliterator) )
       {
-         /* replace equivalent sub-expressions in the tree */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, commonExprVisitingExpr, NULL, NULL, (void*)key2expr) );
+         child = SCIPexpriteratorGetChildExprDFS(repliterator);
+         assert(child != NULL);
+
+         /* try to find an equivalent expression */
+         SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
+
+         /* replace child with newchild */
+         if( newchild != NULL )
+         {
+            assert(child != newchild);
+            assert(SCIPcompareConsExprExprs(child, newchild) == 0);
+
+            SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, SCIPexpriteratorGetCurrent(repliterator), SCIPexpriteratorGetChildIdxDFS(repliterator), newchild) );
+
+            (void) SCIPexpriteratorSkipDFS(repliterator);
+         }
+         else
+         {
+            (void) SCIPexpriteratorGetNext(repliterator);
+         }
       }
    }
 
    /* free memory */
+   SCIPexpriteratorFree(&repliterator);
    SCIPmultihashFree(&key2expr);
-   SCIPhashmapFree(&expr2key);
+   SCIPexpriteratorFree(&hashiterator);
 
    return SCIP_OKAY;
 }
@@ -3782,7 +3033,10 @@ SCIP_RETCODE canonicalizeConstraints(
    /* check whether all locks of each expression have been removed */
    {
       SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      SCIP_CONSEXPR_ITERATOR* it;
       assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
       for( i = 0; i < nconss; ++i )
       {
@@ -3791,15 +3045,16 @@ SCIP_RETCODE canonicalizeConstraints(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
-         for( expr = SCIPexpriteratorInit(conshdlrdata->iterator, consdata->expr);
-            !SCIPexpriteratorIsEnd(conshdlrdata->iterator);
-            expr = SCIPexpriteratorGetNext(conshdlrdata->iterator) ) /*lint !e441*/
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_RTOPOLOGIC, TRUE) );
+         for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
             assert(expr != NULL);
             assert(expr->nlocksneg == 0);
             assert(expr->nlockspos == 0);
          }
       }
+
+      SCIPexpriteratorFree(&it);
    }
 #endif
 
@@ -3816,7 +3071,7 @@ SCIP_RETCODE canonicalizeConstraints(
          /* TODO check whether something has changed because of SCIPsimplifyConsExprExpr */
          havechange = TRUE;
 
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consdata->expr, &simplified) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified) );
          consdata->issimplified = TRUE;
 
          /* If root expression changed, then we need to take care updating the locks as well (the consdata is the one holding consdata->expr "as a child").
@@ -3858,7 +3113,7 @@ SCIP_RETCODE canonicalizeConstraints(
       }
       for( i = 0; i < nconss; ++i )
       {
-         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
          SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
       }
    }
@@ -4661,145 +3916,6 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for computing branching scores */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
-{
-   BRSCORE_DATA* brscoredata;
-   SCIP_Real auxvarvalue;
-   SCIP_Bool overestimate;
-   SCIP_Bool underestimate;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   brscoredata = (BRSCORE_DATA*) data;
-   assert(brscoredata != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
-   if( expr->auxvar == NULL )
-      return SCIP_OKAY;
-
-   /* if having evaluated branching score already, then don't do again and don't enter subexpressions */
-   if( expr->brscoreevaltag == brscoredata->brscoretag )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* make sure expression has been evaluated, so evalvalue makes sense */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr, brscoredata->sol, brscoredata->soltag) );
-
-   auxvarvalue = SCIPgetSolVal(scip, brscoredata->sol, expr->auxvar);
-
-   /* compute violation w.r.t. original variables */
-   if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
-   {
-      /* the expression could be evaluated, then look on which side it is violated */
-
-      /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > brscoredata->minviolation;
-
-      /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > brscoredata->minviolation;
-   }
-   else
-   {
-      /* if expression could not be evaluated, then both under- and overestimate should be considered */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-   }
-
-   /* if there is violation, then consider branching */
-   if( overestimate || underestimate )
-   {
-      /* SCIP_Bool success = FALSE; */
-      SCIP_Bool nlhdlrsuccess;
-      int e;
-
-      /* call branching score callbacks of all nlhdlrs */
-      for( e = 0; e < expr->nenfos; ++e )
-      {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         assert(nlhdlr != NULL);
-
-         /* update auxvalue as corresponding to nlhdlr, if necessary */
-         if( brscoredata->evalauxvalues )
-         {
-            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, brscoredata->sol) );
-         }
-
-         /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr
-          * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
-          * and whether that corresponds to the relation that the nlhdlr tries to enforce
-          */
-         if( expr->enfos[e]->auxvalue == SCIP_INVALID ||  /*lint !e777*/
-            (overestimate && auxvarvalue - expr->enfos[e]->auxvalue > brscoredata->minviolation) ||
-            (underestimate && expr->enfos[e]->auxvalue - auxvarvalue > brscoredata->minviolation) )
-         {
-            SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, brscoredata->sol, expr->enfos[e]->auxvalue, brscoredata->brscoretag, &nlhdlrsuccess) );
-            SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
-            /* if( nlhdlrsuccess )
-               success = TRUE; */
-         }
-      }
-      /* if noone had success, then the violation here is caused by a violation deeper down in the expression tree,
-       * so there was no need to add branching scores from this expression
-       */
-   }
-
-   /* remember that we computed branching scores for this expression */
-   expr->brscoreevaltag = brscoredata->brscoretag;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback for propagating branching scores to child expressions */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(propagateBranchScore)
-{
-   BRSCORE_DATA* brscoredata;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
-
-   brscoredata = (BRSCORE_DATA*) data;
-   assert(brscoredata != NULL);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* propagate branching score, if any, from this expression to current children
-    * NOTE: this only propagates down branching scores that were computed by computeBranchScore
-    * we use the brscoretag to recognize whether this expression has a valid branching score
-    */
-   if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD && expr->brscoretag == brscoredata->brscoretag )
-   {
-      SCIP_CONSEXPR_EXPR* child;
-
-      assert(expr->walkcurrentchild < expr->nchildren);
-
-      child = expr->children[expr->walkcurrentchild];
-      assert(child != NULL);
-
-      SCIPaddConsExprExprBranchScore(scip, child, brscoredata->brscoretag, expr->brscore);
-   }
-
-   /* invalidate the branching scores in this expression, so they are not passed on in case this expression
-    * is visited again
-    * do this only for expressions with children, since for variables we need the brscoretag to be intact
-    */
-   if( stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR && expr->nchildren > 0 )
-      expr->brscoretag = 0;
-
-   return SCIP_OKAY;
-}
-
 /** computes the branching scores for a given set of constraints; the scores are computed by computing the violation of
  *  each expression by considering the values of the linearization variables of the expression and its children
  *
@@ -4819,7 +3935,13 @@ SCIP_RETCODE computeBranchingScores(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   BRSCORE_DATA brscoredata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Real auxvarvalue;
+   SCIP_Bool overestimate;
+   SCIP_Bool underestimate;
+   unsigned int brscoretag;
+   int e;
    int i;
 
    assert(scip != NULL);
@@ -4830,11 +3952,10 @@ SCIP_RETCODE computeBranchingScores(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   brscoredata.sol = sol;
-   brscoredata.soltag = soltag;
-   brscoredata.minviolation = minviolation;
-   brscoredata.brscoretag = ++(conshdlrdata->lastbrscoretag);
-   brscoredata.evalauxvalues = evalauxvalues;
+   /* tag to tell whether branching scores in expression belong to this sweep */
+   brscoretag = ++(conshdlrdata->lastbrscoretag);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -4845,11 +3966,87 @@ SCIP_RETCODE computeBranchingScores(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      /* skip satisfied constraints */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      if( !SCIPexpriteratorIsInit(it) )
       {
-         consdata->expr->brscore = 0.0;
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, computeBranchScore, NULL, NULL, NULL,
-               (void*)&brscoredata) );
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+      consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
+
+      assert(consdata->expr == SCIPexpriteratorGetCurrent(it) || SCIPexpriteratorIsEnd(it));
+      for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
+         if( expr->auxvar == NULL )
+            continue;
+
+         /* make sure expression has been evaluated, so evalvalue makes sense */
+         SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
+
+         auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
+
+         /* compute violation w.r.t. original variables */
+         if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
+         {
+            /* the expression could be evaluated, then look on which side it is violated */
+
+            /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+            overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > minviolation;
+
+            /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+            underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > minviolation;
+         }
+         else
+         {
+            /* if expression could not be evaluated, then both under- and overestimate should be considered */
+            overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+            underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+         }
+
+         if( !overestimate && !underestimate )
+            continue;
+
+         /* if there is violation, then consider branching
+          * call branching score callbacks of all nlhdlrs
+          */
+         for( e = 0; e < expr->nenfos; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            SCIP_Bool nlhdlrsuccess;
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* update auxvalue as corresponding to nlhdlr, if necessary */
+            if( evalauxvalues )
+            {
+               SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+            }
+
+            /* if there is violation w.r.t. auxiliary variables, then call brscore of nlhdlr
+             * the nlhdlr currently needs to recheck whether auxvar <= expr or auxvar >= expr is violated
+             * and whether that corresponds to the relation that the nlhdlr tries to enforce
+             */
+            if( expr->enfos[e]->auxvalue == SCIP_INVALID ||  /*lint !e777*/
+               (overestimate && auxvarvalue - expr->enfos[e]->auxvalue > minviolation) ||
+               (underestimate && expr->enfos[e]->auxvalue - auxvarvalue > minviolation) )
+            {
+               SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol, expr->enfos[e]->auxvalue, brscoretag, &nlhdlrsuccess) );
+               SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s) with auxviolation %g: success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), nlhdlrsuccess);
+               /* if( nlhdlrsuccess )
+                     success = TRUE; */
+            }
+         }
+         /* if noone had success, then the violation here is caused by a violation deeper down in the expression tree,
+          * so there was no need to add branching scores from this expression
+          */
       }
    }
 
@@ -4862,12 +4059,52 @@ SCIP_RETCODE computeBranchingScores(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      /* for satisfied constraints, no branching score has been computed, so no need to propagte from here */
+      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
+      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, propagateBranchScore, NULL, propagateBranchScore,
-               (void*)&brscoredata) );
+         switch( SCIPexpriteratorGetStageDFS(it) )
+         {
+            case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+            {
+               /* propagate branching score, if any, from this expression to current child
+                * NOTE: this only propagates down branching scores that were computed by computeBranchScore
+                * we use the brscoretag to recognize whether this expression has a valid branching score
+                */
+               if( expr->brscoretag == brscoretag )
+                  SCIPaddConsExprExprBranchScore(scip, SCIPexpriteratorGetChildExprDFS(it), brscoretag, expr->brscore);
+
+               break;
+            }
+
+            case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+            {
+               /* invalidate the branching scores in this expression, so they are not passed on in case this expression
+                * is visited again
+                * do this only for expressions with children, since for variables we need the brscoretag to be intact
+                */
+               if( expr->nchildren > 0 )
+                  expr->brscoretag = 0;
+
+               break;
+            }
+
+            default:
+            case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+            case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+               SCIPABORT();
+               break;
+         }
       }
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -4994,13 +4231,18 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
 }
 
 
-/** expression walk callback to install nlhdlrs in expressions */
+/** install nlhdlrs in one expression */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
+SCIP_RETCODE detectNlhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
+   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
+   SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
-   NLHDLR_DETECT_DATA* detectdata;
    SCIP_Bool enforcedbelow;
    SCIP_Bool enforcedabove;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
@@ -5013,40 +4255,18 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    int nsuccess;
    int e, h;
 
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(data != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   detectdata = (NLHDLR_DETECT_DATA *)data;
-   conshdlr = detectdata->conshdlr;
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(detectdata->nlhdlrssuccess != NULL);
-   assert(detectdata->nlhdlrssuccessexprdata != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrssuccess != NULL);
+   assert(nlhdlrssuccessexprdata != NULL);
+   assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
 
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* if there is no auxiliary variable here, then there is no-one requiring that
-    * an auxvar equals (or approximates) to value of this expression
-    * thus, not need to find nlhdlrs
-    */
-   if( expr->auxvar == NULL )
-      return SCIP_OKAY;
-
-   if( expr->nenfos > 0 )
-   {
-      /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
-       * then also the subtree has been investigated already and we can stop walking further down
-       */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-
-      return SCIP_OKAY;
-   }
+   /* there should be no enforcer yet, i.e., detection should not have been run already */
+   assert(expr->nenfos == 0);
    assert(expr->enfos == NULL);
 
    /* analyze expression with nonlinear handlers
@@ -5061,7 +4281,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p (%s); start with below %d above %d\n",
       (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
 
-   for( h = 0; h < conshdlrdata->nnlhdlrs && !detectdata->infeasible; ++h )
+   for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
       SCIP_INTERVAL interval;
@@ -5104,8 +4324,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
 
       /* remember nlhdlr and its data */
-      detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
-      detectdata->nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
+      nlhdlrssuccess[nsuccess] = nlhdlr;
+      nlhdlrssuccessexprdata[nsuccess] = nlhdlrexprdata;
       ++nsuccess;
 
       /* update enforcement flags */
@@ -5121,13 +4341,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &interval, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr)) );
       SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
       /* tighten bounds of expression interval and the auxiliary variable */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, &detectdata->infeasible, &ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, infeasible, &ntightenings) );
    }
 
    /* stop if the expression cannot be enforced
     * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
     */
-   if( (!enforcedbelow || !enforcedabove) && !detectdata->infeasible )
+   if( (!enforcedbelow || !enforcedabove) && !*infeasible )
    {
       SCIPerrorMessage("no nonlinear handler provided enforcement for %s expression %s auxvar\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)),
@@ -5140,14 +4360,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    for( e = 0; e < nsuccess; ++e )
    {
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
-      expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
-      expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
+      expr->enfos[e]->nlhdlr = nlhdlrssuccess[e];
+      expr->enfos[e]->nlhdlrexprdata = nlhdlrssuccessexprdata[e];
       expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
-
-   if( detectdata->infeasible )
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
 
    return SCIP_OKAY;
 }
@@ -5162,30 +4379,34 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    )
 {
-   NLHDLR_DETECT_DATA nlhdlrdetect;
+   SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess;   /* buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /* buffer for exprdata of nlhdlrs */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_ITERATOR* it;
    SCIP_Bool redundant;
    int ntightenings;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-
-   nlhdlrdetect.conshdlr = conshdlr;
-   nlhdlrdetect.infeasible = FALSE;
+   assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    /* allocate some buffer for temporary storage of nlhdlr detect result */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
    /* increase lastinteval tag */
    ++(conshdlrdata->lastintevaltag);
    assert(conshdlrdata->lastintevaltag > 0);
 
+   *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
    {
       assert(conss != NULL && conss[i] != NULL);
@@ -5222,24 +4443,49 @@ SCIP_RETCODE detectNlhdlrs(
             /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
              * in SCIPcreateConsExprExprAuxVar()
              */
-            SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0) );
          }
       }
 #endif
 
       /* compute integrality information for all subexpressions */
-      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, consdata->expr) );
+      SCIP_CALL( SCIPcomputeConsExprExprIntegral(scip, conshdlr, consdata->expr) );
 
       /* create auxiliary variable for root expression */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
       assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
 
-      /* detect non-linear handlers, might create auxiliary variables */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, detectNlhdlrsEnterExpr, NULL, NULL, NULL, &nlhdlrdetect) );
-      if( nlhdlrdetect.infeasible )
+      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      expr = SCIPexpriteratorGetCurrent(it);
+      while( !SCIPexpriteratorIsEnd(it) )
+      {
+         if( expr->nenfos > 0 )
+         {
+            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+             * then also the subtree has been investigated already and we can stop iterating further down
+             */
+            expr = SCIPexpriteratorSkipDFS(it);
+            continue;
+         }
+
+         /* if there is an auxiliary variable here, then there is some-one requiring that
+          * an auxvar equals (or approximates) to value of this expression
+          * thus, we need to find nlhdlrs
+          */
+         if( expr->auxvar != NULL )
+         {
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+
+            if( *infeasible )
+               break;
+         }
+
+         expr = SCIPexpriteratorGetNext(it);
+      }
+
+      if( *infeasible )
       {
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
-         *infeasible = TRUE;
          break;
       }
 
@@ -5251,6 +4497,7 @@ SCIP_RETCODE detectNlhdlrs(
                consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
          break;
       }
+
       SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
       if( *infeasible )
       {
@@ -5260,8 +4507,9 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
+   SCIPexpriteratorFree(&it);
+   SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
+   SCIPfreeBufferArray(scip, &nlhdlrssuccess);
 
    /* call reverse propagation for ALL expressions
     * This can ensure that auxiliary variables take only values that are within the domain of functions that use them
@@ -5270,24 +4518,6 @@ SCIP_RETCODE detectNlhdlrs(
     * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
     */
    SCIP_CALL( reversePropConss(scip, conss, nconss, FALSE, TRUE, infeasible, &ntightenings) );
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to free auxiliary variables created for the outer approximation */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
-{
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   assert((SCIP_CONSHDLR*)data != NULL);
-   assert(strcmp(SCIPconshdlrGetName((SCIP_CONSHDLR*)data), CONSHDLR_NAME) == 0);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   SCIP_CALL( freeAuxVar(scip, expr) );
 
    return SCIP_OKAY;
 }
@@ -5301,115 +4531,133 @@ SCIP_RETCODE freeAuxVars(
    int                   nconss              /**< total number of constraints */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSDATA* consdata;
    int i;
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
 
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
    for( i = 0; i < nconss; ++i )
    {
-      assert(conss != NULL && conss[i] != NULL);
+      assert(conss != NULL);
+      assert(conss[i] != NULL);
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( consdata->expr != NULL )
-      {
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, freeAuxVarsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback for separation initialization */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
-{
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   INITSEPA_DATA* initsepadata;
-   int e;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   initsepadata = (INITSEPA_DATA*)data;
-   assert(initsepadata != NULL);
-   assert(initsepadata->conshdlr != NULL);
-   assert(!initsepadata->infeasible);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* skip expression if it has been considered already */
-   if( initsepadata->initsepatag == expr->initsepatag )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* call initsepa of all nlhdlrs in expr */
-   for( e = 0; e < expr->nenfos; ++e )
-   {
-      SCIP_Bool underestimate;
-      SCIP_Bool overestimate;
-      SCIP_Bool infeasible;
-      assert(expr->enfos[e] != NULL);
-
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
-
-      /* only init sepa if there is an initsepa callback */
-      if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
+      if( consdata->expr == NULL )
          continue;
 
-      assert(!expr->enfos[e]->issepainit);
-
-      /* check whether expression needs to be under- or overestimated */
-      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-      assert(underestimate || overestimate);
-
-      /* call the separation initialization callback of the nonlinear handler */
-      infeasible = FALSE;
-      SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, initsepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-         overestimate, underestimate, &infeasible) );
-      expr->enfos[e]->issepainit = TRUE;
-
-      if( infeasible )
+      if( !SCIPexpriteratorIsInit(it) )
       {
-         /* stop walk if we detected infeasibility
-          * TODO here we'll still call the initsepa of this expr nlhdlrs, but maybe we should not abort the walk? otherwise, we may later call exitsepa for expressions for which initsepa was not called?
-          */
-         initsepadata->infeasible = TRUE;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_CALL( freeAuxVar(scip, expr) );
       }
    }
 
-   /* store the initsepa tag */
-   expr->initsepatag = initsepadata->initsepatag;
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
 
-/** expression walk callback for solve deinitialization (EXITSOL) */
+/** calls separation initialization callback for each expression */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-   assert(data != NULL);
+SCIP_RETCODE initSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c, e;
 
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+   assert(infeasible != NULL);
 
-   SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
-   /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting
-    * (data is a pointer to a bool that indicates whether we are restarting)
-    */
-   SCIP_CALL( freeEnfoData(scip, expr, !*(SCIP_Bool*)data) );
+   *infeasible = FALSE;
+   for( c = 0; c < nconss && !*infeasible; ++c )
+   {
+      assert(conss != NULL);
+      assert(conss[c] != NULL);
+
+      /* call separation initialization callback for 'initial' constraints only */
+      if( !SCIPconsIsInitial(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      if( !SCIPexpriteratorIsInit(it) )
+      {
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         /* call initsepa of all nlhdlrs in expr */
+         for( e = 0; e < expr->nenfos; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            SCIP_Bool underestimate;
+            SCIP_Bool overestimate;
+            assert(expr->enfos[e] != NULL);
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* only init sepa if there is an initsepa callback */
+            if( !SCIPhasConsExprNlhdlrInitSepa(nlhdlr) )
+               continue;
+
+            assert(!expr->enfos[e]->issepainit);
+
+            /* check whether expression needs to be under- or overestimated */
+            overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+            underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+            assert(underestimate || overestimate);
+
+            /* call the separation initialization callback of the nonlinear handler */
+            SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+               overestimate, underestimate, infeasible) );
+            expr->enfos[e]->issepainit = TRUE;
+
+            if( *infeasible )
+            {
+               /* stop everything if we detected infeasibility */
+               SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
+               break;
+            }
+         }
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -5420,7 +4668,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
  * Otherwise, calls the estimator callback, if available, and constructs a cut from the estimator.
  */
 static
-SCIP_RETCODE sepaConsExprNlhdlr(
+SCIP_RETCODE separatePointExprNlhdlr(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
@@ -5431,21 +4679,19 @@ SCIP_RETCODE sepaConsExprNlhdlr(
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
    SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
-   SCIP_RESULT*          result,             /**< pointer to store the result */
-   int*                  ncuts               /**< pointer to store the number of added cuts */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
+   int ncuts;
+
    assert(result != NULL);
-   assert(ncuts != NULL);
 
    /* call separation callback of the nlhdlr */
-   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
+   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, &ncuts) );
 
    /* if it was not running (e.g., because it was not available), then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN )
       return SCIP_OKAY;
-
-   *ncuts = 0;
 
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
@@ -5489,13 +4735,11 @@ SCIP_RETCODE sepaConsExprNlhdlr(
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
-            *ncuts = 0;
             ++nlhdlr->ncutoffs;
          }
          else
          {
             *result = SCIP_SEPARATED;
-            *ncuts = 1;
             ++nlhdlr->ncutsfound;
          }
 
@@ -5508,196 +4752,132 @@ SCIP_RETCODE sepaConsExprNlhdlr(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for separating a given solution */
+/** tries to separate solution or LP solution by a linear cut for a single expression */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
-{
-   SEPA_DATA* sepadata;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   sepadata = (SEPA_DATA*)data;
-   assert(sepadata != NULL);
-   assert(sepadata->result != SCIP_CUTOFF);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* skip expression if it has been considered already */
-   if( sepadata->sepatag != 0 && sepadata->sepatag == expr->sepatag )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-      return SCIP_OKAY;
-   }
-
-   /* it only makes sense to call the separation callback if there is a variable attached to the expression */
-   if( expr->auxvar != NULL )
-   {
-      SCIP_RESULT separesult;
-      SCIP_Real auxvarvalue;
-      SCIP_Bool underestimate;
-      SCIP_Bool overestimate;
-      SCIP_Bool separated;
-      int ncuts;
-      int e;
-
-      separesult = SCIP_DIDNOTFIND;
-      ncuts = 0;
-      separated = FALSE;
-
-      auxvarvalue = SCIPgetSolVal(scip, sepadata->sol, expr->auxvar);
-
-      /* make sure that this expression has been evaluated */
-      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sepadata->sol, sepadata->soltag) );
-
-      /* compute violation and decide whether under- or overestimate is required */
-      if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
-      {
-         /* the expression could be evaluated, then look how much and on which side it is violated */
-
-         /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
-         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > sepadata->minviolation;
-
-         /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
-         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > sepadata->minviolation;
-      }
-      else
-      {
-         /* if expression could not be evaluated, then both under- and overestimate should be considered */
-         overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
-         underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
-      }
-
-      /* no sufficient violation w.r.t. the original variables -> skip expression */
-      if( !overestimate && !underestimate )
-         return SCIP_OKAY;
-
-      /* call the separation callbacks of the nonlinear handlers */
-      for( e = 0; e < expr->nenfos; ++e )
-      {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         assert(nlhdlr != NULL);
-
-         /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
-         SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sepadata->sol) );
-
-         /* update maxauxviolation */
-         if( expr->enfos[e]->auxvalue == SCIP_INVALID )  /*lint !e777*/
-            sepadata->maxauxviolation = SCIPinfinity(scip);
-         else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > sepadata->maxauxviolation )
-            sepadata->maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
-         else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > sepadata->maxauxviolation )
-            sepadata->maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
-
-         SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), REALABS(expr->evalvalue - auxvarvalue), underestimate, overestimate);
-
-         /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
-         if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > sepadata->minviolation) )  /*lint !e777*/
-         {
-            /* call the separation or estimation callback of the nonlinear handler for overestimation */
-            SCIP_CALL( sepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-               expr->enfos[e]->auxvalue, TRUE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
-
-            assert(ncuts >= 0);
-            sepadata->ncuts += ncuts;
-
-            /* if overestimation was successful, then no more need for underestimation
-             * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
-             */
-            if( separesult == SCIP_CUTOFF || separesult == SCIP_SEPARATED )
-               underestimate = FALSE;
-         }
-
-         if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > sepadata->minviolation) )  /*lint !e777*/
-         {
-            /* call the separation or estimation callback of the nonlinear handler for underestimation */
-            SCIP_CALL( sepaConsExprNlhdlr(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol,
-               expr->enfos[e]->auxvalue, FALSE, sepadata->mincutviolation, separated, &separesult, &ncuts) );
-
-            assert(ncuts >= 0);
-            sepadata->ncuts += ncuts;
-         }
-
-         if( separesult == SCIP_CUTOFF )
-         {
-            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
-            sepadata->result = SCIP_CUTOFF;
-            *result = SCIP_CONSEXPREXPRWALK_ABORT;
-            break;
-         }
-         else if( separesult == SCIP_SEPARATED )
-         {
-            assert(ncuts > 0);
-            SCIPdebugMsg(scip, "found %d cuts by nlhdlr <%s> separating the current solution\n", ncuts, nlhdlr->name);
-            sepadata->result = SCIP_SEPARATED;
-            separated = TRUE;
-            /* TODO or should we always just stop here? */
-         }
-         else
-         {
-            /* SCIPdebugMsg(scip, "nlhdlr <%s> was not successful\n", nlhdlr->name); */
-         }
-      }
-   }
-
-   /* store the separation tag at the expression */
-   expr->sepatag = sepadata->sepatag;
-
-   return SCIP_OKAY;
-}
-
-/** calls separation initialization callback for each expression */
-static
-SCIP_RETCODE initSepa(
+SCIP_RETCODE separatePointExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
-   SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraints handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
+   SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
+   SCIP_Bool*            separated,          /**< buffer to store whether solution could be separated */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility to was detected */
+   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   INITSEPA_DATA initsepadata;
-   int c;
+   SCIP_Real auxvarvalue;
+   SCIP_Bool underestimate;
+   SCIP_Bool overestimate;
+   SCIP_RESULT hdlrresult;
+   int e;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
+   assert(expr != NULL);
+   assert(expr->auxvar != NULL);  /* there must be a variable attached to the expression in order to construct a cut here */
+   assert(separated != NULL);
    assert(infeasible != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
+   *separated = FALSE;
    *infeasible = FALSE;
 
-   initsepadata.infeasible = FALSE;
-   initsepadata.conshdlr = conshdlr;
-   initsepadata.initsepatag = (++conshdlrdata->lastinitsepatag);
+   auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
 
-   for( c = 0; c < nconss; ++c )
+   /* make sure that this expression has been evaluated */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
+
+   /* compute violation and decide whether under- or overestimate is required */
+   if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
    {
-      assert(conss != NULL);
-      assert(conss[c] != NULL);
+      /* the expression could be evaluated, then look how much and on which side it is violated */
 
-      /* call LP initialization callback for 'initial' constraints only */
-      if( SCIPconsIsInitial(conss[c]) )
+      /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > minviolation;
+
+      /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > minviolation;
+   }
+   else
+   {
+      /* if expression could not be evaluated, then both under- and overestimate should be considered */
+      overestimate = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+      underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
+   }
+
+   /* no sufficient violation w.r.t. the original variables -> skip expression */
+   if( !overestimate && !underestimate )
+      return SCIP_OKAY;
+
+   /* call the separation callbacks of the nonlinear handlers */
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      nlhdlr = expr->enfos[e]->nlhdlr;
+      assert(nlhdlr != NULL);
+
+      /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+
+      if( maxauxviolation != NULL )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
+         /* update maxauxviolation */
+         if( expr->enfos[e]->auxvalue == SCIP_INVALID )  /*lint !e777*/
+            *maxauxviolation = SCIPinfinity(scip);
+         else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > *maxauxviolation )
+            *maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
+         else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > *maxauxviolation )
+            *maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
+      }
 
-         /* walk through the expression tree and call separation initialization callbacks */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, initSepaEnterExpr, NULL, NULL, NULL, (void*)&initsepadata) );
+      SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), REALABS(expr->evalvalue - auxvarvalue), underestimate, overestimate);
 
-         if( initsepadata.infeasible )
+      /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
+      if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
+      {
+         /* call the separation or estimation callback of the nonlinear handler for overestimation */
+         hdlrresult = SCIP_DIDNOTFIND;
+         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
+            expr->enfos[e]->auxvalue, TRUE, mincutviolation, *separated, &hdlrresult) );
+
+         /* if overestimation was successful, then no more need for underestimation
+          * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
+          */
+         if( hdlrresult == SCIP_CUTOFF )
          {
-            SCIPdebugMsg(scip, "detect infeasibility for constraint %s during initsepa()\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
             *infeasible = TRUE;
-            return SCIP_OKAY;
+            break;
+         }
+
+         if( hdlrresult == SCIP_SEPARATED )
+         {
+            SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
+            underestimate = FALSE;
+            *separated = TRUE;
+         }
+      }
+
+      if( underestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > minviolation) )  /*lint !e777*/
+      {
+         /* call the separation or estimation callback of the nonlinear handler for underestimation */
+         hdlrresult = SCIP_DIDNOTFIND;
+         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
+            expr->enfos[e]->auxvalue, FALSE, mincutviolation, *separated, &hdlrresult) );
+
+         if( hdlrresult == SCIP_CUTOFF )
+         {
+            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
+            *infeasible = TRUE;
+            break;
+         }
+
+         if( hdlrresult == SCIP_SEPARATED )
+         {
+            SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
+            *separated = TRUE;
+            /* TODO or should we always just stop here? */
          }
       }
    }
@@ -5724,9 +4904,11 @@ SCIP_RETCODE separatePoint(
    SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SEPA_DATA sepadata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool separated;
    int c;
 
    assert(conss != NULL || nconss == 0);
@@ -5734,20 +4916,7 @@ SCIP_RETCODE separatePoint(
    assert(mincutviolation >= 0.0);
    assert(result != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* increase separation tag; use the same tag for all constraints in this separatePoint() call */
-   ++(conshdlrdata->lastsepatag);
-
-   /* initialize separation data */
-   sepadata.conshdlr = conshdlr;
-   sepadata.sol = sol;
-   sepadata.soltag = soltag;
-   sepadata.minviolation = minviolation;
-   sepadata.mincutviolation = mincutviolation;
-   sepadata.maxauxviolation = 0.0;
-   sepadata.sepatag = conshdlrdata->lastsepatag;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5781,19 +4950,31 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
-      /* reset some sepadata */
-      sepadata.result = SCIP_DIDNOTFIND;
-      sepadata.ncuts = 0;
-
-      /* walk through the expression tree and call separation callback functions */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, separateSolEnterExpr, NULL, NULL, NULL, (void*)&sepadata) );
-
-      if( sepadata.result == SCIP_CUTOFF || sepadata.result == SCIP_SEPARATED )
+      if( !SCIPexpriteratorIsInit(it) )
       {
-         *result = sepadata.result;
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void)SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
 
-         if( *result == SCIP_CUTOFF )
-            break;
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         /* it only makes sense to call the separation callback if there is a variable attached to the expression */
+         if( expr->auxvar == NULL )
+            continue;
+
+         SCIP_CALL( separatePointExpr(scip, conshdlr, expr, sol, soltag, minviolation, mincutviolation, &separated, &infeasible, maxauxviolation) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            goto TERMINATE;
+         }
+
+         if( separated )
+            *result = SCIP_SEPARATED;
       }
 
       /* enforce only useful constraints; others are only checked and enforced if we are still feasible or have not
@@ -5803,8 +4984,8 @@ SCIP_RETCODE separatePoint(
          break;
    }
 
-   if( maxauxviolation != NULL )
-      *maxauxviolation = sepadata.maxauxviolation;
+TERMINATE:
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -6327,10 +5508,6 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
    conshdlrdata->nlhdlrssize = 0;
 
-   /* free expression iterator */
-   assert(conshdlrdata->iterator != NULL);
-   SCIPexpriteratorFree(&conshdlrdata->iterator);
-
    /* free upgrade functions */
    for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
    {
@@ -6361,7 +5538,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
 
    for( i = 0; i < nconss; ++i )
    {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
@@ -6542,11 +5719,15 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
    int c;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -6560,9 +5741,27 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* walk through the expression tree and call  */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, exitSolEnterExpr, NULL, NULL, NULL, (void*)&restart) );
+      if( !SCIPexpriteratorIsInit(it) )
+      {
+         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+      }
+      else
+      {
+         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
+      }
+
+      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
+
+         /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting
+          * (data is a pointer to a bool that indicates whether we are restarting)
+          */
+         SCIP_CALL( freeEnfoData(scip, expr, !restart) );
+      }
    }
+
+   SCIPexpriteratorFree(&it);
 
    /* deinitialize nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
@@ -6624,23 +5823,14 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
 static
 SCIP_DECL_CONSTRANS(consTransExpr)
 {  /*lint --e{715}*/
-   COPY_DATA copydata;
-   SCIP_CONSEXPR_EXPR* sourceexpr;
    SCIP_CONSEXPR_EXPR* targetexpr;
    SCIP_CONSDATA* sourcedata;
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   sourceexpr = sourcedata->expr;
-
-   copydata.targetscip = scip;
-   copydata.mapvar = transformVar;
-   copydata.mapvardata = NULL;
-
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   targetexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(scip, scip, conshdlr, sourcedata->expr, &targetexpr, transformVar, NULL) );
 
    if( targetexpr == NULL )
    {
@@ -6674,7 +5864,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    if( *infeasible )
       return SCIP_OKAY;
 
-   /* call LP initialization callbacks of the expression handlers */
+   /* call seaparation initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
 
    return SCIP_OKAY;
@@ -7012,7 +6202,7 @@ SCIP_DECL_CONSACTIVE(consActiveExpr)
 
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(cons)) );
+      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(cons)) );
    }
 
    return SCIP_OKAY;
@@ -7105,7 +6295,7 @@ SCIP_DECL_CONSPRINT(consPrintExpr)
    /* print expression */
    if( consdata->expr != NULL )
    {
-      SCIP_CALL( SCIPprintConsExprExpr(scip, consdata->expr, file) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, consdata->expr, file) );
    }
    else
    {
@@ -7130,9 +6320,7 @@ SCIP_DECL_CONSPRINT(consPrintExpr)
 static
 SCIP_DECL_CONSCOPY(consCopyExpr)
 {  /*lint --e{715}*/
-   COPY_DATA copydata;
    COPY_MAPVAR_DATA mapvardata;
-   SCIP_CONSEXPR_EXPR* sourceexpr;
    SCIP_CONSEXPR_EXPR* targetexpr;
    SCIP_CONSDATA* sourcedata;
 
@@ -7141,20 +6329,13 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   sourceexpr = sourcedata->expr;
-
    mapvardata.varmap = varmap;
    mapvardata.consmap = consmap;
    mapvardata.global = global;
    mapvardata.valid = TRUE; /* hope the best */
 
-   copydata.targetscip = scip;
-   copydata.mapvar = copyVar;
-   copydata.mapvardata = &mapvardata;
-
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   targetexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(sourcescip, scip, sourceconshdlr, sourcedata->expr, &targetexpr, copyVar, &mapvardata) );
 
    if( targetexpr == NULL )
    {
@@ -7663,6 +6844,16 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    return SCIP_OKAY;
 }
 
+/** returns whether expression handler implements the print callback */
+SCIP_Bool SCIPhasConsExprExprHdlrPrint(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->print != NULL;
+}
+
 /** returns whether expression handler implements the simplification callback */
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -7863,6 +7054,55 @@ SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    assert(exprhdlr != NULL);
 
    return exprhdlr->data;
+}
+
+/** calls the print callback of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   if( SCIPhasConsExprExprHdlrPrint(expr->exprhdlr) )
+   {
+      SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, currentchild, parentprecedence, file) );
+   }
+   else
+   {
+      /* default: <hdlrname>(<child1>, <child2>, ...) */
+      switch( stage )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         {
+            SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+            if( SCIPgetConsExprExprNChildren(expr) > 0 )
+            {
+               SCIPinfoMessage(scip, file, "(");
+            }
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         {
+            if( currentchild < SCIPgetConsExprExprNChildren(expr)-1 )
+            {
+               SCIPinfoMessage(scip, file, ", ");
+            }
+            else
+            {
+               SCIPinfoMessage(scip, file, ")");
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** calls the simplification method of an expression handler */
@@ -8555,33 +7795,115 @@ void SCIPcaptureConsExprExpr(
 /** releases an expression (decrements usage count and possibly frees expression) */
 SCIP_RETCODE SCIPreleaseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
+   SCIP_CONSEXPR_EXPR**  rootexpr            /**< pointer to expression to be released */
    )
 {
-   assert(expr != NULL);
-   assert(*expr != NULL);
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
 
-   if( (*expr)->nuses == 1 )
+   assert(rootexpr != NULL);
+   assert(*rootexpr != NULL);
+   assert((*rootexpr)->nuses > 0);
+
+   if( (*rootexpr)->nuses > 1 )
    {
-      /* handle the root expr separately: free enfodata and expression data here */
-      SCIP_CALL( freeEnfoData(scip, *expr, TRUE) );
-
-      if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
-      {
-         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
-      }
-
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, NULL, freeExprWalk, freeExprWalk, NULL,  NULL) );
-
-      /* handle the root expr separately: free its children and itself here */
-      SCIP_CALL( freeExpr(scip, expr) );
+      --(*rootexpr)->nuses;
+      *rootexpr = NULL;
 
       return SCIP_OKAY;
    }
 
-   --(*expr)->nuses;
-   assert((*expr)->nuses > 0);
-   *expr = NULL;
+   /* handle the root expr separately: free enfodata and expression data here */
+   SCIP_CALL( freeEnfoData(scip, *rootexpr, TRUE) );
+
+   if( (*rootexpr)->exprdata != NULL && (*rootexpr)->exprhdlr->freedata != NULL )
+   {
+      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
+   }
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, *rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) ; )
+   {
+      /* expression should be used by its parent and maybe by the iterator (only the root!)
+       * in VISITEDCHILD we assert that expression is only used by its parent
+       */
+      assert(expr != NULL);
+      assert(0 <= expr->nuses && expr->nuses <= 2);
+
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            /* check whether a child needs to be visited (nuses == 1)
+             * if not, then we still have to release it
+             */
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( child->nuses > 1 )
+            {
+               /* child is not going to be freed: just release it */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            assert(child->nuses == 1);
+
+            /* free child's enfodata and expression data when entering child */
+            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
+
+            if( child->exprdata != NULL )
+            {
+               if( child->exprhdlr->freedata != NULL )
+               {
+                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+                  assert(child->exprdata == NULL);
+               }
+               else
+               {
+                  child->exprdata = NULL;
+               }
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         {
+            /* free child after visiting it */
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            /* child should only be used by its parent */
+            assert(child->nuses == 1);
+
+            /* child should have no data associated */
+            assert(child->exprdata == NULL);
+
+            /* free child expression */
+            SCIP_CALL( freeExpr(scip, &child) );
+            expr->children[SCIPexpriteratorGetChildIdxDFS(it)] = NULL;
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   /* handle the root expr separately: free its children and itself here */
+   SCIP_CALL( freeExpr(scip, rootexpr) );
 
    return SCIP_OKAY;
 }
@@ -8671,13 +7993,45 @@ void SCIPsetConsExprExprData(
 /** print an expression as info-message */
 SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
    FILE*                   file              /**< file to print to, or NULL for stdout */
    )
 {
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPREXPRWALK_STAGE stage;
+   int currentchild;
+   unsigned int parentprecedence;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExpr, printExpr, printExpr, printExpr, (void*)file) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      assert(expr->exprhdlr != NULL);
+      stage = SCIPexpriteratorGetStageDFS(it);
+
+      if( stage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+         currentchild = SCIPexpriteratorGetChildIdxDFS(it);
+      else
+         currentchild = -1;
+
+      if( SCIPexpriteratorGetParentDFS(it) != NULL )
+         parentprecedence = SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPexpriteratorGetParentDFS(it)));
+      else
+         parentprecedence = 0;
+
+      SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, stage, currentchild, parentprecedence, file) );
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -8685,11 +8039,14 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 /** initializes printing of expressions in dot format */
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
    )
 {
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
    assert(dotdata != NULL);
 
    if( file == NULL )
@@ -8698,9 +8055,10 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP_CALL( SCIPallocBlockMemory(scip, dotdata) );
 
    (*dotdata)->file = file;
+   SCIP_CALL( SCIPexpriteratorCreate(&(*dotdata)->iterator, consexprhdlr, SCIPblkmem(scip)) );
    (*dotdata)->closefile = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->visitedexprs, SCIPblkmem(scip), 1000) );
    (*dotdata)->whattoprint = whattoprint;
+   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->leaveexprs, SCIPblkmem(scip), 100) );
 
    SCIPinfoMessage(scip, file, "strict digraph exprgraph {\n");
    SCIPinfoMessage(scip, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
@@ -8711,6 +8069,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
 /** initializes printing of expressions in dot format to a file with given filename */
 SCIP_RETCODE SCIPprintConsExprExprDotInit2(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    const char*             filename,         /**< name of file to print to */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
@@ -8728,7 +8087,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit2(
       return SCIP_FILECREATEERROR;
    }
 
-   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, dotdata, f, whattoprint) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, consexprhdlr, dotdata, f, whattoprint) );
    (*dotdata)->closefile = TRUE;
 
    return SCIP_OKAY;
@@ -8740,10 +8099,97 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
    )
 {
+   SCIP_Real color;
+   int c;
+
+   assert(scip != NULL);
    assert(dotdata != NULL);
    assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExprDot, NULL, NULL, NULL, (void*)dotdata) );
+   SCIP_CALL( SCIPexpriteratorInit(dotdata->iterator, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   while( !SCIPexpriteratorIsEnd(dotdata->iterator) )
+   {
+      /* print expression as dot node */
+
+      if( SCIPgetConsExprExprNChildren(expr) == 0 )
+      {
+         SCIP_CALL( SCIPhashmapInsert(dotdata->leaveexprs, (void*)expr, NULL) );
+      }
+
+      /* make up some color from the expression type (it's name) */
+      color = 0.0;
+      for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
+         color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+      color = SCIPfrac(scip, color);
+      SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
+      {
+         SCIPinfoMessage(scip, dotdata->file, "%s\\n", SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
+      {
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, -1, 0, dotdata->file) );
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, c, 0, dotdata->file) );
+            SCIPinfoMessage(scip, dotdata->file, "c%d", c);
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, c, 0, dotdata->file) );
+         }
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, -1, 0, dotdata->file) );
+
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+      {
+         /* print number of uses */
+         SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+      {
+         /* print number of locks */
+         SCIPinfoMessage(scip, dotdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
+      {
+         /* print eval value */
+         SCIPinfoMessage(scip, dotdata->file, "val=%g", expr->evalvalue);
+
+         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALTAG) == SCIP_CONSEXPR_PRINTDOT_EVALTAG )
+         {
+            /* print also eval tag */
+            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->evaltag);
+         }
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
+      {
+         /* print interval value */
+         SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
+
+         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
+         {
+            /* print also interval eval tag */
+            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
+         }
+         SCIPinfoMessage(scip, dotdata->file, "\\n");
+      }
+
+      SCIPinfoMessage(scip, dotdata->file, "\"]\n");  /* end of label and end of node */
+
+      /* add edges from expr to its children */
+      for( c = 0; c < expr->nchildren; ++c )
+         SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
+
+      expr = SCIPexpriteratorGetNext(dotdata->iterator);
+   }
 
    return SCIP_OKAY;
 }
@@ -8767,24 +8213,26 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
 
    /* iterate through all entries of the map */
    SCIPinfoMessage(scip, file, "{rank=same;");
-   for( i = 0; i < SCIPhashmapGetNEntries((*dotdata)->visitedexprs); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries((*dotdata)->leaveexprs); ++i )
    {
-      entry = SCIPhashmapGetEntry((*dotdata)->visitedexprs, i);
+      entry = SCIPhashmapGetEntry((*dotdata)->leaveexprs, i);
 
       if( entry != NULL )
       {
          expr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetOrigin(entry);
          assert(expr != NULL);
+         assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-         if( SCIPgetConsExprExprNChildren(expr) == 0 )
-            SCIPinfoMessage(scip, file, " n%p", expr);
+         SCIPinfoMessage(scip, file, " n%p", expr);
       }
    }
    SCIPinfoMessage(scip, file, "}\n");
 
    SCIPinfoMessage(scip, file, "}\n");
 
-   SCIPhashmapFree(&(*dotdata)->visitedexprs);
+   SCIPhashmapFree(&(*dotdata)->leaveexprs);
+
+   SCIPexpriteratorFree(&(*dotdata)->iterator);
 
    if( (*dotdata)->closefile )
       fclose((*dotdata)->file);
@@ -8824,7 +8272,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    }
 
    /* print all of the expression into the pipe */
-   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
    SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, expr) );
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
 
@@ -8838,7 +8286,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 
 /** evaluate an expression in a point
  *
- * Initiates an expression walk to also evaluate children, if necessary.
+ * Iterates over expressions to also evaluate children, if necessary.
  * Value can be received via SCIPgetConsExprExprEvalValue().
  * If an evaluation error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
@@ -8851,31 +8299,132 @@ SCIP_RETCODE SCIPshowConsExprExpr(
  */
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
-   EXPREVAL_DATA evaldata;
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
 
    /* if value is up-to-date, then nothing to do */
    if( soltag != 0 && expr->evaltag == soltag )
       return SCIP_OKAY;
 
-   evaldata.sol = sol;
-   evaldata.soltag = soltag;
-   evaldata.aborted = FALSE;
+   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
+    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
+    */
+   expr->evalvalue = SCIP_INVALID;
+   expr->evaltag = soltag;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, evalExprVisitChild, NULL, evalExprLeaveExpr, &evaldata) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
 
-   if( evaldata.aborted )
+   while( !SCIPexpriteratorIsEnd(it) )
    {
-      expr->evalvalue = SCIP_INVALID;
-      expr->evaltag = soltag;
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            if( soltag == 0 )
+               break;
+
+            /* check whether child has been evaluated for that solution already */
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( soltag == child->evaltag )
+            {
+               if( child->evalvalue == SCIP_INVALID ) /*lint !e777*/
+                  goto TERMINATE;
+
+               /* skip this child
+                * this already returns the next one, so continue with loop
+                */
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         {
+            SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
+            expr->evaltag = soltag;
+
+            if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+               goto TERMINATE;
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         default :
+            /* we should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
    }
+
+TERMINATE:
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
+
+
+/** @name Differentiation methods
+ * Automatic differentiation Backward mode:
+ * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
+ * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
+ * f
+ * |-----|
+ * s     t
+ * |--|  |--|
+ * x  y  x  y
+ * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
+ * f
+ * |   is d_s f [where d is actually \partial]
+ * s
+ * The weight of a path is the product of the weight of the edges in the path.
+ * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
+ * df/dx = d_s f * d_x s + d_t f * d_x t
+ *
+ * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
+ * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
+ * in the DAG and path in a tree diagram of a function.
+ * Initially, we set root->derivative to 1.0.
+ * Then, traversing the tree in Depth First (see SCIPwalkConsExprExprDF), for every expr that *has* children,
+ * we store in its i-th child
+ * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
+ * Example:
+ * f->derivative = 1.0
+ * s->derivative = d_s f * f->derivative = d_s f
+ * x->derivative = d_x s * s->derivative = d_x s * d_s f
+ * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
+ * and afterwards add, instead of overwrite the computed value.
+ * The complete example would then be:
+ * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
+ * s->derivative = d_s f * f->derivative = d_s f
+ * x->derivative += d_x s * s->derivative = d_x s * d_s f
+ * y->derivative += d_t s * s->derivative = d_t s * d_s f
+ * t->derivative = d_t f * f->derivative = d_t f
+ * x->derivative += d_x t * t->derivative = d_x t * d_t f
+ * y->derivative += d_t t * t->derivative = d_t t * d_t f
+ *
+ * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
+ *
+ * @{
+ */
 
 /** computes the gradient for a given point
  *
@@ -8887,55 +8436,103 @@ SCIP_RETCODE SCIPevalConsExprExpr(
 SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real derivative;
+   unsigned int difftag;
+
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
-   assert(expr != NULL);
+   assert(rootexpr != NULL);
 
-   /* evaluate expression if necessary */
-   if( soltag == 0 || expr->evaltag != soltag )
-   {
-      SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, soltag) );
-   }
+   /* ensure expression is evaluated */
+   SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag) );
 
    /* check if expression could not be evaluated */
-   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
+   if( SCIPgetConsExprExprValue(rootexpr) == SCIP_INVALID ) /*lint !e777*/
    {
-      expr->derivative = SCIP_INVALID;
+      rootexpr->derivative = SCIP_INVALID;
       return SCIP_OKAY;
    }
 
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   if( rootexpr->exprhdlr == conshdlrdata->exprvalhdlr )
    {
-      expr->derivative = 0.0;
+      rootexpr->derivative = 0.0;
+      return SCIP_OKAY;
    }
-   else
+
+   difftag = ++(conshdlrdata->lastdifftag);
+
+   rootexpr->derivative = 1.0;
+   rootexpr->difftag = difftag;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      EXPRBWDIFF_DATA bwdiffdata;
-      SCIP_CONSHDLRDATA* conshdlrdata;
+      assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
-      conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-      assert(conshdlrdata != NULL);
+      if( expr->exprhdlr->bwdiff == NULL )
+      {
+         rootexpr->derivative = SCIP_INVALID;
+         break;
+      }
 
-      bwdiffdata.aborted = FALSE;
-      bwdiffdata.difftag = ++(conshdlrdata->lastdifftag);
+      child = SCIPexpriteratorGetChildExprDFS(it);
+      assert(child != NULL);
 
-      expr->derivative = 1.0;
-      expr->difftag = bwdiffdata.difftag;
+      /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+      if( child->difftag != difftag && SCIPisConsExprExprVar(child) )
+         child->derivative = 0.0;
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, bwdiffExprVisitChild, NULL, NULL, (void*)&bwdiffdata) );
+      /* update differentiation tag of the child */
+      child->difftag = difftag;
 
-      /* invalidate derivative if an error occurred */
-      if( bwdiffdata.aborted )
-         expr->derivative = SCIP_INVALID;
+      /* call backward differentiation callback */
+      if( child->exprhdlr == conshdlrdata->exprvalhdlr )
+      {
+         derivative = 0.0;
+      }
+      else
+      {
+         derivative = SCIP_INVALID;
+         SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+
+         if( derivative == SCIP_INVALID ) /*lint !e777*/
+         {
+            rootexpr->derivative = SCIP_INVALID;
+            break;
+         }
+      }
+
+      /* update partial derivative stored in the child expression
+       * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+       * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
+       */
+      if( !SCIPisConsExprExprVar(child) )
+         child->derivative = expr->derivative * derivative;
+      else
+         child->derivative += expr->derivative * derivative;
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
+
+/**@} */  /* end of differentiation methods */
 
 /** evaluates an expression over a box
  *
@@ -8956,6 +8553,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
  */
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
@@ -8964,7 +8562,7 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
 {
    assert(expr != NULL);
 
-   SCIP_CALL( forwardPropExpr(scip, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
+   SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -8981,7 +8579,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    )
 {
    SCIP_Real oldlb;
@@ -8994,7 +8592,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
-   assert(ntightenings != NULL);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval));
 
    oldlb = SCIPintervalGetInf(expr->interval);
@@ -9071,7 +8668,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
             if( tightened )
             {
-               ++*ntightenings;
+               if( ntightenings != NULL )
+                  ++*ntightenings;
                SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %g\n", SCIPvarGetName(var), newlb);
             }
 
@@ -9085,7 +8683,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
             if( tightened )
             {
-               ++*ntightenings;
+               if( ntightenings != NULL )
+                  ++*ntightenings;
                SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %g\n", SCIPvarGetName(var), newub);
             }
 
@@ -9250,25 +8849,28 @@ void SCIPsetConsExprExprEvalInterval(
    expr->intevaltag = tag;
 }
 
-/** returns the hash key of an expression */
-SCIP_RETCODE SCIPgetConsExprExprHashkey(
+/** returns the hash value of an expression */
+SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   unsigned int*           hashkey           /**< pointer to store the hash key */
+   unsigned int*           hashval           /**< pointer to store the hash value */
    )
 {
-   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_ITERATOR* it;
 
+   assert(scip != NULL);
    assert(expr != NULL);
+   assert(hashval != NULL);
 
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+   SCIP_CALL( hashExpr(scip, expr, it, NULL) );
 
-   assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
-   *hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   *hashval = SCIPexpriteratorGetExprUserData(it, expr).uintval;
 
-   SCIPhashmapFree(&expr2key);
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -9625,6 +9227,66 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    return SCIP_OKAY;
 }
 
+/** gets the index an expression iterator can use to store iterator specific data in an expression */
+SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int*                       iterindex       /**< buffer to store iteration index */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+   assert(iterindex != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->nactiveiter + 1 >= SCIP_CONSEXPR_MAXNITER )
+   {
+      SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
+      return SCIP_MAXDEPTHLEVEL;
+   }
+
+   *iterindex = conshdlrdata->nactiveiter++;
+
+   return SCIP_OKAY;
+}
+
+/** returns the index that an expression iterator used to store iterator specific data in an expression */
+void SCIPdeactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int                        iterindex       /**< iteration index that is not used anymore */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+   assert(iterindex >= 0);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* the iterindex must be the one of the last initialized iterator */
+   assert(iterindex == conshdlrdata->nactiveiter-1);
+
+   --conshdlrdata->nactiveiter;
+}
+
+/** get a new tag that can be used to mark an expression as visited */
+unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   return ++conshdlrdata->lastvisitedtag;
+}
+
 /** Gives the parent of an expression in an expression graph walk.
  *
  * During an expression walk, this function returns the expression from which the given expression has been accessed.
@@ -9680,9 +9342,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
-
-   /* create expression iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&conshdlrdata->iterator, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -10194,18 +9853,12 @@ SCIP_RETCODE SCIPappendConsExprExpr(
  */
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
    )
 {
-   COPY_DATA copydata;
-
-   copydata.targetscip = scip;
-   copydata.mapvar = NULL;
-   copydata.mapvardata = NULL;
-
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, copyExpr, &copydata) );
-   *copyexpr = copydata.targetexpr;
+   SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -10216,16 +9869,92 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
  */
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    )
 {
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_ITERATOR* it;
+
    assert(scip != NULL);
-   assert(expr != NULL);
+   assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, simplifyExpr, simplifyExpr, (void*)simplified) );
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         {
+            SCIP_CONSEXPR_EXPR* newchild;
+
+            newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            assert(newchild != NULL);
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+
+            /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         {
+            SCIP_CONSEXPR_EXPR* simplifiedexpr;
+            SCIP_CONSEXPREXPRWALK_IO walkio;
+
+            if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
+            {
+               SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &simplifiedexpr) );
+            }
+            else
+            {
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum")  != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") != 0);
+               assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") != 0);
+
+               /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
+                * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
+                */
+               simplifiedexpr = expr;
+               SCIPcaptureConsExprExpr(simplifiedexpr);
+            }
+            assert(simplifiedexpr != NULL);
+
+            walkio.ptrval = (void*) simplifiedexpr;
+            SCIPexpriteratorSetCurrentUserData(it, walkio);
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *simplified = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
    assert(*simplified != NULL);
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -10236,11 +9965,89 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    )
 {
-   int depth;
+   SCIP_CONSEXPR_ITERATOR* it;
+   int depth = -1;
 
-   depth = -1;
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, dismantleExpr, dismantleExpr, NULL, dismantleExpr, &depth) );
-   assert(depth == -1);
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         {
+            int nspaces;
+            const char* type;
+
+            ++depth;
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            /* use depth of expression to align output */
+            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+
+            if( strcmp(type, "var") == 0 )
+            {
+               SCIP_VAR* var;
+
+               var = SCIPgetConsExprExprVarVar(expr);
+               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var));
+            }
+            else if(strcmp(type, "sum") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
+            else if(strcmp(type, "prod") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
+            else if(strcmp(type, "val") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
+            else if(strcmp(type, "pow") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
+            else if(strcmp(type, "exp") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "log") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "abs") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else
+               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+         {
+            int nspaces;
+            const char* type;
+
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            if( strcmp(type, "sum") == 0 )
+            {
+               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         {
+            --depth;
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         default:
+            /* shouldn't be here */
+            SCIPABORT();
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }

@@ -82,7 +82,7 @@ Test(linconsupg, linear)
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint */
@@ -126,7 +126,7 @@ Test(linconsupg, quadratic)
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint, which should not be possible  */

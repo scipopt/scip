@@ -26,6 +26,8 @@
 #include "scip/cons_expr_var.h"
 #include "scip/struct_cons_expr.h"
 
+static SCIP_CONSHDLR* conshdlr;
+
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(check_nuses)
 {
@@ -43,7 +45,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(check_nuses)
    {
       printf("following expression is captured too many times (%d, expected %d)\n",
             expr->nuses, expectednuses);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
       assert(expr->nuses == expectednuses);
    }
@@ -56,7 +58,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(check_nuses)
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -108,7 +109,7 @@ Test(parse, simple)
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr_xy5, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check that the expression is capture correctly */
@@ -128,7 +129,7 @@ Test(parse, simple2)
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, crazyexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* release expression */
@@ -150,7 +151,7 @@ Test(parse, eval)
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, crazyexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* test expression by evaluating it */
@@ -163,7 +164,7 @@ Test(parse, eval)
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, x, vals[p][0]) );
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, y, vals[p][1]) );
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, crazyexpr, crazysol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, crazyexpr, crazysol, 0) );
       SCIPinfoMessage(scip, NULL, "value for x=%g y=%g is %g, expected: %g\n", vals[p][0], vals[p][1], SCIPgetConsExprExprValue(crazyexpr), expvalue);
       if( SCIPgetConsExprExprValue(crazyexpr) == SCIP_INVALID )
          cr_expect(!SCIPisFinite(expvalue));
@@ -188,7 +189,7 @@ Test(parse, unusual_var_name)
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check that the expression is capture correctly */

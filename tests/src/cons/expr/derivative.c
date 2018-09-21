@@ -382,7 +382,7 @@ Test(performance, rosenbrock)
    }
 
    /* simplify is incredibly slow for large k! */
-   //SCIP_CALL( SCIPsimplifyConsExprExpr(scip, sum, &rosenbrock) );
+   //SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, sum, &rosenbrock) );
    //SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
    rosenbrock = sum;
 

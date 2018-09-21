@@ -145,7 +145,7 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
    for( i = 0; i < 4; ++i )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, entropyexpr, sol, 0) );
 
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), results[i]));
    }
@@ -156,10 +156,10 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
       randnum = SCIPrandomGetReal(rndgen, 0.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, entropyexpr, sol, 0) );
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, negprodexpr, sol, 0) );
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(negprodexpr), -randnum * log(randnum)));
    }
 }
@@ -206,14 +206,14 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
 
       intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
 
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }
@@ -223,14 +223,14 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
 
       intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
 
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }
@@ -279,9 +279,9 @@ Test(entropy, hash, .description = "Tests the expression hash.")
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, xexpr) );
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr3, yexpr) );
 
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1) );
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2) );
-   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr3, &hashkey3) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr1, &hashkey1) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr2, &hashkey2) );
+   SCIP_CALL( SCIPgetConsExprExprHash(scip, expr3, &hashkey3) );
 
    cr_expect(hashkey1 != 0);
    cr_expect(hashkey2 != 0);
@@ -303,8 +303,8 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* expr1 = <5.0>, expr2 = entropy(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
-   SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3));
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), -5.0 * log(5.0)));
@@ -316,7 +316,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of x and log(x) is transformed to sum of entropy expression
     * expr1 is buffer for simplification and expr2 is used to store children
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, prodexpr, &expr1));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1));
 
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPgetConsExprExprHdlrSum(conshdlr));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
@@ -333,7 +333,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of -x and log(x) is transformed to entropy expression
     * expr1 is buffer for simplification
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, negprodexpr, &expr1));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1));
 
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);

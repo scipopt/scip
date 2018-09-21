@@ -190,6 +190,12 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
 );
 
+/** returns whether expression handler implements the print callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrPrint(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the simplification callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
@@ -310,6 +316,10 @@ EXTERN
 SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
+
+/** calls the print callback of an expression handler */
+extern
+SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr);
 
 /** calls the simplification method of an expression handler */
 extern
@@ -513,6 +523,7 @@ void SCIPsetConsExprExprData(
 EXTERN
 SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
@@ -521,6 +532,7 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 EXTERN
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    FILE*                   file,             /**< file to print to, or NULL for stdout */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
@@ -530,6 +542,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
 EXTERN
 SCIP_RETCODE SCIPprintConsExprExprDotInit2(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    const char*             filename,         /**< name of file to print to */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
@@ -566,7 +579,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 
 /** evaluate an expression in a point
  *
- * Initiates an expression walk to also evaluate children, if necessary.
+ * Iterates over expressions to also evaluate children, if necessary.
  * Value can be received via SCIPgetConsExprExprEvalValue().
  * If an evaluation error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
@@ -580,6 +593,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 EXTERN
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
@@ -621,6 +635,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
 EXTERN
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
@@ -640,7 +655,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
 /** adds branching score to an expression
@@ -705,12 +720,12 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
-/** returns the hash key of an expression */
+/** returns the hash value of an expression */
 EXTERN
-SCIP_RETCODE SCIPgetConsExprExprHashkey(
+SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   unsigned int*           hashkey           /**< pointer to store the hash key */
+   unsigned int*           hashval           /**< pointer to store the hash value */
    );
 
 /** sets the evaluation interval */
@@ -831,6 +846,26 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    void*                 data                          /**< data to be passed on to callback methods, or NULL */
    );
 
+/** gets the index an expression iterator can use to store iterator specific data in an expression */
+EXTERN
+SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int*                       iterindex       /**< buffer to store iteration index */
+   );
+
+/** returns the index that an expression iterator used to store iterator specific data in an expression */
+EXTERN
+void SCIPdeactivateConsExprExprHdlrIterator(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   int                        iterindex       /**< iteration index that is not used anymore */
+   );
+
+/** get a new tag that can be used to mark an expression as visited */
+EXTERN
+unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
 /** Gives the parent of an expression in an expression graph walk.
  *
  * During an expression walk, this function returns the expression from which the given expression has been accessed.
@@ -947,6 +982,7 @@ int SCIPgetConsExprExprNLocksNeg(
 EXTERN
 SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
@@ -971,6 +1007,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
 EXTERN
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
    );
@@ -982,7 +1019,8 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
 EXTERN
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be simplified */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
    );
 
@@ -1007,24 +1045,26 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
 
 /** returns the total number of variables in an expression
  *
- * @note the function counts variables in common sub-expressions multiple times; use this function to get a descent
- *       upper bound on the number of unique variables in an expression
+ * The function counts variables in common sub-expressions only once.
  */
 EXTERN
 SCIP_RETCODE SCIPgetConsExprExprNVars(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    int*                    nvars             /**< buffer to store the total number of variables */
    );
 
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
- * no two different variable expression sharing the same variable
+ * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * and can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
  */
+EXTERN
 SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
    int*                    nvarexprs         /**< buffer to store the total number of variable expressions */

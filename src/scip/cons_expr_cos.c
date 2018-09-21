@@ -100,41 +100,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyCos)
    return SCIP_OKAY;
 }
 
-/** expression print callback */
-static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printCos)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   switch( stage )
-   {
-   case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-   {
-      /* print function with opening parenthesis */
-      SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-   {
-      assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-   {
-      /* print closing parenthesis */
-      SCIPinfoMessage(scip, file, ")");
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-   default: ;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseCos)
@@ -358,20 +323,14 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropCos)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashCos)
 {  /*lint --e{715}*/
-   unsigned int childhash;
-
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-
-   assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
-
-   *hashkey ^= childhash;
+   *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
 }
@@ -450,7 +409,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrCos, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyCos) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaCos, NULL, NULL, estimateCos) );

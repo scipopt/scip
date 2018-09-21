@@ -77,6 +77,15 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)); /**< integrality detection callback (can be NULL) */
 };
 
+/* expression iteration data */
+struct SCIP_ConsExpr_Expr_IterData
+{
+   SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in expression walk */
+   int                      currentchild; /**< child that is currently visited (or will be visited next) by expression walk */
+   unsigned int             visitedtag;   /**< tag to identify whether an expression has been visited already */
+   SCIP_CONSEXPREXPRWALK_IO userdata;     /**< space for iteration user to store some (temporary) data */
+};
+
 /** a node in the expression graph that is handled by the expression constraint handler */
 struct SCIP_ConsExpr_Expr
 {
@@ -97,7 +106,6 @@ struct SCIP_ConsExpr_Expr
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
-   unsigned int            sepatag;       /**< tag of point for which an outer approximation cut has been computed last, or 0 */
 
    /* branching */
    SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
@@ -121,13 +129,12 @@ struct SCIP_ConsExpr_Expr
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
-   /* separation initialization */
-   unsigned int            initsepatag;   /**< flag to store whether an expression has been called during the separation initialization */
-
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
    int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */
    SCIP_CONSEXPREXPRWALK_IO walkio;       /**< space for walker callback to store some (temporary) data, e.g., to simulate input or output values of a recursive call */
+
+   SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPR_MAXNITER];  /**< data for expression iterators */
 
    /* curvature information */
    SCIP_EXPRCURV           curvature;     /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
@@ -190,14 +197,27 @@ struct SCIP_ConsExpr_ExprEnfo
 /** expression tree iterator */
 struct SCIP_ConsExpr_Iterator
 {
-   SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
+   SCIP_CONSHDLR*              consexprhdlr; /**< expr constraint handler */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
+
+   SCIP_Bool                   initialized;  /**< whether the iterator has been initialized, that is, is in use */
+   SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
    SCIP_CONSEXPR_EXPR*         curr;         /**< current expression of the iterator */
+   int                         iterindex;    /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
+   unsigned int                visitedtag;   /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
+
+   /* data for rtopological mode */
    SCIP_CONSEXPR_EXPR**        dfsexprs;     /**< DFS stack */
    int*                        dfsnvisited;  /**< number of visited children for each expression in the stack */
    int                         dfsnexprs;    /**< total number of expression in stack */
    int                         dfssize;      /**< size DFS stack */
+
+   /* data for BFS mode */
    SCIP_QUEUE*                 queue;        /**< BFS queue */
+
+   /* data for DFS mode */
+   SCIP_CONSEXPREXPRWALK_STAGE dfsstage;     /**< stage in DFS walk */
+   unsigned int                stopstages;   /**< stages in which to interrupt the walk */
 };
 
 #ifdef __cplusplus

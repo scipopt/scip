@@ -54,6 +54,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 static
 SCIP_RETCODE createNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nlhdlr expression data */
    )
@@ -65,8 +66,8 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata == NULL);
 
-   /* compute a decent upper bound on the number of unique variable expressions */
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, expr, &nvars) );
+   /* compute the number of unique variable expressions */
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
    assert(nvars > 0);
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -74,8 +75,9 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->varexprssize = nvars;
 
    /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
    assert((*nlhdlrexprdata)->nvarexprs > 0);
+   assert((*nlhdlrexprdata)->nvarexprs == nvars);
 
    return SCIP_OKAY;
 }
@@ -157,7 +159,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    /* store variable expressions into the expression data of the nonlinear handler */
    if( *success )
    {
-      SCIP_CALL( createNlhdlrExprData(scip, expr, nlhdlrexprdata) );
+      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, nlhdlrexprdata) );
    }
 
    return SCIP_OKAY;

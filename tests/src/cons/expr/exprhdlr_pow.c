@@ -120,7 +120,7 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
 
    /* binary variable to positive exponent */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^17.43", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
 
    cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
    cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPgetConsExprExprHdlrVar(conshdlr));
@@ -130,7 +130,7 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
 
    /* binary variable to negative exponent -> nothing happens */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^(-1.43)", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
 
    cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
    cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPfindConsExprExprHdlr(conshdlr, "pow"));

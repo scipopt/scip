@@ -187,12 +187,16 @@ extern "C" {
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
  *  - stage: stage of expression print walk
+ *  - currentchild: index of current child if in stage visitingchild or visitedchild
+ *  - parentprecedence: precedence of parent
  *  - file : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   int currentchild, \
+   unsigned int parentprecedence, \
    FILE* file)
 
 /** expression parse callback
@@ -380,19 +384,20 @@ extern "C" {
 
 /** expression hash callback
  *
- * The method hashes an expression by taking the hash keys of its children into account.
+ * The method hashes an expression by taking the hashes of its children into account.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be hashed
- *  - expr2key : hash map containing keys for sub-expressions
- *  - hashkey: pointer to store the hash key
+ *  - hashkey : pointer to store the hash value
+ *  - childrenhashes : array with hash values of children
  */
 #define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_HASHMAP* expr2key, \
-   unsigned int* hashkey)
+   unsigned int* hashkey, \
+   unsigned int* childrenhashes)
+
 
 /** expression branching score callback
  *
@@ -466,6 +471,12 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* isintegral)
 
+/** maximal number of iterators that can be active on an expression graph concurrently
+ *
+ * How often an expression graph iteration can be started within an active iteration, plus one.
+ */
+#define SCIP_CONSEXPR_MAXNITER 5
+
 /* maybe should make this a parameter (was cutmaxrange in other conshdlr)
  * maybe should derive this from the current feastol (e.g., 10/feastol)
  */
@@ -474,11 +485,12 @@ extern "C" {
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {
-   SCIP_CONSEXPREXPRWALK_ENTEREXPR,          /**< an expression is visited the first time (before any of its children are visited) */
-   SCIP_CONSEXPREXPRWALK_VISITINGCHILD,      /**< a child of an expression is to be visited */
-   SCIP_CONSEXPREXPRWALK_VISITEDCHILD,       /**< a child of an expression has been visited */
-   SCIP_CONSEXPREXPRWALK_LEAVEEXPR           /**< an expression is to be left (all of its children have been processed) */
+   SCIP_CONSEXPREXPRWALK_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
+   SCIP_CONSEXPREXPRWALK_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
+   SCIP_CONSEXPREXPRWALK_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
+   SCIP_CONSEXPREXPRWALK_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
 } SCIP_CONSEXPREXPRWALK_STAGE;
+#define SCIP_CONSEXPREXPRWALK_ALLSTAGES ((unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR))
 
 /** feedback from expression walker callback to expression walker to direct the walk
  *
@@ -497,6 +509,7 @@ typedef union
    SCIP_Real             realval;            /**< a floating-point value */
    int                   intval;             /**< an integer value */
    int                   intvals[2];         /**< two integer values */
+   unsigned int          uintval;            /**< an unsigned integer value */
    void*                 ptrval;             /**< a pointer */
 } SCIP_CONSEXPREXPRWALK_IO;
 
@@ -504,7 +517,8 @@ typedef union
 typedef enum
 {
    SCIP_CONSEXPRITERATOR_RTOPOLOGIC,         /**< reverse topological order */
-   SCIP_CONSEXPRITERATOR_BFS                 /**< breadth-first search */
+   SCIP_CONSEXPRITERATOR_BFS,                /**< breadth-first search */
+   SCIP_CONSEXPRITERATOR_DFS                 /**< depth-first search */
 } SCIP_CONSEXPRITERATOR_TYPE;
 
 /** monotonicity of an expression */
@@ -887,6 +901,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+typedef struct SCIP_ConsExpr_Expr_IterData SCIP_CONSEXPR_EXPR_ITERDATA; /**< expression tree iterator data for a specific expression */
 typedef struct SCIP_ConsExpr_Iterator    SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
 
 #ifdef __cplusplus

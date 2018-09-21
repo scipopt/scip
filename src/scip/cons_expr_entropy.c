@@ -285,42 +285,6 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataEntropy)
    return SCIP_OKAY;
 }
 
-/** expression print callback */
-static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printEntropy)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-
-   switch( stage )
-   {
-   case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-   {
-      /* print function with opening parenthesis */
-      SCIPinfoMessage(scip, file, "entropy(");
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-   {
-      assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-   {
-      /* print closing parenthesis */
-      SCIPinfoMessage(scip, file, ")");
-      break;
-   }
-
-   case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-   default: ;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseEntropy)
@@ -536,19 +500,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropEntropy)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashEntropy)
 {  /*lint --e{715}*/
-   unsigned int childhash;
-
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-
-   assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
-
-   *hashkey ^= childhash;
+   *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
 }
@@ -643,7 +601,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrEntropy, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataEntropy, freedataEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyEntropy) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimateEntropy) );

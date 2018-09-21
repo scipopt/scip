@@ -71,7 +71,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
       SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
-      if( v < 0.0 && EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr)  )
+      if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
       }
@@ -133,7 +133,6 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;

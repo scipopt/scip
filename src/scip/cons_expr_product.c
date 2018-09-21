@@ -885,7 +885,7 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CONSEXPR_EXPR* simplifiedpower;
 
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, SCIPfindConshdlr(scip, "expr"), &power, base1, expo1 + expo2) );
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, power, &simplifiedpower) ); /* FIXME: call simplifyPow */
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), power, &simplifiedpower) ); /* FIXME: call simplifyPow */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &power) );
 
          /* replace tomergenode's expression with simplifiedpower */
@@ -1127,7 +1127,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
        * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
        */
-      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, aux, simplifiedexpr) ); /*FIXME: how to call simplifySum ? */
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), aux, simplifiedexpr) ); /*FIXME: how to call simplifySum ? */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
    /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
@@ -1298,7 +1298,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -1306,7 +1306,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print coefficient, if not one */
          if( exprdata->coefficient != 1.0 )
          {
-            if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
+            if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > parentprecedence )
             {
                SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
             }
@@ -1320,10 +1320,8 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
-         int childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
-
          /* print multiplication sign, if not first factor */
-         if( exprdata->coefficient != 1.0 || childidx > 0 )
+         if( exprdata->coefficient != 1.0 || currentchild > 0 )
          {
             SCIPinfoMessage(scip, file, "*");
          }
@@ -1338,7 +1336,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= parentprecedence )
          {
             SCIPinfoMessage(scip, file, ")");
          }
@@ -1358,8 +1356,8 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr2key != NULL);
    assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -1368,14 +1366,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
    *hashkey ^= SCIPcalcFibHash(exprdata->coefficient);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      unsigned int childhash;
-
-      assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
-      childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
-
-      *hashkey ^= childhash;
-   }
+      *hashkey ^= childrenhashes[c];
 
    return SCIP_OKAY;
 }
