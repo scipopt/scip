@@ -43,7 +43,8 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-
+//#define SCIP_DEBUG
+#define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
@@ -665,7 +666,7 @@ const char* getStatusString(
    case SCIP_NEWROUND:
       return "SCIP_NEWROUND";
    case SCIP_REDUCEDDOM:
-      return "SCIP_REDUCEDDOM"
+      return "SCIP_REDUCEDDOM";
    case SCIP_CONSADDED:
       return "SCIP_CONSADDED";
    case SCIP_CONSCHANGED:
@@ -684,7 +685,7 @@ const char* getStatusString(
       return "SCIP_DELAYNODE";
    default:
       SCIPerrorMessage("result code %d not treated in lookahead branching rule\n", result);
-      SCIP_ABORT();
+      SCIPABORT();
       return "UNKNOWN";
    }
 }
@@ -1792,7 +1793,7 @@ void addLowerBoundProofNode(
 
    /* in case the new lower bound is greater than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag */
-   if( SCIPisGT(scip, domainreductions->lowerbounds[varindex], basesolutionval)
+   if( SCIPisFeasGT(scip, domainreductions->lowerbounds[varindex], basesolutionval)
        && !domainreductions->baselpviolated[varindex] )
    {
       domainreductions->baselpviolated[varindex] = TRUE;
@@ -1875,7 +1876,7 @@ void addUpperBoundProofNode(
 
    /* In case the new upper bound is smaller than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
-   if( SCIPisLT(scip, domainreductions->upperbounds[varindex], basesolutionval)
+   if( SCIPisFeasLT(scip, domainreductions->upperbounds[varindex], basesolutionval)
        && !domainreductions->baselpviolated[varindex] )
    {
       domainreductions->baselpviolated[varindex] = TRUE;
@@ -2794,7 +2795,7 @@ SCIP_RETCODE applyBinaryConstraints(
    assert(config != NULL);
    assert(consadded != NULL);
    assert(cutoff != NULL);
-   assert(boundchange != NULL)
+   assert(boundchange != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nelements);
 
