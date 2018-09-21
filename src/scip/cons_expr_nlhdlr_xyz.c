@@ -39,6 +39,11 @@ struct SCIP_ConsExpr_NlhdlrExprData
 {
 };
 
+/** nonlinear handler data */
+struct SCIP_ConsExpr_NlhdlrData
+{
+};
+
 /*
  * Local methods
  */
