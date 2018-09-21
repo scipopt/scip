@@ -295,10 +295,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrXyz);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataXyz);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataXyz);
-   SCIPsetConsExprNlhdlrInit(scip, nlhdlr, nlhdlrInitXyz);
-   SCIPsetConsExprNlhdlrExit(scip, nlhdlr, nlhdlrExitXyz);
-   SCIPsetConsExprNlhdlrInitSepa(scip, nlhdlr, nlhdlrInitSepaXyz);
-   SCIPsetConsExprNlhdlrExitSepa(scip, nlhdlr, nlhdlrExitSepaXyz);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrSepaXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreXyz);
