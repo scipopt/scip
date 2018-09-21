@@ -3244,7 +3244,7 @@ SCIP_RETCODE canonicalizeConstraints(
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
-      if( reformulate )
+      if( reformulate && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
       {
          SCIP_CONSEXPR_EXPR* refexpr;
 
