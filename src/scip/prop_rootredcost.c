@@ -598,7 +598,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

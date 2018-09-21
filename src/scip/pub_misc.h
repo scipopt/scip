@@ -778,6 +778,14 @@ SCIP_RETCODE SCIPhashmapInsert(
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
 EXTERN
+SCIP_RETCODE SCIPhashmapInsertInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+EXTERN
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -787,6 +795,13 @@ SCIP_RETCODE SCIPhashmapInsertReal(
 /** retrieves image of given origin from the hash map, or NULL if no image exists */
 EXTERN
 void* SCIPhashmapGetImage(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
+EXTERN
+int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
@@ -806,6 +821,16 @@ SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
+   );
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+EXTERN
+SCIP_RETCODE SCIPhashmapSetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
    );
 
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
@@ -878,6 +903,12 @@ void* SCIPhashmapEntryGetImage(
 
 /** gives the image of the hashmap entry */
 EXTERN
+int SCIPhashmapEntryGetImageInt(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
+   );
+
+/** gives the image of the hashmap entry */
+EXTERN
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
@@ -887,6 +918,13 @@ EXTERN
 void SCIPhashmapEntrySetImage(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    void*                 image               /**< new image */
+   );
+
+/** sets integer image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImageInt(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   int                   image               /**< new image */
    );
 
 /** sets real image of a hashmap entry */

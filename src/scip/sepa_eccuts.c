@@ -1220,7 +1220,7 @@ SCIP_RETCODE searchEcAggrWithCliques(
 
    for( i = 0; i < aggrsize; ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(cliquemap, (void*) (size_t) maxcliquenodes[i], NULL) );
+      SCIP_CALL( SCIPhashmapInsertInt(cliquemap, (void*) (size_t) maxcliquenodes[i], 0) ); /*lint !e571*/
    }
 
    /* count the degree of good cycle edges for each node in the clique */

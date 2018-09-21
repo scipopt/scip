@@ -194,7 +194,7 @@ SCIP_RETCODE getSymmetries(
       /* insert variables */
       for (v = 0; v < propdata->npermvars; ++v)
       {
-         SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
       }
    }
 
@@ -412,7 +412,7 @@ SCIP_RETCODE computeBranchingVariables(
             {
                int branchvaridx;
 
-               branchvaridx = (int) (size_t) SCIPhashmapGetImage(varmap, (void*) branchvar);
+               branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
                assert( branchvaridx < nvars );
                b1[branchvaridx] = TRUE;
             }

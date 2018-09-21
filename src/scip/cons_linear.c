@@ -16313,7 +16313,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* apply dual presolving for variables that appear in only one constraint */
-         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
          {
             SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
          }
@@ -16335,7 +16335,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* singleton column stuffing */
       if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) &&
-         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowDualReds(scip) )
+         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( presolStuffing(scip, cons, conshdlrdata->singletonstuffing,
                conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds) );
@@ -16447,7 +16447,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && !SCIPisStopped(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }

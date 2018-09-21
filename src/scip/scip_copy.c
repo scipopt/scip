@@ -2389,11 +2389,11 @@ void SCIPsetSubscipDepth(
    )
 {
    assert( scip != NULL );
-   assert( scip->stat != NULL );
    assert( newdepth > 0 );
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetSubscipDepth", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert( scip->stat != NULL );
    scip->stat->subscipdepth = newdepth;
 }
 

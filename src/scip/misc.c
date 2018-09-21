@@ -2901,6 +2901,36 @@ SCIP_RETCODE SCIPhashmapInsert(
  *
  *  @note multiple insertion of same element is checked and results in an error
  */
+SCIP_RETCODE SCIPhashmapInsertInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.integer = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -2947,6 +2977,25 @@ void* SCIPhashmapGetImage(
 }
 
 /** retrieves image of given origin from the hash map, or NULL if no image exists */
+int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.integer;
+
+   return INT_MAX;
+}
+
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -2988,6 +3037,34 @@ SCIP_RETCODE SCIPhashmapSetImage(
 
    /* append origin->image pair to hash map */
    img.ptr = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
+ */
+SCIP_RETCODE SCIPhashmapSetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.integer = image;
    SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
 
    return SCIP_OKAY;
@@ -3179,6 +3256,16 @@ void* SCIPhashmapEntryGetImage(
 }
 
 /** gives the image of the hashmap entry */
+int SCIPhashmapEntryGetImageInt(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
+   )
+{
+   assert(entry != NULL);
+
+   return entry->image.integer;
+}
+
+/** gives the image of the hashmap entry */
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    )
@@ -3197,6 +3284,17 @@ void SCIPhashmapEntrySetImage(
    assert(entry != NULL);
 
    entry->image.ptr = image;
+}
+
+/** sets integer image of a hashmap entry */
+void SCIPhashmapEntrySetImageInt(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   int                   image               /**< new image */
+   )
+{
+   assert(entry != NULL);
+
+   entry->image.integer = image;
 }
 
 /** sets real image of a hashmap entry */

@@ -107,6 +107,7 @@ struct SCIP_MultiHash
 
 typedef union {
    void*                 ptr;                /**< pointer image */
+   int                   integer;            /**< integer image */
    SCIP_Real             real;               /**< real image */
 } SCIP_HASHMAPIMAGE;
 

@@ -117,10 +117,10 @@ int getVarIndex(
    assert(var != NULL);
    assert(SCIPhashmapExists(varindex, (void*)var));
 
-   return (int)(size_t)SCIPhashmapGetImage(varindex, (void*)var);
+   return SCIPhashmapGetImageInt(varindex, (void*)var);
 }
 #else
-#define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
+#define getVarIndex(varindex,var) (SCIPhashmapGetImageInt((varindex), (void*)(var)))
 #endif
 
 /** samples and stores random points; stores points which have a better objective value than the current incumbent
@@ -829,7 +829,7 @@ SCIP_RETCODE applyHeur(
    /* create an unique mapping of all variables to 0,..,SCIPgetNVars(scip)-1 */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(varindex, (void*)SCIPgetVars(scip)[i], i) );
    }
 
    /* compute estimated costs of computing a gradient for each nlrow */
