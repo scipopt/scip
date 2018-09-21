@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define DEBUG_ASCENDPRUNE
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    const int probtype = g->stp_type;
    int nnewnodes = 0;
    int nnewedges = 0;
-   const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
    SCIP_Bool success;
 
    assert(g != NULL);
@@ -321,6 +321,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(edgearrint != NULL);
    assert(nodearrint != NULL);
    assert(nodearrchar != NULL);
+   assert(!pcmw || g->extended);
 
    if( root < 0 )
       root = g->source;
@@ -369,7 +370,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
             if( SCIPisZero(scip, redcosts[a]) )
             {
-               if( pcmw && k == root && Is_term(g->term[head]) )
+               if( pcmw && k == root && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
                   continue;
 
                /* vertex not labeled yet? */
@@ -408,6 +409,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
    }
 
+#ifdef DEBUG_ASCENDPRUNE
+   for( int k = 0; k < nnodes; k++ )
+      nodechild[k] = -1;
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nnewedges) );
 
    /* initialize new graph */
@@ -427,10 +433,13 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       {
          if( pcmw )
          {
-            if( (!Is_term(g->term[k])) )
+            if( !Is_term(g->term[k]) || g->term2edge[k] < 0 )
                newgraph->prize[newgraph->knots] = g->prize[k];
             else
+            {
+               assert(SCIPisLT(scip, g->prize[k], FARAWAY));
                newgraph->prize[newgraph->knots] = 0.0;
+            }
          }
 
          nodechild[k] = newgraph->knots;
@@ -449,9 +458,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    /* set root of new graph */
    newgraph->source = nodechild[root];
    assert(newgraph->source >= 0);
-
-   if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      newgraph->prize[newgraph->source] = FARAWAY;
+   assert(!graph_pc_isRootedPcMw(g) || newgraph->prize[newgraph->source] == FARAWAY);
 
    /* add edges to new graph */
    for( int a = 0; a < nnewedges; a++ )
@@ -468,6 +475,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          if( newgraph->head[i] == head )
             break;
 
+      /* edge not added yet? */
       if( i == EAT_LAST )
       {
          edgeancestor[newgraph->edges] = e;
@@ -494,6 +502,17 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP_CALL( level0(scip, newgraph) );
 
 #ifdef DEBUG_ASCENDPRUNE
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      for( int k = 0; k < nnodes; k++ )
+         if( Is_term(g->term[k]) && graph_pc_knotIsFixedTerm(g, k) )
+            if( nodechild[k] < 0 || newgraph->term2edge[nodechild[k]] >= 0 )
+            {
+               printf("RPCMW child FAIL in AP \n\n\n");
+               return SCIP_ERROR;
+            }
+   }
+
    for( int k = 0; k < nnodes && !pcmw; k++ )
    {
       if( Is_term(g->term[k]) )

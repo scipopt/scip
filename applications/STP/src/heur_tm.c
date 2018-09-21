@@ -185,30 +185,39 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    const int nnodes = g->knots;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
+   assert(g != NULL && cost != NULL && result != NULL && connected != NULL);
+   assert(g->extended);
+
    if( rpcmw )
    {
       for( i = 0; i < nnodes; i++ )
       {
-         if( connected[i] && g->mark[i] )
+         if( connected[i] && (!Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i)) )
             g->mark[i] = TRUE;
          else
             g->mark[i] = FALSE;
+
+         assert(g->mark[i] || !graph_pc_knotIsFixedTerm(g, i));
       }
+
       if( !g->mark[root] )
       {
          const int nedges = g->edges;
-         for( i = 0; i < nedges; i++ )
-         {
-            assert(0);
+         int todo;
+         printf("FAIL in prune! \n");
+         assert(0);
 
-            printf("FAIL i prune! \n");
+
+         for( i = 0; i < nedges; i++ )
             result[i] = CONNECT;
-         }
+
          return SCIP_OKAY;
       }
    }
    else
    {
+      int a;
+
       for( i = 0; i < nnodes; i++ )
       {
          if( connected[i] && !Is_term(g->term[i]) )
@@ -216,11 +225,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
          else
             g->mark[i] = FALSE;
       }
-   }
 
-   if( !rpcmw )
-   {
-      int a;
       for( a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
       {
          i = g->head[a];
@@ -271,6 +276,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       {
          if( rpcmw && g->mark[i] )
          {
+            printf("i %d g->prize[i] %f\n", i,g->prize[i]);
             assert(g->prize[i] == FARAWAY);
             continue;
          }
@@ -465,7 +471,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    /* connect all terminals */
    for( i = nnodes - 1; i >= 0; --i )
    {
-      if( Is_term(g->term[i]) && i != orgroot )
+      if( Is_term(g->term[i]) && i != orgroot && !graph_pc_knotIsFixedTerm(g, i) )
       {
          e1 = g->inpbeg[i];
          assert(e1 >= 0);
@@ -885,7 +891,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
 static
 SCIP_RETCODE computeSteinerTreeDijkPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
+   GRAPH*                g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
@@ -1648,7 +1654,7 @@ static
 SCIP_RETCODE runPcMW(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best solution */
    int*                  result,             /**< temporary array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int*                  best_result,        /**< final array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
@@ -1673,7 +1679,6 @@ SCIP_RETCODE runPcMW(
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int nterms = graph->terms;
-   int runs = maxruns;
    int t;
    STP_Bool* connected;
 
@@ -1718,9 +1723,9 @@ SCIP_RETCODE runPcMW(
 
       for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
       {
-         if( SCIPisGT(scip, graph->cost[e], 0.0) && Is_term(graph->term[graph->head[e]]) )
+         const int head = graph->head[e];
+         if( SCIPisGT(scip, graph->cost[e], 0.0) && Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
          {
-            const int head = graph->head[e];
             graph->mark[head] = FALSE;
             assert(graph->grad[head] == 2);
          }
@@ -1737,6 +1742,7 @@ SCIP_RETCODE runPcMW(
             terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
          }
       }
+
       assert(nterms == t);
       SCIPsortRealInt(terminalprio, terminalperm, nterms);
    }
@@ -1749,9 +1755,10 @@ SCIP_RETCODE runPcMW(
       terminalperm[nterms - 1] = bestincstart;
 
    /* local main loop */
-   for( int r = runs - 1; r >= 0; --r )
+   for( int r = 0; r < maxruns; r++ )
    {
       const int start = terminalperm[r];
+      SCIPdebugMessage("TM run=%d start=%d\n", r, start);
 
       if( pcmwfull )
       {

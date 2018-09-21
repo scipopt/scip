@@ -924,6 +924,26 @@ void graph_pc_knot2nonTerm(
    g->term2edge[node] = -1;
 }
 
+/** check whether node is fixed terminal */
+SCIP_Bool graph_pc_knotIsFixedTerm(
+   const GRAPH*          g,                  /**< the graph */
+   int                   node                /**< node to be checked */
+   )
+{
+   assert(g      != NULL);
+   assert(node   >= 0);
+   assert(node   < g->knots);
+   assert(graph_pc_isPcMw(g));
+   assert(g->term2edge);
+
+#ifndef NDEBUG
+   if( Is_term(g->term[node]) && g->term2edge[node] < 0 )
+      assert(node == g->source || g->prize[node] == FARAWAY);
+#endif
+
+   return (Is_term(g->term[node]) && g->term2edge[node] < 0);
+}
+
 /** updates term2edge array for new graph */
 void graph_pc_updateTerm2edge(
    GRAPH*                newgraph,           /**< the new graph */
@@ -960,19 +980,47 @@ void graph_pc_updateTerm2edge(
    assert(-1 == newgraph->term2edge[newgraph->source]);
 }
 
+
+/** mark original graph (without dummy terminals) */
+void graph_pc_markOrgGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int root = g->source;
+   const int nnodes = g->knots;
+
+   assert(g != NULL);
+   assert(graph_pc_isPcMw(g));
+   assert(g->term2edge != NULL);
+   assert(g->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+      g->mark[k] = (g->grad[k] > 0);
+
+   for( int e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int head = g->head[e];
+
+      if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+      {
+         g->mark[head] = FALSE;
+         assert(g->grad[head] == 2);
+      }
+   }
+}
+
 /** mark terminals and switch terminal property to original terminals */
 void graph_pc_2org(
    GRAPH*                graph               /**< the graph */
    )
 {
-   int root;
-   int nnodes;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
 
    assert(graph != NULL);
+   assert(graph->term2edge != NULL);
    assert(graph->extended);
-
-   root = graph->source;
-   nnodes = graph->knots;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -982,16 +1030,19 @@ void graph_pc_2org(
       {
          graph_knot_chg(graph, k, 0);
       }
-      else if( Is_term(graph->term[k]) )
+      else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
+         assert(k != root);
+
          graph->mark[k] = FALSE;
-         if( k != root )
-            graph_knot_chg(graph, k, -2);
+         graph_knot_chg(graph, k, -2);
       }
    }
 
    if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP )
       graph->mark[root] = TRUE;
+   else
+      graph->mark[root] = FALSE;
 
    graph->extended = FALSE;
 
@@ -1015,8 +1066,11 @@ void graph_pc_2trans(
 
       if( Is_pterm(graph->term[k]) )
          graph_knot_chg(graph, k, 0);
-      else if( Is_term(graph->term[k]) && k != root )
+      else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
+      {
+         assert(k != root);
          graph_knot_chg(graph, k, -2);
+      }
    }
 
    graph->extended = TRUE;
@@ -2955,9 +3009,20 @@ void graph_edge_hide(
 }
 
 
-/** print edge info */
+/** print information on graph  */
+void graph_printInfo(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   assert(g != NULL);
+   if( graph_pc_isPcMw(g) )
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d, isExtended=%d\n", g->knots, g->edges, g->terms, g->source, g->stp_type, g->extended);
+   else
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d \n", g->knots, g->edges, g->terms, g->source, g->stp_type);
+}
+
+/** print information on edge */
 void graph_edge_printInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    int                   e                   /**< the edge */
    )
@@ -2965,6 +3030,23 @@ void graph_edge_printInfo(
    const int t = g->tail[e];
    const int h = g->head[e];
    printf("e: %d   %d->%d (%d->%d) \n", e, t, h, g->term[t], g->term[h]);
+}
+
+/** print information on node */
+void graph_knot_printInfo(
+   const GRAPH*          g,                  /**< the graph */
+   int                   k                   /**< the node */
+   )
+{
+   assert(!graph_pc_isPcMw(g) || g->term2edge != NULL);
+
+   if( graph_pc_isPcMw(g) && (g->term2edge[k] < 0 || !Is_term(g->term[k])) )
+   {
+      assert(g->prize != NULL);
+      printf("node %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
+   }
+   else
+      printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
 }
 
 /** changes solution according to given root */
@@ -3874,13 +3956,15 @@ SCIP_RETCODE graph_copy_data(
    BMScopyMemoryArray(g->ieat, p->ieat, esize);
    BMScopyMemoryArray(g->oeat, p->oeat, esize);
 
-   if( g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RMWCSP )
+   if( graph_pc_isPcMw(g) )
    {
+      const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
 
       for( int k = 0; k < g->knots; k++ )
-         if( Is_term(p->term[k]) )
+         if( Is_term(p->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(p, k)) )
             g->prize[k] = 0.0;
          else
             g->prize[k] = p->prize[k];
@@ -4125,9 +4209,10 @@ SCIP_RETCODE graph_pack(
 
       for( e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
       {
-         if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[g->head[e]]) )
+         const int i = g->head[e];
+
+         if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[i]) && g->term2edge[i] >= 0 )
          {
-            const int i = g->head[e];
             g->mark[i] = FALSE;
             assert(g->grad[i] == 2);
          }
@@ -4447,6 +4532,14 @@ SCIP_Bool graph_valid(
 
       for( int k = 0; k < nnodes; k++ )
       {
+         if( rooted && g->term2edge[k] < 0 && Is_pterm(g->term[k]) )
+         {
+            assert(k != root);
+
+            SCIPdebugMessage("inconsistent term2edge for %d \n", k);
+            return FALSE;
+         }
+
          if( k == root || (rooted && g->term2edge[k] < 0) )
             continue;
 

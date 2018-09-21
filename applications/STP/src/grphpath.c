@@ -1535,7 +1535,7 @@ void graph_path_st_pcmw_extend(
  *  */
 void graph_path_st_rpcmw(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
@@ -1545,7 +1545,6 @@ void graph_path_st_rpcmw(
 {
    SCIP_Real maxprize;
    const int nnodes = g->knots;
-   const int root = g->source;
    int nrterms;
    int* const heap = g->path_heap;
    int* const state = g->path_state;
@@ -1557,22 +1556,13 @@ void graph_path_st_rpcmw(
    assert(start  <  g->knots);
    assert(cost   != NULL);
    assert(connected != NULL);
+   assert(g->extended);
 
    nrterms = 0;
    maxprize = 0.0;
 
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = (g->grad[k] > 0);
-
-   for( int e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
-   {
-      if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[g->head[e]]) )
-      {
-         const int head = g->head[e];
-         g->mark[head] = FALSE;
-         assert(g->grad[head] == 2);
-      }
-   }
+   /* unmark dummy terminals */
+   graph_pc_markOrgGraph(scip, g);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -2620,17 +2610,12 @@ SCIP_RETCODE graph_voronoiWithRadius(
    )
 {
    int* nodesid;
-   int i;
-   int k;
-   int m;
-   int vbm;
-   int vbk;
-   int root;
    int count = 0;
-   int nnodes;
    int nterms = 0;
-   STP_Bool pc;
-   STP_Bool mw;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const STP_Bool mw = (graph->stp_type == STP_MWCSP);
+   const STP_Bool pc = ((graph->stp_type == STP_PCSPG) || (graph->stp_type == STP_RPCSPG));
 
    assert(graph != NULL);
    assert(heap   != NULL);
@@ -2640,20 +2625,15 @@ SCIP_RETCODE graph_voronoiWithRadius(
    assert(costrev   != NULL);
    assert(rad != NULL);
    assert(vbase != NULL);
-
-   nnodes = graph->knots;
+   assert(!graph->extended);
 
    if( graph->terms == 0 )
       return SCIP_OKAY;
 
-   root = graph->source;
-   mw = (graph->stp_type == STP_MWCSP);
-   pc = ((graph->stp_type == STP_PCSPG) || (graph->stp_type == STP_RPCSPG));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
 
    /* initialize */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       rad[i] = FARAWAY;
 
@@ -2694,26 +2674,23 @@ SCIP_RETCODE graph_voronoiWithRadius(
 
    if( nnodes > 1 )
    {
-      SCIP_Real c1;
-      SCIP_Real c2;
       SCIP_Real ecost;
-      int ne;
 
       /* until the heap is empty */
       while( count > 0 )
       {
          /* get the next (i.e. a nearest) vertex of the heap */
-         k = nearest(heap, state, &count, path);
+         const int k = nearest(heap, state, &count, path);
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
 
          /* iterate over all outgoing edges of vertex k */
-         for( i = graph->outbeg[k]; i != EAT_LAST; i = graph->oeat[i] )
+         for( int i = graph->outbeg[k]; i != EAT_LAST; i = graph->oeat[i] )
          {
-            m = graph->head[i];
-            vbm = vbase[m];
-            vbk = vbase[k];
+            const int m = graph->head[i];
+            const int vbm = vbase[m];
+            const int vbk = vbase[k];
 
             if( state[m] == CONNECT && vbm != vbk && graph->mark[m] )
             {
@@ -2757,8 +2734,13 @@ SCIP_RETCODE graph_voronoiWithRadius(
                }
                else
                {
+                  int ne;
+
                   if( graph->stp_type == STP_DHCSTP )
                   {
+                     SCIP_Real c1;
+                     SCIP_Real c2;
+
                      if( m == root )
                         c1 = path[m].dist + costrev[i];
                      else
@@ -2783,11 +2765,10 @@ SCIP_RETCODE graph_voronoiWithRadius(
 
                   if( pc )
                   {
-                     if( SCIPisGT(scip, ecost, graph->prize[vbm])
-                           && root != vbm )
+                     if( SCIPisGT(scip, ecost, graph->prize[vbm]) && root != vbm && !graph_pc_knotIsFixedTerm(graph, vbm) )
                         ecost = graph->prize[vbm];
-                     if( SCIPisGT(scip, ecost, graph->prize[vbk])
-                           && root != vbk )
+
+                     if( SCIPisGT(scip, ecost, graph->prize[vbk]) && root != vbk && !graph_pc_knotIsFixedTerm(graph, vbk) )
                         ecost = graph->prize[vbk];
                   }
 
@@ -2810,19 +2791,14 @@ SCIP_RETCODE graph_voronoiWithRadius(
                   }
                   else
                   {
-                     graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk],
-                           ecost, ecost);
+                     graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
                   }
 
-                  if( SCIPisGT(scip, rad[vbk],
-                        path[k].dist + ((vbk == root) ? cost[i] : costrev[i])) )
-                     rad[vbk] = path[k].dist
-                           + ((vbk == root) ? cost[i] : costrev[i]);
+                  if( SCIPisGT(scip, rad[vbk], path[k].dist + ((vbk == root) ? cost[i] : costrev[i])) )
+                     rad[vbk] = path[k].dist + ((vbk == root) ? cost[i] : costrev[i]);
 
-                  if( SCIPisGT(scip, rad[vbm],
-                        path[m].dist + ((vbm == root) ? costrev[i] : cost[i])) )
-                     rad[vbm] = path[m].dist
-                           + ((vbm == root) ? costrev[i] : cost[i]);
+                  if( SCIPisGT(scip, rad[vbm], path[m].dist + ((vbm == root) ? costrev[i] : cost[i])) )
+                     rad[vbm] = path[m].dist + ((vbm == root) ? costrev[i] : cost[i]);
                }
             }
 

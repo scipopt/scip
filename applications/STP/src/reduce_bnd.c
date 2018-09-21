@@ -63,7 +63,6 @@
 #define EXEDGE_FIXED 1
 #define EXEDGE_KILLED 2
 
-
 /** mark ancestors of given edge */
 static
 SCIP_Bool markAncestorsConflict(
@@ -5461,6 +5460,7 @@ SCIP_RETCODE reduce_boundPrune(
    assert(soledge != NULL);
    assert(graph->source >= 0);
    assert(graph_valid(graph));
+   assert(!graph->extended);
 
    mstobj = 0.0;
    *nelims = 0;
@@ -5535,7 +5535,6 @@ SCIP_RETCODE reduce_boundPrune(
    }
    else
    {
-
       /* build Voronoi regions */
       graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
 
