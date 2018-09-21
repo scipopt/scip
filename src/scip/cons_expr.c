@@ -1473,7 +1473,7 @@ static
 int nlhdlrCmp(
    void*                 hdlr1,              /**< first handler */
    void*                 hdlr2               /**< second handler */
-)
+   )
 {
    SCIP_CONSEXPR_NLHDLR* h1;
    SCIP_CONSEXPR_NLHDLR* h2;
@@ -10153,7 +10153,7 @@ void SCIPsetConsExprNlhdlrFreeHdlrData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10165,7 +10165,7 @@ void SCIPsetConsExprNlhdlrFreeExprData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10177,7 +10177,7 @@ void SCIPsetConsExprNlhdlrCopyHdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10190,7 +10190,7 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit_))    /**< deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10206,7 +10206,7 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
    assert(sepa != NULL || estimate != NULL);
@@ -10223,7 +10223,7 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10236,7 +10236,7 @@ void SCIPsetConsExprNlhdlrBranchscore(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10248,7 +10248,7 @@ void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10258,7 +10258,7 @@ void SCIPsetConsExprNlhdlrReformulate(
 /** gives name of nonlinear handler */
 const char* SCIPgetConsExprNlhdlrName(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10268,7 +10268,7 @@ const char* SCIPgetConsExprNlhdlrName(
 /** gives description of nonlinear handler, can be NULL */
 const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10278,7 +10278,7 @@ const char* SCIPgetConsExprNlhdlrDesc(
 /** gives priority of nonlinear handler */
 unsigned int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10288,7 +10288,7 @@ unsigned int SCIPgetConsExprNlhdlrPriority(
 /** gives handler data of nonlinear handler */
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -10298,7 +10298,7 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
 /** returns whether nonlinear handler implements the separation initialization callback */
 SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->initsepa != NULL;
 }
@@ -10306,7 +10306,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
 /** returns whether nonlinear handler implements the separation deinitialization callback */
 SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->exitsepa != NULL;
 }
@@ -10314,7 +10314,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
 /** returns whether nonlinear handler implements the separation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->sepa != NULL;
 }
@@ -10322,7 +10322,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrSepa(
 /** returns whether nonlinear handler implements the estimator callback */
 SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->estimate != NULL;
 }
@@ -10330,7 +10330,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
 /** returns whether nonlinear handler implements the interval evaluation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrInteval(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->inteval != NULL;
 }
@@ -10338,7 +10338,7 @@ SCIP_Bool SCIPhasConsExprNlhdlrInteval(
 /** returns whether nonlinear handler implements the reverse propagation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->reverseprop != NULL;
 }
@@ -10354,7 +10354,7 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlr(
    SCIP_Bool*                     enforcedabove,    /**< indicates whether an enforcement method for expr >= auxvar exists (to be updated by this call) or is not necessary */
    SCIP_Bool*                     success,          /**< buffer to store whether the nonlinear handler should be called for this expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10393,7 +10393,7 @@ SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
    SCIP_Bool                     overestimate,     /**< whether the expression needs to be overestimated */
    SCIP_Bool                     underestimate,    /**< whether the expression needs to be underestimated */
    SCIP_Bool*                    infeasible        /**< pointer to store whether an infeasibility was detected */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10423,7 +10423,7 @@ SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
    SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< expression data of nonlinear handler */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10519,7 +10519,7 @@ SCIP_RETCODE SCIPintevalConsExprNlhdlr(
    SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)),   /**< function to call to evaluate interval of variable */
    void*                         intevalvardata    /**< data to be passed to intevalvar call */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -10545,7 +10545,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
    SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
    SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
