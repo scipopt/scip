@@ -1033,7 +1033,7 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexor       /**< buffer to store reformulated expression */
+   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
    );
 
 /** prints structure of an expression a la Maple's dismantle */
@@ -1439,6 +1439,7 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 /** calls the reformulation callback of a nonlinear handler */
 SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
    SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */

@@ -3058,12 +3058,12 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 #endif
 
-   /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
+      /* call simplify for each expression */
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
@@ -3091,6 +3091,32 @@ SCIP_RETCODE canonicalizeConstraints(
              * Therefore, we have to release it here.
              */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+         }
+      }
+
+      /* call reformulation callback of nonlinear handlers for each expression */
+      {
+         SCIP_CONSEXPR_EXPR* refexpr;
+
+         if( consdata->expr != NULL )
+         {
+            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr) );
+
+            if( refexpr != consdata->expr )
+            {
+               /* release old expression */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+
+               /* store simplified expression */
+               consdata->expr = refexpr;
+            }
+            else
+            {
+               /* The reformulation captures simplified in any case, also if nothing has changed.
+                * Therefore, we have to release it here.
+                */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &refexpr) );
+            }
          }
       }
    }
@@ -9971,7 +9997,7 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexor       /**< buffer to store reformulated expression */
+   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -9979,7 +10005,7 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
 
    assert(scip != NULL);
    assert(rootexpr != NULL);
-   assert(refrootexor != NULL);
+   assert(refrootexpr != NULL);
 
    /* simplify bottom up
     * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
@@ -10029,17 +10055,16 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
 
                if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
                {
-                  SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlrdata->nlhdlrs[k], expr, &refexpr) );
+                  SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k], expr, &refexpr) );
+                  assert(refexpr != NULL);
 
                   /* stop calling other nonlinear handlers as soon as the reformulation was successful */
-                  if( refexpr != NULL )
+                  if( refexpr != expr )
                      break;
                }
             }
 
-            /* check whether no nonlinear handler could reformulate the expression; set refexpr expression to expr and
-             * capture it (see SCIPsimplifyConsExprExpr for more details)
-             */
+            /* all nonlinear handlers do not implement the reformulation callback; capture expr as it has been done in SCIPsimplifyConsExprExpr */
             if( refexpr == NULL )
             {
                refexpr = expr;
@@ -10060,8 +10085,8 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
       }
    }
 
-   *refrootexor = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
-   assert(*refrootexor != NULL);
+   *refrootexpr = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
+   assert(*refrootexpr != NULL);
 
    SCIPexpriteratorFree(&it);
 
@@ -10690,12 +10715,14 @@ SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
 /** calls the reformulation callback of a nonlinear handler */
 SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
    SCIP*                         scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
    SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
    )
 {
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlr->reformulatetime != NULL);
 
@@ -10706,7 +10733,7 @@ SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
 
    /* call reformulation callback */
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->reformulatetime) );
-   SCIP_CALL( nlhdlr->reformulate(scip, nlhdlr, expr, refexpr) );
+   SCIP_CALL( nlhdlr->reformulate(scip, conshdlr, nlhdlr, expr, refexpr) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
 
    /* check whether reformulation was successful */
