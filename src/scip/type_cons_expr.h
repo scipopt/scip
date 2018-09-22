@@ -492,7 +492,7 @@ typedef enum
 } SCIP_CONSEXPRITERATOR_STAGE;
 #define SCIP_CONSEXPRITERATOR_ALLSTAGES ((unsigned int)(SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR))
 
-/** user data storage type for expression walker */
+/** user data storage type for expression iteration */
 typedef union
 {
    SCIP_Real             realval;            /**< a floating-point value */
@@ -519,22 +519,6 @@ typedef enum
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
 
 } SCIP_MONOTONE;
-
-/** expression graph walk callback
- *
- * input:
- *  - scip   : SCIP main data structure
- *  - expr   : expression node that is visited
- *  - stage  : the current stage of the expression walker
- *  - data   : pointer to user data
- *  - result : buffer to store how to proceed in the walk
- */
-#define SCIP_DECL_CONSEXPREXPRWALK_VISIT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPRITERATOR_STAGE stage, \
-   void* data, \
-   SCIP_CONSEXPREXPRWALK_RESULT* result)
 
 /** @name bitflags that customize what is printed by dot-format printer
  * @{

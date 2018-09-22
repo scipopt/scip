@@ -80,10 +80,10 @@ struct SCIP_ConsExpr_ExprHdlr
 /* expression iteration data */
 struct SCIP_ConsExpr_Expr_IterData
 {
-   SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in expression walk */
-   int                      currentchild; /**< child that is currently visited (or will be visited next) by expression walk */
+   SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in DFS iteration */
+   int                      currentchild; /**< child that is currently visited (or will be visited next) by DFS iteration */
    unsigned int             visitedtag;   /**< tag to identify whether an expression has been visited already */
-   SCIP_CONSEXPRITERATOR_USERDATA userdata; /**< space for iteration user to store some (temporary) data */
+   SCIP_CONSEXPRITERATOR_USERDATA userdata; /**< space for iterator user to store some (temporary) data */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -214,8 +214,8 @@ struct SCIP_ConsExpr_Iterator
    SCIP_QUEUE*                 queue;        /**< BFS queue */
 
    /* data for DFS mode */
-   SCIP_CONSEXPRITERATOR_STAGE dfsstage;     /**< stage in DFS walk */
-   unsigned int                stopstages;   /**< stages in which to interrupt the walk */
+   SCIP_CONSEXPRITERATOR_STAGE dfsstage;     /**< current stage */
+   unsigned int                stopstages;   /**< stages in which to interrupt iterator */
 };
 
 #ifdef __cplusplus
