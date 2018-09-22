@@ -611,7 +611,7 @@ Test(iterator, walk_in_walk)
    nnodes = 0;
    SCIPexpriteratorCreate(&it2, conshdlr, SCIPblkmem(scip));
    SCIP_CALL( SCIPexpriteratorInit(it, expr_sum, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
    while( !SCIPexpriteratorIsEnd(it) )
    {
       SCIP_CALL( SCIPexpriteratorInit(it2, SCIPexpriteratorGetCurrent(it), SCIP_CONSEXPRITERATOR_DFS, TRUE) );

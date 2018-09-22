@@ -182,7 +182,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
 EXTERN
 void SCIPexpriteratorSetStagesDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   unsigned int                stopstages   /**< the stages in which to stop when iterating via DFS */
+   SCIP_CONSEXPRITERATOR_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
    );
 
 /** gets the current expression that the expression iterator points to */

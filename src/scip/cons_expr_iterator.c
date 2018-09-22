@@ -525,7 +525,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
          expr->iterdata[iterator->iterindex].currentchild = 0;
          expr->iterdata[iterator->iterindex].parent = NULL;
          iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
-         iterator->stopstages = (unsigned int)SCIP_CONSEXPRITERATOR_ENTEREXPR;
+         iterator->stopstages = SCIP_CONSEXPRITERATOR_ENTEREXPR;
 
          break;
       }
@@ -572,7 +572,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
    expr->iterdata[iterator->iterindex].parent = NULL;
    iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
 
-   if( (iterator->stopstages & (unsigned int)SCIP_CONSEXPRITERATOR_ENTEREXPR) == 0 )
+   if( (iterator->stopstages & SCIP_CONSEXPRITERATOR_ENTEREXPR) == 0 )
       return SCIPexpriteratorGetNext(iterator);
 
    return iterator->curr;
@@ -584,12 +584,12 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
  */
 void SCIPexpriteratorSetStagesDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   unsigned int                stopstages   /**< the stages in which to stop when iterating via DFS */
+   SCIP_CONSEXPRITERATOR_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
    )
 {
    assert(iterator != NULL);
 
-   if( ((unsigned int)iterator->dfsstage & stopstages) == 0 )
+   if( (iterator->dfsstage & stopstages) == 0 )
    {
       iterator->stopstages = stopstages;
       (void) SCIPexpriteratorGetNext(iterator);
@@ -813,7 +813,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
          {
             iterator->curr = doDfsNext(iterator);
          }
-         while( iterator->curr != NULL && ((unsigned int)iterator->dfsstage & iterator->stopstages) == 0 );
+         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 );
 
          break;
       }
@@ -849,7 +849,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorSkipDFS(
          /* move directly to leaveexpr */
          iterator->dfsstage = SCIP_CONSEXPRITERATOR_LEAVEEXPR;
          /* if leaveexpr is not a stopstage, then move on */
-         while( iterator->curr != NULL && ((unsigned int)iterator->dfsstage & iterator->stopstages) == 0 )
+         while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 )
             iterator->curr = doDfsNext(iterator);
          return iterator->curr;
       }

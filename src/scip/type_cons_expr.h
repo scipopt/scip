@@ -483,14 +483,14 @@ extern "C" {
 #define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
 
 /** stages of expression DFS iteration */
-typedef enum
-{
-   SCIP_CONSEXPRITERATOR_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
-   SCIP_CONSEXPRITERATOR_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
-   SCIP_CONSEXPRITERATOR_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
-   SCIP_CONSEXPRITERATOR_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
-} SCIP_CONSEXPRITERATOR_STAGE;
-#define SCIP_CONSEXPRITERATOR_ALLSTAGES ((unsigned int)(SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR))
+#define SCIP_CONSEXPRITERATOR_ENTEREXPR     1u /**< an expression is visited the first time (before any of its children are visited) */
+#define SCIP_CONSEXPRITERATOR_VISITINGCHILD 2u /**< a child of an expression is to be visited */
+#define SCIP_CONSEXPRITERATOR_VISITEDCHILD  4u /**< a child of an expression has been visited */
+#define SCIP_CONSEXPRITERATOR_LEAVEEXPR     8u /**< an expression is to be left (all of its children have been processed) */
+#define SCIP_CONSEXPRITERATOR_ALLSTAGES     (SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR)
+
+/** type to represent stage of DFS iterator */
+typedef unsigned int SCIP_CONSEXPRITERATOR_STAGE;
 
 /** user data storage type for expression iteration */
 typedef union

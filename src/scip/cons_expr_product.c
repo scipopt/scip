@@ -1342,6 +1342,10 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          }
          break;
       }
+
+      default:
+         /* all stages should have been covered above */
+         SCIPABORT();
    }
 
    return SCIP_OKAY;
