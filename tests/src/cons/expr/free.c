@@ -70,7 +70,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-/***** TEST SUITE: all tests of the form Test(walk, xxx) belong to the same suite and share the setup and teardown *****/
+/***** TEST SUITE: all tests of the form Test(free, xxx) belong to the same suite and share the setup and teardown *****/
 TestSuite(free, .init = setup, .fini = teardown);
 
 /***** ACTUAL TESTS *****/

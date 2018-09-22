@@ -1266,20 +1266,20 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
       {
          /* print function with opening parenthesis */
          SCIPinfoMessage(scip, file, "(");
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
       {
          assert(currentchild == 0);
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
       {
 
          SCIP_Real exponent = SCIPgetConsExprExprPowExponent(expr);
@@ -1293,7 +1293,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
       default: ;
    }
 

@@ -181,12 +181,12 @@ extern "C" {
 /** expression print callback
  *
  * the method prints an expression
- * it is called during an expression walk at different stages of the walk
+ * it is called while iterating over the expression graph at different stages
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
- *  - stage: stage of expression print walk
+ *  - stage: stage of expression graph iteration
  *  - currentchild: index of current child if in stage visitingchild or visitedchild
  *  - parentprecedence: precedence of parent
  *  - file : the file to print to
@@ -194,7 +194,7 @@ extern "C" {
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   SCIP_CONSEXPRITERATOR_STAGE stage, \
    int currentchild, \
    unsigned int parentprecedence, \
    FILE* file)
@@ -482,28 +482,17 @@ extern "C" {
  */
 #define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
 
-/** stages of expression walker in which the walker callbacks are called */
-typedef enum
-{
-   SCIP_CONSEXPREXPRWALK_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
-   SCIP_CONSEXPREXPRWALK_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
-   SCIP_CONSEXPREXPRWALK_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
-   SCIP_CONSEXPREXPRWALK_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
-} SCIP_CONSEXPREXPRWALK_STAGE;
-#define SCIP_CONSEXPREXPRWALK_ALLSTAGES ((unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR))
+/** stages of expression DFS iteration */
+#define SCIP_CONSEXPRITERATOR_ENTEREXPR     1u /**< an expression is visited the first time (before any of its children are visited) */
+#define SCIP_CONSEXPRITERATOR_VISITINGCHILD 2u /**< a child of an expression is to be visited */
+#define SCIP_CONSEXPRITERATOR_VISITEDCHILD  4u /**< a child of an expression has been visited */
+#define SCIP_CONSEXPRITERATOR_LEAVEEXPR     8u /**< an expression is to be left (all of its children have been processed) */
+#define SCIP_CONSEXPRITERATOR_ALLSTAGES     (SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR)
 
-/** feedback from expression walker callback to expression walker to direct the walk
- *
- * The return code SCIP_CONSEXPREXPRWALK_SKIP is only allowed in the stages SCIP_CONSEXPREXPRWALK_ENTERNODE and SCIP_CONSEXPREXPRWALK_VISITINGCHILD.
- */
-typedef enum
-{
-   SCIP_CONSEXPREXPRWALK_CONTINUE,           /**< continue the walk */
-   SCIP_CONSEXPREXPRWALK_SKIP,               /**< skip this node (if in ENTEREXPR stage) or the next child (if in VISITINGCHILD stage) */
-   SCIP_CONSEXPREXPRWALK_ABORT               /**< abort the walk */
-} SCIP_CONSEXPREXPRWALK_RESULT;
+/** type to represent stage of DFS iterator */
+typedef unsigned int SCIP_CONSEXPRITERATOR_STAGE;
 
-/** user data storage type for expression walker */
+/** user data storage type for expression iteration */
 typedef union
 {
    SCIP_Real             realval;            /**< a floating-point value */
@@ -511,7 +500,7 @@ typedef union
    int                   intvals[2];         /**< two integer values */
    unsigned int          uintval;            /**< an unsigned integer value */
    void*                 ptrval;             /**< a pointer */
-} SCIP_CONSEXPREXPRWALK_IO;
+} SCIP_CONSEXPRITERATOR_USERDATA;
 
 /** mode for expression iterator */
 typedef enum
@@ -530,22 +519,6 @@ typedef enum
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
 
 } SCIP_MONOTONE;
-
-/** expression graph walk callback
- *
- * input:
- *  - scip   : SCIP main data structure
- *  - expr   : expression node that is visited
- *  - stage  : the current stage of the expression walker
- *  - data   : pointer to user data
- *  - result : buffer to store how to proceed in the walk
- */
-#define SCIP_DECL_CONSEXPREXPRWALK_VISIT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPREXPRWALK_STAGE stage, \
-   void* data, \
-   SCIP_CONSEXPREXPRWALK_RESULT* result)
 
 /** @name bitflags that customize what is printed by dot-format printer
  * @{

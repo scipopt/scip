@@ -609,7 +609,7 @@ SCIP_RETCODE copyExpr(
 {
    SCIP_CONSHDLR* targetconsexprhdlr = NULL;
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPREXPRWALK_IO expriteruserdata;
+   SCIP_CONSEXPRITERATOR_USERDATA expriteruserdata;
    SCIP_CONSEXPR_EXPR* expr;
 
    assert(sourcescip != NULL);
@@ -626,14 +626,14 @@ SCIP_RETCODE copyExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(sourcescip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, sourceexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /*TODO use FALSE, i.e., don't duplicate common subexpr? */
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITEDCHILD);
 
    expr = sourceexpr;
    while( !SCIPexpriteratorIsEnd(it) )
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR :
          {
             /* create expr that will hold the copy */
             SCIP_CONSEXPR_EXPR* exprcopy;
@@ -725,7 +725,7 @@ SCIP_RETCODE copyExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
          {
             /* just visited child so a copy of himself should be available; append it */
             SCIP_CONSEXPR_EXPR* exprcopy;
@@ -757,8 +757,6 @@ SCIP_RETCODE copyExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
          default:
             /* we should never be called in this stage */
             SCIPABORT();
@@ -973,7 +971,7 @@ SCIP_RETCODE hashExpr(
    int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
    )
 {
-   SCIP_CONSEXPREXPRWALK_IO walkiodata;
+   SCIP_CONSEXPRITERATOR_USERDATA iterdata;
    unsigned int* childrenhashes;
    int childrenhashessize;
    unsigned int exprhash;
@@ -988,7 +986,7 @@ SCIP_RETCODE hashExpr(
 
    for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
    {
-      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
       if( nvisitedexprs != NULL )
          ++*nvisitedexprs;
@@ -1019,8 +1017,8 @@ SCIP_RETCODE hashExpr(
          exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
       }
 
-      walkiodata.uintval = exprhash;
-      SCIPexpriteratorSetCurrentUserData(hashiterator, walkiodata);
+      iterdata.uintval = exprhash;
+      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
    }
 
    SCIPfreeBufferArray(scip, &childrenhashes);
@@ -1353,7 +1351,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
    {
@@ -1434,7 +1432,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
@@ -1525,13 +1523,13 @@ SCIP_RETCODE forwardPropExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    for( expr = SCIPexpriteratorGetCurrent(it), aborted = FALSE; !SCIPexpriteratorIsEnd(it) && !aborted;  )
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
             SCIP_CONSEXPR_EXPR* child;
 
@@ -1552,7 +1550,7 @@ SCIP_RETCODE forwardPropExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
             SCIP_Bool intersect;
             SCIP_INTERVAL interval;
@@ -1690,8 +1688,7 @@ SCIP_RETCODE forwardPropExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         default:
             /* you should never be here */
             SCIPABORT();
             break;
@@ -2616,7 +2613,7 @@ SCIP_RETCODE propagateLocks(
 {
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPREXPRWALK_IO ituserdata;
+   SCIP_CONSEXPRITERATOR_USERDATA ituserdata;
 
    assert(expr != NULL);
 
@@ -2629,7 +2626,7 @@ SCIP_RETCODE propagateLocks(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
    assert(SCIPexpriteratorGetCurrent(it) == expr); /* iterator should not have moved */
 
    /* store locks in root node */
@@ -2646,7 +2643,7 @@ SCIP_RETCODE propagateLocks(
 
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
          {
             if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
             {
@@ -2679,7 +2676,7 @@ SCIP_RETCODE propagateLocks(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
             /* remove monotonicity information if expression has been unlocked */
             if( expr->nlockspos == 0 && expr->nlocksneg == 0 && expr->monotonicity != NULL )
@@ -2694,7 +2691,7 @@ SCIP_RETCODE propagateLocks(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
             SCIP_MONOTONE monotonicity;
 
@@ -2732,7 +2729,7 @@ SCIP_RETCODE propagateLocks(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         default :
             /* you should never be here */
             SCIPABORT();
             break;
@@ -2902,7 +2899,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
       {
          /* first constraint with non-NULL expr: initialize iterator (set type and stopstage) */
          SCIP_CALL( SCIPexpriteratorInit(hashiterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-         SCIPexpriteratorSetStagesDFS(hashiterator, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+         SCIPexpriteratorSetStagesDFS(hashiterator, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
       }
 
       SCIP_CALL( hashExpr(scip, consdata->expr, hashiterator, &nexprs) );
@@ -2946,7 +2943,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
       /* replace equivalent sub-expressions in the tree */
       SCIP_CALL( SCIPexpriteratorInit(repliterator, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      SCIPexpriteratorSetStagesDFS(repliterator, (unsigned int)SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+      SCIPexpriteratorSetStagesDFS(repliterator, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
       while( !SCIPexpriteratorIsEnd(repliterator) )
       {
@@ -3006,13 +3003,13 @@ SCIP_RETCODE reformulateConsExprExpr(
     */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+         case SCIP_CONSEXPRITERATOR_VISITEDCHILD:
          {
             SCIP_CONSEXPR_EXPR* newchild;
 
@@ -3027,10 +3024,10 @@ SCIP_RETCODE reformulateConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
          {
             SCIP_CONSEXPR_EXPR* refexpr = NULL;
-            SCIP_CONSEXPREXPRWALK_IO walkio;
+            SCIP_CONSEXPRITERATOR_USERDATA iterdata;
 
             /* use simplification of expression handlers */
             if( simplify )
@@ -3096,14 +3093,12 @@ SCIP_RETCODE reformulateConsExprExpr(
                }
             }
 
-            walkio.ptrval = (void*) refexpr;
-            SCIPexpriteratorSetCurrentUserData(it, walkio);
+            iterdata.ptrval = (void*) refexpr;
+            SCIPexpriteratorSetCurrentUserData(it, iterdata);
 
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
          default:
             SCIPABORT(); /* we should never be called in this stage */
             break;
@@ -4129,6 +4124,7 @@ SCIP_RETCODE computeBranchingScores(
    brscoretag = ++(conshdlrdata->lastbrscoretag);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -4143,18 +4139,9 @@ SCIP_RETCODE computeBranchingScores(
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
       consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
 
-      assert(consdata->expr == SCIPexpriteratorGetCurrent(it) || SCIPexpriteratorIsEnd(it));
-      for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
          if( expr->auxvar == NULL )
@@ -4238,13 +4225,13 @@ SCIP_RETCODE computeBranchingScores(
 
       /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
       SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-      SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
       for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          switch( SCIPexpriteratorGetStageDFS(it) )
          {
-            case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+            case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
             {
                /* propagate branching score, if any, from this expression to current child
                 * NOTE: this only propagates down branching scores that were computed by computeBranchScore
@@ -4256,7 +4243,7 @@ SCIP_RETCODE computeBranchingScores(
                break;
             }
 
-            case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+            case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
             {
                /* invalidate the branching scores in this expression, so they are not passed on in case this expression
                 * is visited again
@@ -4269,8 +4256,6 @@ SCIP_RETCODE computeBranchingScores(
             }
 
             default:
-            case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-            case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
                SCIPABORT();
                break;
          }
@@ -4713,6 +4698,7 @@ SCIP_RETCODE freeAuxVars(
    assert(nconss >= 0);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -4725,16 +4711,7 @@ SCIP_RETCODE freeAuxVars(
       if( consdata->expr == NULL )
          continue;
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIP_CALL( freeAuxVar(scip, expr) );
       }
@@ -4767,6 +4744,7 @@ SCIP_RETCODE initSepa(
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    *infeasible = FALSE;
    for( c = 0; c < nconss && !*infeasible; ++c )
@@ -4782,16 +4760,7 @@ SCIP_RETCODE initSepa(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* call initsepa of all nlhdlrs in expr */
          for( e = 0; e < expr->nenfos; ++e )
@@ -5090,6 +5059,7 @@ SCIP_RETCODE separatePoint(
    assert(result != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5123,16 +5093,7 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void)SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* it only makes sense to call the separation callback if there is a variable attached to the expression */
          if( expr->auxvar == NULL )
@@ -5905,6 +5866,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -5918,16 +5880,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
@@ -7248,7 +7201,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
       /* default: <hdlrname>(<child1>, <child2>, ...) */
       switch( stage )
       {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR :
          {
             SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
             if( SCIPgetConsExprExprNChildren(expr) > 0 )
@@ -7258,7 +7211,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
          {
             if( currentchild < SCIPgetConsExprExprNChildren(expr)-1 )
             {
@@ -7272,8 +7225,8 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          default:
             break;
       }
@@ -8000,7 +7953,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, *rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD);
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) ; )
    {
       /* expression should be used by its parent and maybe by the iterator (only the root!)
@@ -8011,7 +7964,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
             /* check whether a child needs to be visited (nuses == 1)
              * if not, then we still have to release it
@@ -8048,7 +8001,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
          {
             /* free child after visiting it */
             SCIP_CONSEXPR_EXPR* child;
@@ -8067,8 +8020,6 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
          default:
             SCIPABORT(); /* we should never be called in this stage */
             break;
@@ -8176,7 +8127,7 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPREXPRWALK_STAGE stage;
+   SCIP_CONSEXPRITERATOR_STAGE stage;
    int currentchild;
    unsigned int parentprecedence;
 
@@ -8186,14 +8137,14 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ALLSTAGES);
 
    while( !SCIPexpriteratorIsEnd(it) )
    {
       assert(expr->exprhdlr != NULL);
       stage = SCIPexpriteratorGetStageDFS(it);
 
-      if( stage == SCIP_CONSEXPREXPRWALK_VISITEDCHILD || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+      if( stage == SCIP_CONSEXPRITERATOR_VISITEDCHILD || stage == SCIP_CONSEXPRITERATOR_VISITINGCHILD )
          currentchild = SCIPexpriteratorGetChildIdxDFS(it);
       else
          currentchild = -1;
@@ -8309,14 +8260,14 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
 
       if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
       {
-         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, -1, 0, dotdata->file) );
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPRITERATOR_ENTEREXPR, -1, 0, dotdata->file) );
          for( c = 0; c < expr->nchildren; ++c )
          {
-            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, c, 0, dotdata->file) );
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPRITERATOR_VISITINGCHILD, c, 0, dotdata->file) );
             SCIPinfoMessage(scip, dotdata->file, "c%d", c);
-            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, c, 0, dotdata->file) );
+            SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPRITERATOR_VISITEDCHILD, c, 0, dotdata->file) );
          }
-         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, -1, 0, dotdata->file) );
+         SCIP_CALL( SCIPprintConsExprExprHdlr(scip, expr, SCIP_CONSEXPRITERATOR_LEAVEEXPR, -1, 0, dotdata->file) );
 
          SCIPinfoMessage(scip, dotdata->file, "\\n");
       }
@@ -8500,13 +8451,13 @@ SCIP_RETCODE SCIPevalConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    while( !SCIPexpriteratorIsEnd(it) )
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
             SCIP_CONSEXPR_EXPR* child;
 
@@ -8530,7 +8481,7 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
             SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
             expr->evaltag = soltag;
@@ -8541,8 +8492,6 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
          default :
             /* we should never be here */
             SCIPABORT();
@@ -8580,7 +8529,7 @@ TERMINATE:
  * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
  * in the DAG and path in a tree diagram of a function.
  * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPwalkConsExprExprDF), for every expr that *has* children,
+ * Then, traversing the tree in Depth First (see SCIPexpriteratorInit), for every expr that *has* children,
  * we store in its i-th child
  * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
  * Example:
@@ -8655,7 +8604,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
@@ -9041,7 +8990,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    SCIP_CALL( hashExpr(scip, expr, it, NULL) );
 
@@ -9139,271 +9088,6 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    return SCIP_OKAY;
 }
 
-
-/** walks the expression graph in depth-first manner and executes callbacks at certain places
- *
- * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
- * natural way of implementing this algorithms is using recursion.
- * In general, a function which traverses the tree in depth-first looks like
- * <pre>
- * fun( expr )
- *    enterexpr()
- *    continue skip or abort
- *       for( child in expr->children )
- *          visitingchild()
- *          continue skip or abort
- *          fun(child, data, proceed)
- *          visitedchild()
- *          continue skip or abort
- *    leaveexpr()
- * </pre>
- * Given that some expressions might be quite deep we provide this functionality in an iterative fashion.
- *
- * Consider an expression (x*y) + z + log(x-y).
- * The corresponding expression graph is
- * <pre>
- *           [+]
- *       /    |   \
- *    [*]     |    [log]
- *    / \     |      |
- *   /   \    |     [-]
- *   |   |    |     / \
- *  [x] [y]  [z]  [x] [y]
- * </pre>
- * (where [x] and [y] are actually the same expression).
- *
- * If given a pointer to the [+] expression is given as root to this expression, it will walk
- * the graph in a depth-first manner and call the given callback methods at various stages.
- * - When entering an expression, it calls the enterexpr callback.
- *   The SCIPgetConsExprExprWalkParent() function indicates from where the expression has been entered (NULL for the root expression).
- * - Before visiting a child of an expression, it calls the visitingchild callback.
- *   The SCIPgetConsExprExprWalkCurrentChild() function returns which child will be visited (as an index in the current expr's children array).
- * - When returning from visiting a child of an expression, the visitedchild callback is called.
- *   Again the SCIPgetConsExprExprWalkCurrentChild() function returns which child has been visited.
- * - When leaving an expression, it calls the leaveexpr callback.
- *
- * Thus, for the above expression, the callbacks are called in the following order:
- * - enterexpr([+])
- * - visitingchild([+])  currentchild == 0
- * - enterexpr([*])
- * - visitingchild([*])  currentchild == 0
- * - enterexpr([x])
- * - leaveexpr([x])
- * - visitedchild([*])   currentchild == 0
- * - visitingchild([*])  currentchild == 1
- * - enterexpr([y])
- * - leaveexpr([y])
- * - visitedchild([*])   currentchild == 1
- * - leaveexpr([*])
- * - visitedchild([+])   currentchild == 0
- * - visitingchild([+])  currentchild == 1
- * - enterexpr([z])
- * - leaveexpr([z])
- * - visitedchild([+])   currentchild == 1
- * - visitingchild([+])  currentchild == 2
- * - enterexpr([log])
- * - visitingchild([log]) currentchild == 0
- * - enterexpr([-])
- * - visitingchild([-])  currentchild == 0
- * - enterexpr([x])
- * - leaveexpr([x])
- * - visitedchild([-])   currentchild == 0
- * - visitingchild([-])  currentchild == 1
- * - enterexpr([y])
- * - leaveexpr([y])
- * - visitedchild([-])   currentchild == 1
- * - leaveexpr([-])
- * - visitedchild([log]) currentchild == 0
- * - leaveexpr([log])
- * - visitedchild([+])   currentchild == 2
- * - leaveexpr([+])
- *
- * The callbacks can direct the walking method to skip parts of the tree or abort.
- * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an enterexpr callback, all children of that expression will be skipped. The leaveexpr callback will still be called.
- * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitingchild callback, visiting the current child will be skipped.
- * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitedchild callback, visiting the remaining children will be skipped.
- * If returning SCIP_CONSEXPREXPRWALK_ABORT in any of the callbacks, the walk will be aborted immediately.
- *
- * @note The walkio member of the root expression is reset to its previous value when the walk finishes.
- */
-SCIP_RETCODE SCIPwalkConsExprExprDF(
-   SCIP*                 scip,                         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   root,                         /**< the root expression from where to start the walk */
-   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*enterexpr)),     /**< callback to be called when entering an expression, or NULL */
-   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*visitingchild)), /**< callback to be called before visiting a child, or NULL */
-   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*visitedchild)),  /**< callback to be called when returning from a child, or NULL */
-   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*leaveexpr)),     /**< callback to be called when leaving an expression, or NULL */
-   void*                 data                          /**< data to be passed on to callback methods, or NULL */
-   )
-{
-   SCIP_CONSEXPREXPRWALK_STAGE  stage;
-   SCIP_CONSEXPREXPRWALK_RESULT result;
-   SCIP_CONSEXPR_EXPR*          child;
-   SCIP_CONSEXPR_EXPR*          oldroot;
-   SCIP_CONSEXPR_EXPR*          oldparent;
-   SCIP_CONSEXPREXPRWALK_IO     oldwalkio;
-   int                          oldcurrentchild;
-   SCIP_Bool                    aborted;
-
-   assert(root != NULL);
-
-   /* remember the current root, data, child and parent of incoming root, in case we are called from within another walk
-    * furthermore, we need to capture the root, because we don't want nobody somebody to invalidate it while we have it
-    * NOTE: no callback should touch walkparent, nor walkcurrentchild: these are internal fields of the walker!
-    */
-   SCIPcaptureConsExprExpr(root);
-   oldroot         = root;
-   oldcurrentchild = root->walkcurrentchild;
-   oldparent       = root->walkparent;
-   oldwalkio       = root->walkio;
-
-   /* traverse the tree */
-   root->walkcurrentchild = 0;
-   root->walkparent = NULL;
-   result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-   stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-   aborted = FALSE;
-   while( !aborted )
-   {
-      switch( stage )
-      {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
-            assert(root->walkcurrentchild == 0);
-            if( enterexpr != NULL )
-            {
-               SCIP_CALL( (*enterexpr)(scip, root, stage, data, &result) );
-               switch( result )
-               {
-                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_SKIP :
-                     root->walkcurrentchild = root->nchildren;
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_ABORT :
-                     aborted = TRUE;
-                     break;
-               }
-            }
-            /* goto start visiting children */
-            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
-            break;
-
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
-            /* if there are no more children to visit, goto leave */
-            if( root->walkcurrentchild >= root->nchildren )
-            {
-               assert(root->walkcurrentchild == root->nchildren);
-               stage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
-               break;
-            }
-            /* prepare visit */
-            if( visitingchild != NULL )
-            {
-               SCIP_CALL( (*visitingchild)(scip, root, stage, data, &result) );
-               if( result == SCIP_CONSEXPREXPRWALK_SKIP )
-               {
-                  /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
-                  ++root->walkcurrentchild;
-                  continue;
-               }
-               else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
-               {
-                  aborted = TRUE;
-                  break;
-               }
-            }
-            /* remember the parent and set the first child that should be visited of the new root */
-            child = root->children[root->walkcurrentchild];
-            child->walkparent = root;
-            child->walkcurrentchild = 0;
-            root = child;
-            /* visit child */
-            stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
-            break;
-
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
-            if( visitedchild != NULL )
-            {
-               SCIP_CALL( (*visitedchild)(scip, root, stage, data, &result) );
-               switch( result )
-               {
-                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                     /* visit next (if any) */
-                     ++root->walkcurrentchild;
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_SKIP :
-                     /* skip visiting the rest of the children */
-                     root->walkcurrentchild = root->nchildren;
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_ABORT :
-                     aborted = TRUE;
-                     break;
-               }
-            }
-            else
-            {
-               /* visit next child (if any) */
-               ++root->walkcurrentchild;
-            }
-            /* goto visiting (next) */
-            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
-            break;
-
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
-            if( leaveexpr != NULL )
-            {
-               SCIP_CONSEXPR_EXPR* parent;
-
-               /* store parent in case the callback frees root */
-               parent = root->walkparent;
-
-               SCIP_CALL( (*leaveexpr)(scip, root, stage, data, &result) );
-               switch( result )
-               {
-                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_SKIP :
-                     /* this result is not allowed here */
-                     SCIPABORT();
-                     break;
-                  case SCIP_CONSEXPREXPRWALK_ABORT :
-                     aborted = TRUE;
-                     break;
-               }
-
-               /* go up */
-               root = parent;
-            }
-            else
-            {
-               /* go up */
-               root = root->walkparent;
-            }
-            /* if we finished with the real root (walkparent == NULL), we are done */
-            if( root == NULL )
-               aborted = TRUE;
-
-            /* goto visited */
-            stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
-            break;
-         default:
-            /* unknown stage */
-            SCIPABORT();
-      }
-   }
-
-   /* recover previous information */
-   root                   = oldroot;
-   root->walkcurrentchild = oldcurrentchild;
-   root->walkparent       = oldparent;
-   root->walkio           = oldwalkio;
-
-   /* release root captured by walker */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &root) );
-
-   return SCIP_OKAY;
-}
-
 /** gets the index an expression iterator can use to store iterator specific data in an expression */
 SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
@@ -9462,46 +9146,6 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
    assert(conshdlrdata != NULL);
 
    return ++conshdlrdata->lastvisitedtag;
-}
-
-/** Gives the parent of an expression in an expression graph walk.
- *
- * During an expression walk, this function returns the expression from which the given expression has been accessed.
- * If not in an expression walk, the returned pointer is undefined.
- */
-SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->walkparent;
-}
-
-/** Gives the index of the child that will be visited next (or is currently visited) by an expression walk. */
-int SCIPgetConsExprExprWalkCurrentChild(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->walkcurrentchild;
-}
-
-/** Gives the precedence of the expression handler of the parent expression in an expression graph walk.
- *
- * If there is no parent, then 0 is returned.
- */
-unsigned int SCIPgetConsExprExprWalkParentPrecedence(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   )
-{
-   assert(expr != NULL);
-
-   if( expr->walkparent == NULL )
-      return 0;
-
-   return expr->walkparent->exprhdlr->precedence;
 }
 
 /*
@@ -10089,13 +9733,13 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, (unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR));
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
          {
             int nspaces;
             const char* type;
@@ -10135,7 +9779,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
          {
             int nspaces;
             const char* type;
@@ -10152,13 +9796,12 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
          {
             --depth;
             break;
          }
 
-         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
          default:
             /* shouldn't be here */
             SCIPABORT();
