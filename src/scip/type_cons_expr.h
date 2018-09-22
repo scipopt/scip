@@ -181,12 +181,12 @@ extern "C" {
 /** expression print callback
  *
  * the method prints an expression
- * it is called during an expression walk at different stages of the walk
+ * it is called while iterating over the expression graph at different stages
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
- *  - stage: stage of expression print walk
+ *  - stage: stage of expression graph iteration
  *  - currentchild: index of current child if in stage visitingchild or visitedchild
  *  - parentprecedence: precedence of parent
  *  - file : the file to print to
@@ -491,17 +491,6 @@ typedef enum
    SCIP_CONSEXPREXPRWALK_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
 } SCIP_CONSEXPREXPRWALK_STAGE;
 #define SCIP_CONSEXPREXPRWALK_ALLSTAGES ((unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR))
-
-/** feedback from expression walker callback to expression walker to direct the walk
- *
- * The return code SCIP_CONSEXPREXPRWALK_SKIP is only allowed in the stages SCIP_CONSEXPREXPRWALK_ENTERNODE and SCIP_CONSEXPREXPRWALK_VISITINGCHILD.
- */
-typedef enum
-{
-   SCIP_CONSEXPREXPRWALK_CONTINUE,           /**< continue the walk */
-   SCIP_CONSEXPREXPRWALK_SKIP,               /**< skip this node (if in ENTEREXPR stage) or the next child (if in VISITINGCHILD stage) */
-   SCIP_CONSEXPREXPRWALK_ABORT               /**< abort the walk */
-} SCIP_CONSEXPREXPRWALK_RESULT;
 
 /** user data storage type for expression walker */
 typedef union
