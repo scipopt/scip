@@ -28,6 +28,7 @@
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_product.h"
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr.h"
 
 #include "include/scip_test.h"
@@ -568,4 +569,113 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+}
+
+Test(iterator, walk_in_walk)
+{
+   SCIP_CONSEXPR_EXPR* expr_x;
+   SCIP_CONSEXPR_EXPR* expr_y;
+   SCIP_CONSEXPR_EXPR* expr_5;
+   SCIP_CONSEXPR_EXPR* expr_xy5;
+   SCIP_CONSEXPR_EXPR* expr_sum;
+   SCIP_CONSEXPR_ITERATOR* it2;
+   int nnodes;
+
+   /* create expressions for variables x and y */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+   /* create expression for constant -5 */
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
+
+   /* create expression for product of -5, x, and y, and constant factor -2 */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, -2.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5) );
+
+   /* create expression for sum of x and product (expr_xy5) */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 1, &expr_x, NULL, 0) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr_sum, expr_xy5, 1.0) );
+
+   /* returns sum_{expr in expr_sum} 1 */
+   nnodes = 0;
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_sum, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      ++nnodes;
+      SCIPexpriteratorGetNext(it);
+   }
+   cr_assert(nnodes == 6);
+
+   /* returns sum_{expr in expr_sum} nchild(expr) by repeatedly counting */
+   nnodes = 0;
+   SCIPexpriteratorCreate(&it2, conshdlr, SCIPblkmem(scip));
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_sum, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, (unsigned int)SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      SCIP_CALL( SCIPexpriteratorInit(it2, SCIPexpriteratorGetCurrent(it), SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      while( !SCIPexpriteratorIsEnd(it2) )
+      {
+         ++nnodes;
+         SCIPexpriteratorGetNext(it2);
+      }
+      SCIPexpriteratorGetNext(it);
+   }
+   cr_assert(nnodes == 14);
+   SCIPexpriteratorFree(&it2);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
+}
+
+#include "walk.sol"
+
+Test(iterator, print)
+{
+   SCIP_CONSEXPR_EXPR* expr_x;
+   SCIP_CONSEXPR_EXPR* expr_y;
+   SCIP_CONSEXPR_EXPR* expr_5;
+   SCIP_CONSEXPR_EXPR* expr_xy5;
+   SCIP_CONSEXPR_EXPR* expr_sum;
+
+   /* create expressions for variables x and y */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+   /* create expression for constant -5 */
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
+
+   /* create expression for product of -5, x, and y, and constant factor -2 */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, -2.0) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5) );
+
+   /* create expression for sum of x and product (expr_xy5) */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 1, &expr_x, NULL, 0) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr_sum, expr_xy5, 1.0) );
+
+   cr_redirect_stdout();
+
+   SCIP_CALL( SCIPexpriteratorInit(it, expr_sum, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPREXPRWALK_ALLSTAGES);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+      printf("stage %d curchild %d type %s\n",
+         SCIPexpriteratorGetStageDFS(it),
+         SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITINGCHILD || SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPREXPRWALK_VISITEDCHILD ? SCIPexpriteratorGetChildIdxDFS(it) : -1,
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+
+   fflush(stdout);
+
+   cr_assert_stdout_eq_str(sol);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
 }
