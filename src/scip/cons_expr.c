@@ -757,8 +757,6 @@ SCIP_RETCODE copyExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
-         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          default:
             /* we should never be called in this stage */
             SCIPABORT();
@@ -1690,8 +1688,7 @@ SCIP_RETCODE forwardPropExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
-         case SCIP_CONSEXPRITERATOR_VISITEDCHILD:
+         default:
             /* you should never be here */
             SCIPABORT();
             break;
@@ -2732,7 +2729,7 @@ SCIP_RETCODE propagateLocks(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
+         default :
             /* you should never be here */
             SCIPABORT();
             break;
@@ -3102,8 +3099,6 @@ SCIP_RETCODE reformulateConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_ENTEREXPR :
-         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          default:
             SCIPABORT(); /* we should never be called in this stage */
             break;
@@ -4269,8 +4264,6 @@ SCIP_RETCODE computeBranchingScores(
             }
 
             default:
-            case SCIP_CONSEXPRITERATOR_ENTEREXPR :
-            case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
                SCIPABORT();
                break;
          }
@@ -8067,8 +8060,6 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_ENTEREXPR :
-         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          default:
             SCIPABORT(); /* we should never be called in this stage */
             break;
@@ -8541,8 +8532,6 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_ENTEREXPR :
-         case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
          default :
             /* we should never be here */
             SCIPABORT();
@@ -9853,7 +9842,6 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             break;
          }
 
-         case SCIP_CONSEXPRITERATOR_VISITEDCHILD:
          default:
             /* shouldn't be here */
             SCIPABORT();
