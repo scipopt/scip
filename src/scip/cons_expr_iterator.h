@@ -175,7 +175,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_CONSEXPREXPRWALK_STAGE values
+ * @param stopstages should be a bitwise OR of different SCIP_CONSEXPRITERATOR_STAGE values
  *
  * If the current stage is not one of the stopstages, then the iterator will be moved on.
  */
@@ -196,7 +196,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
  * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_STAGE SCIPexpriteratorGetStageDFS(
+SCIP_CONSEXPRITERATOR_STAGE SCIPexpriteratorGetStageDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 

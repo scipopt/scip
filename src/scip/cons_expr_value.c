@@ -68,7 +68,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
+   if( stage == SCIP_CONSEXPRITERATOR_ENTEREXPR )
    {
       SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
       if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )

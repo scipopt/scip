@@ -221,7 +221,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
 
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
+   if( stage == SCIP_CONSEXPRITERATOR_ENTEREXPR )
    {
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprData(expr)));
    }

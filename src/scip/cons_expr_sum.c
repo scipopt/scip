@@ -732,7 +732,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -748,7 +748,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
       {
          SCIP_Real coef;
 
@@ -777,7 +777,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -787,7 +787,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
       default: ;
    }
 

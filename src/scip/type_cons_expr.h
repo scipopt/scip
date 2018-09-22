@@ -194,7 +194,7 @@ extern "C" {
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   SCIP_CONSEXPRITERATOR_STAGE stage, \
    int currentchild, \
    unsigned int parentprecedence, \
    FILE* file)
@@ -482,15 +482,15 @@ extern "C" {
  */
 #define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
 
-/** stages of expression walker in which the walker callbacks are called */
+/** stages of expression DFS iteration */
 typedef enum
 {
-   SCIP_CONSEXPREXPRWALK_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
-   SCIP_CONSEXPREXPRWALK_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
-   SCIP_CONSEXPREXPRWALK_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
-   SCIP_CONSEXPREXPRWALK_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
-} SCIP_CONSEXPREXPRWALK_STAGE;
-#define SCIP_CONSEXPREXPRWALK_ALLSTAGES ((unsigned int)(SCIP_CONSEXPREXPRWALK_ENTEREXPR | SCIP_CONSEXPREXPRWALK_VISITINGCHILD | SCIP_CONSEXPREXPRWALK_VISITEDCHILD | SCIP_CONSEXPREXPRWALK_LEAVEEXPR))
+   SCIP_CONSEXPRITERATOR_ENTEREXPR = 1,      /**< an expression is visited the first time (before any of its children are visited) */
+   SCIP_CONSEXPRITERATOR_VISITINGCHILD = 2,  /**< a child of an expression is to be visited */
+   SCIP_CONSEXPRITERATOR_VISITEDCHILD = 4,   /**< a child of an expression has been visited */
+   SCIP_CONSEXPRITERATOR_LEAVEEXPR = 8       /**< an expression is to be left (all of its children have been processed) */
+} SCIP_CONSEXPRITERATOR_STAGE;
+#define SCIP_CONSEXPRITERATOR_ALLSTAGES ((unsigned int)(SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR))
 
 /** user data storage type for expression walker */
 typedef union
@@ -532,7 +532,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPREXPRWALK_VISIT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   SCIP_CONSEXPRITERATOR_STAGE stage, \
    void* data, \
    SCIP_CONSEXPREXPRWALK_RESULT* result)
 
