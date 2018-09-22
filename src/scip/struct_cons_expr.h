@@ -83,7 +83,7 @@ struct SCIP_ConsExpr_Expr_IterData
    SCIP_CONSEXPR_EXPR*      parent;       /**< parent expression in expression walk */
    int                      currentchild; /**< child that is currently visited (or will be visited next) by expression walk */
    unsigned int             visitedtag;   /**< tag to identify whether an expression has been visited already */
-   SCIP_CONSEXPREXPRWALK_IO userdata;     /**< space for iteration user to store some (temporary) data */
+   SCIP_CONSEXPRITERATOR_USERDATA userdata; /**< space for iteration user to store some (temporary) data */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */

@@ -609,7 +609,7 @@ SCIP_RETCODE copyExpr(
 {
    SCIP_CONSHDLR* targetconsexprhdlr = NULL;
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPREXPRWALK_IO expriteruserdata;
+   SCIP_CONSEXPRITERATOR_USERDATA expriteruserdata;
    SCIP_CONSEXPR_EXPR* expr;
 
    assert(sourcescip != NULL);
@@ -973,7 +973,7 @@ SCIP_RETCODE hashExpr(
    int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
    )
 {
-   SCIP_CONSEXPREXPRWALK_IO walkiodata;
+   SCIP_CONSEXPRITERATOR_USERDATA iterdata;
    unsigned int* childrenhashes;
    int childrenhashessize;
    unsigned int exprhash;
@@ -1019,8 +1019,8 @@ SCIP_RETCODE hashExpr(
          exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
       }
 
-      walkiodata.uintval = exprhash;
-      SCIPexpriteratorSetCurrentUserData(hashiterator, walkiodata);
+      iterdata.uintval = exprhash;
+      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
    }
 
    SCIPfreeBufferArray(scip, &childrenhashes);
@@ -2616,7 +2616,7 @@ SCIP_RETCODE propagateLocks(
 {
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPREXPRWALK_IO ituserdata;
+   SCIP_CONSEXPRITERATOR_USERDATA ituserdata;
 
    assert(expr != NULL);
 
@@ -3030,7 +3030,7 @@ SCIP_RETCODE reformulateConsExprExpr(
          case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
          {
             SCIP_CONSEXPR_EXPR* refexpr = NULL;
-            SCIP_CONSEXPREXPRWALK_IO walkio;
+            SCIP_CONSEXPRITERATOR_USERDATA iterdata;
 
             /* use simplification of expression handlers */
             if( simplify )
@@ -3096,8 +3096,8 @@ SCIP_RETCODE reformulateConsExprExpr(
                }
             }
 
-            walkio.ptrval = (void*) refexpr;
-            SCIPexpriteratorSetCurrentUserData(it, walkio);
+            iterdata.ptrval = (void*) refexpr;
+            SCIPexpriteratorSetCurrentUserData(it, iterdata);
 
             break;
          }

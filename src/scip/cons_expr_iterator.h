@@ -226,7 +226,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetCurrentUserData(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
@@ -235,7 +235,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetCurrentUserData(
  * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetChildUserDataDFS(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
@@ -244,7 +244,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetChildUserDataDFS(
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
    );
@@ -256,7 +256,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
 EXTERN
 void SCIPexpriteratorSetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored */
+   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored */
    );
 
 /** sets the iterator specific user data of the current expressions current child
@@ -266,7 +266,7 @@ void SCIPexpriteratorSetCurrentUserData(
 EXTERN
 void SCIPexpriteratorSetChildUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored in current child */
+   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored in current child */
    );
 
 /** moves the iterator to the next expression according to the mode of the expression iterator

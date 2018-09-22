@@ -500,7 +500,7 @@ typedef union
    int                   intvals[2];         /**< two integer values */
    unsigned int          uintval;            /**< an unsigned integer value */
    void*                 ptrval;             /**< a pointer */
-} SCIP_CONSEXPREXPRWALK_IO;
+} SCIP_CONSEXPRITERATOR_USERDATA;
 
 /** mode for expression iterator */
 typedef enum
