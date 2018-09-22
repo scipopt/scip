@@ -360,6 +360,8 @@ SCIP_Bool SCIPexpriteratorIsInit(
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
  *
+ * \note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
+ *
  * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
  *
  * More details on the DFS mode:
@@ -447,13 +449,12 @@ SCIP_Bool SCIPexpriteratorIsInit(
  */
 SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
+   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator, can be NULL */
    SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
    SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    )
 {
    assert(iterator != NULL);
-   assert(expr != NULL);
 
    deinit(iterator);
 
@@ -491,6 +492,13 @@ SCIP_RETCODE SCIPexpriteratorInit(
 
          assert(iterator->queue != NULL);
          SCIPqueueClear(iterator->queue);
+
+         if( expr == NULL )
+         {
+            iterator->curr = NULL;
+            break;
+         }
+
          SCIP_CALL( SCIPqueueInsert(iterator->queue, expr) );
 
          if( iterator->visitedtag != 0 )
@@ -511,9 +519,16 @@ SCIP_RETCODE SCIPexpriteratorInit(
       {
          SCIP_CALL( ensureStackSize(iterator, MINDFSSIZE) );
 
-         reverseTopologicalInsert(iterator, expr);
+         if( expr != NULL )
+         {
+            reverseTopologicalInsert(iterator, expr);
+            iterator->curr = SCIPexpriteratorGetNext(iterator);
+         }
+         else
+         {
+            iterator->curr = NULL;
+         }
 
-         iterator->curr = SCIPexpriteratorGetNext(iterator);
          break;
       }
 
@@ -521,11 +536,15 @@ SCIP_RETCODE SCIPexpriteratorInit(
       {
          assert(iterator->iterindex >= 0);
 
+         iterator->stopstages = SCIP_CONSEXPRITERATOR_ENTEREXPR;
          iterator->curr = expr;
+
+         if( expr == NULL )
+            break;
+
          expr->iterdata[iterator->iterindex].currentchild = 0;
          expr->iterdata[iterator->iterindex].parent = NULL;
          iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
-         iterator->stopstages = SCIP_CONSEXPRITERATOR_ENTEREXPR;
 
          break;
       }

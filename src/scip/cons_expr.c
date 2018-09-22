@@ -4124,6 +4124,7 @@ SCIP_RETCODE computeBranchingScores(
    brscoretag = ++(conshdlrdata->lastbrscoretag);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    /* call branching score callbacks for expressions in violated constraints */
    for( i = 0; i < nconss; ++i )
@@ -4138,18 +4139,9 @@ SCIP_RETCODE computeBranchingScores(
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
       consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
 
-      assert(consdata->expr == SCIPexpriteratorGetCurrent(it) || SCIPexpriteratorIsEnd(it));
-      for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
          if( expr->auxvar == NULL )
@@ -4706,6 +4698,7 @@ SCIP_RETCODE freeAuxVars(
    assert(nconss >= 0);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -4718,16 +4711,7 @@ SCIP_RETCODE freeAuxVars(
       if( consdata->expr == NULL )
          continue;
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIP_CALL( freeAuxVar(scip, expr) );
       }
@@ -4760,6 +4744,7 @@ SCIP_RETCODE initSepa(
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    *infeasible = FALSE;
    for( c = 0; c < nconss && !*infeasible; ++c )
@@ -4775,16 +4760,7 @@ SCIP_RETCODE initSepa(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* call initsepa of all nlhdlrs in expr */
          for( e = 0; e < expr->nenfos; ++e )
@@ -5083,6 +5059,7 @@ SCIP_RETCODE separatePoint(
    assert(result != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5116,16 +5093,7 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void)SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* it only makes sense to call the separation callback if there is a variable attached to the expression */
          if( expr->auxvar == NULL )
@@ -5898,6 +5866,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -5911,16 +5880,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( !SCIPexpriteratorIsInit(it) )
-      {
-         SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-      }
-      else
-      {
-         (void) SCIPexpriteratorRestartDFS(it, consdata->expr);
-      }
-
-      for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
