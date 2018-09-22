@@ -769,31 +769,6 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
-/** Gives the parent of an expression in an expression graph walk.
- *
- * During an expression walk, this function returns the expression from which the given expression has been accessed.
- * If not in an expression walk, the returned pointer is undefined.
- */
-EXTERN
-SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   );
-
-/** Gives the index of the child that will be visited next (or is currently visited) by an expression walk. */
-EXTERN
-int SCIPgetConsExprExprWalkCurrentChild(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
-   );
-
-/** Gives the precedence of the expression handler of the parent expression in an expression graph walk.
- *
- * If there is no parent, then 0 is returned.
- */
-EXTERN
-unsigned int SCIPgetConsExprExprWalkParentPrecedence(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   );
-
 /** Creates an expression from a string.
  * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms

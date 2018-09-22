@@ -9199,46 +9199,6 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
    return ++conshdlrdata->lastvisitedtag;
 }
 
-/** Gives the parent of an expression in an expression graph walk.
- *
- * During an expression walk, this function returns the expression from which the given expression has been accessed.
- * If not in an expression walk, the returned pointer is undefined.
- */
-SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->walkparent;
-}
-
-/** Gives the index of the child that will be visited next (or is currently visited) by an expression walk. */
-int SCIPgetConsExprExprWalkCurrentChild(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->walkcurrentchild;
-}
-
-/** Gives the precedence of the expression handler of the parent expression in an expression graph walk.
- *
- * If there is no parent, then 0 is returned.
- */
-unsigned int SCIPgetConsExprExprWalkParentPrecedence(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
-   )
-{
-   assert(expr != NULL);
-
-   if( expr->walkparent == NULL )
-      return 0;
-
-   return expr->walkparent->exprhdlr->precedence;
-}
-
 /*
  * constraint specific interface methods
  */
