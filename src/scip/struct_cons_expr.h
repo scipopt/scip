@@ -110,7 +110,6 @@ struct SCIP_ConsExpr_Expr
    /* branching */
    SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */
    unsigned int            brscoretag;    /**< tag to decide whether a branching score of an expression needs to be initialized */
-   unsigned int            brscoreevaltag;/**< tag to decide whether the branching scoring callback of an expression needs to be called */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
