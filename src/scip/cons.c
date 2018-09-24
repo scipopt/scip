@@ -6299,7 +6299,7 @@ SCIP_RETCODE SCIPconsGetVars(
    return SCIP_OKAY;
 }
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @note The success pointer indicates if the contraint handler was able to return the number of variables
  *
