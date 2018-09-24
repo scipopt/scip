@@ -192,6 +192,7 @@ struct SCIP_ConshdlrData
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
+   SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
 
    /* upgrade */
    SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
@@ -3123,6 +3124,8 @@ SCIP_RETCODE canonicalizeConstraints(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIP_CALL( SCIPstartClock(scip, conshdlrdata->canonicalizetime) );
+
    /* check whether at least one nonlinear handler implements the reformulation callback */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -3278,6 +3281,8 @@ SCIP_RETCODE canonicalizeConstraints(
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &nlocksneg);
    SCIPfreeBufferArray(scip, &nlockspos);
+
+   SCIP_CALL( SCIPstopClock(scip, conshdlrdata->canonicalizetime) );
 
    return SCIP_OKAY;
 }
@@ -5327,11 +5332,15 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Cons-Expr Hdlr     : %10s %10s %10s\n", "DespBranch", "DespCutoff", "ForceLP");
-   SCIPinfoMessage(scip, file, "  %-17s:", "enforcement");
+   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s\n", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "  %-18s", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
+   SCIPinfoMessage(scip, file, "\n");
+   SCIPinfoMessage(scip, file, "ConsExpr Presolve  : %10s\n", "CanonTime");
+   SCIPinfoMessage(scip, file, "  %-18s", "");
+   SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 }
 
@@ -5636,6 +5645,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->exprconsupgrades, conshdlrdata->exprconsupgradessize);
 
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->canonicalizetime) );
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -5714,6 +5724,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata->ndesperatebranch = 0;
    conshdlrdata->ndesperatecutoff = 0;
    conshdlrdata->nforcelp = 0;
+   SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
 
    return SCIP_OKAY;
 }
@@ -9178,6 +9189,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
+   SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->canonicalizetime) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
