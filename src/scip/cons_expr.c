@@ -603,7 +603,7 @@ SCIP_RETCODE copyExpr(
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   sourceexpr,         /**< expression to be copied */
    SCIP_CONSEXPR_EXPR**  targetexpr,         /**< buffer to store pointer to copy of source expression */
-   SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar)),  /**< variable mapping function, or NULL for identity mapping */
+   SCIP_DECL_CONSEXPR_MAPVAR((*mapvar)),  /**< variable mapping function, or NULL for identity mapping */
    void*                 mapvardata          /**< data of variable mapping function */
    )
 {
@@ -776,7 +776,7 @@ SCIP_RETCODE copyExpr(
 
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
+SCIP_DECL_CONSEXPR_MAPVAR(transformVar)
 {   /*lint --e{715}*/
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
@@ -793,7 +793,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
+SCIP_DECL_CONSEXPR_MAPVAR(copyVar)
 {
    COPY_MAPVAR_DATA* data;
    SCIP_Bool valid;

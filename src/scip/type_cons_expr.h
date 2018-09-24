@@ -78,7 +78,7 @@ extern "C" {
  *  - sourcevar          : variable to be mapped
  *  - mapvardata         : data of callback
  */
-#define SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_MAPVAR(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
    SCIP_VAR** targetvar, \
    SCIP* sourcescip, \
@@ -165,7 +165,7 @@ extern "C" {
    SCIP_CONSEXPR_EXPRDATA** targetexprdata, \
    SCIP* sourcescip, \
    SCIP_CONSEXPR_EXPR* sourceexpr, \
-   SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(mapvar), \
+   SCIP_DECL_CONSEXPR_MAPVAR(mapvar), \
    void* mapvardata)
 
 /** expression data free callback
