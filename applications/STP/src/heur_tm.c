@@ -276,7 +276,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       {
          if( rpcmw && g->mark[i] )
          {
-            printf("i %d g->prize[i] %f\n", i,g->prize[i]);
             assert(g->prize[i] == FARAWAY);
             continue;
          }
@@ -1712,6 +1711,7 @@ SCIP_RETCODE runPcMW(
 
    if( rmw || rpc )
    {
+     // graph_printInfo(graph);
       SCIP_Real max = 0.0;
 
       for( int k = 0; k < t; k++ )
@@ -1742,7 +1742,8 @@ SCIP_RETCODE runPcMW(
             terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
          }
       }
-
+//printf("%d %d \n", nterms, t);
+//graph_knot_printInfo(graph, graph->source);
       assert(nterms == t);
       SCIPsortRealInt(terminalprio, terminalperm, nterms);
    }

@@ -1223,7 +1223,6 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real ub;
    SCIP_Real fix;
    SCIP_Real timelimit;
-   SCIP_Real rootprize = 0.0;
    const SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
    int nelims;
    int danelims;
@@ -1244,20 +1243,13 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
 
-   int deleteme;
-   return SCIP_OKAY;
-
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
-   if( rpc )
-   {
-      rootprize = g->prize[g->source];
-      g->prize[g->source] = FARAWAY;
-   }
+   assert(!rpc || g->prize[g->source] == FARAWAY);
 
    ub = -1.0;
    fix = 0.0;
@@ -1270,7 +1262,16 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
    assert(graph_pc_term2edgeConsistent(g));
 
+
+
+
+   graph_pc_2trans(g);
+   graph_pc_presolExit(scip, g);
+   return SCIP_OKAY;
+
+
    prizesum = graph_pc_getPosPrizeSum(scip, g);
+   assert(prizesum < FARAWAY);
 
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1432,8 +1433,7 @@ SCIP_RETCODE redLoopPc(
    }
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
-   if( rpc )
-      g->prize[g->source] = rootprize;
+   assert(!rpc || g->prize[g->source] == FARAWAY);
 
    assert(graph_pc_term2edgeConsistent(g));
    graph_pc_2trans(g);

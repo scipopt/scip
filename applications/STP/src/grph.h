@@ -209,6 +209,7 @@ extern void   graph_pc_2transcheck(GRAPH*);
 extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
+extern void   graph_pc_deleteDummyTerm(SCIP*, GRAPH*, int);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);

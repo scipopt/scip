@@ -1563,6 +1563,7 @@ void graph_path_st_rpcmw(
 
    /* unmark dummy terminals */
    graph_pc_markOrgGraph(scip, g);
+   assert(graph_pc_knotIsFixedTerm(g, g->source));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1571,15 +1572,18 @@ void graph_path_st_rpcmw(
       pathedge[k] = -1;
       connected[k] = FALSE;
 
-      if( Is_term(g->term[k]) && g->mark[k] )
+      if( graph_pc_knotIsFixedTerm(g, k) )
+      {
+         assert(g->mark[k]);
          nrterms++;
+      }
 
       if( Is_pterm(g->term[k]) )
-         if( SCIPisGT(scip, g->prize[k], maxprize) && k != start )
+         if( g->prize[k] > maxprize && k != start )
             maxprize = g->prize[k];
    }
 
-   /* add start vertex to heap */
+   assert(SCIPisLT(scip, maxprize, FARAWAY));
 
    pathdist[start] = 0.0;
    connected[start] = TRUE;
@@ -1593,6 +1597,7 @@ void graph_path_st_rpcmw(
       int termscount = 0;
       int rtermscount = 0;
 
+      /* add start vertex to heap */
       k = start;
       count = 1;
       heap[count] = k;
@@ -1605,11 +1610,14 @@ void graph_path_st_rpcmw(
          k = nearestX(heap, state, &count, pathdist);
          state[k] = UNKNOWN;
 
-         /* if k is positive vertex and close enough, connect its path to current subtree */
+         /* if k is fixed terminal positive vertex and close enough, connect its path to current subtree */
          if( Is_gterm(g->term[k]) && (Is_term(g->term[k]) || SCIPisGE(scip, g->prize[k], pathdist[k])) && !connected[k] )
          {
             if( Is_term(g->term[k]) )
+            {
+               assert(graph_pc_knotIsFixedTerm(g, k));
                rtermscount++;
+            }
 
             connected[k] = TRUE;
             pathdist[k] = 0.0;
@@ -1633,6 +1641,7 @@ void graph_path_st_rpcmw(
          }
          else if( SCIPisGT(scip, pathdist[k], maxprize) && rtermscount >= nrterms )
          {
+            assert(rtermscount == nrterms);
             break;
          }
 
@@ -1649,6 +1658,12 @@ void graph_path_st_rpcmw(
          }
       }
    }
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+      if( graph_pc_knotIsFixedTerm(g, k) )
+         assert(connected[k]);
+#endif
 }
 
 

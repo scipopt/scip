@@ -29,7 +29,7 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                                                   */
-
+//#define SCIP_DEBUG
 #include "scip/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -854,6 +854,8 @@ SCIP_Bool graph_pc_term2edgeConsistent(
    const GRAPH*          g                   /**< the graph */
 )
 {
+   const int root = g->source;
+
    assert(g != NULL);
    assert(g->term2edge);
    assert(!g->extended);
@@ -863,7 +865,7 @@ SCIP_Bool graph_pc_term2edgeConsistent(
 
    for( int i = 0; i < g->knots; i++ )
    {
-      if( Is_gterm(g->term[i]) && i != g->source && g->term2edge[i] < 0 )
+      if( Is_gterm(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) && i != root && g->term2edge[i] < 0 )
       {
          SCIPdebugMessage("term2edge consistency fail1 %d \n", i);
          return FALSE;
@@ -875,7 +877,7 @@ SCIP_Bool graph_pc_term2edgeConsistent(
          return FALSE;
       }
 
-      if( Is_pterm(g->term[i]) && i != g->source )
+      if( Is_pterm(g->term[i]) && i != root )
       {
          int k = -1;
          int e;
@@ -883,7 +885,7 @@ SCIP_Bool graph_pc_term2edgeConsistent(
          for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
             k = g->head[e];
-            if( Is_term(g->term[k]) && k != g->source )
+            if( Is_term(g->term[k]) && k != root )
                break;
          }
          assert(e != EAT_LAST);
@@ -2007,6 +2009,55 @@ SCIP_RETCODE graph_pc_mw2rmw(
    return SCIP_OKAY;
 }
 
+/* deletes dummy terminal to given node */
+void graph_pc_deleteDummyTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i                   /**< index of the terminal */
+   )
+{
+   int e;
+   int j;
+
+   assert(g != NULL);
+   assert(!g->extended);
+   assert(Is_term(g->term[i]));
+   assert(!graph_pc_knotIsFixedTerm(g, i));
+   assert(i != g->source);
+
+   /* get edge from s to its artificial terminal */
+   for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      if( Is_pterm(g->term[g->head[e]]) )
+         break;
+
+   assert(e != EAT_LAST);
+   assert(g->pcancestors != NULL);
+
+   /* artificial terminal to s */
+   j = g->head[e];
+
+   assert(j != g->source);
+   assert(!g->mark[j]);
+   assert(g->term2edge != NULL);
+
+   /* delete edge and unmark artificial terminal */
+   graph_knot_chg(g, j, -1);
+   graph_edge_del(scip, g, e, TRUE);
+   g->term2edge[j] = -1;
+
+   /* delete remaining incident edge of artificial terminal */
+   e = g->inpbeg[j];
+
+   assert(e != EAT_LAST);
+   assert(g->source == g->tail[e] || g->source == j);
+   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
+
+   graph_edge_del(scip, g, e, TRUE);
+
+   g->term2edge[i] = -1;
+   assert(g->inpbeg[j] == EAT_LAST);
+}
+
 
 /** delete a terminal for a (rooted) prize-collecting problem */
 int graph_pc_deleteTerm(
@@ -2022,6 +2073,8 @@ int graph_pc_deleteTerm(
    assert(g != NULL);
    assert(scip != NULL);
    assert(Is_term(g->term[i]));
+   assert(i != g->source);
+   assert(!graph_pc_knotIsFixedTerm(g, i));
 
    t = UNKNOWN;
 
@@ -2030,6 +2083,14 @@ int graph_pc_deleteTerm(
    assert(g->term2edge[i] != -1);
    graph_pc_knot2nonTerm(g, i);
    g->mark[i] = FALSE;
+
+#if 0
+   if( graph_pc_knotIsFixedTerm(g, i) )
+   {
+      graph_knot_del(g, i, TRUE);
+      return grad;
+   }
+#endif
 
    while( (e = g->outbeg[i]) != EAT_LAST )
    {
@@ -2183,6 +2244,8 @@ SCIP_RETCODE graph_pc_contractEdge(
    assert(g != NULL);
    assert(scip != NULL);
    assert(Is_term(g->term[i]));
+   assert(!g->extended);
+   assert(g->source != s);
 
    /* get edge from t to s */
    for( ets = g->outbeg[t]; ets != EAT_LAST; ets = g->oeat[ets] )
@@ -2191,53 +2254,57 @@ SCIP_RETCODE graph_pc_contractEdge(
 
    assert(ets != EAT_LAST);
 
+   if( graph_pc_knotIsFixedTerm(g, s) || graph_pc_knotIsFixedTerm(g, t) )
+   {
+      assert(graph_pc_isRootedPcMw(g));
+
+      if( g->pcancestors[s] != NULL )
+      {
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[s], NULL) );
+         SCIPintListNodeFree(scip, &(g->pcancestors[s]));
+      }
+
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ets], NULL) );
+
+      if( !graph_pc_knotIsFixedTerm(g, s) )
+      {
+         assert(graph_pc_knotIsFixedTerm(g, t));
+         if( Is_term(g->term[s]))
+            graph_pc_deleteDummyTerm(scip, g, s);
+      }
+      else if( !graph_pc_knotIsFixedTerm(g, t) )
+      {
+         /* need to make t a fixed term */
+         assert(g->source != t);
+         graph_pc_deleteDummyTerm(scip, g, t);
+         assert(g->prize[s] = FARAWAY);
+         g->prize[t] = FARAWAY;
+      }
+
+      /* contract s into t */
+      SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
+      g->term2edge[t] = -1;
+      assert(g->term2edge[s] == -1);
+
+      return SCIP_OKAY;
+   }
+
+   assert(!graph_pc_isRootedPcMw(g) || (s != g->source && t != g->source));
+
    SCIP_CALL( graph_pc_contractEdgeAncestors(scip, g, t, s, ets) );
 
    /* are both endpoints of the edge to be contracted terminals? */
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
    {
-      int e;
-      int j;
+      double costs = g->cost[ets]; // todo remove
+      graph_pc_deleteDummyTerm(scip, g, s);
 
-      /* get edge from s to its artificial terminal */
-      for( e = g->outbeg[s]; e != EAT_LAST; e = g->oeat[e] )
-         if( Is_pterm(g->term[g->head[e]]) )
-            break;
-
-      assert(e != EAT_LAST);
-      assert(g->pcancestors != NULL);
-
-      /* artificial terminal to s */
-      j = g->head[e];
-
-      assert(j != g->source);
-      assert(!g->mark[j]);
-      assert(g->term2edge != NULL);
-
-      /* delete edge and unmark artificial terminal */
-      graph_knot_chg(g, j, -1);
-      graph_edge_del(scip, g, e, TRUE);
-      g->term2edge[j] = -1;
-
-      /* delete remaining incident edge of artificial terminal */
-      e = g->inpbeg[j];
-
-      assert(e != EAT_LAST);
-      assert(g->source == g->tail[e] || g->source == j);
-      assert(SCIPisEQ(scip, g->prize[s], g->cost[e]));
+      assert(costs == g->cost[ets]);
 
       graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], i);
-      graph_edge_del(scip, g, e, TRUE);
-
-      assert(g->inpbeg[j] == EAT_LAST);
 
       /* contract s into t */
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
-      g->term2edge[s] = -1;
-
-      assert(g->grad[s] == 0);
-
-      SCIPdebugMessage("PC contract: %d, %d \n", t, s);
    }
    else
    {
@@ -2247,6 +2314,9 @@ SCIP_RETCODE graph_pc_contractEdge(
          graph_pc_subtractPrize(scip, g, -(g->prize[s]), i);
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
+   assert(g->grad[s] == 0);
+   SCIPdebugMessage("PcMw contract: %d into %d \n", s, t);
+
    return SCIP_OKAY;
 }
 
@@ -3014,11 +3084,56 @@ void graph_printInfo(
    const GRAPH*          g                   /**< the graph */
    )
 {
+   char type[64];
+
+   switch( g->stp_type )
+      {
+   case 0:
+      strcpy(type, "STP_SPG");
+      break;
+   case 1:
+      strcpy(type, "STP_SAP");
+      break;
+   case 2:
+      strcpy(type, "STP_PCSPG");
+      break;
+   case 3:
+      strcpy(type, "STP_RPCSPG");
+      break;
+   case 4:
+      strcpy(type, "STP_NWSPG");
+      break;
+   case 5:
+      strcpy(type, "STP_DCSTP");
+      break;
+   case 6:
+      strcpy(type, "STP_REVENUES_BUDGET_HOPCONS");
+      break;
+   case 7:
+      strcpy(type, "STP_RSMT");
+      break;
+   case 8:
+      strcpy(type, "STP_OARSMT");
+      break;
+   case 9:
+      strcpy(type, "STP_MWCSP");
+      break;
+   case 10:
+      strcpy(type, "STP_DHCSTP");
+      break;
+   case 11:
+      strcpy(type, "STP_GSTP");
+      break;
+   case 12:
+      strcpy(type, "STP_RMWCSP");
+      break;
+   }
+
    assert(g != NULL);
    if( graph_pc_isPcMw(g) )
-      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d, isExtended=%d\n", g->knots, g->edges, g->terms, g->source, g->stp_type, g->extended);
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s, isExtended=%d\n", g->knots, g->edges, g->terms, g->source, type, g->extended);
    else
-      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d \n", g->knots, g->edges, g->terms, g->source, g->stp_type);
+      printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s \n", g->knots, g->edges, g->terms, g->source, type);
 }
 
 /** print information on edge */

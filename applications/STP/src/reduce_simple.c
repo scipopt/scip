@@ -55,6 +55,33 @@ SCIP_Bool adjterms(
 }
 #endif
 
+/* returns degree of non-root vertex in non-extended graph */
+static
+int realDegreePc(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   i,                  /**< the vertex to be checked */
+   SCIP_Bool             pc,                 /**< prize-collecting problem (otherwise rooted prize-collecting */
+   SCIP_Bool             fixedterm           /**< fixed terminal? */
+)
+{
+   const int ggrad = g->grad[i];
+   int newgrad;
+
+   assert(g != NULL);
+   assert(!g->extended);
+   assert(!Is_pterm(g->term[i]));
+   assert(i != g->source);
+
+   if( !Is_term(g->term[i]) || fixedterm )
+      newgrad = ggrad;
+   else if( pc )
+      newgrad = ggrad - 2;
+   else
+      newgrad = ggrad - 1;
+
+   return newgrad;
+}
+
 /** count numbers of chains */
 static
 unsigned nchains(
@@ -155,6 +182,8 @@ SCIP_RETCODE trydg1edgepc(
    {
       /* delete terminal */
 
+      assert(!graph_pc_knotIsFixedTerm(g, i));
+
       if( (i1 < i) && (Is_term(g->term[i1]) || g->grad[i1] == 2 || g->grad[i1] == 3) )
          (*rerun) = TRUE;
       SCIPdebugMessage("Delete (degree 1) terminal %d \n", i);
@@ -180,25 +209,18 @@ SCIP_RETCODE trydg1edgepc(
          *offset += g->cost[iout];
       }
 
-      if( g->source == i1 )
-      {
-         assert(g->stp_type == STP_RPCSPG );
-
-         if( g->pcancestors[i] != NULL )
-         {
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[i], NULL) );
-            SCIPintListNodeFree(scip, &(g->pcancestors[i]));
-         }
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[iout], NULL) );
-         (*count) += graph_pc_deleteTerm(scip, g, i);
-         return SCIP_OKAY;
-      }
-
       degsum = g->grad[i] + g->grad[i1];
 
-      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
-
-      degsum -= g->grad[i];
+      if( Is_term(g->term[i1]) )
+      {
+         SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i1, i, i1));
+         degsum -= g->grad[i1];
+      }
+      else
+      {
+         SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i, i1, i));
+         degsum -= g->grad[i];
+      }
 
       assert(degsum >= 1);
 
@@ -411,6 +433,7 @@ void adjust0term(
    assert(Is_term(g->term[i]));
    assert(g->source != i);
    assert(SCIPisZero(scip, g->prize[i]));
+   assert(!graph_pc_knotIsFixedTerm(g, i));
 
    t = UNKNOWN;
    e2 = UNKNOWN;
@@ -1193,8 +1216,8 @@ SCIP_RETCODE reduce_simple_mw(
                continue;
             }
          }
-      }
-   }
+      } /* i = 1 ... nnodes */
+   } /* main loop */
 
    /* contract adjacent positive vertices */
    for( int i = 0; i < nnodes; i++ )
@@ -1352,11 +1375,15 @@ SCIP_RETCODE reduce_simple_pc(
    SCIPdebugMessage("Degree Test: ");
 
    if( !pc )
+   {
+      assert(g->mark[root]);
       g->mark[root] = FALSE;
+   }
 
    /* main loop */
    while( rerun )
    {
+      SCIP_Bool fixedterm = FALSE;
       rerun = FALSE;
 
       for( int i = 0; i < nnodes; i++ )
@@ -1364,13 +1391,14 @@ SCIP_RETCODE reduce_simple_pc(
          assert(g->grad[i] >= 0);
          assert(!(g->mark[i] && Is_pterm(g->term[i])));
 
-         /* last condition should never be true, but just in case ... */
-         if( !g->mark[i] || g->grad[i] == 0 || Is_pterm(g->term[i]) )
+         if( !g->mark[i] || g->grad[i] == 0 )
             continue;
+
+         assert(!Is_pterm(g->term[i]) &&  i != root);
 
          if( !Is_term(g->term[i]) )
          {
-            assert(SCIPisZero(scip, g->prize[i]));
+            assert(0.0 == g->prize[i]);
 
             if( g->grad[i] == 1 )
             {
@@ -1435,19 +1463,22 @@ SCIP_RETCODE reduce_simple_pc(
           * node i is a terminal:
           */
 
+         assert(Is_term(g->term[i]));
+         fixedterm = (!pc && graph_pc_knotIsFixedTerm(g, i));
+
          /* terminal of 0-prize? */
-         if( SCIPisLE(scip, g->prize[i], 0.0) && i != root )
+         if( SCIPisLE(scip, g->prize[i], 0.0) )
          {
             adjust0term(scip, g, i);
             (*count) += 2;
             continue;
          }
 
-         assert(Is_term(g->term[i]));
-
          /* terminal of (real) degree 0? */
-         if( ( (g->grad[i] == 2 && pc) || (g->grad[i] == 1 && !pc) ) )
+         if( realDegreePc(g, i, pc, fixedterm) == 0 )
          {
+            assert(!fixedterm);
+
             /* if terminal node i is node the one with the highest prize, delete */
             if( !is_maxprize(scip, g, i, &maxprize) )
             {
@@ -1457,7 +1488,7 @@ SCIP_RETCODE reduce_simple_pc(
             }
          }
          /* terminal of (real) degree 1? */
-         else if( ( (g->grad[i] == 3 && pc) || (g->grad[i] == 2 && !pc) ) )
+         else if( realDegreePc(g, i, pc, fixedterm) == 1 )
          {
             int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -1470,7 +1501,7 @@ SCIP_RETCODE reduce_simple_pc(
             SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, count, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
-         else if( ( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc)  )  )
+         else if( realDegreePc(g, i, pc, fixedterm) == 2 )
          {
             if( !is_maxprize(scip, g, i, &maxprize) )
             {
@@ -1495,6 +1526,8 @@ SCIP_RETCODE reduce_simple_pc(
                   int n1;
                   const int e = edges2[0];
                   const int e1 = edges2[1];
+
+                  assert(!fixedterm);
 
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)], NULL) );
@@ -1558,55 +1591,10 @@ SCIP_RETCODE reduce_simple_pc(
                *fixed += g->cost[ett];
                (*count)++;
 
-               if( i1 == root )
-               {
-                  int j;
-                  int e;
-
-                  /* get edge from i to its artificial terminal */
-                  for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
-                     if( Is_pterm(g->term[g->head[e]]) && g->head[e] != root )
-                        break;
-
-                  assert(e != EAT_LAST);
-                  SCIPdebugMessage("contract rt %d->%d \n", i, i1);
-
-                  if( g->pcancestors[i] != NULL )
-                  {
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[i], NULL));
-                     SCIPintListNodeFree(scip, &(g->pcancestors[i]));
-                  }
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ett], NULL));
-
-                  /* artificial terminal to i */
-                  j = g->head[e];
-                  assert(!g->mark[j]);
-
-                  /* delete edge and unmark artificial terminal */
-                  graph_pc_knot2nonTerm(g, j);
-                  graph_edge_del(scip, g, e, TRUE);
-
-                  /* delete remaining incident edge of artificial terminal */
-                  e = g->inpbeg[j];
-
-                  assert(e != EAT_LAST);
-                  assert(g->source == g->tail[e] || g->source == j);
-                  assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
-
-                  graph_edge_del(scip, g, e, TRUE);
-
-                  assert(g->inpbeg[j] == EAT_LAST);
-
-                  SCIP_CALL(graph_knot_contract(scip, g, solnode, i1, i));
-                  graph_pc_knot2nonTerm(g, i);
-               } /* i1 == root */
+               if( (g->grad[i] >= g->grad[i1] || i == g->source) && i1 != g->source )
+                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
                else
-               {
-                  if( g->grad[i] >= g->grad[i1] )
-                     SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
-                  else
-                     SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );
-               }
+                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );
 
                rerun = TRUE;
             }
