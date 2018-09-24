@@ -958,57 +958,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
-/** hashes an expression using an already existing iterator
- *
- * The iterator must by of type DFS with allowrevisit=FALSE and the only leaveexpr stage enabled.
- * The hashes of all visited expressions will be stored in the iterators expression data.
- */
-static
-SCIP_RETCODE hashExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to hash */
-   SCIP_CONSEXPR_ITERATOR* hashiterator,     /**< iterator to use for hashing */
-   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
-   )
-{
-   SCIP_CONSEXPRITERATOR_USERDATA iterdata;
-   unsigned int* childrenhashes;
-   int childrenhashessize;
-   int i;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(hashiterator != NULL);
-
-   childrenhashessize = 5;
-   SCIP_CALL( SCIPallocBufferArray(scip, &childrenhashes, childrenhashessize) );
-
-   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
-   {
-      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-      if( nvisitedexprs != NULL )
-         ++*nvisitedexprs;
-
-      /* collect hashes of children */
-      if( childrenhashessize < expr->nchildren )
-      {
-         childrenhashessize = SCIPcalcMemGrowSize(scip, expr->nchildren);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &childrenhashes, childrenhashessize) );
-      }
-      for( i = 0; i < expr->nchildren; ++i )
-         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
-
-      SCIP_CALL( SCIPhashConsExprExprHdlr(scip, expr, &iterdata.uintval, childrenhashes) );
-
-      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
-   }
-
-   SCIPfreeBufferArray(scip, &childrenhashes);
-
-   return SCIP_OKAY;
-}
-
 /** @name Simplifying methods
  *
  * This is largely inspired in Joel Cohen's
@@ -2788,6 +2737,57 @@ SCIP_RETCODE addLocks(
       assert(!SCIPisInfinity(scip, -consdata->lhs));
       SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
    }
+
+   return SCIP_OKAY;
+}
+
+/** hashes an expression using an already existing iterator
+ *
+ * The iterator must by of type DFS with allowrevisit=FALSE and the only leaveexpr stage enabled.
+ * The hashes of all visited expressions will be stored in the iterators expression data.
+ */
+static
+SCIP_RETCODE hashExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to hash */
+   SCIP_CONSEXPR_ITERATOR* hashiterator,     /**< iterator to use for hashing */
+   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
+   )
+{
+   SCIP_CONSEXPRITERATOR_USERDATA iterdata;
+   unsigned int* childrenhashes;
+   int childrenhashessize;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(hashiterator != NULL);
+
+   childrenhashessize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenhashes, childrenhashessize) );
+
+   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
+   {
+      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+      if( nvisitedexprs != NULL )
+         ++*nvisitedexprs;
+
+      /* collect hashes of children */
+      if( childrenhashessize < expr->nchildren )
+      {
+         childrenhashessize = SCIPcalcMemGrowSize(scip, expr->nchildren);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childrenhashes, childrenhashessize) );
+      }
+      for( i = 0; i < expr->nchildren; ++i )
+         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
+
+      SCIP_CALL( SCIPhashConsExprExprHdlr(scip, expr, &iterdata.uintval, childrenhashes) );
+
+      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
+   }
+
+   SCIPfreeBufferArray(scip, &childrenhashes);
 
    return SCIP_OKAY;
 }
