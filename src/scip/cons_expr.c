@@ -974,7 +974,6 @@ SCIP_RETCODE hashExpr(
    SCIP_CONSEXPRITERATOR_USERDATA iterdata;
    unsigned int* childrenhashes;
    int childrenhashessize;
-   unsigned int exprhash;
    int i;
 
    assert(scip != NULL);
@@ -1000,27 +999,8 @@ SCIP_RETCODE hashExpr(
       for( i = 0; i < expr->nchildren; ++i )
          childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
 
-      if( expr->exprhdlr->hash != NULL )
-      {
-         SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, &exprhash, childrenhashes) );
-      }
-      else
-      {
-         /* compute initial hash from expression handler name if callback is not implemented
-          * this can lead to more collisions and thus a larger number of expensive expression compare calls
-          */
-         exprhash = 0;
-         for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
-            exprhash += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+      SCIP_CALL( SCIPhashConsExprExprHdlr(scip, expr, &iterdata.uintval, childrenhashes) );
 
-         exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
-
-         /* now make use of the hashkeys of the children */
-         for( i = 0; i < expr->nchildren; ++i )
-            exprhash ^= childrenhashes[i];
-      }
-
-      iterdata.uintval = exprhash;
       SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
    }
 
@@ -7475,6 +7455,38 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
       if( *infeasible )
          ++(expr->exprhdlr->ncutoffs);
       ++(expr->exprhdlr->npropcalls);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the expression hash callback */
+SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(hashkey != NULL);
+
+   if( expr->exprhdlr->hash != NULL )
+   {
+      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, hashkey, childrenhashes) );
+   }
+   else
+   {
+      int i;
+
+      /* compute initial hash from expression handler name if callback is not implemented
+       * this can lead to more collisions and thus a larger number of expensive expression compare calls
+       */
+      *hashkey = 0;
+      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+         *hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+
+      *hashkey = SCIPcalcFibHash((SCIP_Real)*hashkey);
+
+      /* now make use of the hashkeys of the children */
+      for( i = 0; i < expr->nchildren; ++i )
+         *hashkey ^= childrenhashes[i];
    }
 
    return SCIP_OKAY;

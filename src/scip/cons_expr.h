@@ -398,6 +398,10 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
    SCIP_Bool                  force         /**< force tightening even if it is below the bound strengthening tolerance */
    );
 
+/** calls the expression hash callback */
+extern
+SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
+
 /** calls the expression branching score callback */
 extern
 SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
