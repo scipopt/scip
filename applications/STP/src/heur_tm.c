@@ -1711,7 +1711,6 @@ SCIP_RETCODE runPcMW(
 
    if( rmw || rpc )
    {
-     // graph_printInfo(graph);
       SCIP_Real max = 0.0;
 
       for( int k = 0; k < t; k++ )
@@ -1720,6 +1719,8 @@ SCIP_RETCODE runPcMW(
 
       for( int k = 0; k < nnodes; k++ )
          graph->mark[k] = (graph->grad[k] > 0);
+
+      graph->mark[graph->source] = TRUE;
 
       for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
       {
@@ -1742,8 +1743,7 @@ SCIP_RETCODE runPcMW(
             terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
          }
       }
-//printf("%d %d \n", nterms, t);
-//graph_knot_printInfo(graph, graph->source);
+
       assert(nterms == t);
       SCIPsortRealInt(terminalprio, terminalperm, nterms);
    }
