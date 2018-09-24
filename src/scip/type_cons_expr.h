@@ -125,21 +125,6 @@ extern "C" {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
    SCIP_CONSEXPR_EXPRHDLRDATA** exprhdlrdata)
 
-/** expression simplify callback
- *
- * the method receives the expression to be simplified and a pointer to store the simplified expression
- *
- * input:
- *  - scip           : SCIP main data structure
- *  - expr           : expression to simplify
- * output:
- *  - simplifiedexpr : the simplified expression
- */
-#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
-   SCIP*                 scip,               \
-   SCIP_CONSEXPR_EXPR*   expr,               \
-   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
-
 /** expression data copy callback
  *
  * the method copies the data of an expression
@@ -225,6 +210,85 @@ extern "C" {
    SCIP_CONSEXPR_EXPR** expr, \
    SCIP_Bool* success)
 
+/** expression curvature detection callback
+ *
+ * The method computes the curvature of an given expression. It assumes that the interval evaluation of the expression
+ * has been called before and the expression has been simplified.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - expr : expression to check the curvature for
+ *  - curvature : buffer to store the curvature of the expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPRCURV* curvature)
+
+/** expression monotonicity detection callback
+ *
+ * The method computes the monotonicity of an expression with respect to a given child.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to check the monotonicity for
+ *  - childidx : index of the considered child expression
+ *  - result : buffer to store the monotonicity
+ */
+#define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   int childidx, \
+   SCIP_MONOTONE* result)
+
+/** expression integrality detection callback
+ *
+ * The method computes whether an expression evaluates always to an integral value.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to check the integrality for
+ *  - isintegral : buffer to store whether expr is integral
+ */
+#define SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* isintegral)
+
+/** expression hash callback
+ *
+ * The method hashes an expression by taking the hashes of its children into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be hashed
+ *  - hashkey : pointer to store the hash value
+ *  - childrenhashes : array with hash values of children
+ */
+#define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   unsigned int* hashkey, \
+   unsigned int* childrenhashes)
+
+/** derivative evaluation callback
+ *
+ * The method computes the derivative of an expression using backward automatic differentiation.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - childidx : index of the child
+ *  - val : buffer to store the partial derivative w.r.t. the i-th children
+ */
+#define SCIP_DECL_CONSEXPR_EXPRBWDIFF(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   int childidx, \
+   SCIP_Real* val)
+
 /** expression (point-) evaluation callback
  *
  * The method evaluates an expression by taking the values of its children into account.
@@ -243,21 +307,71 @@ extern "C" {
    SCIP_Real* val, \
    SCIP_SOL* sol)
 
-/** derivative evaluation callback
+/** expression (interval-) evaluation callback
  *
- * The method computes the derivative of an expression using backward automatic differentiation.
+ * The method evaluates an expression by taking the intervals of its children into account.
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - interval : buffer where to store interval
  *  - expr : expression to be evaluated
- *  - childidx : index of the child
- *  - val : buffer to store the partial derivative w.r.t. the i-th children
+ *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - intevalvardata : data to be passed to intevalvar callback
  */
-#define SCIP_DECL_CONSEXPR_EXPRBWDIFF(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
-   int childidx, \
-   SCIP_Real* val)
+   SCIP_INTERVAL* interval, \
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   void* intevalvardata)
+
+/** expression under/overestimation callback
+ *
+ * The method tries to compute a linear under- or overestimator that is as tight as possible
+ * at a given point by using auxiliary variables stored in all children.
+ * If the value of the estimator in the solution is smaller (larger) than targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
+ * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
+ * the constant part in \par constant.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression
+ *  - sol  : solution at which to estimate (NULL for the LP solution)
+ *  - overestimate : whether the expression needs to be over- or underestimated
+ *  - targetvalue : a value that the estimator shall exceed, can be +/-infinity
+ *  - coefs : array to store coefficients of estimator
+ *  - constant : buffer to store constant part of estimator
+ *  - islocal : buffer to store whether estimator is valid locally only
+ *  - success : buffer to indicate whether an estimator could be computed
+ */
+#define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_SOL* sol, \
+   SCIP_Bool overestimate, \
+   SCIP_Real targetvalue, \
+   SCIP_Real* coefs, \
+   SCIP_Real* constant, \
+   SCIP_Bool* islocal, \
+   SCIP_Bool* success)
+
+/** expression simplify callback
+ *
+ * the method receives the expression to be simplified and a pointer to store the simplified expression
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : expression to simplify
+ * output:
+ *  - simplifiedexpr : the simplified expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
+   SCIP*                 scip,               \
+   SCIP_CONSEXPR_EXPR*   expr,               \
+   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
 
 /** expression callback for reverse propagation
  *
@@ -280,24 +394,6 @@ extern "C" {
    SCIP_Bool* infeasible, \
    int* nreductions, \
    SCIP_Bool force)
-
-/** expression (interval-) evaluation callback
- *
- * The method evaluates an expression by taking the intervals of its children into account.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - interval : buffer where to store interval
- *  - expr : expression to be evaluated
- *  - intevalvar : callback to be called when interval evaluating a variable
- *  - intevalvardata : data to be passed to intevalvar callback
- */
-#define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_INTERVAL* interval, \
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
-   void* intevalvardata)
 
 /** separation initialization method of an expression handler (called during CONSINITLP)
  *
@@ -352,56 +448,6 @@ extern "C" {
    SCIP_RESULT* result, \
    int* ncuts)
 
-/** expression under/overestimation callback
- *
- * The method tries to compute a linear under- or overestimator that is as tight as possible
- * at a given point by using auxiliary variables stored in all children.
- * If the value of the estimator in the solution is smaller (larger) than targetvalue
- * when underestimating (overestimating), then no estimator needs to be computed.
- * Note, that targetvalue can be infinite if any estimator will be accepted.
- * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
- * the constant part in \par constant.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression
- *  - sol  : solution at which to estimate (NULL for the LP solution)
- *  - overestimate : whether the expression needs to be over- or underestimated
- *  - targetvalue : a value that the estimator shall exceed, can be +/-infinity
- *  - coefs : array to store coefficients of estimator
- *  - constant : buffer to store constant part of estimator
- *  - islocal : buffer to store whether estimator is valid locally only
- *  - success : buffer to indicate whether an estimator could be computed
- */
-#define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Bool overestimate, \
-   SCIP_Real targetvalue, \
-   SCIP_Real* coefs, \
-   SCIP_Real* constant, \
-   SCIP_Bool* islocal, \
-   SCIP_Bool* success)
-
-/** expression hash callback
- *
- * The method hashes an expression by taking the hashes of its children into account.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression to be hashed
- *  - hashkey : pointer to store the hash value
- *  - childrenhashes : array with hash values of children
- */
-#define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   unsigned int* hashkey, \
-   unsigned int* childrenhashes)
-
-
 /** expression branching score callback
  *
  * The method adds branching scores to its children if it finds that the value of the
@@ -426,53 +472,6 @@ extern "C" {
    SCIP_Real auxvalue, \
    unsigned int brscoretag, \
    SCIP_Bool* success)
-
-/** expression curvature detection callback
- *
- * The method computes the curvature of an given expression. It assumes that the interval evaluation of the expression
- * has been called before and the expression has been simplified.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr : expression constraint handler
- *  - expr : expression to check the curvature for
- *  - curvature : buffer to store the curvature of the expression
- */
-#define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_EXPRCURV* curvature)
-
-/** expression monotonicity detection callback
- *
- * The method computes the monotonicity of an expression with respect to a given child.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression to check the monotonicity for
- *  - childidx : index of the considered child expression
- *  - result : buffer to store the monotonicity
- */
-#define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   int childidx, \
-   SCIP_MONOTONE* result)
-
-/** expression integrality detection callback
- *
- * The method computes whether an expression evaluates always to an integral value.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression to check the integrality for
- *  - isintegral : buffer to store whether expr is integral
- */
-#define SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_Bool* isintegral)
 
 /** @} */  /* expression handler callbacks */
 
