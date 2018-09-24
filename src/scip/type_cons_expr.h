@@ -51,6 +51,44 @@ extern "C" {
    void* intevalvardata \
    )
 
+/** expression compare callback
+ *
+ * the method receives two expressions, expr1 and expr2. Must return
+ * -1 if expr1 < expr2
+ * 0  if expr1 = expr2
+ * 1  if expr1 > expr2
+ *
+ * input:
+ *  - expr1 : first expression to compare
+ *  - expr2 : second expression to compare
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
+   SCIP_CONSEXPR_EXPR* expr1, \
+   SCIP_CONSEXPR_EXPR* expr2)
+
+/** variable mapping callback for expression data callback
+ *
+ * The method maps a variable (in a source SCIP instance) to a variable
+ * (in a target SCIP instance) and captures the target variable.
+ *
+ *  input:
+ *  - targetscip         : target SCIP main data structure
+ *  - targetvar          : pointer to store the mapped variable
+ *  - sourcescip         : source SCIP main data structure
+ *  - sourcevar          : variable to be mapped
+ *  - mapvardata         : data of callback
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(x) SCIP_RETCODE x (\
+   SCIP* targetscip, \
+   SCIP_VAR** targetvar, \
+   SCIP* sourcescip, \
+   SCIP_VAR* sourcevar, \
+   void* mapvardata \
+   )
+
+/**@name Expression Handler Callbacks */
+/**@{ */
+
 /** expression handler copy callback
  *
  * the method includes the expression handler into a expression constraint handler
@@ -101,41 +139,6 @@ extern "C" {
    SCIP*                 scip,               \
    SCIP_CONSEXPR_EXPR*   expr,               \
    SCIP_CONSEXPR_EXPR**  simplifiedexpr)
-
-/** expression compare callback
- *
- * the method receives two expressions, expr1 and expr2. Must return
- * -1 if expr1 < expr2
- * 0  if expr1 = expr2
- * 1  if expr1 > expr2
- *
- * input:
- *  - expr1 : first expression to compare
- *  - expr2 : second expression to compare
- */
-#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
-   SCIP_CONSEXPR_EXPR* expr1, \
-   SCIP_CONSEXPR_EXPR* expr2)
-
-/** variable mapping callback for expression data callback
- *
- * The method maps a variable (in a source SCIP instance) to a variable
- * (in a target SCIP instance) and captures the target variable.
- *
- *  input:
- *  - targetscip         : target SCIP main data structure
- *  - targetvar          : pointer to store the mapped variable
- *  - sourcescip         : source SCIP main data structure
- *  - sourcevar          : variable to be mapped
- *  - mapvardata         : data of callback
- */
-#define SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(x) SCIP_RETCODE x (\
-   SCIP* targetscip, \
-   SCIP_VAR** targetvar, \
-   SCIP* sourcescip, \
-   SCIP_VAR* sourcevar, \
-   void* mapvardata \
-   )
 
 /** expression data copy callback
  *
@@ -470,6 +473,8 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* isintegral)
+
+/** @} */  /* expression handler callbacks */
 
 /** maximal number of iterators that can be active on an expression graph concurrently
  *
