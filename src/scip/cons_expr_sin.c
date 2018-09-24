@@ -1101,7 +1101,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL newbounds;

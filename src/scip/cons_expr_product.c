@@ -1789,7 +1789,7 @@ CLEANUP:
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;

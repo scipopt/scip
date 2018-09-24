@@ -1179,7 +1179,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSum)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    assert(scip != NULL);

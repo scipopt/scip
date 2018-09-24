@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRREVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
 );
 
 /** set the hash callback of an expression handler */

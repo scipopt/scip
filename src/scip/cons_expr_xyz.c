@@ -214,7 +214,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXyz)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXyz)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 

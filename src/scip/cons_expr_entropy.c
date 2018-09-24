@@ -468,7 +468,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropEntropy)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL newinterval;
    SCIP_INTERVAL exprinterval;

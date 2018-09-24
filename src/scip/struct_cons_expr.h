@@ -69,7 +69,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa));  /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa));          /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate));  /**< estimation callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRREVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)); /**< branching score callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)); /**< curvature detection callback (can be NULL) */

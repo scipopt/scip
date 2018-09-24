@@ -262,7 +262,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropLog)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 
