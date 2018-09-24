@@ -1006,15 +1006,18 @@ SCIP_RETCODE hashExpr(
       }
       else
       {
-         /* compute hash from expression handler name if callback is not implemented
+         /* compute initial hash from expression handler name if callback is not implemented
           * this can lead to more collisions and thus a larger number of expensive expression compare calls
-          * TODO shouldn't the children hashkeys be involved here, too?
           */
          exprhash = 0;
          for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
             exprhash += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
 
          exprhash = SCIPcalcFibHash((SCIP_Real)exprhash);
+
+         /* now make use of the hashkeys of the children */
+         for( i = 0; i < expr->nchildren; ++i )
+            exprhash ^= childrenhashes[i];
       }
 
       iterdata.uintval = exprhash;
