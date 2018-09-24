@@ -9117,7 +9117,7 @@ SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->nactiveiter + 1 >= SCIP_CONSEXPR_MAXNITER )
+   if( conshdlrdata->nactiveiter + 1 >= SCIP_CONSEXPRITERATOR_MAXNACTIVE )
    {
       SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
       return SCIP_MAXDEPTHLEVEL;

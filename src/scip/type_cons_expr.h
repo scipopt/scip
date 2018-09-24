@@ -475,16 +475,16 @@ extern "C" {
 
 /** @} */  /* expression handler callbacks */
 
-/** maximal number of iterators that can be active on an expression graph concurrently
- *
- * How often an expression graph iteration can be started within an active iteration, plus one.
- */
-#define SCIP_CONSEXPR_MAXNITER 5
-
 /* maybe should make this a parameter (was cutmaxrange in other conshdlr)
  * maybe should derive this from the current feastol (e.g., 10/feastol)
  */
 #define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
+
+/** maximal number of iterators that can be active on an expression graph concurrently
+ *
+ * How often an expression graph iteration can be started within an active iteration, plus one.
+ */
+#define SCIP_CONSEXPRITERATOR_MAXNACTIVE 5
 
 /** stages of expression DFS iteration */
 #define SCIP_CONSEXPRITERATOR_ENTEREXPR     1u /**< an expression is visited the first time (before any of its children are visited) */

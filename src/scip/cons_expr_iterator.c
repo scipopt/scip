@@ -194,7 +194,7 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
    assert(expr != NULL);
 
    assert(iterator->visitedtag == 0 || iterator->iterindex >= 0);
-   assert(iterator->visitedtag == 0 || iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+   assert(iterator->visitedtag == 0 || iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
    /* we should have set the visitedtag when adding the expression to the queue */
    assert(iterator->visitedtag == 0 || expr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag);
 
@@ -207,7 +207,7 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
       if( iterator->visitedtag != 0 )
       {
          assert(iterator->iterindex >= 0);
-         assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+         assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
 
          /* skip children that have already been visited or have already been added to the queue */
          if( child->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
@@ -504,7 +504,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
          if( iterator->visitedtag != 0 )
          {
             assert(iterator->iterindex >= 0);
-            assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+            assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
             assert(expr->iterdata[iterator->iterindex].visitedtag != iterator->visitedtag);
 
             /* mark expression as being in the queue */
@@ -798,7 +798,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
          if( iterator->visitedtag != 0 )
          {
             assert(iterator->iterindex >= 0);
-            assert(iterator->iterindex < SCIP_CONSEXPR_MAXNITER);
+            assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
 
             /* skip already visited expressions */
             while( iterator->curr != NULL )

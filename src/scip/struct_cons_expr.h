@@ -129,7 +129,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
    /* expression iterators data */
-   SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPR_MAXNITER];  /**< data for expression iterators */
+   SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPRITERATOR_MAXNACTIVE];  /**< data for expression iterators */
 
    /* curvature information */
    SCIP_EXPRCURV           curvature;     /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
