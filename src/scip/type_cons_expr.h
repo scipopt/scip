@@ -34,6 +34,24 @@
 extern "C" {
 #endif
 
+/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
+ * maybe should derive this from the current feastol (e.g., 10/feastol)
+ */
+#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
+
+typedef struct SCIP_ConsExpr_ExprData  SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
+typedef struct SCIP_ConsExpr_Expr      SCIP_CONSEXPR_EXPR;         /**< expression */
+
+/** monotonicity of an expression */
+typedef enum
+{
+   SCIP_MONOTONE_UNKNOWN      = 0,          /**< unknown */
+   SCIP_MONOTONE_INC          = 1,          /**< increasing */
+   SCIP_MONOTONE_DEC          = 2,          /**< decreasing */
+   SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
+
+} SCIP_MONOTONE;
+
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
  * Implements a relaxation scheme for variable bounds and translates between different infinity values.
@@ -86,7 +104,7 @@ extern "C" {
    void* mapvardata \
    )
 
-/**@name Expression Handler Callbacks */
+/**@name Expression Handler */
 /**@{ */
 
 /** expression handler copy callback
@@ -473,12 +491,15 @@ extern "C" {
    unsigned int brscoretag, \
    SCIP_Bool* success)
 
-/** @} */  /* expression handler callbacks */
+typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
+typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
 
-/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
- * maybe should derive this from the current feastol (e.g., 10/feastol)
+/** @} */  /* expression handler */
+
+
+/** @name expression iterator
+ * @{
  */
-#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
 
 /** maximal number of iterators that can be active on an expression graph concurrently
  *
@@ -514,19 +535,15 @@ typedef enum
    SCIP_CONSEXPRITERATOR_DFS                 /**< depth-first search */
 } SCIP_CONSEXPRITERATOR_TYPE;
 
-/** monotonicity of an expression */
-typedef enum
-{
-   SCIP_MONOTONE_UNKNOWN      = 0,          /**< unknown */
-   SCIP_MONOTONE_INC          = 1,          /**< increasing */
-   SCIP_MONOTONE_DEC          = 2,          /**< decreasing */
-   SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
+typedef struct SCIP_ConsExpr_Expr_IterData SCIP_CONSEXPR_EXPR_ITERDATA; /**< expression tree iterator data for a specific expression */
+typedef struct SCIP_ConsExpr_Iterator      SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
 
-} SCIP_MONOTONE;
+/** @} */
 
-/** @name bitflags that customize what is printed by dot-format printer
+/** @name expression printing
  * @{
  */
+
 #define SCIP_CONSEXPR_PRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
 #define SCIP_CONSEXPR_PRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
 #define SCIP_CONSEXPR_PRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
@@ -539,12 +556,13 @@ typedef enum
 /** print everything */
 #define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_NLOCKS | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
 
-/** type for printdot bitflags
- * @todo find a better name
- */
-typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
+
+typedef unsigned int                      SCIP_CONSEXPR_PRINTDOT_WHAT; /**< type for printdot bitflags */
+typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA;  /**< printing a dot file data */
+
 /** @} */
 
+/** @name expression enforcement */
 #define SCIP_CONSEXPR_EXPRENFO_NONE           0x0u /**< no enforcement */
 #define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
 #define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
@@ -554,16 +572,14 @@ typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 #define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x10u /**< setting branching scores */
 #define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) /**< all enforcement methods */
 
-/** type for exprenfo bitflags */
-typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;
+typedef unsigned int                  SCIP_CONSEXPR_EXPRENFO_METHOD; /**< exprenfo bitflags */
+typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expression enforcement data */
 
-typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
-typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
-typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
-typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
-typedef struct SCIP_ConsExpr_ExprEnfo     SCIP_CONSEXPR_EXPRENFO;     /**< expression enforcement data */
+/** @} */
 
-typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
+/** @name Nonlinear Handler
+ * @{
+ */
 
 /** nonlinear handler copy callback
  *
@@ -674,6 +690,26 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
+/** nonlinear handler callback for reformulation
+ *
+ * The method is called for each expression during SCIP's presolving.
+ * It shall reformulate a given expression by another one.
+ * It shall store the reformulated expression in the refexpr pointer.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression to be reformulated
+ * output:
+ *  - simplifiedexpr : the simplified expression (NULL if expr can not be reformulated)
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_EXPR** refexpr)
+
 /** auxiliary evaluation callback of nonlinear handler
  *
  * Evaluates the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any)
@@ -691,6 +727,53 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Real* auxvalue, \
    SCIP_SOL* sol)
 
+/** nonlinear handler interval evaluation callback
+ *
+ * The methods computes an interval that contains the image (range) of the expression.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
+ *  - intevalvar : callback to be called when interval evaluating a variable
+ *  - intevalvardata : data to be passed to intevalvar callback
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_INTERVAL* interval, \
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   void* intevalvardata)
+
+/** nonlinear handler callback for reverse propagation
+ *
+ * The method propagates bounds over the arguments of an expression.
+ * The arguments of an expression are other expressions and the tighter intervals should be stored inside the interval variable
+ * of the corresponding argument (expression) by using SCIPtightenConsExprExprInterval().
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
+ *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
+ *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - force : force tightening even if it is below the bound strengthening tolerance
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_QUEUE* reversepropqueue, \
+   SCIP_Bool* infeasible, \
+   int* nreductions, \
+   SCIP_Bool force)
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP)
  *
@@ -799,54 +882,6 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_ROWPREP* rowprep, \
    SCIP_Bool* success)
 
-/** nonlinear handler interval evaluation callback
- *
- * The methods computes an interval that contains the image (range) of the expression.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
- *  - intevalvar : callback to be called when interval evaluating a variable
- *  - intevalvardata : data to be passed to intevalvar callback
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_INTERVAL* interval, \
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
-   void* intevalvardata)
-
-/** nonlinear handler callback for reverse propagation
- *
- * The method propagates bounds over the arguments of an expression.
- * The arguments of an expression are other expressions and the tighter intervals should be stored inside the interval variable
- * of the corresponding argument (expression) by using SCIPtightenConsExprExprInterval().
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
- *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
- *  - nreductions : buffer to store the number of interval reductions of all children
- *  - force : force tightening even if it is below the bound strengthening tolerance
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_QUEUE* reversepropqueue, \
-   SCIP_Bool* infeasible, \
-   int* nreductions, \
-   SCIP_Bool force)
-
 /** nonlinear handler callback for branching scores
  *
  * The method adds branching scores to successors if it finds that this is how to enforce
@@ -875,31 +910,11 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    unsigned int brscoretag, \
    SCIP_Bool* success)
 
-/** nonlinear handler callback for reformulation
- *
- * The method is called for each expression during SCIP's presolving.
- * It shall reformulate a given expression by another one.
- * It shall store the reformulated expression in the refexpr pointer.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression to be reformulated
- * output:
- *  - simplifiedexpr : the simplified expression (NULL if expr can not be reformulated)
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_EXPR** refexpr)
-
-typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
-typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
+typedef struct SCIP_ConsExpr_Nlhdlr         SCIP_CONSEXPR_NLHDLR;          /**< nonlinear handler */
+typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
-typedef struct SCIP_ConsExpr_Expr_IterData SCIP_CONSEXPR_EXPR_ITERDATA; /**< expression tree iterator data for a specific expression */
-typedef struct SCIP_ConsExpr_Iterator    SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
+
+/** @} */
 
 #ifdef __cplusplus
 }
