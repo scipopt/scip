@@ -143,7 +143,7 @@ for Q in ${split_queue[@]}; do
     # run full test set on each node
     echo "     CLUSTERNODES=$n"
     echo "     SETTINGS=$SETTINGS"
-    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR="${OUTPUTDIR}"
+    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n ACCOUNT=scip EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR="${OUTPUTDIR}"
 
     # artificial settings file may only be removed after executable was started
   done
