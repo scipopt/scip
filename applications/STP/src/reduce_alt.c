@@ -2994,6 +2994,7 @@ SCIP_RETCODE reduce_bd34(
    assert(g != NULL);
    assert(heap != NULL);
    assert(nelims != NULL);
+   assert(!g->extended);
 
    /* initialize new graph for bd4 tests */
    SCIP_CALL( graph_init(scip, &auxg, STP_BD_MAXDEGREE, 2 * STP_BD_MAXDNEDGES, 1) );

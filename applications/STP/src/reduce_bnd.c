@@ -4897,10 +4897,10 @@ SCIP_RETCODE reduce_bound(
          if( SCIPisGT(scip, prize[k], max) )
             max = prize[k];
 
-         if( SCIPisGE(scip, radius[k], 0.0 )  )
-	    radius[k] = 0.0;
-	 else
-	    radius[k] = -radius[k];
+         if( SCIPisGE(scip, radius[k], 0.0) )
+            radius[k] = 0.0;
+         else
+            radius[k] = -radius[k];
       }
    }
 
@@ -4959,7 +4959,7 @@ SCIP_RETCODE reduce_bound(
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
-      /* PC or RPC? Then restore oringinal graph */
+      /* PC or RPC? Then restore original graph */
       if( pcmw )
          graph_pc_2org(graph);
 
@@ -5162,8 +5162,10 @@ SCIP_RETCODE reduce_bound(
       for( k = 0; k < nnodes; k++ )
       {
          /* is k a terminal other than the root? */
-         if( Is_term(graph->term[k]) && graph->mark[k] && graph->grad[k] > 2 && k != graph->source )
+         if( Is_term(graph->term[k]) && graph->mark[k] && graph->grad[k] > 2 && !graph_pc_knotIsFixedTerm(graph, k) )
          {
+            assert(graph->source != k);
+
             assert(perm != NULL);
             for( l = 0; l < nterms; l++ )
                if( perm[l] == k )
@@ -5179,7 +5181,7 @@ SCIP_RETCODE reduce_bound(
 
             if( SCIPisGT(scip, tmpcost, obj) )
             {
-               SCIPdebugMessage("alternative bnd elimination!!! \n\n");
+               SCIPdebugMessage("alternative bnd elimination! \n\n");
                (*nelims) += graph_pc_deleteTerm(scip, graph, k);
                (*offset) += graph->prize[k];
             }
@@ -5198,7 +5200,7 @@ SCIP_RETCODE reduce_bound(
 
                   if( e == EAT_LAST )
                   {
-                     SCIPdebugMessage("second elimination!!! prize: %f \n\n", graph->prize[k]);
+                     SCIPdebugMessage("second elimination! prize: %f \n\n", graph->prize[k]);
                      (*offset) += graph->prize[k];
                      (*nelims) += graph_pc_deleteTerm(scip, graph, k);
                   }
