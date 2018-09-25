@@ -260,7 +260,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
    for( i = 0; i < nnodes; i++ )
    {
-      if( g->mark[i] && (mst[i].edge != -1) )
+      if( g->mark[i] && (mst[i].edge != UNKNOWN) )
       {
          assert(g->path_state[i] == CONNECT);
          assert(g->head[mst[i].edge] == i);
@@ -383,7 +383,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
 
 
-/** build (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
+/** build (rooted) prize collecting Steiner tree in such a way that all leaves are terminals; objresult is set FARAWAY if infeasible */
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -394,65 +394,66 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    )
 {
    SCIP_Real obj;
-   int i;
-   int j;
-   int e1;
-   int e2;
-   int k1;
-   int k2;
-   int root;
+   int mstroot;
    int count;
-   int nnodes;
-   int orgroot;
+   const int nnodes = g->knots;
+   const int orgroot = g->source;
+   const SCIP_Bool isrooted = graph_pc_isRootedPcMw(g);
 
    assert(g != NULL);
    assert(mst != NULL);
    assert(scip != NULL);
    assert(cost != NULL);
    assert(connected != NULL);
+   assert(g->extended);
 
    obj = 0.0;
-   nnodes = g->knots;
-   orgroot = g->source;
 
-   /* compute the MST, exclude all terminals */
-   for( i = nnodes - 1; i >= 0; --i )
+   /* unmark all dummy terminals and unconnected nodes */
+   for( int i = nnodes - 1; i >= 0; --i )
    {
       if( connected[i] == CONNECT && !Is_term(g->term[i]) )
          g->mark[i] = TRUE;
       else
          g->mark[i] = FALSE;
+
+      if( isrooted && graph_pc_knotIsFixedTerm(g, i) )
+         g->mark[i] = TRUE;
    }
 
-   if( g->stp_type == STP_RPCSPG )
+   if( isrooted )
    {
-      root = orgroot;
-      g->mark[root] = TRUE;
+      mstroot = orgroot;
+      assert(g->mark[mstroot]);
    }
    else
    {
       int a;
+      int i;
       for( a = g->outbeg[orgroot]; a != EAT_LAST; a = g->oeat[a] )
       {
          i = g->head[a];
-         if( !Is_term(g->term[i]) && connected[i] == CONNECT )
+         if( g->mark[i] )
+         {
+            assert(Is_pterm(g->term[i]) && connected[i] == CONNECT);
             break;
+         }
       }
 
       /* trivial solution? */
       if( a == EAT_LAST )
       {
-         for( i = 0; i < nnodes; i++ )
-            mst[i].edge = UNKNOWN;
+         for( int k = 0; k < nnodes; k++ )
+            mst[k].edge = UNKNOWN;
 
          printf("trivial solution in buildPcMwTree \n");
          for( a = g->outbeg[orgroot]; a != EAT_LAST; a = g->oeat[a] )
          {
-            i = g->head[a];
-            if( Is_term(g->term[i]) )
+            const int head = g->head[a];
+            if( Is_term(g->term[head]) )
             {
                obj += cost[a];
-               mst[i].edge = a;
+               mst[head].edge = a;
             }
          }
          (*objresult) = obj;
@@ -460,82 +461,96 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
       }
 
       assert(g->mark[i]);
-      root = i;
+      mstroot = i;
    }
-   assert(root >= 0);
-   assert(root < nnodes);
+   assert(mstroot >= 0);
+   assert(mstroot < nnodes);
 
-   graph_path_exec(scip, g, MST_MODE, root, cost, mst);
+   graph_path_exec(scip, g, MST_MODE, mstroot, cost, mst);
 
-   /* connect all terminals */
-   for( i = nnodes - 1; i >= 0; --i )
+   /* connect all potential terminals */
+   for( int i = nnodes - 1; i >= 0; --i )
    {
       if( Is_term(g->term[i]) && i != orgroot && !graph_pc_knotIsFixedTerm(g, i) )
       {
-         e1 = g->inpbeg[i];
-         assert(e1 >= 0);
-         e2 = g->ieat[e1];
+         int k1;
+         int k2;
+         const int e1 = g->inpbeg[i];
+         const int e2 = g->ieat[e1];
 
+         assert(e1 >= 0);
+         assert(e2 != EAT_LAST);
+
+#if 0
          if( e2 == EAT_LAST )
          {
             mst[i].edge = e1;
          }
          else
          {
-            assert(e2 >= 0);
+#endif
 
-            assert(g->ieat[e2] == EAT_LAST);
-            k1 = g->tail[e1];
-            k2 = g->tail[e2];
-            assert(k1 == orgroot || k2 == orgroot);
+         k1 = g->tail[e1];
+         k2 = g->tail[e2];
 
-            if( k1 != orgroot && g->path_state[k1] == CONNECT )
-            {
-               mst[i].edge = e1;
-            }
-            else if( k2 != orgroot && g->path_state[k2] == CONNECT )
-            {
-               mst[i].edge = e2;
-            }
-            else if( k1 == orgroot )
-            {
-               mst[i].edge = e1;
-            }
-            else if( k2 == orgroot )
-            {
-               mst[i].edge = e2;
-            }
+         assert(e2 >= 0);
+         assert(g->ieat[e2] == EAT_LAST);
+         assert(k1 == orgroot || k2 == orgroot);
+
+         if( k1 != orgroot && g->path_state[k1] == CONNECT )
+         {
+            mst[i].edge = e1;
+         }
+         else if( k2 != orgroot && g->path_state[k2] == CONNECT )
+         {
+            mst[i].edge = e2;
+         }
+         else if( k1 == orgroot )
+         {
+            mst[i].edge = e1;
+         }
+         else if( k2 == orgroot )
+         {
+            mst[i].edge = e2;
+         }
+         else
+         {
+            assert(0 && "should not happen");
          }
       }
-      else if( i == root && g->stp_type != STP_RPCSPG )
-      {
-         for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
-            if( g->tail[e1] == orgroot )
-               break;
-         assert(e1 != EAT_LAST);
-         mst[i].edge = e1;
-      }
+   }    /* connect all potential terminals */
+
+   if( !isrooted )
+   {
+      int e1;
+      for( e1 = g->inpbeg[mstroot]; e1 != EAT_LAST; e1 = g->ieat[e1] )
+         if( g->tail[e1] == orgroot )
+            break;
+      assert(e1 != EAT_LAST);
+      mst[mstroot].edge = e1;
    }
 
    /* prune */
    do
    {
+      int j;
       count = 0;
 
-      for( i = nnodes - 1; i >= 0; --i )
+      for( int i = nnodes - 1; i >= 0; --i )
       {
          if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
             continue;
 
          for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
          {
-            e1 = mst[g->head[j]].edge;
+            const int e1 = mst[g->head[j]].edge;
             if( e1 == j )
                break;
          }
 
          if( j == EAT_LAST )
          {
+            assert(!Is_pterm(g->term[i]));
             mst[i].edge = UNKNOWN;
             g->mark[i] = FALSE;
             connected[i] = UNKNOWN;
@@ -546,12 +561,23 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    }
    while( count > 0 );
 
-   for( i = nnodes - 1; i >= 0; --i )
+   if( isrooted )
+   {
+      /* check for feasibility */
+      for( int i = 0; i < nnodes; i++ )
+         if( graph_pc_knotIsFixedTerm(g, i) && i != orgroot && mst[i].edge == UNKNOWN )
+         {
+            printf("fail in TM reconstruction, fixed terminal %d not connected \n", i);
+            *objresult = FARAWAY;
+            return SCIP_OKAY;
+         }
+   }
+
+   for( int i = nnodes - 1; i >= 0; --i )
       if( mst[i].edge >= 0 )
          obj += cost[mst[i].edge];
 
-   (*objresult) = obj;
-
+   *objresult = obj;
    return SCIP_OKAY;
 }
 
