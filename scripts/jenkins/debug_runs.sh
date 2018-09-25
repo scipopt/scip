@@ -50,12 +50,12 @@ export MODE=debug
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
+export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
 
-export CRITERION_DIR=/optimi/usr/sw/criterion
-export IPOPT_DIR=/optimi/usr/sw/ipopt
-export CPLEX_DIR=/optimi/usr/sw/cplex
-export BLISS_DIR=/optimi/usr/sw/bliss
+export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
+export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
+export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
 # Find out what day of week it is: mon-1 .. sun-7
 DAY_OF_WEEK=`date +%u`
@@ -195,8 +195,8 @@ ${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set ra
 ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 
 # create more required symlinks
-ln -fs /optimi/kombadon/IP check/
-ln -fs /optimi/kombadon/MINLP check/
+ln -fs /nfs/optimi/kombadon/IP check/
+ln -fs /nfs/optimi/kombadon/MINLP check/
 
 #######################
 ### Submit Testruns ###
