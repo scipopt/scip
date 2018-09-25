@@ -1262,7 +1262,9 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
    assert(graph_pc_term2edgeConsistent(g));
 
+   SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
 
+   *fixed += fix;
 
 
    graph_pc_2trans(g);

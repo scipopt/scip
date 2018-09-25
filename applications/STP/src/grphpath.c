@@ -384,7 +384,7 @@ inline static void utdist(
       {
          path[vbk].dist = dist;
          vbase[vbk] = vbk2;
-	 return;
+         return;
       }
    }
    else
@@ -2194,8 +2194,6 @@ void graph_get4nextTerms(
    int*                  state               /**< array to mark the state of each node during calculation */
    )
 {
-   int k;
-
    assert(g         != NULL);
    assert(path      != NULL);
    assert(cost      != NULL);
@@ -2204,7 +2202,7 @@ void graph_get4nextTerms(
    assert(costrev   != NULL);
 
    if( g->stp_type != STP_PCSPG && g->stp_type != STP_RPCSPG )
-      for( k = 0; k < g->knots; k++ )
+      for( int k = 0; k < g->knots; k++ )
          g->mark[k] = (g->grad[k] > 0);
 
    /* build voronoi diagram */
@@ -2316,7 +2314,6 @@ void graph_voronoiTerms(
 {
    int k;
    int m;
-   int i;
    int count = 0;
    int nbases = 0;
 
@@ -2327,7 +2324,7 @@ void graph_voronoiTerms(
    assert(state   != NULL);
 
    /* initialize */
-   for( i = 0; i < g->knots; i++ )
+   for( int i = 0; i < g->knots; i++ )
    {
       /* set the base of vertex i */
       if( Is_term(g->term[i]) && g->mark[i] )
@@ -2362,7 +2359,7 @@ void graph_voronoiTerms(
          state[k] = CONNECT;
 
          /* iterate over all outgoing edges of vertex k */
-         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         for( int i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
             m = g->head[i];
 

@@ -1530,6 +1530,7 @@ SCIP_RETCODE reduce_sdPc(
    assert(nelims != NULL);
    assert(nodesid != NULL);
    assert(nodesorg != NULL);
+   assert(!g->extended);
 
    *nelims = 0;
 
@@ -1538,7 +1539,7 @@ SCIP_RETCODE reduce_sdPc(
    else
    {
       const SCIP_Longint longedges = (SCIP_Longint) nedges;
-      const SCIP_Longint longtermsq = (SCIP_Longint) (nterms - 1) * nterms;
+      const SCIP_Longint longtermsq = (SCIP_Longint) (nterms - 1) * (SCIP_Longint) nterms;
 
       if( longedges <= longtermsq )
          maxnedges = nedges;
@@ -2488,6 +2489,7 @@ SCIP_RETCODE reduce_sdsp(
    assert(memlbltail != NULL);
    assert(memlblhead != NULL);
    assert(nelims != NULL);
+   assert(!g->extended);
 
    *nelims = 0;
 
