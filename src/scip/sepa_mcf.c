@@ -5905,7 +5905,7 @@ SCIP_RETCODE generateClusterCuts(
    nvars = SCIPgetNVars(scip);
 
    /* get the maximal number of cuts allowed in a separation round */
-   if( SCIPgetDepth(scip) == 0 )
+   if( depth == 0 )
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
