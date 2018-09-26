@@ -2633,7 +2633,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* get the maximal number of cuts allowed in a separation round */
-   nmaxcuts = SCIPgetDepth(scip) == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
+   nmaxcuts = depth == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
    ncuts = 0;
 
    /* try to compute cuts for each nonlinear row independently */

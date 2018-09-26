@@ -316,7 +316,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          {
             /* determine iteration limit; the number of iterations in the root is only set after its solution, but the
              * total number of LP iterations is always updated. */
-            if ( SCIPgetDepth(scip) == 0 )
+            if ( depth == 0 )
                nlpiters = SCIPgetNLPIterations(scip);
             else
                nlpiters = SCIPgetNRootLPIterations(scip);
@@ -353,7 +353,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          SCIP_Bool cutoff;
 
          noldcuts = SCIPgetNCuts(scip);
-         isroot = (SCIP_Bool) (SCIPgetDepth(scip) == 0);
+         isroot = (SCIP_Bool) (depth == 0);
 
          /* separate solution via other separators */
          SCIP_CALL( SCIPseparateSol(scip, point, isroot, TRUE, FALSE, &delayed, &cutoff) );

@@ -803,7 +803,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
 
    /* only call separator up to a maximum depth */
-   if( sepadata->maxdepth >= 0 && SCIPgetDepth(scip) > sepadata->maxdepth )
+   if( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
       return SCIP_OKAY;
 
    /* only call separator, if we are not close to terminating */
@@ -819,7 +819,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 
    /* recompute convex NLP relaxation if the variable set changed and we are still at the root node
     * @todo: does it make sense to do this??? */
-   if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && SCIPgetDepth(scip) == 0 )
+   if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && depth == 0 )
    {
       SCIP_CALL( sepadataClear(scip, sepadata) );
       assert(sepadata->nlpiprob == NULL);
@@ -853,8 +853,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
-      /* add rows of the LP */
-      if( SCIPgetDepth(scip) == 0 )
+      /* add rows of the LP @todo is it valid to use the depth callback parameter for this check? */
+      if( depth == 0 )
       {
          SCIP_CALL( SCIPaddNlpiProbRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
                   SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );

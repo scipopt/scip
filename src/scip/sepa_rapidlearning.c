@@ -565,7 +565,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     n1startinfers = 0;
     n2startinfers = 0;
 
-    /* install start values for inference branching */
+    /* install start values for inference branching @todo is it valid to use the depth callback parameter for this check? */
     /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
     if( sepadata->applyinfervals && SCIPgetDepth(scip) == 0 && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
     {

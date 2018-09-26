@@ -383,6 +383,8 @@ SCIP_RETCODE generateDisjCutSOS1(
 
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+
+   /* @todo is it valid to use the depth callback parameter for this check? */
    if ( SCIPgetDepth(scip) == 0 )
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
    else
@@ -408,16 +410,16 @@ SCIP_RETCODE generateDisjCutSOS1(
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      assert( SCIPgetDepth(scip) >= 0 );
-      if( SCIPgetDepth(scip) == 0 )
+      assert( depth >= 0 );
+      if( depth == 0 )
       {
-	 maxdnom = 100;
-	 maxscale = 100.0;
+         maxdnom = 100;
+	      maxscale = 100.0;
       }
       else
       {
-	 maxdnom = 10;
-	 maxscale = 10.0;
+         maxdnom = 10;
+         maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -672,7 +674,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIPfreeBufferArrayNull(scip, &violationarray);
 
    /* compute maximal number of cuts */
-   if ( SCIPgetDepth(scip) == 0 )
+   if ( depth == 0 )
       maxcuts = MIN(sepadata->maxinvcutsroot, nrelevantedges);
    else
       maxcuts = MIN(sepadata->maxinvcuts, nrelevantedges);
