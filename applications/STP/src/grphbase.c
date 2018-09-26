@@ -2129,9 +2129,9 @@ void graph_pc_subtractPrize(
 
    assert(scip != NULL);
    assert(g != NULL);
-
-   if( g->stp_type == STP_RPCSPG && i == g->source )
-      return;
+   assert(!g->extended);
+   assert(!graph_pc_knotIsFixedTerm(g, i));
+   assert(i != g->source);
 
    g->prize[i] -= cost;
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -2301,17 +2301,21 @@ SCIP_RETCODE graph_pc_contractEdge(
 
       assert(costs == g->cost[ets]);
 
-      graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], i);
+      if( !graph_pc_knotIsFixedTerm(g, i ) )
+         graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], i);
 
       /* contract s into t */
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
    else
    {
-      if( g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-         graph_pc_subtractPrize(scip, g, g->cost[ets], i);
-      else
-         graph_pc_subtractPrize(scip, g, -(g->prize[s]), i);
+      if( !graph_pc_knotIsFixedTerm(g, i ) )
+      {
+         if( g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
+            graph_pc_subtractPrize(scip, g, g->cost[ets], i);
+         else
+            graph_pc_subtractPrize(scip, g, -(g->prize[s]), i);
+      }
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
    assert(g->grad[s] == 0);
@@ -4634,7 +4638,7 @@ SCIP_Bool graph_valid(
          return((void)fprintf(stderr, fehler7, k), FALSE);
    }
 
-   if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
+   if( graph_pc_isPcMw(g) )
    {
       int npterms = 0;
       const int root = g->source;
@@ -4652,6 +4656,12 @@ SCIP_Bool graph_valid(
             assert(k != root);
 
             SCIPdebugMessage("inconsistent term2edge for %d \n", k);
+            return FALSE;
+         }
+
+         if( rooted && graph_pc_knotIsFixedTerm(g, k) && g->prize[k] != FARAWAY )
+         {
+            SCIPdebugMessage("inconsistent prize for %d \n", k);
             return FALSE;
          }
 

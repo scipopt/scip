@@ -3500,26 +3500,12 @@ SCIP_RETCODE reduce_sl(
 {
    SCIP_QUEUE* queue;
    SCIP_Real cost;
-   SCIP_Real mincost2;
-   SCIP_Real mincost3;
-   int     i;
-   int     k;
-   int     e;
-   int     j;
-   int     t;
-   int     old;
-   int     head;
-   int     tail;
-   int     root;
-   int     nnodes;
-   int     vrcount;
-   int     minedge;
-   int*    qnode;
-   STP_Bool    contract;
-   STP_Bool    foundterms;
-   STP_Bool*   forbidden;
-   STP_Bool*   newterm;
-   SCIP_Bool pc;
+   const int root = g->source;
+   const int nnodes = g->knots;
+   STP_Bool foundterms;
+   STP_Bool* forbidden;
+   STP_Bool* newterm;
+   const SCIP_Bool pc = (g->stp_type == STP_PCSPG) || (g->stp_type == STP_RPCSPG);
 
    assert(g != NULL);
    assert(vnoi != NULL);
@@ -3531,9 +3517,6 @@ SCIP_RETCODE reduce_sl(
 
    *nelims = 0;
    foundterms = FALSE;
-   nnodes = g->knots;
-   root = g->source;
-   pc = (g->stp_type == STP_PCSPG) || (g->stp_type == STP_RPCSPG);
 
    if( g->terms <= 1 )
       return SCIP_OKAY;
@@ -3542,55 +3525,64 @@ SCIP_RETCODE reduce_sl(
    SCIP_CALL( SCIPallocBufferArray(scip, &newterm, nnodes) );
 
    if( !pc )
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
    graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, heap, state);
 
    SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
-   for( j = 0; j < nnodes; j++ )
+   for( int i = 0; i < nnodes; i++ )
    {
-      newterm[j] = FALSE;
-      forbidden[j] = FALSE;
-      visited[j] = FALSE;
+      newterm[i] = FALSE;
+      forbidden[i] = FALSE;
+      visited[i] = FALSE;
    }
-   for( i = 0; i < nnodes; i++ )
+
+   for( int i = 0; i < nnodes; i++ )
    {
       /* is i terminal and not disabled? */
       if( Is_term(g->term[i]) && g->mark[i] && !forbidden[i] )
       {
          /* traverse voronoi-region of (terminal) i */
+
+         SCIP_Real mincost2 = FARAWAY;
+         SCIP_Real mincost3 = FARAWAY;
+         int t = i;
+         int tail;
+         int head;
+         int minedge = UNKNOWN;
+         int vrcount = 1;
+
          assert(SCIPqueueIsEmpty(queue));
-         t = i;
+
          SCIP_CALL( SCIPqueueInsert(queue, &t) );
-         vrcount = 1;
          vrnodes[0] = i;
          visited[i] = TRUE;
-         minedge = UNKNOWN;
-         mincost2 = FARAWAY;
-         mincost3 = FARAWAY;
 
          while( !SCIPqueueIsEmpty(queue) )
          {
-            qnode = (SCIPqueueRemove(queue));
-            /* traverse all adjacent edges */
-            for( e = g->outbeg[*qnode]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               j = g->head[e];
+            const int qnode = *(int*) (SCIPqueueRemove(queue));
 
-               if( !g->mark[j] )
+            /* traverse all adjacent edges */
+            for( int e = g->outbeg[qnode]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               int base;
+               head = g->head[e];
+
+               if( !g->mark[head] )
                   continue;
 
-               k = vbase[j];
-               assert(k != UNKNOWN);
-               if( !visited[j] && k == i )
+               base = vbase[head];
+               assert(base != UNKNOWN);
+
+               if( !visited[head] && base == i )
                {
-                  visited[j] = TRUE;
-                  vrnodes[vrcount++] = j;
+                  visited[head] = TRUE;
+                  vrnodes[vrcount++] = head;
                   SCIP_CALL( SCIPqueueInsert(queue, &(g->head[e])) );
                }
-               else if( k != i )
-                  /* update shortest and second shortest edge (cost) leaving the voronoi region */
+               else if( base != i )
+               /* update shortest and second shortest edge (cost) leaving the voronoi region */
                {
                   cost = g->cost[e];
                   if( minedge == UNKNOWN )
@@ -3615,44 +3607,52 @@ SCIP_RETCODE reduce_sl(
                }
             }
          }
-         for( j = 0; j < vrcount; j++ )
+         for( int j = 0; j < vrcount; j++ )
             visited[vrnodes[j]] = FALSE;
+
+#ifndef NDEBUG
+         for( int j = 0; j < nnodes; j++ )
+            assert(!visited[j]);
+#endif
+
          if( minedge == UNKNOWN )
             continue;
-         e = minedge;
-         tail = g->tail[e];
-         head = g->head[e];
+
+         tail = g->tail[minedge];
+         head = g->head[minedge];
          assert(vbase[tail] == i);
 
-         contract = FALSE;
-         cost = vnoi[tail].dist + g->cost[e] + vnoi[head].dist;
-         if( SCIPisGE(scip, mincost2, cost) )
-         {
-            contract = TRUE;
-         }
+         cost = vnoi[tail].dist + g->cost[minedge] + vnoi[head].dist;
 
          /* check whether minedge can be removed */
-         if( contract )
+         if( SCIPisGE(scip, mincost2, cost) )
          {
+            int j;
+            int k;
+            int old;
+
             if( pc )
             {
-               if( root != vbase[head] && !SCIPisLE(scip, g->cost[e] + vnoi[tail].dist + vnoi[head].dist, g->prize[vbase[head]]) )
+               assert(g->stp_type != STP_RPCSPG || g->prize[root] == FARAWAY);
+
+               if( !SCIPisLE(scip, g->cost[minedge] + vnoi[tail].dist + vnoi[head].dist, g->prize[vbase[head]]) )
                   continue;
+
                if( i == tail )
                {
-                  if( root != i && !SCIPisLE(scip, vnoi[tail].dist + g->cost[e], g->prize[i]) )
+                  if( !SCIPisLE(scip, vnoi[tail].dist + g->cost[minedge], g->prize[i]) )
                      continue;
                }
                else
                {
-                  if( root != i && !SCIPisLT(scip, vnoi[tail].dist + g->cost[e], g->prize[i]) )
+                  if( !SCIPisLT(scip, vnoi[tail].dist + g->cost[minedge], g->prize[i]) )
                      continue;
                }
                if( Is_term(g->term[head]) && Is_term(g->term[tail]) )
                   continue;
             }
 
-            *fixed += g->cost[e];
+            *fixed += g->cost[minedge];
             assert(g->mark[tail] && g->mark[head]);
             assert(!Is_pterm(g->term[tail]) && !Is_pterm(g->term[head]));
 
@@ -3672,10 +3672,17 @@ SCIP_RETCODE reduce_sl(
             if( pc )
             {
                SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, j, k, i) );
+               assert(g->grad[j] > 0);
+               if( graph_pc_knotIsFixedTerm(g, i) && !Is_term(g->term[j]) )
+               {
+                  assert(!Is_gterm(g->term[j]));
+                  newterm[j] = TRUE;
+                  foundterms = TRUE;
+               }
             }
             else
             {
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[minedge], NULL) );
                SCIP_CALL( graph_knot_contract(scip, g, solnode, j, k) );
 
                assert(g->grad[k] == 0 && g->grad[j] >= 0);
@@ -3695,10 +3702,19 @@ SCIP_RETCODE reduce_sl(
       }
    }
 
-   for( i = 0; i < nnodes && foundterms; i++ )
-      if( newterm[i] && !Is_term(g->term[i]) && g->grad[i] > 0 )
-         graph_knot_chg(g, i, 0);
-
+   if( foundterms )
+   {
+      for( int i = 0; i < nnodes; i++ )
+         if( newterm[i] && !Is_term(g->term[i]) && g->grad[i] > 0 )
+         {
+            if( pc )
+            {
+               assert(g->prize[i] == 0.0 && !Is_gterm(g->term[i]));
+               g->prize[i] = FARAWAY;
+            }
+            graph_knot_chg(g, i, 0);
+         }
+   }
 
    /* free memory */
    SCIPqueueFree(&queue);
