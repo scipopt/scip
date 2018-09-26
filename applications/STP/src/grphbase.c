@@ -1655,7 +1655,7 @@ SCIP_RETCODE graph_pc_2rpc(
    GRAPH*                graph               /**< the graph */
    )
 {
-   SCIP_Real* prize;
+   SCIP_Real* const prize = graph->prize;
    const int root = graph->source;
    const int nnodes = graph->knots;
    int nterms;
@@ -1665,7 +1665,6 @@ SCIP_RETCODE graph_pc_2rpc(
    assert(graph != NULL);
    assert(graph->edges == graph->esize);
 
-   prize = graph->prize;
    graph->norgmodeledges = graph->edges;
    graph->norgmodelknots = nnodes;
 
@@ -1687,10 +1686,23 @@ SCIP_RETCODE graph_pc_2rpc(
       else if( SCIPisGT(scip, prize[i], 0.0) )
       {
          assert(i != root);
-         graph_knot_chg(graph, i, 0);
+         assert(Is_term(graph->term[i]));
          npotterms++;
       }
+      else if( Is_term(graph->term[i]) )
+      {
+         assert(i != root);
+         assert(SCIPisEQ(scip, prize[i], 0.0));
+         prize[i] = 0.0;
+         graph_knot_chg(graph, i, -1);
+      }
+      else
+      {
+         assert(prize[i] == 0.0);
+      }
    }
+
+   assert(npotterms + nfixterms == graph->terms);
 
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    SCIP_CALL( graph_resize(scip, graph, (graph->ksize + graph->terms), (graph->esize + npotterms * 4) , -1) );

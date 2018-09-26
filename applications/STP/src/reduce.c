@@ -1285,6 +1285,8 @@ SCIP_RETCODE redLoopPc(
 
    printf("brednelims %d \n", brednelims);
    printf("nvslnelims %d \n", nvslnelims);
+   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
+
 #endif
    *fixed += fix;
 
