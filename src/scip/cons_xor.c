@@ -4429,7 +4429,13 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
 
                intrhs = (int) SCIPfloor(scip, rhs);
                rhsparity = ((SCIP_Bool) (intrhs % 2)); /*lint !e571*/
-               neednew = (intrhs != 1 && intrhs != 0);
+
+               /* we need a new variable if the rhs is not 0 or 1 or if the coefficient was +2, since in these cases, we
+                * need to aggregate the variables (flipping signs and/or shifting */
+               if ( (intrhs != 1 && intrhs != 0) || postwo )
+                  neednew = TRUE;
+               else
+                  neednew = FALSE;
 
                /* check if we can use the parity variable as integer variable of the XOR constraint or do we need to
                 * create a new variable
