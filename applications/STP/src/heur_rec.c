@@ -483,8 +483,7 @@ SCIP_RETCODE buildsolgraph(
    STPSOL** poolsols = NULL;
    SCIP_VAR** vars = NULL;
    int* solselection;
-   const SCIP_Bool pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP
-                        || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP );
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Bool usestppool = (pool != NULL);
 
    assert(scip != NULL);
@@ -584,60 +583,72 @@ SCIP_RETCODE buildsolgraph(
             }
          }
       }
-      if( pcmw ) /* todo this probably won't work for RMWCSP */
+      if( pcmw )
       {
          const int oldroot = graph->source;
+         assert(graph->extended);
+
          for( int i = graph->outbeg[oldroot]; i != EAT_LAST; i = graph->oeat[i] )
          {
-            if( Is_gterm(graph->term[graph->head[i]]) )
+            const int head = graph->head[i];
+            const int ihalf = i / 2;
+
+            if( !soledge[ihalf] )
             {
-               const int ihalf = i / 2;
-               const int head = graph->head[i];
-               if( soledge[ihalf] == FALSE )
+               if( Is_gterm(graph->term[head]) )
                {
                   nsoledges++;
                   soledge[ihalf] = TRUE;
-                  if( !solnode[head] && SCIPisEQ(scip, graph->cost[flipedge(i)], FARAWAY) )
+
+                  if( !solnode[head] )
                   {
                      solnode[head] = TRUE;
                      nsolnodes++;
                   }
-                  assert(solnode[graph->head[i]]);
                }
+            }
+            else
+            {
+               assert(solnode[head]);
+            }
 
-               if( Is_pterm(graph->term[head]) )
+            if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
+            {
+               const int e2 = graph->term2edge[head];
+               const int head2 = graph->head[e2];
+
+               assert(graph->grad[head] == 2 && e2 >= 0 && Is_pterm(graph->term[head2]));
+
+               if( !soledge[e2 / 2] )
                {
-                  int e2;
-                  for( e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-                     if( Is_term(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
-                        break;
-
-                  assert(e2 != EAT_LAST);
-
-                  if( soledge[e2 / 2] == FALSE )
-                  {
-                     nsoledges++;
-                     soledge[e2 / 2] = TRUE;
-                  }
+                  nsoledges++;
+                  soledge[e2 / 2] = TRUE;
                }
-               else
+               if( !solnode[head2] )
                {
-                  int e2;
-                  assert(Is_term(graph->term[head]));
-                  for( e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-                     if( Is_pterm(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
-                        break;
-
-                  assert(e2 != EAT_LAST);
-
-                  if( soledge[e2 / 2] == FALSE )
-                  {
-                     nsoledges++;
-                     soledge[e2 / 2] = TRUE;
-                  }
+                  solnode[head2] = TRUE;
+                  nsolnodes++;
                }
             }
          }
+
+#ifndef NDEBUG
+         for( int k = 0; k < nnodes; k++ )
+         {
+            if( Is_pterm(graph->term[k]) )
+            {
+               const int e2 = graph->term2edge[k];
+
+               assert(!graph_pc_knotIsFixedTerm(graph, k));
+               assert(solnode[k]);
+               assert(e2 != EAT_LAST && soledge[e2 / 2]);
+            }
+            else if( Is_term(graph->term[k]) )
+            {
+               assert(solnode[k]);
+            }
+         }
+#endif
       }
 
       /* add additional edges? */
@@ -710,7 +721,7 @@ SCIP_RETCODE buildsolgraph(
          {
             if( pcmw )
             {
-               if( (!Is_term(graph->term[i])) )
+               if( (!Is_term(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i)) )
                   newgraph->prize[j] = graph->prize[i];
                else
                   newgraph->prize[j] = 0.0;
@@ -731,10 +742,9 @@ SCIP_RETCODE buildsolgraph(
 
       /* set root */
       newgraph->source = dnodemap[graph->source];
-      if( newgraph->stp_type == STP_RPCSPG || newgraph->stp_type == STP_RMWCSP )
-         newgraph->prize[newgraph->source] = FARAWAY;
 
       assert(newgraph->source >= 0);
+      assert(!graph_pc_isRootedPcMw(graph) || newgraph->prize[newgraph->source] == FARAWAY);
 
       /* copy max degrees*/
       if( graph->stp_type == STP_DCSTP )
@@ -1033,7 +1043,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    int*                  newsolindex,        /**< index of new solution */
    int                   runs,               /**< number of runs */
    int                   nsols,              /**< number of solutions in pool (SCIP or STP) */
-   SCIP_Bool             restrictheur,       /**< use restricted version of heur? */
+   SCIP_Bool             restrictheur,       /**< use restricted version of heuristic? */
    SCIP_Bool*            solfound            /**< new solution found? */
 )
 {
@@ -1046,7 +1056,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int probtype = graph->stp_type;
-   const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP );
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    STP_Bool* stnodes;
 
    assert(runs >= 0);
@@ -1168,8 +1178,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          assert(graph_valid(solgraph));
 
          /* reduce new graph */
-         if( probtype == STP_RPCSPG || probtype == STP_DHCSTP || probtype == STP_DCSTP
-             || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
+         if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5, FALSE) );
          else
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 2, 5, FALSE) );
@@ -1271,13 +1280,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                for( int k = 0; k < nsolnodes; k++ )
                {
-                  if( Is_pterm(solgraph->term[k]) && k != solgraphroot )
+                  if( Is_pterm(solgraph->term[k]) )
                   {
                      int e;
                      const int term = solgraph->head[solgraph->term2edge[k]];
                      orgprize[k] = prize[k];
 
                      assert(term >= 0);
+                     assert(solgraphroot != k);
                      assert(Is_term(solgraph->term[term]));
 
                      for( e = solgraph->inpbeg[term]; e != EAT_LAST; e = solgraph->ieat[e] )
@@ -1322,8 +1332,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                assert(orgprize != NULL);
 
                for( int k = 0; k < nsolnodes; k++ )
-                  if( Is_pterm(solgraph->term[k]) && k != solgraph->source )
+                  if( Is_pterm(solgraph->term[k]) )
+                  {
+                     assert(k != solgraph->source);
                      prize[k] = orgprize[k];
+                  }
 
                SCIPfreeBufferArray(scip, &orgprize);
             }
