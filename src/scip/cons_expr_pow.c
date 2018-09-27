@@ -899,7 +899,7 @@ void estimateRoot(
  * base_1 < base2 or, base_1 = base_2 and expo_1 < expo_2
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(comparePow)
 {  /*lint --e{715}*/
    SCIP_Real expo1;
    SCIP_Real expo2;

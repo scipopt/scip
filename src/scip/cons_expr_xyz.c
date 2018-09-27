@@ -83,7 +83,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
 
 /** expression compare callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareXyz)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
 {  /*lint --e{715}*/
    assert(expr1 != NULL);
    assert(expr2 != NULL);

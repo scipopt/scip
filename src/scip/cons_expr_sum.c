@@ -611,7 +611,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
  *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareSum)
 {  /*lint --e{715}*/
    SCIP_Real const1;
    SCIP_Real* coefs1;

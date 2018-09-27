@@ -1098,37 +1098,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
  * @{
  */
 
-/** Implements OR5: default comparison method of expressions of the same type:
- * expr1 < expr2 if and only if expr1_i = expr2_i for all i < k and expr1_k < expr2_k.
- * if there is no such k, use number of children to decide
- * if number of children is equal, both expressions are equal
- * @note: Warning, this method doesn't know about expression data. So if your expressions have special data,
- * you must implement the compare callback: SCIP_DECL_CONSEXPR_EXPRCMP
- */
-static
-int compareConsExprExprsDefault(
-   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
-   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
-   )
-{
-   int i;
-   int nchildren1;
-   int nchildren2;
-   int compareresult;
-
-   nchildren1 = SCIPgetConsExprExprNChildren(expr1);
-   nchildren2 = SCIPgetConsExprExprNChildren(expr2);
-
-   for( i = 0; i < nchildren1 && i < nchildren2; ++i )
-   {
-      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[i]);
-      if( compareresult != 0 )
-         return compareresult;
-   }
-
-   return nchildren1 == nchildren2 ? 0 : nchildren1 < nchildren2 ? -1 : 1;
-}
-
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
@@ -1148,12 +1117,7 @@ int SCIPcompareConsExprExprs(
    /* expressions are of the same kind/type; use compare callback or default method */
    if( exprhdlr1 == exprhdlr2 )
    {
-      if( exprhdlr1->compare != NULL )
-         /* enforces OR1-OR4 */
-         return exprhdlr1->compare(expr1, expr2);
-      else
-         /* enforces OR5 */
-         return compareConsExprExprsDefault(expr1, expr2);
+      return SCIPcompareConsExprExprHdlr(expr1, expr2);
    }
 
    /* expressions are of different kind/type */
@@ -6856,7 +6820,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRCMP((*compare))    /**< compare callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRCOMPARE((*compare))/**< compare callback (can be NULL) */
    )
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
@@ -7280,6 +7244,46 @@ SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr)
    }
 
    return SCIP_OKAY;
+}
+
+/** calls the expression compare callback */
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr)
+{
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+   assert(expr1->exprhdlr == expr2->exprhdlr);
+
+   if( expr1->exprhdlr->compare != NULL )
+   {
+      /* enforces OR1-OR4 */
+      return expr1->exprhdlr->compare(expr1, expr2);
+   }
+   else
+   {
+      /* enforces OR5: default comparison method of expressions of the same type:
+       * expr1 < expr2 if and only if expr1_i = expr2_i for all i < k and expr1_k < expr2_k.
+       * if there is no such k, use number of children to decide
+       * if number of children is equal, both expressions are equal
+       * @note: Warning, this method doesn't know about expression data. So if your expressions have special data,
+       * you must implement the compare callback: SCIP_DECL_CONSEXPR_EXPRCMP
+       */
+      int i;
+      int nchildren1;
+      int nchildren2;
+      int compareresult;
+
+      nchildren1 = SCIPgetConsExprExprNChildren(expr1);
+      nchildren2 = SCIPgetConsExprExprNChildren(expr2);
+
+      for( i = 0; i < nchildren1 && i < nchildren2; ++i )
+      {
+         compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[i]);
+         if( compareresult != 0 )
+            return compareresult;
+      }
+
+      return nchildren1 == nchildren2 ? 0 : nchildren1 < nchildren2 ? -1 : 1;
+   }
 }
 
 /** calls the evaluation callback of an expression handler

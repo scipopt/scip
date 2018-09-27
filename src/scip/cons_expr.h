@@ -130,7 +130,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRCMP((*compare))    /**< compare callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRCOMPARE((*compare))/**< compare callback (can be NULL) */
 );
 
 /** set the derivative evaluation callback of an expression handler */
@@ -322,6 +322,10 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(SCIPparseConsExprExprHdlr);
 /** calls the expression hash callback */
 EXTERN
 SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
+
+/** calls the expression compare callback */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr);
 
 /** calls the evaluation callback of an expression handler
  *

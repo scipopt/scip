@@ -32,7 +32,7 @@
 
 /** the order of two values is the real order */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareValue)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareValue)
 {  /*lint --e{715}*/
    SCIP_Real val1;
    SCIP_Real val2;

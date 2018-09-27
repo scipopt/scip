@@ -127,7 +127,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
 /** the order of two variable is given by their indices
  * @note: this is affected by permutations in the problem! */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareVar)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareVar)
 {  /*lint --e{715}*/
    int index1;
    int index2;

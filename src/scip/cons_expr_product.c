@@ -1165,7 +1165,7 @@ CLEANUP:
  *  Example: y * z < x * y * z
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareProduct)
 {  /*lint --e{715}*/
    int compareresult;
    int i;
