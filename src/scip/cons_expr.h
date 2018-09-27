@@ -1110,6 +1110,9 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
 
 /** @} */
 
+/**@name Nonlinear Handler Methods */
+/**@{ */
+
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 EXTERN
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
@@ -1123,6 +1126,14 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    );
+
+/** set the copy handler callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrCopyHdlr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
+);
 
 /** set the nonlinear handler callback to free the nonlinear handler data */
 EXTERN
@@ -1140,14 +1151,6 @@ void SCIPsetConsExprNlhdlrFreeExprData(
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
 );
 
-/** set the copy handler callback of a nonlinear handler */
-EXTERN
-void SCIPsetConsExprNlhdlrCopyHdlr(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
-);
-
 /** set the initialization and deinitialization callback of a nonlinear handler */
 EXTERN
 void SCIPsetConsExprNlhdlrInitExit(
@@ -1155,6 +1158,22 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
+);
+
+/** set the reformulate callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrReformulate(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
+   );
+
+/** set the propagation callbacks of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
 /** set the separation callbacks of a nonlinear handler */
@@ -1168,15 +1187,6 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 );
 
-/** set the propagation callbacks of a nonlinear handler */
-EXTERN
-void SCIPsetConsExprNlhdlrProp(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-);
-
 /** set the branching score callback of a nonlinear handler */
 EXTERN
 void SCIPsetConsExprNlhdlrBranchscore(
@@ -1184,13 +1194,6 @@ void SCIPsetConsExprNlhdlrBranchscore(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
 );
-
-/** set the reformulate callback of a nonlinear handler */
-void SCIPsetConsExprNlhdlrReformulate(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
-   );
 
 /** gives name of nonlinear handler */
 EXTERN
@@ -1214,6 +1217,24 @@ unsigned int SCIPgetConsExprNlhdlrPriority(
 EXTERN
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the reformulation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the interval evaluation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrInteval(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
+/** returns whether nonlinear handler implements the reverse propagation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the separation initialization callback */
@@ -1240,63 +1261,33 @@ SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
-/** returns whether nonlinear handler implements the interval evaluation callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprNlhdlrInteval(
-   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-);
-
-/** returns whether nonlinear handler implements the reverse propagation callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
-   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-);
-
-/** returns whether nonlinear handler implements the reformulation callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
-   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-);
-
 /** call the detect callback of a nonlinear handler */
 EXTERN
-SCIP_RETCODE SCIPdetectConsExprNlhdlr(
-   SCIP*                          scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                 conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*          nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*            expr,             /**< expression to analyze */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods,   /**< enforcement methods that are provided (to be updated by this call) */
-   SCIP_Bool*                     enforcedbelow,    /**< indicates whether an enforcement method for expr <= auxvar exists (to be updated by this call) or is not necessary */
-   SCIP_Bool*                     enforcedabove,    /**< indicates whether an enforcement method for expr >= auxvar exists (to be updated by this call) or is not necessary */
-   SCIP_Bool*                     success,          /**< buffer to store whether the nonlinear handler should be called for this expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata    /**< nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE */
-);
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr);
+
+/** calls the reformulation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(SCIPreformulateConsExprNlhdlr);
 
 /** call the auxiliary evaluation callback of a nonlinear handler */
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr);
 
+/** calls the interval evaluation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(SCIPintevalConsExprNlhdlr);
+
+/** calls the reverse propagation callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(SCIPreversepropConsExprNlhdlr);
+
 /** calls the separation initialization callback of a nonlinear handler */
 EXTERN
-SCIP_RETCODE SCIPinitsepaConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_Bool                     overestimate,     /**< whether the expression needs to be overestimated */
-   SCIP_Bool                     underestimate,    /**< whether the expression needs to be underestimated */
-   SCIP_Bool*                    infeasible        /**< pointer to store whether an infeasibility was detected */
-);
+SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr);
 
 /** calls the separation deinitialization callback of a nonlinear handler */
 EXTERN
-SCIP_RETCODE SCIPexitsepaConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata    /**< expression data of nonlinear handler */
-);
+SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(SCIPexitsepaConsExprNlhdlr);
 
 /** calls the separation callback of a nonlinear handler */
 EXTERN
@@ -1306,43 +1297,11 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
-/** calls the interval evaluation callback of a nonlinear handler */
-EXTERN
-SCIP_RETCODE SCIPintevalConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_INTERVAL*                interval,         /**< buffer where to store interval (on input: current interval for expr, on output: computed interval for expr) */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)),   /**< function to call to evaluate interval of variable */
-   void*                         intevalvardata    /**< data to be passed to intevalvar call */
-);
-
-/** calls the reverse propagation callback of a nonlinear handler */
-EXTERN
-SCIP_RETCODE SCIPreversepropConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,   /**< expression data of nonlinear handler */
-   SCIP_QUEUE*                   reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
-   SCIP_Bool*                    infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                          nreductions,      /**< buffer to store the number of interval reductions of all children */
-   SCIP_Bool                     force             /**< force tightening even if it is below the bound strengthening tolerance */
-);
-
-/** calls the reformulation callback of a nonlinear handler */
-SCIP_RETCODE SCIPreformulateConsExprNlhdlr(
-   SCIP*                         scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*                conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr,           /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*           expr,             /**< expression */
-   SCIP_CONSEXPR_EXPR**          refexpr           /**< pointer to store reformulated expression */
-   );
-
 /** calls the nonlinear handler branching score callback */
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
+
+/** @} */
 
 #ifdef __cplusplus
 }
