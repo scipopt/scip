@@ -74,7 +74,6 @@
 #define TABLE_POSITION_EXPR                      12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_EXPR                SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-
 /* enable nonlinear constraint upgrading */
 #include "scip/cons_nonlinear.h"
 #define NONLINCONSUPGD_PRIORITY   600000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
@@ -82,8 +81,6 @@
 /* enable quadratic constraint upgrading */
 #include "scip/cons_quadratic.h"
 #define QUADCONSUPGD_PRIORITY     600000 /**< priority of the constraint handler for upgrading of quadratic constraints */
-
-
 
 /** ensures that a block memory array has at least a given size
  *
@@ -106,6 +103,7 @@
  *  if val is >= infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
+
 
 /*
  * Data structures
@@ -131,13 +129,13 @@ typedef struct SCIP_ExprConsUpgrade SCIP_EXPRCONSUPGRADE;
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
-   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array containing all variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   SCIP_VAREVENTDATA**   vareventdata;       /**< array containing eventdata for bound change of variables */
-
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint */
    SCIP_Real             lhs;                /**< left-hand side */
    SCIP_Real             rhs;                /**< right-hand side */
+
+   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array containing all variable expressions */
+   int                   nvarexprs;          /**< total number of variable expressions */
+   SCIP_VAREVENTDATA**   vareventdata;       /**< array containing eventdata for bound change of variables */
 
    SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
@@ -154,6 +152,7 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   /* expression handler */
    SCIP_CONSEXPR_EXPRHDLR** exprhdlrs;       /**< expression handlers */
    int                      nexprhdlrs;      /**< number of expression handlers */
    int                      exprhdlrssize;   /**< size of exprhdlrs array */
@@ -163,41 +162,47 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 
+   /* nonlinear handler */
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
    int                      nnlhdlrs;        /**< number of nonlinear handlers */
    int                      nlhdlrssize;     /**< size of nlhdlrs array */
 
+   /* constraint upgrades */
+   SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
+   int                      exprconsupgradessize; /**< size of exprconsupgrades array */
+   int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
+
+   /* other plugins */
+   SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
+   SCIP_HEUR*               subnlpheur;      /**< a pointer to the subnlp heuristic, if available */
+
+   /* expression iterator */
    int                      nactiveiter;     /**< number of currently active iterators */
    unsigned int             lastvisitedtag;  /**< last visited tag used by iterators */
 
+   /* tags and counters */
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
-   unsigned int             lastbrscoretag;  /**< last branching score tag used */
-   unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             lastintevaltag;  /**< last interval evaluation tag used */
+   unsigned int             lastdifftag;     /**< last tag used for computing gradients */
+   unsigned int             lastbrscoretag;  /**< last branching score tag used */
 
    SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
    SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
    SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
 
-   SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
-   SCIP_HEUR*               subnlpheur;      /**< a pointer to the subnlp heuristic, if available */
-
+   /* parameters */
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
    SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
    SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
 
+   /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
    SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
-
-   /* upgrade */
-   SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
-   int                      exprconsupgradessize; /**< size of exprconsupgrades array */
-   int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -209,6 +214,7 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
+/** printing to dot file data */
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
