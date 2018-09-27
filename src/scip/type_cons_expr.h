@@ -208,6 +208,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRPARSE(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
    const char* string, \
    const char** endstring, \
    SCIP_CONSEXPR_EXPR** expr, \

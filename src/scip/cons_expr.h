@@ -315,6 +315,10 @@ SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
 EXTERN
 SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr);
 
+/** calls the parse callback of an expression handler */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRPARSE(SCIPparseConsExprExprHdlr);
+
 /** calls the expression hash callback */
 EXTERN
 SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);

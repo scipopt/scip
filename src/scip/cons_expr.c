@@ -3436,15 +3436,9 @@ SCIP_RETCODE parseBase(
          SCIPerrorMessage("No expression handler with name <%s> found.\n", operatorname);
          return SCIP_READERROR;
       }
-      if( exprhdlr->parse == NULL )
-      {
-         SCIPerrorMessage("Expression handler <%s> has no parsing method.\n", operatorname);
-         return SCIP_READERROR;
-      }
 
-      /* give control to exprhdlr's parser */
       ++expr;
-      SCIP_CALL( exprhdlr->parse(scip, conshdlr, expr, newpos, basetree, &success) );
+      SCIP_CALL( SCIPparseConsExprExprHdlr(scip, conshdlr, exprhdlr, expr, newpos, basetree, &success) );
 
       if( !success )
       {
@@ -7224,6 +7218,34 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
             break;
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** calls the parse callback of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRPARSE(SCIPparseConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(exprhdlr != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   *expr = NULL;
+
+   if( exprhdlr->parse == NULL )
+   {
+      /* TODO we could just look for a comma separated list of operands and try to initialize the expr with this one?
+       * That would be sufficient for sin, cos, exp, log, abs, for example.
+       */
+      SCIPdebugMessage("Expression handler <%s> has no parsing method.\n", SCIPgetConsExprExprHdlrName(exprhdlr));
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* give control to exprhdlr's parser */
+   SCIP_CALL( exprhdlr->parse(scip, consexprhdlr, exprhdlr, string, endstring, expr, success) );
+
+   assert(*success || (*expr == NULL));
 
    return SCIP_OKAY;
 }
