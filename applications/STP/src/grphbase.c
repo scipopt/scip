@@ -3143,6 +3143,8 @@ void graph_printInfo(
    case 12:
       strcpy(type, "STP_RMWCSP");
       break;
+   default:
+      strcpy(type, "UNKNOWN");
    }
 
    assert(g != NULL);
