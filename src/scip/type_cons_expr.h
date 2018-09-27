@@ -69,21 +69,6 @@ typedef enum
    void* intevalvardata \
    )
 
-/** expression compare callback
- *
- * the method receives two expressions, expr1 and expr2. Must return
- * -1 if expr1 < expr2
- * 0  if expr1 = expr2
- * 1  if expr1 > expr2
- *
- * input:
- *  - expr1 : first expression to compare
- *  - expr2 : second expression to compare
- */
-#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
-   SCIP_CONSEXPR_EXPR* expr1, \
-   SCIP_CONSEXPR_EXPR* expr2)
-
 /** variable mapping callback for expression data callback
  *
  * The method maps a variable (in a source SCIP instance) to a variable
@@ -290,6 +275,21 @@ typedef enum
    SCIP_CONSEXPR_EXPR* expr, \
    unsigned int* hashkey, \
    unsigned int* childrenhashes)
+
+/** expression compare callback
+ *
+ * the method receives two expressions, expr1 and expr2. Must return
+ * -1 if expr1 < expr2
+ * 0  if expr1 = expr2
+ * 1  if expr1 > expr2
+ *
+ * input:
+ *  - expr1 : first expression to compare
+ *  - expr2 : second expression to compare
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
+   SCIP_CONSEXPR_EXPR* expr1, \
+   SCIP_CONSEXPR_EXPR* expr2)
 
 /** derivative evaluation callback
  *
