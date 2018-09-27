@@ -378,223 +378,44 @@ SCIP_RETCODE freeEnfoData(
    return SCIP_OKAY;
 }
 
-/** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
-SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
+SCIP_DECL_CONSEXPR_MAPVAR(transformVar)
+{   /*lint --e{715}*/
+   assert(sourcevar != NULL);
+   assert(targetvar != NULL);
+   assert(sourcescip == targetscip);
 
-/** copy expression and nonlinear handlers from sourceconshdlr to (target's) scip consexprhdlr */
-static
-SCIP_RETCODE copyConshdlrExprExprHdlr(
-   SCIP*                 scip,               /**< (target) SCIP data structure */
-   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint expression handler */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
-   )
-{
-   int                i;
-   SCIP_CONSHDLR*     conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLRDATA* sourceconshdlrdata;
+   /* transform variable (does not capture target variable) */
+   SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
+   assert(*targetvar != NULL);
 
-   assert(strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0);
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   assert(conshdlr != sourceconshdlr);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   sourceconshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
-   assert(sourceconshdlrdata != NULL);
-
-   /* copy expression handlers */
-   *valid = TRUE;
-   for( i = 0; i < sourceconshdlrdata->nexprhdlrs; i++ )
-   {
-      SCIP_Bool localvalid;
-      SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr;
-
-      sourceexprhdlr = sourceconshdlrdata->exprhdlrs[i];
-
-      if( sourceexprhdlr->copyhdlr != NULL )
-      {
-         SCIP_CALL( sourceexprhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourceexprhdlr, &localvalid) );
-         *valid &= localvalid;
-      }
-      else
-      {
-         *valid = FALSE;
-      }
-   }
-
-   /* set pointer to important expression handlers in conshdlr of target SCIP */
-   conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
-   conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
-   conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
-   conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
-
-   /* copy nonlinear handlers */
-   for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
-   {
-      SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
-
-      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
-      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
-      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
-      {
-         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
-      }
-   }
+   /* caller assumes that target variable has been captured */
+   SCIP_CALL( SCIPcaptureVar(sourcescip, *targetvar) );
 
    return SCIP_OKAY;
 }
 
-/** returns an equivalent expression for a given expression if possible; it adds the expression to key2expr if the map
- *  does not contain the key
- */
 static
-SCIP_RETCODE findEqualExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR *  expr,               /**< expression to replace */
-   SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
-   SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
-   )
-{  /*lint --e{438}*/
-   SCIP_MULTIHASHLIST* multihashlist;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(key2expr != NULL);
-   assert(newexpr != NULL);
-
-   *newexpr = NULL;
-   multihashlist = NULL;
-
-   do
-   {
-      /* search for an equivalent expression */
-      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPmultihashRetrieveNext(key2expr, &multihashlist, (void*)expr));
-
-      if( *newexpr == NULL )
-      {
-         /* processed all expressions like expr from hash table, so insert expr */
-         SCIP_CALL( SCIPmultihashInsert(key2expr, (void*) expr) );
-         break;
-      }
-      else if( expr != *newexpr )
-      {
-         assert(SCIPcompareConsExprExprs(expr, *newexpr) == 0);
-         break;
-      }
-      else
-      {
-         /* can not replace expr since it is already contained in the hashtablelist */
-         assert(expr == *newexpr);
-         *newexpr = NULL;
-         break;
-      }
-   }
-   while( TRUE ); /*lint !e506*/
-
-   return SCIP_OKAY;
-}
-
-/** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
-static
-SCIP_RETCODE presolveUpgrade(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
-   SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
-   int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
-   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
-   )
+SCIP_DECL_CONSEXPR_MAPVAR(copyVar)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONS** upgdconss;
-   int upgdconsssize;
-   int nupgdconss_;
-   int i;
+   COPY_MAPVAR_DATA* data;
+   SCIP_Bool valid;
 
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(cons != NULL);
-   assert(!SCIPconsIsModifiable(cons));
-   assert(upgraded   != NULL);
-   assert(nupgdconss != NULL);
-   assert(naddconss  != NULL);
+   assert(sourcevar != NULL);
+   assert(targetvar != NULL);
+   assert(mapvardata != NULL);
 
-   *upgraded = FALSE;
+   data = (COPY_MAPVAR_DATA*)mapvardata;
 
-   nupgdconss_ = 0;
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, targetvar, data->varmap, data->consmap, data->global, &valid) );
+   assert(*targetvar != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   /* if copy was not valid, store so in mapvar data */
+   if( !valid )
+      data->valid = FALSE;
 
-   /* if there are no upgrade methods, we can stop */
-   if( conshdlrdata->nexprconsupgrades == 0 )
-      return SCIP_OKAY;
-
-   upgdconsssize = 2;
-   SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
-
-   /* call the upgrading methods */
-   SCIPdebugMsg(scip, "upgrading expression constraint <%s> (up to %d upgrade methods): ",
-      SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   /* try all upgrading methods in priority order in case the upgrading step is enable  */
-   for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
-   {
-      if( !conshdlrdata->exprconsupgrades[i]->active )
-         continue;
-
-      assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
-
-      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
-
-      while( nupgdconss_ < 0 )
-      {
-         /* upgrade function requires more memory: resize upgdconss and call again */
-         assert(-nupgdconss_ > upgdconsssize);
-         upgdconsssize = -nupgdconss_;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
-
-         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
-
-         assert(nupgdconss_ != 0);
-      }
-
-      if( nupgdconss_ > 0 )
-      {
-         /* got upgrade */
-         int j;
-
-         SCIPdebugMsg(scip, " -> upgraded to %d constraints:\n", nupgdconss_);
-
-         /* add the upgraded constraints to the problem and forget them */
-         for( j = 0; j < nupgdconss_; ++j )
-         {
-            SCIPdebugMsgPrint(scip, "\t");
-            SCIPdebugPrintCons(scip, upgdconss[j], NULL);
-
-            SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
-            SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[j]) ); /*lint !e613*/
-         }
-
-         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
-         *nupgdconss += 1;
-         *naddconss += nupgdconss_ - 1;
-         *upgraded = TRUE;
-
-         /* delete upgraded constraint */
-         SCIPdebugMsg(scip, "delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-
-         break;
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &upgdconss);
+   /* caller assumes that target variable has been captured */
+   SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
 
    return SCIP_OKAY;
 }
@@ -781,45 +602,173 @@ SCIP_RETCODE copyExpr(
    return SCIP_OKAY;
 }
 
-
+/** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
-SCIP_DECL_CONSEXPR_MAPVAR(transformVar)
-{   /*lint --e{715}*/
-   assert(sourcevar != NULL);
-   assert(targetvar != NULL);
-   assert(sourcescip == targetscip);
+SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
 
-   /* transform variable (does not capture target variable) */
-   SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
-   assert(*targetvar != NULL);
+/** copy expression and nonlinear handlers from sourceconshdlr to (target's) scip consexprhdlr */
+static
+SCIP_RETCODE copyConshdlrExprExprHdlr(
+   SCIP*                 scip,               /**< (target) SCIP data structure */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint expression handler */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
+   )
+{
+   int                i;
+   SCIP_CONSHDLR*     conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* sourceconshdlrdata;
 
-   /* caller assumes that target variable has been captured */
-   SCIP_CALL( SCIPcaptureVar(sourcescip, *targetvar) );
+   assert(strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   assert(conshdlr != sourceconshdlr);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   sourceconshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert(sourceconshdlrdata != NULL);
+
+   /* copy expression handlers */
+   *valid = TRUE;
+   for( i = 0; i < sourceconshdlrdata->nexprhdlrs; i++ )
+   {
+      SCIP_Bool localvalid;
+      SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr;
+
+      sourceexprhdlr = sourceconshdlrdata->exprhdlrs[i];
+
+      if( sourceexprhdlr->copyhdlr != NULL )
+      {
+         SCIP_CALL( sourceexprhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourceexprhdlr, &localvalid) );
+         *valid &= localvalid;
+      }
+      else
+      {
+         *valid = FALSE;
+      }
+   }
+
+   /* set pointer to important expression handlers in conshdlr of target SCIP */
+   conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
+   conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
+   conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
+   conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
+
+   /* copy nonlinear handlers */
+   for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
+
+      /* TODO for now just don't copy disabled nlhdlr, we clean way would probably to copy them and disable then */
+      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
+      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
+      {
+         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
+      }
+   }
 
    return SCIP_OKAY;
 }
 
+/** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
 static
-SCIP_DECL_CONSEXPR_MAPVAR(copyVar)
+SCIP_RETCODE presolveUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
+   int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
+   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
+   )
 {
-   COPY_MAPVAR_DATA* data;
-   SCIP_Bool valid;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS** upgdconss;
+   int upgdconsssize;
+   int nupgdconss_;
+   int i;
 
-   assert(sourcevar != NULL);
-   assert(targetvar != NULL);
-   assert(mapvardata != NULL);
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(!SCIPconsIsModifiable(cons));
+   assert(upgraded   != NULL);
+   assert(nupgdconss != NULL);
+   assert(naddconss  != NULL);
 
-   data = (COPY_MAPVAR_DATA*)mapvardata;
+   *upgraded = FALSE;
 
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, targetvar, data->varmap, data->consmap, data->global, &valid) );
-   assert(*targetvar != NULL);
+   nupgdconss_ = 0;
 
-   /* if copy was not valid, store so in mapvar data */
-   if( !valid )
-      data->valid = FALSE;
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   /* caller assumes that target variable has been captured */
-   SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
+   /* if there are no upgrade methods, we can stop */
+   if( conshdlrdata->nexprconsupgrades == 0 )
+      return SCIP_OKAY;
+
+   upgdconsssize = 2;
+   SCIP_CALL( SCIPallocBufferArray(scip, &upgdconss, upgdconsssize) );
+
+   /* call the upgrading methods */
+   SCIPdebugMsg(scip, "upgrading expression constraint <%s> (up to %d upgrade methods): ",
+      SCIPconsGetName(cons), conshdlrdata->nexprconsupgrades);
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* try all upgrading methods in priority order in case the upgrading step is enable  */
+   for( i = 0; i < conshdlrdata->nexprconsupgrades; ++i )
+   {
+      if( !conshdlrdata->exprconsupgrades[i]->active )
+         continue;
+
+      assert(conshdlrdata->exprconsupgrades[i]->exprconsupgd != NULL);
+
+      SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+
+      while( nupgdconss_ < 0 )
+      {
+         /* upgrade function requires more memory: resize upgdconss and call again */
+         assert(-nupgdconss_ > upgdconsssize);
+         upgdconsssize = -nupgdconss_;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &upgdconss, -nupgdconss_) );
+
+         SCIP_CALL( conshdlrdata->exprconsupgrades[i]->exprconsupgd(scip, cons, &nupgdconss_, upgdconss, upgdconsssize) );
+
+         assert(nupgdconss_ != 0);
+      }
+
+      if( nupgdconss_ > 0 )
+      {
+         /* got upgrade */
+         int j;
+
+         SCIPdebugMsg(scip, " -> upgraded to %d constraints:\n", nupgdconss_);
+
+         /* add the upgraded constraints to the problem and forget them */
+         for( j = 0; j < nupgdconss_; ++j )
+         {
+            SCIPdebugMsgPrint(scip, "\t");
+            SCIPdebugPrintCons(scip, upgdconss[j], NULL);
+
+            SCIP_CALL( SCIPaddCons(scip, upgdconss[j]) );      /*lint !e613*/
+            SCIP_CALL( SCIPreleaseCons(scip, &upgdconss[j]) ); /*lint !e613*/
+         }
+
+         /* count the first upgrade constraint as constraint upgrade and the remaining ones as added constraints */
+         *nupgdconss += 1;
+         *naddconss += nupgdconss_ - 1;
+         *upgraded = TRUE;
+
+         /* delete upgraded constraint */
+         SCIPdebugMsg(scip, "delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &upgdconss);
 
    return SCIP_OKAY;
 }
@@ -963,31 +912,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    SCIPintervalSetBounds(&interval, lb, ub);
 
    return interval;
-}
-
-/** compares nonlinear handler by priority
- *
- * if handlers have same priority, then compare by name
- */
-static
-int nlhdlrCmp(
-   void*                 hdlr1,              /**< first handler */
-   void*                 hdlr2               /**< second handler */
-   )
-{
-   SCIP_CONSEXPR_NLHDLR* h1;
-   SCIP_CONSEXPR_NLHDLR* h2;
-
-   assert(hdlr1 != NULL);
-   assert(hdlr2 != NULL);
-
-   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
-   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
-
-   if( h1->priority != h2->priority )
-      return (int)(h1->priority - h2->priority);
-
-   return strcmp(h1->name, h2->name);
 }
 
 /** propagate bounds of the expressions in a given expression tree and tries to tighten the bounds of the auxiliary
@@ -2234,6 +2158,56 @@ SCIP_RETCODE addLocks(
    return SCIP_OKAY;
 }
 
+/** returns an equivalent expression for a given expression if possible; it adds the expression to key2expr if the map
+ *  does not contain the key
+ */
+static
+SCIP_RETCODE findEqualExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR *  expr,               /**< expression to replace */
+   SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
+   SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
+   )
+{  /*lint --e{438}*/
+   SCIP_MULTIHASHLIST* multihashlist;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(key2expr != NULL);
+   assert(newexpr != NULL);
+
+   *newexpr = NULL;
+   multihashlist = NULL;
+
+   do
+   {
+      /* search for an equivalent expression */
+      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPmultihashRetrieveNext(key2expr, &multihashlist, (void*)expr));
+
+      if( *newexpr == NULL )
+      {
+         /* processed all expressions like expr from hash table, so insert expr */
+         SCIP_CALL( SCIPmultihashInsert(key2expr, (void*) expr) );
+         break;
+      }
+      else if( expr != *newexpr )
+      {
+         assert(SCIPcompareConsExprExprs(expr, *newexpr) == 0);
+         break;
+      }
+      else
+      {
+         /* can not replace expr since it is already contained in the hashtablelist */
+         assert(expr == *newexpr);
+         *newexpr = NULL;
+         break;
+      }
+   }
+   while( TRUE ); /*lint !e506*/
+
+   return SCIP_OKAY;
+}
+
 /** hashes an expression using an already existing iterator
  *
  * The iterator must by of type DFS with allowrevisit=FALSE and the only leaveexpr stage enabled.
@@ -3289,6 +3263,8 @@ SCIP_RETCODE parseExpr(
    return SCIP_OKAY;
 }
 
+/** @} */  /* end of parsing methods */
+
 /** given a cons_expr expression, creates an equivalent classic (nlpi-) expression */
 static
 SCIP_RETCODE makeClassicExpr(
@@ -3862,6 +3838,30 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
    return SCIP_OKAY;
 }
 
+/** compares nonlinear handler by priority
+ *
+ * if handlers have same priority, then compare by name
+ */
+static
+int nlhdlrCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+   )
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->priority != h2->priority )
+      return (int)(h1->priority - h2->priority);
+
+   return strcmp(h1->name, h2->name);
+}
 
 /** install nlhdlrs in one expression */
 static
