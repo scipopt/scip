@@ -959,407 +959,6 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarRedundancyCheck)
    return interval;
 }
 
-/** @name Simplifying methods
- *
- * This is largely inspired in Joel Cohen's
- * Computer algebra and symbolic computation: Mathematical methods
- * In particular Chapter 3
- * The other fountain of inspiration is the current simplifying methods in expr.c.
- *
- * Definition of simplified expressions
- * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- * An expression is simplified if it
- * - is a value expression
- * - is a var expression
- * - is a product expression such that
- *    SP1:  every child is simplified
- *    SP2:  no child is a product
- *    SP4:  no two children are the same expression (those should be multiplied)
- *    SP5:  the children are sorted [commutative rule]
- *    SP7:  no child is a value
- *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
- *    SP10: it has at least two children
- *    ? at most one child is an exp
- *    ? at most one child is an abs
- *    SP11: no two children are expr*log(expr)
- *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
- *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
- * - is a power expression such that
- *    POW1: exponent is not 0
- *    POW2: exponent is not 1
- *    POW3: its child is not a value
- *    POW4: its child is simplified
- *    POW5: if exponent is integer, its child is not a product
- *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
- *    POW7: if exponent is 2, its child is not a sum (expand sums)
- *    POW8: if exponent is integer, its child is not a power
- *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
- *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
- * - is a sum expression such that
- *    SS1: every child is simplified
- *    SS2: no child is a sum
- *    SS3: no child is a value (values should go in the constant of the sum)
- *    SS4: no two children are the same expression (those should be summed up)
- *    SS5: the children are sorted [commutative rule]
- *    SS6: it has at least one child
- *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
- *    SS8: no child has coefficient 0
- *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
- * - it is a function with simplified arguments, but not all of them can be values
- * ? a logarithm doesn't have a product as a child
- * ? the exponent of an exponential is always 1
- *
- * ORDERING RULES
- * ^^^^^^^^^^^^^^
- * These rules define a total order on *simplified* expressions.
- * There are two groups of rules, when comparing equal type expressions and different type expressions
- * Equal type expressions:
- * OR1: u,v value expressions: u < v <=> val(u) < val(v)
- * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
- * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
- * OR4: u,v are both pow: u < v <=> base(u) < base(v) or, base(u) == base(v) and expo(u) < expo(v)
- * OR5: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
- *      or if such a k doesn't exist, then n < m.
- *
- * Different type expressions:
- * OR6: u value, v other: u < v always
- * OR7: u sum, v var or func: u < v <=> u < 0+v
- *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
- * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
- *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
- *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
- *             do *not* have constant coefficients
- * OR9: u pow, v sum, var or func: u < v <=> u < v^1
- * OR10: u var, v func: u < v always
- * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
- * OR12: none of the rules apply: u < v <=> ! v < u
- * Examples:
- * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
- *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
- *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
- *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
- *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
- *
- * Algorithm
- * ^^^^^^^^^
- * The recursive version of the algorithm is
- *
- * EXPR simplify(expr)
- *    for c in 1..expr->nchildren
- *       expr->children[c] = simplify(expr->children[c])
- *    end
- *    return expr->exprhdlr->simplify(expr)
- * end
- *
- * Important: Whatever is returned by a simplify callback **has** to be simplified.
- * Also, all children of the given expression **are** already simplified
- *
- * Here is an outline of the algorithm for simplifying sum expressions:
- * The idea is to create a list of all the children that the simplified expr must containt.
- * We use a linked list to construct it
- *
- * INPUT:  expr  :: sum expression to be simplified
- * OUTPUT: sexpr :: simplified expression
- * NOTE: it *can* modify expr
- *
- * simplified_coefficient <- expr->coefficient
- * expr_list <- empty list (list containing the simplified children of the final simplified expr)
- * For each child in expr->children:
- *    1. if child's coef is 0: continue
- *    2. if child is value: add it to simplified_coefficient and continue
- *    3. if child is not a sum: build list L = [(coef,child)]
- *    4. if child is sum:
- *       4.1. if coef is not 1.0: multiply child by coef (*)
- *       4.2. build list with the children of child, L = [(val, expr) for val in child->coeffs, expr in child->children)]
- *    5. mergeSum(L, expr_list)
- * if expr_list is empty, return value expression with value simplified_coefficient
- * if expr_list has only one child and simplified_coefficient is 1, return child
- * otherwise, build sum expression using the exprs in expr_list as children
- *
- * The method mergeSum simply inserts the elements of L into expr_list. Note that both lists are sorted.
- * While inserting, collisions can happen. A collision means that we have to add the two expressions.
- * However, after adding them, we need to simplify the resulting expression (e.g., the coefficient may become 0.0).
- * Fortunately, the coefficient being 0 is the only case we have to handle.
- * PROOF: all expressions in expr_list are simplified wrt to the sum, meaning that if we would build a sum
- * expression from them, it would yield a simplified sum expression. If there is a collision, then the expression
- * in L has to be in expr_list. The sum yields coef*expr and from the previous one can easily verify that it is
- * a valid child of a simplified sum (it is not a sum, etc), except for the case coef = 0.
- * Note: the context where the proof works is while merging (adding) children. Before this step, the children
- * go through a "local" simplification (i.e., 1-4 above). There, we *do* have to take care of other cases.
- * But, in contrast to products, after this steps, no child in finalchildren is a sum and the proof works.
- *
- * The algorithm for simplifying a product is basically the same. One extra difficulty occurs at (*):
- * The distribution of the exponent over a product children can only happen if the exponent is integral.
- * Also, in that case, the resulting new child could be unsimplified, so it must be re-simplified.
- * While merging, multiplying similar product expressions can render them unsimplified. So to handle it
- * one basically needs to simulate (the new) (*) while merging. Hence, a further merge might be necessary
- * (and then all the book-keeping information to perform the original merge faster is lost)
- *
- * @{
- */
-
-/** compare expressions
- * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
- * @note: The given expressions are assumed to be simplified.
- */
-int SCIPcompareConsExprExprs(
-   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
-   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
-   )
-{
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr1;
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr2;
-   int retval;
-
-   exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
-   exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
-
-   /* expressions are of the same kind/type; use compare callback or default method */
-   if( exprhdlr1 == exprhdlr2 )
-   {
-      return SCIPcompareConsExprExprHdlr(expr1, expr2);
-   }
-
-   /* expressions are of different kind/type */
-   /* enforces OR6 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
-   {
-      return -1;
-   }
-   /* enforces OR12 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
-      return -SCIPcompareConsExprExprs(expr2, expr1);
-
-   /* enforces OR7 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
-   {
-      int compareresult;
-      int nchildren;
-
-      nchildren = SCIPgetConsExprExprNChildren(expr1);
-      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
-
-      if( compareresult != 0 )
-         return compareresult;
-
-      /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
-      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
-         return -1;
-
-      /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
-      return 1;
-   }
-   /* enforces OR12 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
-      return -SCIPcompareConsExprExprs(expr2, expr1);
-
-   /* enforces OR8 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
-   {
-      int compareresult;
-      int nchildren;
-
-      nchildren = SCIPgetConsExprExprNChildren(expr1);
-      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
-
-      if( compareresult != 0 )
-         return compareresult;
-
-      /* largest expression of product is larger or equal than expr2 => expr1 > expr2 */
-      return 1;
-   }
-   /* enforces OR12 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
-      return -SCIPcompareConsExprExprs(expr2, expr1);
-
-   /* enforces OR9 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "pow") == 0 )
-   {
-      int compareresult;
-
-      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[0], expr2);
-
-      if( compareresult != 0 )
-         return compareresult;
-
-      /* base equal to expr2, exponent might tell us that expr2 is larger */
-      if( SCIPgetConsExprExprPowExponent(expr1) < 1.0 )
-         return -1;
-
-      /* power expression is larger => expr1 > expr2 */
-      return 1;
-   }
-   /* enforces OR12 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "pow") == 0 )
-      return -SCIPcompareConsExprExprs(expr2, expr1);
-
-   /* enforces OR10 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
-      return -1;
-   /* enforces OR12 */
-   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "var") == 0 )
-      return -SCIPcompareConsExprExprs(expr2, expr1);
-
-   /* enforces OR11 */
-   retval = strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
-   return retval == 0 ? 0 : retval < 0 ? -1 : 1;
-}
-
-/** sets the curvature of an expression */
-void SCIPsetConsExprExprCurvature(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
-   )
-{
-   assert(expr != NULL);
-   expr->curvature = curvature;
-}
-
-/** returns the curvature of an expression */
-SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->curvature;
-}
-
-/** computes the curvature of a given expression and all its subexpressions
- *
- *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
- */
-SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_EXPRCURV curv;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-
-   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
-   {
-      curv = SCIP_EXPRCURV_UNKNOWN;
-
-      if( expr->exprhdlr->curvature != NULL )
-      {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
-      }
-
-      /* set curvature in expression */
-      SCIPsetConsExprExprCurvature(expr, curv);
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** returns the monotonicity of an expression w.r.t. to a given child
- *
- *  @note Call SCIPevalConsExprExprInterval before using this function.
- */
-SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   childidx            /**< index of child */
-   )
-{
-   SCIP_MONOTONE monotonicity = SCIP_MONOTONE_UNKNOWN;
-
-   assert(expr != NULL);
-   assert(childidx >= 0 || expr->nchildren == 0);
-   assert(childidx < expr->nchildren);
-
-   /* check whether the expression handler implements the monotonicity callback */
-   if( expr->exprhdlr->monotonicity != NULL )
-   {
-      SCIP_CALL_ABORT( (*expr->exprhdlr->monotonicity)(scip, expr, childidx, &monotonicity) );
-   }
-
-   return monotonicity;
-}
-
-/** returns the number of positive rounding locks of an expression */
-int SCIPgetConsExprExprNLocksPos(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->nlockspos;
-}
-
-/** returns the number of negative rounding locks of an expression */
-int SCIPgetConsExprExprNLocksNeg(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->nlocksneg;
-}
-
-/** computes integrality information of a given expression and all its subexpressions; the integrality information can
- * be accessed via SCIPisConsExprExprIntegral()
- */
-SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(expr != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-   {
-      /* compute integrality information */
-      expr->isintegral = FALSE;
-
-      if( expr->exprhdlr->integrality != NULL )
-      {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** returns whether an expression is integral */
-SCIP_Bool SCIPisConsExprExprIntegral(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->isintegral;
-}
-
-
-/**@} */  /* end of simplifying methods */
-
 /** compares nonlinear handler by priority
  *
  * if handlers have same priority, then compare by name
@@ -2162,83 +1761,6 @@ SCIP_RETCODE checkRedundancyConss(
 
       SCIPdebugMsg(scip, " -> not redundant: activity [%g,%g] not within sides [%g,%g]\n", activity.inf, activity.sup, consdata->lhs, consdata->rhs);
    }
-
-   return SCIP_OKAY;
-}
-
-/** returns the total number of variables in an expression
- *
- * The function counts variables in common sub-expressions only once.
- */
-SCIP_RETCODE SCIPgetConsExprExprNVars(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   int*                    nvars             /**< buffer to store the total number of variables */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(nvars != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   *nvars = 0;
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      if( SCIPisConsExprExprVar(expr) )
-         ++(*nvars);
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
- * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
- * and can be bounded by SCIPgetNVars().
- *
- * @note function captures variable expressions
- */
-SCIP_RETCODE SCIPgetConsExprExprVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
-   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-
-   assert(expr != NULL);
-   assert(varexprs != NULL);
-   assert(nvarexprs != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   *nvarexprs = 0;
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-   {
-      assert(expr != NULL);
-
-      if( SCIPisConsExprExprVar(expr) )
-      {
-         /* add variable expression to array and capture expr */
-         assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1);
-
-         varexprs[(*nvarexprs)++] = expr;
-
-         /* capture expression */
-         SCIPcaptureConsExprExpr(expr);
-      }
-   }
-
-   /* @todo sort variable expressions here? */
-
-   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -7916,6 +7438,75 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** appends child to the children list of expr */
+SCIP_RETCODE SCIPappendConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(child != NULL);
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
+
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, expr->children, expr->childrensize, expr->nchildren + 1);
+
+   expr->children[expr->nchildren] = child;
+   ++expr->nchildren;
+
+   /* capture child */
+   SCIPcaptureConsExprExpr(child);
+
+   return SCIP_OKAY;
+}
+
+/** overwrites/replaces a child of an expressions
+ *
+ * @note the old child is released and the newchild is captured
+ */
+SCIP_RETCODE SCIPreplaceConsExprExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(newchild != NULL);
+   assert(childidx < SCIPgetConsExprExprNChildren(expr));
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
+
+   /* capture new child (do this before releasing the old child in case there are equal */
+   SCIPcaptureConsExprExpr(newchild);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[childidx])) );
+   expr->children[childidx] = newchild;
+
+   return SCIP_OKAY;
+}
+
+/** duplicates the given expression
+ *
+ * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
+ */
+SCIP_RETCODE SCIPduplicateConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
+   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   )
+{
+   SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** gets the number of times the expression is currently captured */
 int SCIPgetConsExprExprNUses(
    SCIP_CONSEXPR_EXPR*   expr               /**< expression */
@@ -8425,6 +8016,139 @@ SCIP_RETCODE SCIPshowConsExprExpr(
 #endif
 }
 
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_RETCODE SCIPdismantleConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   int depth = -1;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+         {
+            int nspaces;
+            const char* type;
+
+            ++depth;
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            /* use depth of expression to align output */
+            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
+
+            if( strcmp(type, "var") == 0 )
+            {
+               SCIP_VAR* var;
+
+               var = SCIPgetConsExprExprVarVar(expr);
+               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var));
+            }
+            else if(strcmp(type, "sum") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
+            else if(strcmp(type, "prod") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
+            else if(strcmp(type, "val") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
+            else if(strcmp(type, "pow") == 0)
+               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
+            else if(strcmp(type, "exp") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "log") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "abs") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else
+               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
+
+            break;
+         }
+
+         case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
+         {
+            int nspaces;
+            const char* type;
+
+            nspaces = 3 * depth;
+            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+            if( strcmp(type, "sum") == 0 )
+            {
+               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
+               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+            }
+
+            break;
+         }
+
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
+         {
+            --depth;
+            break;
+         }
+
+         default:
+            /* shouldn't be here */
+            SCIPABORT();
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** Creates an expression from a string.
+ * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
+ * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
+ * The actual definition:
+ * <pre>
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * Term       -> Factor { ("*" | "/" ) Factor }
+ * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
+ * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
+ * </pre>
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
+ *
+ * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
+ * OpExpression to whatever string the expression handler accepts (through its parse method).
+ *
+ * See also @ref parseExpr.
+ */
+SCIP_RETCODE SCIPparseConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   const char*           exprstr,            /**< string with the expr to parse */
+   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
+   )
+{
+   const char* finalpos_;
+   SCIP_RETCODE retcode;
+   SCIP_HASHMAP* vartoexprvarmap;
+
+   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
+
+   /* if parseExpr fails, we still want to free hashmap */
+   retcode = parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr);
+
+   SCIPhashmapFree(&vartoexprvarmap);
+
+   if( finalpos != NULL )
+      *finalpos = finalpos_;
+
+   return retcode;
+}
 
 /** evaluate an expression in a point
  *
@@ -8521,50 +8245,38 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
+SCIP_Real SCIPgetConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
 
-/** @name Differentiation methods
- * Automatic differentiation Backward mode:
- * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
- * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
- * f
- * |-----|
- * s     t
- * |--|  |--|
- * x  y  x  y
- * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
- * f
- * |   is d_s f [where d is actually \partial]
- * s
- * The weight of a path is the product of the weight of the edges in the path.
- * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
- * df/dx = d_s f * d_x s + d_t f * d_x t
- *
- * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
- * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
- * in the DAG and path in a tree diagram of a function.
- * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPexpriteratorInit), for every expr that *has* children,
- * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
- * Example:
- * f->derivative = 1.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative = d_x s * s->derivative = d_x s * d_s f
- * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
- * and afterwards add, instead of overwrite the computed value.
- * The complete example would then be:
- * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative += d_x s * s->derivative = d_x s * d_s f
- * y->derivative += d_t s * s->derivative = d_t s * d_s f
- * t->derivative = d_t f * f->derivative = d_t f
- * x->derivative += d_x t * t->derivative = d_x t * d_t f
- * y->derivative += d_t t * t->derivative = d_t t * d_t f
- *
- * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
- *
- * @{
- */
+   return expr->evalvalue;
+}
+
+/** sets the evaluation value */
+void SCIPsetConsExprExprEvalValue(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_Real               value,            /**< value to set */
+   unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
+   )
+{
+   assert(expr != NULL);
+
+   expr->evalvalue = value;
+   expr->evaltag = tag;
+}
+
+/** gives the evaluation tag from the last evaluation, or 0 */
+unsigned int SCIPgetConsExprExprEvalTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->evaltag;
+}
 
 /** computes the gradient for a given point
  *
@@ -8672,7 +8384,54 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    return SCIP_OKAY;
 }
 
-/**@} */  /* end of differentiation methods */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetConsExprExprPartialDiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression which has been used in the last SCIPcomputeConsExprExprGradient() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_CONSEXPR_EXPR* varexpr;
+   SCIP_HASHMAP* var2expr;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
+   assert(expr != NULL);
+   assert(var != NULL);
+   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
+
+   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
+   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+      return 0.0;
+
+   /* return 0.0 for value expression */
+   if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
+      return SCIP_INVALID;
+
+   /* use variable to expressions mapping which is stored as the expression handler data */
+   var2expr = (SCIP_HASHMAP*)SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
+   assert(var2expr != NULL);
+   assert(SCIPhashmapExists(var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   assert(varexpr != NULL);
+   assert(SCIPisConsExprExprVar(varexpr));
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
+}
+
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->derivative;
+}
 
 /** evaluates an expression over a box
  *
@@ -8705,6 +8464,39 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
 
    return SCIP_OKAY;
+}
+
+/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
+SCIP_INTERVAL SCIPgetConsExprExprInterval(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->interval;
+}
+
+/** sets the evaluation interval */
+void SCIPsetConsExprExprEvalInterval(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_INTERVAL*          interval,         /**< interval to set */
+   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
+   )
+{
+   assert(expr != NULL);
+
+   SCIPintervalSetBounds(&expr->interval, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
+   expr->intevaltag = tag;
+}
+
+/** gives the box tag from the last interval evaluation, or 0 */
+unsigned int SCIPgetConsExprExprEvalIntervalTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->intevaltag;
 }
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -8873,122 +8665,6 @@ void SCIPaddConsExprExprBranchScore(
    expr->brscore += branchscore;
 }
 
-
-/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
-SCIP_Real SCIPgetConsExprExprValue(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->evalvalue;
-}
-
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
-SCIP_Real SCIPgetConsExprExprPartialDiff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression which has been used in the last SCIPcomputeConsExprExprGradient() call */
-   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
-   )
-{
-   SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_HASHMAP* var2expr;
-
-   assert(scip != NULL);
-   assert(consexprhdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
-   assert(expr != NULL);
-   assert(var != NULL);
-   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
-
-   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
-      return 0.0;
-
-   /* return 0.0 for value expression */
-   if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
-      return SCIP_INVALID;
-
-   /* use variable to expressions mapping which is stored as the expression handler data */
-   var2expr = (SCIP_HASHMAP*)SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
-   assert(var2expr != NULL);
-   assert(SCIPhashmapExists(var2expr, var));
-
-   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
-   assert(varexpr != NULL);
-   assert(SCIPisConsExprExprVar(varexpr));
-
-   /* use difftag to decide whether the variable belongs to the expression */
-   return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
-}
-
-/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
-SCIP_Real SCIPgetConsExprExprDerivative(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->derivative;
-}
-
-/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
-SCIP_INTERVAL SCIPgetConsExprExprInterval(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->interval;
-}
-
-/** gives the evaluation tag from the last evaluation, or 0 */
-unsigned int SCIPgetConsExprExprEvalTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->evaltag;
-}
-
-/** gives the box tag from the last interval evaluation, or 0 */
-unsigned int SCIPgetConsExprExprEvalIntervalTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
-
-   return expr->intevaltag;
-}
-
-/** sets the evaluation value */
-void SCIPsetConsExprExprEvalValue(
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_Real               value,            /**< value to set */
-   unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
-   )
-{
-   assert(expr != NULL);
-
-   expr->evalvalue = value;
-   expr->evaltag = tag;
-}
-
-/** sets the evaluation interval */
-void SCIPsetConsExprExprEvalInterval(
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
-   )
-{
-   assert(expr != NULL);
-
-   SCIPintervalSetBounds(&expr->interval, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
-   expr->intevaltag = tag;
-}
-
 /** returns the hash value of an expression */
 SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -9102,6 +8778,526 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    return SCIP_OKAY;
 }
 
+/** @name Simplifying methods
+ *
+ * This is largely inspired in Joel Cohen's
+ * Computer algebra and symbolic computation: Mathematical methods
+ * In particular Chapter 3
+ * The other fountain of inspiration is the current simplifying methods in expr.c.
+ *
+ * Definition of simplified expressions
+ * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * An expression is simplified if it
+ * - is a value expression
+ * - is a var expression
+ * - is a product expression such that
+ *    SP1:  every child is simplified
+ *    SP2:  no child is a product
+ *    SP4:  no two children are the same expression (those should be multiplied)
+ *    SP5:  the children are sorted [commutative rule]
+ *    SP7:  no child is a value
+ *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
+ *    SP10: it has at least two children
+ *    ? at most one child is an exp
+ *    ? at most one child is an abs
+ *    SP11: no two children are expr*log(expr)
+ *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
+ *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
+ * - is a power expression such that
+ *    POW1: exponent is not 0
+ *    POW2: exponent is not 1
+ *    POW3: its child is not a value
+ *    POW4: its child is simplified
+ *    POW5: if exponent is integer, its child is not a product
+ *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
+ *    POW7: if exponent is 2, its child is not a sum (expand sums)
+ *    POW8: if exponent is integer, its child is not a power
+ *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
+ *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
+ * - is a sum expression such that
+ *    SS1: every child is simplified
+ *    SS2: no child is a sum
+ *    SS3: no child is a value (values should go in the constant of the sum)
+ *    SS4: no two children are the same expression (those should be summed up)
+ *    SS5: the children are sorted [commutative rule]
+ *    SS6: it has at least one child
+ *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
+ *    SS8: no child has coefficient 0
+ *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
+ * - it is a function with simplified arguments, but not all of them can be values
+ * ? a logarithm doesn't have a product as a child
+ * ? the exponent of an exponential is always 1
+ *
+ * ORDERING RULES
+ * ^^^^^^^^^^^^^^
+ * These rules define a total order on *simplified* expressions.
+ * There are two groups of rules, when comparing equal type expressions and different type expressions
+ * Equal type expressions:
+ * OR1: u,v value expressions: u < v <=> val(u) < val(v)
+ * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
+ * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
+ * OR4: u,v are both pow: u < v <=> base(u) < base(v) or, base(u) == base(v) and expo(u) < expo(v)
+ * OR5: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
+ *      or if such a k doesn't exist, then n < m.
+ *
+ * Different type expressions:
+ * OR6: u value, v other: u < v always
+ * OR7: u sum, v var or func: u < v <=> u < 0+v
+ *      In other words, u = \sum_{i = 1}^n \alpha_i u_i, then u < v <=> u_n < v or if u_n = v and \alpha_n < 1
+ * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
+ *      In other words, u = \Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
+ *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
+ *             do *not* have constant coefficients
+ * OR9: u pow, v sum, var or func: u < v <=> u < v^1
+ * OR10: u var, v func: u < v always
+ * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
+ * OR12: none of the rules apply: u < v <=> ! v < u
+ * Examples:
+ * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
+ *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
+ *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
+ *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
+ *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
+ *
+ * Algorithm
+ * ^^^^^^^^^
+ * The recursive version of the algorithm is
+ *
+ * EXPR simplify(expr)
+ *    for c in 1..expr->nchildren
+ *       expr->children[c] = simplify(expr->children[c])
+ *    end
+ *    return expr->exprhdlr->simplify(expr)
+ * end
+ *
+ * Important: Whatever is returned by a simplify callback **has** to be simplified.
+ * Also, all children of the given expression **are** already simplified
+ *
+ * Here is an outline of the algorithm for simplifying sum expressions:
+ * The idea is to create a list of all the children that the simplified expr must containt.
+ * We use a linked list to construct it
+ *
+ * INPUT:  expr  :: sum expression to be simplified
+ * OUTPUT: sexpr :: simplified expression
+ * NOTE: it *can* modify expr
+ *
+ * simplified_coefficient <- expr->coefficient
+ * expr_list <- empty list (list containing the simplified children of the final simplified expr)
+ * For each child in expr->children:
+ *    1. if child's coef is 0: continue
+ *    2. if child is value: add it to simplified_coefficient and continue
+ *    3. if child is not a sum: build list L = [(coef,child)]
+ *    4. if child is sum:
+ *       4.1. if coef is not 1.0: multiply child by coef (*)
+ *       4.2. build list with the children of child, L = [(val, expr) for val in child->coeffs, expr in child->children)]
+ *    5. mergeSum(L, expr_list)
+ * if expr_list is empty, return value expression with value simplified_coefficient
+ * if expr_list has only one child and simplified_coefficient is 1, return child
+ * otherwise, build sum expression using the exprs in expr_list as children
+ *
+ * The method mergeSum simply inserts the elements of L into expr_list. Note that both lists are sorted.
+ * While inserting, collisions can happen. A collision means that we have to add the two expressions.
+ * However, after adding them, we need to simplify the resulting expression (e.g., the coefficient may become 0.0).
+ * Fortunately, the coefficient being 0 is the only case we have to handle.
+ * PROOF: all expressions in expr_list are simplified wrt to the sum, meaning that if we would build a sum
+ * expression from them, it would yield a simplified sum expression. If there is a collision, then the expression
+ * in L has to be in expr_list. The sum yields coef*expr and from the previous one can easily verify that it is
+ * a valid child of a simplified sum (it is not a sum, etc), except for the case coef = 0.
+ * Note: the context where the proof works is while merging (adding) children. Before this step, the children
+ * go through a "local" simplification (i.e., 1-4 above). There, we *do* have to take care of other cases.
+ * But, in contrast to products, after this steps, no child in finalchildren is a sum and the proof works.
+ *
+ * The algorithm for simplifying a product is basically the same. One extra difficulty occurs at (*):
+ * The distribution of the exponent over a product children can only happen if the exponent is integral.
+ * Also, in that case, the resulting new child could be unsimplified, so it must be re-simplified.
+ * While merging, multiplying similar product expressions can render them unsimplified. So to handle it
+ * one basically needs to simulate (the new) (*) while merging. Hence, a further merge might be necessary
+ * (and then all the book-keeping information to perform the original merge faster is lost)
+ *
+ * @{
+ */
+
+/** compare expressions
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
+ * @note: The given expressions are assumed to be simplified.
+ */
+int SCIPcompareConsExprExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr1;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr2;
+   int retval;
+
+   exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
+   exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
+
+   /* expressions are of the same kind/type; use compare callback or default method */
+   if( exprhdlr1 == exprhdlr2 )
+   {
+      return SCIPcompareConsExprExprHdlr(expr1, expr2);
+   }
+
+   /* expressions are of different kind/type */
+   /* enforces OR6 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
+   {
+      return -1;
+   }
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR7 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
+   {
+      int compareresult;
+      int nchildren;
+
+      nchildren = SCIPgetConsExprExprNChildren(expr1);
+      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
+      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
+         return -1;
+
+      /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR8 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
+   {
+      int compareresult;
+      int nchildren;
+
+      nchildren = SCIPgetConsExprExprNChildren(expr1);
+      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* largest expression of product is larger or equal than expr2 => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR9 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "pow") == 0 )
+   {
+      int compareresult;
+
+      compareresult = SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr1)[0], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* base equal to expr2, exponent might tell us that expr2 is larger */
+      if( SCIPgetConsExprExprPowExponent(expr1) < 1.0 )
+         return -1;
+
+      /* power expression is larger => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "pow") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR10 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
+      return -1;
+   /* enforces OR12 */
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "var") == 0 )
+      return -SCIPcompareConsExprExprs(expr2, expr1);
+
+   /* enforces OR11 */
+   retval = strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
+   return retval == 0 ? 0 : retval < 0 ? -1 : 1;
+}
+
+/** simplifies an expression
+ *
+ * The given expression will be released and overwritten with the simplified expression.
+ * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
+ */
+SCIP_RETCODE SCIPsimplifyConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+)
+{
+   assert(rootexpr != NULL);
+   assert(simplified != NULL);
+
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
+
+   return SCIP_OKAY;
+}
+
+/**@} */  /* end of simplifying methods */
+
+/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
+ *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
+ *  callback
+ */
+SCIP_RETCODE SCIPreformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
+   )
+{
+   assert(rootexpr != NULL);
+   assert(refrootexpr != NULL);
+
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the curvature of an expression */
+void SCIPsetConsExprExprCurvature(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   )
+{
+   assert(expr != NULL);
+   expr->curvature = curvature;
+}
+
+/** returns the curvature of an expression */
+SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->curvature;
+}
+
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
+SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   {
+      curv = SCIP_EXPRCURV_UNKNOWN;
+
+      if( expr->exprhdlr->curvature != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+      }
+
+      /* set curvature in expression */
+      SCIPsetConsExprExprCurvature(expr, curv);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** returns the monotonicity of an expression w.r.t. to a given child
+ *
+ *  @note Call SCIPevalConsExprExprInterval before using this function.
+ */
+SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   childidx            /**< index of child */
+   )
+{
+   SCIP_MONOTONE monotonicity = SCIP_MONOTONE_UNKNOWN;
+
+   assert(expr != NULL);
+   assert(childidx >= 0 || expr->nchildren == 0);
+   assert(childidx < expr->nchildren);
+
+   /* check whether the expression handler implements the monotonicity callback */
+   if( expr->exprhdlr->monotonicity != NULL )
+   {
+      SCIP_CALL_ABORT( (*expr->exprhdlr->monotonicity)(scip, expr, childidx, &monotonicity) );
+   }
+
+   return monotonicity;
+}
+
+/** returns the number of positive rounding locks of an expression */
+int SCIPgetConsExprExprNLocksPos(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nlockspos;
+}
+
+/** returns the number of negative rounding locks of an expression */
+int SCIPgetConsExprExprNLocksNeg(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nlocksneg;
+}
+
+/** computes integrality information of a given expression and all its subexpressions; the integrality information can
+ * be accessed via SCIPisConsExprExprIntegral()
+ */
+SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      /* compute integrality information */
+      expr->isintegral = FALSE;
+
+      if( expr->exprhdlr->integrality != NULL )
+      {
+         /* get curvature from expression handler */
+         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an expression is integral */
+SCIP_Bool SCIPisConsExprExprIntegral(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->isintegral;
+}
+
+/** returns the total number of variables in an expression
+ *
+ * The function counts variables in common sub-expressions only once.
+ */
+SCIP_RETCODE SCIPgetConsExprExprNVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   int*                    nvars             /**< buffer to store the total number of variables */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nvars != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   *nvars = 0;
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      if( SCIPisConsExprExprVar(expr) )
+         ++(*nvars);
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
+ * to be at least of size the number of unique variables in the expression which is given by SCIpgetConsExprExprNVars()
+ * and can be bounded by SCIPgetNVars().
+ *
+ * @note function captures variable expressions
+ */
+SCIP_RETCODE SCIPgetConsExprExprVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(expr != NULL);
+   assert(varexprs != NULL);
+   assert(nvarexprs != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   *nvarexprs = 0;
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      assert(expr != NULL);
+
+      if( SCIPisConsExprExprVar(expr) )
+      {
+         /* add variable expression to array and capture expr */
+         assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1);
+
+         varexprs[(*nvarexprs)++] = expr;
+
+         /* capture expression */
+         SCIPcaptureConsExprExpr(expr);
+      }
+   }
+
+   /* @todo sort variable expressions here? */
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/*
+ * constraint specific interface methods
+ */
+
 /** gets the index an expression iterator can use to store iterator specific data in an expression */
 SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
@@ -9161,10 +9357,6 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
 
    return ++conshdlrdata->lastvisitedtag;
 }
-
-/*
- * constraint specific interface methods
- */
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
@@ -9612,247 +9804,6 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &vars);
-
-   return SCIP_OKAY;
-}
-
-/** Creates an expression from a string.
- * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
- * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
- * The actual definition:
- * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
- * Term       -> Factor { ("*" | "/" ) Factor }
- * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
- * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * </pre>
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
- *
- * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method).
- *
- * See also @ref parseExpr.
- */
-SCIP_RETCODE SCIPparseConsExprExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   const char*           exprstr,            /**< string with the expr to parse */
-   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
-   )
-{
-   const char* finalpos_;
-   SCIP_RETCODE retcode;
-   SCIP_HASHMAP* vartoexprvarmap;
-
-   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
-
-   /* if parseExpr fails, we still want to free hashmap */
-   retcode = parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr);
-
-   SCIPhashmapFree(&vartoexprvarmap);
-
-   if( finalpos != NULL )
-      *finalpos = finalpos_;
-
-   return retcode;
-}
-
-/** appends child to the children list of expr */
-SCIP_RETCODE SCIPappendConsExprExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(child != NULL);
-   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
-   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
-   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
-
-   ENSUREBLOCKMEMORYARRAYSIZE(scip, expr->children, expr->childrensize, expr->nchildren + 1);
-
-   expr->children[expr->nchildren] = child;
-   ++expr->nchildren;
-
-   /* capture child */
-   SCIPcaptureConsExprExpr(child);
-
-   return SCIP_OKAY;
-}
-
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
-SCIP_RETCODE SCIPduplicateConsExprExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
-   )
-{
-   SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
-/** simplifies an expression
- * The given expression will be released and overwritten with the simplified expression.
- * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
- */
-SCIP_RETCODE SCIPsimplifyConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
-   )
-{
-   assert(rootexpr != NULL);
-   assert(simplified != NULL);
-
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
-
-   return SCIP_OKAY;
-}
-
-/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
- *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
- *  callback
- */
-SCIP_RETCODE SCIPreformulateConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
-   )
-{
-   assert(rootexpr != NULL);
-   assert(refrootexpr != NULL);
-
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
-
-   return SCIP_OKAY;
-}
-
-/** prints structure of an expression a la Maple's dismantle */
-SCIP_RETCODE SCIPdismantleConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   int depth = -1;
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-   {
-      switch( SCIPexpriteratorGetStageDFS(it) )
-      {
-         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
-         {
-            int nspaces;
-            const char* type;
-
-            ++depth;
-            nspaces = 3 * depth;
-            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-            /* use depth of expression to align output */
-            SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
-
-            if( strcmp(type, "var") == 0 )
-            {
-               SCIP_VAR* var;
-
-               var = SCIPgetConsExprExprVarVar(expr);
-               SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
-                  SCIPvarGetUbLocal(var));
-            }
-            else if(strcmp(type, "sum") == 0)
-               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
-            else if(strcmp(type, "prod") == 0)
-               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprProductCoef(expr));
-            else if(strcmp(type, "val") == 0)
-               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprValueValue(expr));
-            else if(strcmp(type, "pow") == 0)
-               SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprPowExponent(expr));
-            else if(strcmp(type, "exp") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "log") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else if(strcmp(type, "abs") == 0)
-               SCIPinfoMessage(scip, NULL, "\n");
-            else
-               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
-
-            break;
-         }
-
-         case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
-         {
-            int nspaces;
-            const char* type;
-
-            nspaces = 3 * depth;
-            type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
-
-            if( strcmp(type, "sum") == 0 )
-            {
-               SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
-            }
-
-            break;
-         }
-
-         case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
-         {
-            --depth;
-            break;
-         }
-
-         default:
-            /* shouldn't be here */
-            SCIPABORT();
-            break;
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** overwrites/replaces a child of an expressions
- *
- * @note the old child is released and the newchild is captured
- */
-SCIP_RETCODE SCIPreplaceConsExprExprChild(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
-   int                     childidx,         /**< index of child being replaced */
-   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(newchild != NULL);
-   assert(childidx < SCIPgetConsExprExprNChildren(expr));
-   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
-   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
-   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
-
-   /* capture new child (do this before releasing the old child in case there are equal */
-   SCIPcaptureConsExprExpr(newchild);
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(expr->children[childidx])) );
-   expr->children[childidx] = newchild;
 
    return SCIP_OKAY;
 }
