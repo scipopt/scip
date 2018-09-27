@@ -312,22 +312,18 @@ SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
    );
 
 /** calls the print callback of an expression handler */
-extern
+EXTERN
 SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr);
 
-/** calls the simplification method of an expression handler */
-extern
-SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
-   );
+/** calls the expression hash callback */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
 
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
  */
-extern
+EXTERN
 SCIP_RETCODE SCIPevalConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
@@ -336,72 +332,40 @@ SCIP_RETCODE SCIPevalConsExprExprHdlr(
    SCIP_SOL*                  sol           /**< solution that is evaluated (used by the var-expression) */
 );
 
-/** calls the separation initialization method of an expression handler */
-extern
-SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_Bool                  overestimate, /**< should the expression be overestimated? */
-   SCIP_Bool                  underestimate,/**< should the expression be underestimated? */
-   SCIP_Bool*                 infeasible    /**< pointer to store whether the problem is infeasible */
-   );
-
-/** calls the separation deinitialization method of an expression handler */
-extern
-SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr          /**< expression */
-   );
-
-/** calls separator method of expression handler to separate a given solution */
-extern
-SCIP_RETCODE SCIPsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_SOL*                  sol,          /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Bool                  overestimate, /**< should the expression be over- or underestimated? */
-   SCIP_Real                  minviol,      /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT*               result,       /**< pointer to store the result */
-   int*                       ncuts         /**< pointer to store the number of added cuts */
-   );
+/** calls the expression interval evaluation callback */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr);
 
 /** calls estimator method of expression handler */
-extern
+EXTERN
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr);
 
-/** calls the expression interval evaluation callback */
-extern
-SCIP_RETCODE SCIPintevalConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_INTERVAL*             interval,     /**< buffer to store the interval */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
-   void*                      intevalvardata /**< data to be passed to intevalvar call */
-   );
+/** calls the simplification method of an expression handler */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr);
 
 /** calls the expression callback for reverse propagation */
-extern
-SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_QUEUE*                reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
-   SCIP_Bool*                 infeasible,   /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                       nreductions,  /**< buffer to store the number of interval reductions of all children */
-   SCIP_Bool                  force         /**< force tightening even if it is below the bound strengthening tolerance */
-   );
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr);
 
-/** calls the expression hash callback */
-extern
-SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
+/** calls the separation initialization method of an expression handler */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr);
+
+/** calls the separation deinitialization method of an expression handler */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr);
+
+/** calls separator method of expression handler to separate a given solution */
+EXTERN
+SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr);
 
 /** calls the expression branching score callback */
-extern
+EXTERN
 SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
 
 /** increments the branching score count of an expression handler */
-extern
+EXTERN
 void SCIPincrementConsExprExprHdlrNBranchScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
    );

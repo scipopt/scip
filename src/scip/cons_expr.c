@@ -7228,25 +7228,33 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr)
    return SCIP_OKAY;
 }
 
-/** calls the simplification method of an expression handler */
-SCIP_RETCODE SCIPsimplifyConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_CONSEXPR_EXPR**       simplifiedexpr/**< pointer to store the simplified expression */
-   )
+/** calls the expression hash callback */
+SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(simplifiedexpr != NULL);
+   assert(hashkey != NULL);
 
-   if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
+   if( expr->exprhdlr->hash != NULL )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->simplifytime) );
-      SCIP_CALL( expr->exprhdlr->simplify(scip, expr, simplifiedexpr) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->simplifytime) );
+      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, hashkey, childrenhashes) );
+   }
+   else
+   {
+      int i;
 
-      /* update statistics */
-      ++(expr->exprhdlr->nsimplifycalls);
+      /* compute initial hash from expression handler name if callback is not implemented
+       * this can lead to more collisions and thus a larger number of expensive expression compare calls
+       */
+      *hashkey = 0;
+      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+         *hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+
+      *hashkey = SCIPcalcFibHash((SCIP_Real)*hashkey);
+
+      /* now make use of the hashkeys of the children */
+      for( i = 0; i < expr->nchildren; ++i )
+         *hashkey ^= childrenhashes[i];
    }
 
    return SCIP_OKAY;
@@ -7302,88 +7310,18 @@ SCIP_RETCODE SCIPevalConsExprExprHdlr(
    return SCIP_OKAY;
 }
 
-/** calls the separation initialization method of an expression handler */
-SCIP_RETCODE SCIPinitsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_Bool                  overestimate, /**< should the expression be overestimated? */
-   SCIP_Bool                  underestimate,/**< should the expression be underestimated? */
-   SCIP_Bool*                 infeasible    /**< pointer to store whether the problem is infeasible */
-   )
+/** calls the expression interval evaluation callback */
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(infeasible != NULL);
+   assert(interval != NULL);
 
-   *infeasible = FALSE;
-
-   if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
+   if( SCIPhasConsExprExprHdlrIntEval(expr->exprhdlr) )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-
-      /* update statistics */
-      if( *infeasible )
-         ++(expr->exprhdlr->ncutoffs);
-      ++(expr->exprhdlr->nsepacalls);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls the separation deinitialization method of an expression handler */
-SCIP_RETCODE SCIPexitsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr          /**< expression */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   if( SCIPhasConsExprExprHdlrExitSepa(expr->exprhdlr) )
-   {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls separator method of expression handler to separate a given solution */
-SCIP_RETCODE SCIPsepaConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_SOL*                  sol,          /**< solution to be separated (NULL for the LP solution) */
-   SCIP_Bool                  overestimate, /**< should the expression be over- or underestimated? */
-   SCIP_Real                  minviol,      /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT*               result,       /**< pointer to store the result */
-   int*                       ncuts         /**< pointer to store the number of added cuts */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(minviol >= 0.0);
-   assert(result != NULL);
-   assert(ncuts != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-   *ncuts = 0;
-
-   if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
-   {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, expr, sol, overestimate, minviol, result, ncuts) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-
-      /* update statistics */
-      if( *result == SCIP_CUTOFF )
-         ++(expr->exprhdlr->ncutoffs);
-      expr->exprhdlr->ncutsfound += *ncuts;
-      ++(expr->exprhdlr->nsepacalls);
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
+      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, intevalvardata) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
    }
 
    return SCIP_OKAY;
@@ -7412,38 +7350,28 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
    return SCIP_OKAY;
 }
 
-/** calls the expression interval evaluation callback */
-SCIP_RETCODE SCIPintevalConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_INTERVAL*             interval,     /**< buffer to store the interval */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
-   void*                      intevalvardata /**< data to be passed to intevalvar call */
-   )
+/** calls the simplification method of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(interval != NULL);
+   assert(simplifiedexpr != NULL);
 
-   if( SCIPhasConsExprExprHdlrIntEval(expr->exprhdlr) )
+   if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
-      SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, intevalvardata) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->simplifytime) );
+      SCIP_CALL( expr->exprhdlr->simplify(scip, expr, simplifiedexpr) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->simplifytime) );
+
+      /* update statistics */
+      ++(expr->exprhdlr->nsimplifycalls);
    }
 
    return SCIP_OKAY;
 }
 
 /** calls the expression callback for reverse propagation */
-SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
-   SCIP*                      scip,         /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
-   SCIP_QUEUE*                reversepropqueue, /**< expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval */
-   SCIP_Bool*                 infeasible,   /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                       nreductions,  /**< buffer to store the number of interval reductions of all children */
-   SCIP_Bool                  force         /**< force tightening even if it is below the bound strengthening tolerance */
-   )
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -7470,33 +7398,68 @@ SCIP_RETCODE SCIPreversepropConsExprExprHdlr(
    return SCIP_OKAY;
 }
 
-/** calls the expression hash callback */
-SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr)
+/** calls the separation initialization method of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(hashkey != NULL);
+   assert(infeasible != NULL);
 
-   if( expr->exprhdlr->hash != NULL )
+   *infeasible = FALSE;
+
+   if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
    {
-      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, hashkey, childrenhashes) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+
+      /* update statistics */
+      if( *infeasible )
+         ++(expr->exprhdlr->ncutoffs);
+      ++(expr->exprhdlr->nsepacalls);
    }
-   else
+
+   return SCIP_OKAY;
+}
+
+/** calls the separation deinitialization method of an expression handler */
+SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   if( SCIPhasConsExprExprHdlrExitSepa(expr->exprhdlr) )
    {
-      int i;
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+   }
 
-      /* compute initial hash from expression handler name if callback is not implemented
-       * this can lead to more collisions and thus a larger number of expensive expression compare calls
-       */
-      *hashkey = 0;
-      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
-         *hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+   return SCIP_OKAY;
+}
 
-      *hashkey = SCIPcalcFibHash((SCIP_Real)*hashkey);
+/** calls separator method of expression handler to separate a given solution */
+SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(ncuts != NULL);
 
-      /* now make use of the hashkeys of the children */
-      for( i = 0; i < expr->nchildren; ++i )
-         *hashkey ^= childrenhashes[i];
+   *result = SCIP_DIDNOTRUN;
+   *ncuts = 0;
+
+   if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
+   {
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, expr, sol, overestimate, mincutviolation, result, ncuts) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+
+      /* update statistics */
+      if( *result == SCIP_CUTOFF )
+         ++(expr->exprhdlr->ncutoffs);
+      expr->exprhdlr->ncutsfound += *ncuts;
+      ++(expr->exprhdlr->nsepacalls);
    }
 
    return SCIP_OKAY;
