@@ -6978,6 +6978,26 @@ SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    return exprhdlr->print != NULL;
 }
 
+/** returns whether expression handler implements the interval evaluation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->inteval != NULL;
+}
+
+/** returns whether expression handler implements the estimator callback */
+SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->estimate != NULL;
+}
+
 /** returns whether expression handler implements the simplification callback */
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -6986,6 +7006,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    assert(exprhdlr != NULL);
 
    return exprhdlr->simplify != NULL;
+}
+
+/** returns whether expression handler implements the reverse propagation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->reverseprop != NULL;
 }
 
 /** returns whether expression handler implements the initialization callback */
@@ -7016,36 +7046,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrSepa(
    assert(exprhdlr != NULL);
 
    return exprhdlr->sepa != NULL;
-}
-
-/** returns whether expression handler implements the estimator callback */
-SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   )
-{
-   assert(exprhdlr != NULL);
-
-   return exprhdlr->estimate != NULL;
-}
-
-/** returns whether expression handler implements the interval evaluation callback */
-SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   )
-{
-   assert(exprhdlr != NULL);
-
-   return exprhdlr->inteval != NULL;
-}
-
-/** returns whether expression handler implements the reverse propagation callback */
-SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   )
-{
-   assert(exprhdlr != NULL);
-
-   return exprhdlr->reverseprop != NULL;
 }
 
 /** returns whether expression handler implements the branching score callback */

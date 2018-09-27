@@ -196,9 +196,27 @@ SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
+/** returns whether expression handler implements the interval evaluation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the estimator callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the simplification callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the reverse propagation callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
@@ -217,24 +235,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
 /** returns whether expression handler implements the separation callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprExprHdlrSepa(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   );
-
-/** returns whether expression handler implements the estimator callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   );
-
-/** returns whether expression handler implements the interval evaluation callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   );
-
-/** returns whether expression handler implements the reverse propagation callback */
-EXTERN
-SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
