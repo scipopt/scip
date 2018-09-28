@@ -4314,7 +4314,7 @@ SCIP_RETCODE separatePointExprNlhdlr(
    {
       SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
-      SCIP_Bool success;
+      SCIP_Bool success = FALSE;
 
       *result = SCIP_DIDNOTFIND;
 
