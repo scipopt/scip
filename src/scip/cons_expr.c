@@ -10089,6 +10089,28 @@ unsigned int SCIPgetConsExprNlhdlrPriority(
    return nlhdlr->priority;
 }
 
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name           /**< name of nonlinear handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int h;
+
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), name) == 0 )
+         return conshdlrdata->nlhdlrs[h];
+
+   return NULL;
+}
+
 /** gives handler data of nonlinear handler */
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */

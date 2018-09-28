@@ -1213,6 +1213,13 @@ unsigned int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+EXTERN
+SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name           /**< name of nonlinear handler */
+   );
+
 /** gives handler data of nonlinear handler */
 EXTERN
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
