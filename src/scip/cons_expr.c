@@ -4615,7 +4615,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
    SCIP_Real minviolation;
-   SCIP_Real maxauxviolation;
+   SCIP_Real maxauxviolation = 0.0;
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
