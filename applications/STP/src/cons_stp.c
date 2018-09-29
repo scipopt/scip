@@ -1754,7 +1754,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    }
 
    /* if specified root is not a terminal, take default root */
-   if( !Is_term(g->term[root]) )
+   if( root < 0 || !Is_term(g->term[root]) )
       root = g->source;
 
 #ifdef BITFIELDSARRAY

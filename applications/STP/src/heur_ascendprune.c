@@ -328,6 +328,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    assert(Is_term(g->term[root]));
    assert(graph_valid(g));
+   assert(!pcmw || graph_pc_knotIsFixedTerm(g, root));
 
    if( addsol )
    {
@@ -358,7 +359,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       nnewnodes++;
 
       /* DFS */
-      while( qsize )
+      while( qsize > 0 )
       {
          const int k = queue[--qsize];
          scanned[k] = TRUE;
@@ -370,7 +371,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
             if( SCIPisZero(scip, redcosts[a]) )
             {
-               if( pcmw && k == root && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+               if( pcmw && k == g->source && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
                   continue;
 
                /* vertex not labeled yet? */
@@ -381,10 +382,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
                   queue[qsize++] = head;
                }
 
-               if( (!scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)])) && k != root )
+               if( (!scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)])) && k != g->source && head != g->source )
                {
-                  assert(g->tail[a] != root);
-                  assert(g->head[a] != root);
+                  assert(g->tail[a] != g->source && g->head[a] != g->source);
 
                   newedges[nnewedges++] = a;
                }
@@ -396,12 +396,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       for( int k = 0; k < nnewedges && pcmw; k++ )
       {
          const int e = newedges[k];
-         assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
-         assert(!(g->head[e] == root && Is_pterm(g->term[g->tail[e]])));
+         assert(g->tail[e] != g->source && g->head[e] != g->source);
       }
 #endif
 
-      for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+      for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
       {
          const int head = g->head[a];
          if( mark[head] )
@@ -436,10 +435,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
             if( !Is_term(g->term[k]) || g->term2edge[k] < 0 )
                newgraph->prize[newgraph->knots] = g->prize[k];
             else
-            {
-               assert(SCIPisLT(scip, g->prize[k], FARAWAY));
                newgraph->prize[newgraph->knots] = 0.0;
-            }
          }
 
          nodechild[k] = newgraph->knots;
@@ -456,7 +452,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(nnewnodes == newgraph->knots);
 
    /* set root of new graph */
-   newgraph->source = nodechild[root];
+   if( pcmw )
+      newgraph->source = nodechild[g->source];
+   else
+      newgraph->source = nodechild[root];
+
    assert(newgraph->source >= 0);
    assert(!graph_pc_isRootedPcMw(g) || newgraph->prize[newgraph->source] == FARAWAY);
 

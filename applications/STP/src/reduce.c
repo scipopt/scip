@@ -1260,44 +1260,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
-
-#if 1
    assert(graph_pc_term2edgeConsistent(g));
-
-   SCIP_CALL(reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims));
-
-   sdcnelims = 0;
-   SCIP_CALL(
-         reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, ((1 > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL));
-   printf("sdcnelims %d \n", sdcnelims);
-
-   if( bd3 && dualascent )
-   {
-      SCIP_CALL(reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND));
-
-      printf("bd3nelims %d \n", bd3nelims);
-   }
-
-   SCIP_CALL(
-         nvreduce_sl(scip, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims,
-               reductbound));
-
-   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
-
-   SCIP_CALL(reduce_bound(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2, &fix, &ub, heap, state, vbase, &brednelims));
-
-   printf("brednelims %d \n", brednelims);
-   printf("nvslnelims %d \n", nvslnelims);
-   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
-
-#endif
-   *fixed += fix;
-
-
-   graph_pc_2trans(g);
-   graph_pc_presolExit(scip, g);
-   return SCIP_OKAY;
-
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
    assert(prizesum < FARAWAY);

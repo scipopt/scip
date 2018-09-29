@@ -1135,7 +1135,6 @@ SCIP_RETCODE graph_pc_getSap(
    SCIP_Real*            offset              /**< offset */
    )
 {
-   SCIP_Real* prize;
    SCIP_Real max;
    SCIP_Real prizesum;
    int k;
@@ -1154,7 +1153,6 @@ SCIP_RETCODE graph_pc_getSap(
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
 
-   prize = graph->prize;
    nnodes = graph->knots;
    nterms = graph->terms;
    prizesum = 0.0;
@@ -1175,15 +1173,16 @@ SCIP_RETCODE graph_pc_getSap(
    /* new pseudo-root */
    pseudoroot = (*newgraph)->knots;
    graph_knot_add((*newgraph), -1);
+   graph->prize[pseudoroot] = 0.0;
 
    max = 0.0;
    for( k = 0; k < nnodes; k++ )
       if( Is_pterm(graph->term[k]) )
       {
-         prizesum += prize[k];
+         prizesum += graph->prize[k];
 
-         if( prize[k] > max )
-            max = prize[k];
+         if( graph->prize[k] > max )
+            max = graph->prize[k];
       }
 
    prizesum -= max;
@@ -1266,7 +1265,6 @@ SCIP_RETCODE graph_pc_getSapShift(
 {
    GRAPH* newg;
    SCIP_Real maxp;
-   SCIP_Real* const prize = graph->prize;
    SCIP_Real prizesum;
    int e;
    int root;
@@ -1313,7 +1311,7 @@ SCIP_RETCODE graph_pc_getSapShift(
 
          assert(newg->mark[k]);
 
-         p = prize[k];
+         p = graph->prize[k];
          for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
             if( SCIPisLT(scip, graph->cost[e], p) && !Is_term(graph->term[graph->tail[e]]) )
                break;
@@ -1346,7 +1344,7 @@ SCIP_RETCODE graph_pc_getSapShift(
                   assert(SCIPisGE(scip, newg->cost[e], 0.0));
                }
             }
-            prize[k] = 0.0;
+            graph->prize[k] = 0.0;
 
             (*offset) += p;
             assert(e2 != -1);
@@ -1375,7 +1373,7 @@ SCIP_RETCODE graph_pc_getSapShift(
    prizesum = 0.0;
    for( int k = 0; k < nnodes; k++ )
       if( Is_pterm(graph->term[k]) )
-         prizesum += prize[k];
+         prizesum += graph->prize[k];
 
    prizesum += 1;
 
@@ -1574,7 +1572,6 @@ SCIP_RETCODE graph_pc_2pc(
    GRAPH*                graph               /**< the graph */
    )
 {
-   SCIP_Real* prize;
    int root;
    const int nnodes = graph->knots;
    int nterms;
@@ -1583,8 +1580,7 @@ SCIP_RETCODE graph_pc_2pc(
    assert(graph->edges == graph->esize);
 
    nterms = graph->terms;
-   prize = graph->prize;
-   assert(prize != NULL);
+   assert(graph->prize != NULL);
    assert(nnodes == graph->ksize);
    graph->norgmodeledges = graph->edges;
    graph->norgmodelknots = nnodes;
@@ -1599,6 +1595,7 @@ SCIP_RETCODE graph_pc_2pc(
    /* new root */
    root = graph->knots;
    graph_knot_add(graph, 0);
+   graph->prize[root] = 0.0;
 
    /* allocate and initialize term2edge array */
    graph_pc_init(scip, graph, -1, graph->knots);
@@ -1617,11 +1614,12 @@ SCIP_RETCODE graph_pc_2pc(
          /* switch the terminal property, mark k */
          graph_knot_chg(graph, k, -2);
          graph_knot_chg(graph, node, 0);
-         assert(SCIPisGE(scip, prize[k], 0.0));
+         graph->prize[node] = 0.0;
+         assert(SCIPisGE(scip, graph->prize[k], 0.0));
 
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
          graph_edge_add(scip, graph, root, k, 0.0, FARAWAY);
-         graph_edge_add(scip, graph, root, node, prize[k], FARAWAY);
+         graph_edge_add(scip, graph, root, node, graph->prize[k], FARAWAY);
 
          graph->term2edge[k] = graph->edges;
          graph->term2edge[node] = graph->edges + 1;
@@ -1634,7 +1632,7 @@ SCIP_RETCODE graph_pc_2pc(
       }
       else if( graph->stp_type != STP_MWCSP )
       {
-         prize[k] = 0;
+         graph->prize[k] = 0.0;
       }
    }
    graph->source = root;
@@ -1655,7 +1653,6 @@ SCIP_RETCODE graph_pc_2rpc(
    GRAPH*                graph               /**< the graph */
    )
 {
-   SCIP_Real* const prize = graph->prize;
    const int root = graph->source;
    const int nnodes = graph->knots;
    int nterms;
@@ -1668,44 +1665,44 @@ SCIP_RETCODE graph_pc_2rpc(
    graph->norgmodeledges = graph->edges;
    graph->norgmodelknots = nnodes;
 
-   assert(prize != NULL);
+   assert(graph->prize != NULL);
    assert(nnodes == graph->ksize);
    assert(root >= 0);
 
    nfixterms = 0;
    npotterms = 0;
 
-   /* count number of fixed and potential terminals */
+   /* count number of fixed and potential terminals and initialize prizes */
    for( int i = 0; i < nnodes; i++ )
    {
-      if( SCIPisGE(scip, prize[i], FARAWAY) )
+      if( !Is_term(graph->term[i]) )
       {
-         assert(Is_term(graph->term[i]));
+         graph->prize[i] = 0.0;
+      }
+      else if( SCIPisGE(scip, graph->prize[i], FARAWAY) )
+      {
+         assert(graph->prize[i] == FARAWAY);
          nfixterms++;
       }
-      else if( SCIPisGT(scip, prize[i], 0.0) )
+      else if( SCIPisGT(scip, graph->prize[i], 0.0) )
       {
          assert(i != root);
          assert(Is_term(graph->term[i]));
          npotterms++;
       }
-      else if( Is_term(graph->term[i]) )
-      {
-         assert(i != root);
-         assert(SCIPisEQ(scip, prize[i], 0.0));
-         prize[i] = 0.0;
-         graph_knot_chg(graph, i, -1);
-      }
       else
       {
-         assert(prize[i] == 0.0);
+         assert(i != root);
+         assert(SCIPisEQ(scip, graph->prize[i], 0.0));
+         graph->prize[i] = 0.0;
+         graph_knot_chg(graph, i, -1);
       }
    }
 
    assert(npotterms + nfixterms == graph->terms);
 
-   /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
-   SCIP_CALL( graph_resize(scip, graph, (graph->ksize + graph->terms), (graph->esize + npotterms * 4) , -1) );
+   /* for each terminal, except for the root, one node and two edges (i.e. four arcs) are to be added */
+   SCIP_CALL( graph_resize(scip, graph, (graph->ksize + npotterms), (graph->esize + npotterms * 4) , -1) );
 
    /* create new nodes corresponding to potential terminals */
    for( int k = 0; k < npotterms; ++k )
@@ -1720,19 +1717,22 @@ SCIP_RETCODE graph_pc_2rpc(
    for( int k = 0; k < nnodes; ++k )
    {
       /* is the kth node a potential terminal? */
-      if( Is_term(graph->term[k]) && SCIPisLT(scip, prize[k], FARAWAY) && k != root )
+      if( Is_term(graph->term[k]) && SCIPisLT(scip, graph->prize[k], FARAWAY) )
       {
          /* the copied node */
          const int node = nnodes + nterms;
          nterms++;
 
+         assert(k != root);
+
          /* switch the terminal property, mark k as former terminal */
          graph_knot_chg(graph, k, -2);
          graph_knot_chg(graph, node, 0);
-         assert(SCIPisGE(scip, prize[k], 0.0));
+         assert(SCIPisGE(scip, graph->prize[k], 0.0));
+         graph->prize[node] = 0.0;
 
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
-         graph_edge_add(scip, graph, root, node, prize[k], FARAWAY);
+         graph_edge_add(scip, graph, root, node, graph->prize[k], FARAWAY);
 
          graph->term2edge[k] = graph->edges;
          graph->term2edge[node] = graph->edges + 1;
@@ -1746,12 +1746,13 @@ SCIP_RETCODE graph_pc_2rpc(
       }
       else
       {
-         assert(prize[k] == FARAWAY || prize[k] == 0.0);
+         assert(graph->prize[k] == FARAWAY || graph->prize[k] == 0.0);
       }
    }
 
    graph->extended = TRUE;
    assert(nterms == npotterms);
+   assert(graph->prize[graph->source] == FARAWAY);
    graph->stp_type = STP_RPCSPG;
 
    SCIPdebugMessage("Transformed problem to (RPC) SAP \n");
@@ -1880,6 +1881,7 @@ SCIP_RETCODE graph_pc_2rmw(
 
    /* for each terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    SCIP_CALL( graph_resize(scip, graph, (graph->ksize + npterms), (graph->esize + npterms * 4) , -1) );
+   maxweights = graph->prize;
 
    /* create a new nodes */
    for( int k = 0; k < npterms; k++ )
@@ -1902,6 +1904,7 @@ SCIP_RETCODE graph_pc_2rmw(
          /* switch the terminal property, mark k */
          graph_knot_chg(graph, k, -2);
          graph_knot_chg(graph, node, 0);
+         graph->prize[node] = 0.0;
          assert(SCIPisGE(scip, maxweights[k], 0.0));
 
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
@@ -3191,7 +3194,7 @@ SCIP_RETCODE graph_sol_reroot(
    )
 {
    int* queue;
-   int* const gmark = g->mark;
+   int* gmark;
    int size;
    const int nnodes = g->knots;
 
@@ -3203,10 +3206,11 @@ SCIP_RETCODE graph_sol_reroot(
    if( g->grad[newroot] == 0 )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
+
    for( int k = 0; k < nnodes; k++ )
       gmark[k] = FALSE;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
 
    gmark[newroot] = TRUE;
    size = 0;
@@ -3234,8 +3238,6 @@ SCIP_RETCODE graph_sol_reroot(
          }
       }
    }
-
-   SCIPfreeBufferArray(scip, &queue);
 
    /* adjust solution if infeasible */
    for( int k = 0; k < nnodes; k++ )
@@ -3280,6 +3282,9 @@ SCIP_RETCODE graph_sol_reroot(
          }
       }
    }
+
+   SCIPfreeBufferArray(scip, &queue);
+   SCIPfreeBufferArray(scip, &gmark);
 
    return SCIP_OKAY;
 }
@@ -3895,6 +3900,9 @@ SCIP_RETCODE graph_resize(
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->grad), ksize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->inpbeg), ksize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->outbeg), ksize) );
+
+      if( g->prize != NULL)
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->prize), ksize) );
 
       g->ksize  = ksize;
    }
