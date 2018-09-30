@@ -3337,7 +3337,7 @@ SCIP_Bool graph_sol_valid(
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &queue, nnodes) );
 
-   if( (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) && !graph->extended )
+   if( graph_pc_isPcMw(graph) && !graph->extended )
       usepterms = TRUE;
    else
       usepterms = FALSE;
@@ -3374,7 +3374,7 @@ SCIP_Bool graph_sol_valid(
 
             if( usepterms)
             {
-               if( Is_pterm(graph->term[i]) )
+               if( Is_pterm(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i) )
                   termcount++;
             }
             else
