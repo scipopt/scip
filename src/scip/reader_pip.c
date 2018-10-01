@@ -810,6 +810,7 @@ SCIP_RETCODE getVariableIndex(
    /* check if we saw this variable before */
    if( SCIPhashmapExists(varhash, (void*)var) )
    {
+      /* coverity[pointer_conversion_loses_bits] */
       *varidx = (int)(size_t)SCIPhashmapGetImage(varhash, (void*)var);
       assert(*varidx >= 0);
       assert(*varidx < *nvars);
