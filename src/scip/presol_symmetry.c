@@ -82,8 +82,6 @@ struct SCIP_PresolData
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
-   int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
-   SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
 
@@ -1450,16 +1448,6 @@ SCIP_RETCODE determineSymmetry(
 
          return SCIP_OKAY;
       }
-
-      /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "   (%.1fs) turning off presolver <domcol> for remaining computations in order to avoid conflicts\n",
-         SCIPgetSolvingTime(scip));
-
-      /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-
-      presoldata->changeddefaultparams = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1469,25 +1457,6 @@ SCIP_RETCODE determineSymmetry(
 /*
  * Callback methods of presolver
  */
-
-/** initialization method of presolver (called after problem was transformed) */
-static
-SCIP_DECL_PRESOLINIT(presolInitSymmetry)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-
-   /* initialize original values of changed parameters in case we do not enter determineSymmetry() */
-   SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
-
-   return SCIP_OKAY;
-}
-
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
@@ -1533,14 +1502,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
-
-   /* reset changed parameters */
-   if ( presoldata->changeddefaultparams )
-   {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
-
-      presoldata->changeddefaultparams = FALSE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1608,7 +1569,6 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
-   presoldata->changeddefaultparams = FALSE;
    presoldata->transposedperms = FALSE;
 
    /* include constraint handler */
@@ -1617,7 +1577,6 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    assert( presol != NULL );
 
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
-   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymmetry) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymmetry) );
 
    /* add parameters */
