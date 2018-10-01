@@ -5531,7 +5531,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
    }
 
    /* call separation
