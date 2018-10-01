@@ -149,13 +149,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 
    *success = FALSE;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )  /* TODO also run in presolve */
-      return SCIP_OKAY;
-
-   /* if already enforced by separation, then nothing we would contribute here */
-   if( *enforcedbelow && *enforcedabove && (*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) )
-      return SCIP_OKAY;
-
    /* only look at sum expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
       return SCIP_OKAY;
