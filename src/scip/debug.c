@@ -2338,4 +2338,3 @@ SCIP_RETCODE SCIPcheckStage(
    }
 }
 #endif
-

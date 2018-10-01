@@ -2068,7 +2068,7 @@ SCIP_RETCODE freeTransform(
     *       we might want to remove locks also in that case
     */
    /* remove var locks set to avoid dual reductions */
-   if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
+   if( scip->set->reopt_enable || !scip->set->misc_allowstrongdualreds )
    {
       int v;
 

@@ -208,7 +208,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    if( !commvarbnds )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
    return SCIP_OKAY;
 }
 

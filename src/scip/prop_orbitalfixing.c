@@ -229,7 +229,7 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
-   varidx = (int) (size_t) SCIPhashmapGetImage(propdata->permvarmap, (void*) var);
+   varidx = SCIPhashmapGetImageInt(propdata->permvarmap, (void*) var);
    assert( 0 <= varidx && varidx < propdata->npermvars );
 
    if ( SCIPeventGetType(event) == SCIP_EVENTTYPE_GUBCHANGED )
@@ -499,7 +499,7 @@ SCIP_RETCODE getSymmetries(
       SCIP_CALL( SCIPallocBufferArray(scip, &moved, propdata->npermvars) );
       for (v = 0; v < propdata->npermvars; ++v)
       {
-         SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
          SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[v]) );
 
          propdata->bg0[v] = FALSE;
@@ -771,7 +771,7 @@ SCIP_RETCODE computeBranchingVariables(
             {
                int branchvaridx;
 
-               branchvaridx = (int) (size_t) SCIPhashmapGetImage(varmap, (void*) branchvar);
+               branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
                assert( branchvaridx < nvars );
 
                /* the variable might already be fixed to 1 */
