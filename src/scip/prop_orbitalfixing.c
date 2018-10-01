@@ -126,6 +126,9 @@ struct SCIP_PropData
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for handling global variable fixings */
+   SCIP_Shortbool*       bg0;                /**< bitset to store variables globally fixed to 0 */
+   int*                  bg0list;            /**< list of variables globally fixed to 0 */
+   int                   nbg0;               /**< number of variables in bg0 and bg0list */
    SCIP_Shortbool*       bg1;                /**< bitset to store variables globally fixed or branched to 1 */
    int*                  bg1list;            /**< list of variables globally fixed or branched to 1 */
    int                   nbg1;               /**< number of variables in bg1 and bg1list */
@@ -229,16 +232,29 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
    varidx = (int) (size_t) SCIPhashmapGetImage(propdata->permvarmap, (void*) var);
    assert( 0 <= varidx && varidx < propdata->npermvars );
 
-   /* we only catch global lower bound changes */
-   assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_GLBCHANGED );
-   assert( SCIPisEQ(scip, SCIPeventGetNewbound(event), 1.0) );
-   assert( SCIPisEQ(scip, SCIPeventGetOldbound(event), 0.0) );
+   if ( SCIPeventGetType(event) == SCIP_EVENTTYPE_GUBCHANGED )
+   {
+      assert( SCIPisEQ(scip, SCIPeventGetNewbound(event), 0.0) );
+      assert( SCIPisEQ(scip, SCIPeventGetOldbound(event), 1.0) );
 
-   SCIPdebugMsg(scip, "Mark variable <%s> as globally fixed to 1.\n", SCIPvarGetName(var));
-   assert( ! propdata->bg1[varidx] );
-   propdata->bg1[varidx] = TRUE;
-   propdata->bg1list[propdata->nbg1++] = varidx;
-   assert( propdata->nbg1 <= propdata->npermvars );
+      SCIPdebugMsg(scip, "Mark variable <%s> as globally fixed to 0.\n", SCIPvarGetName(var));
+      assert( ! propdata->bg0[varidx] );
+      propdata->bg0[varidx] = TRUE;
+      propdata->bg0list[propdata->nbg0++] = varidx;
+      assert( propdata->nbg0 <= propdata->npermvars );
+   }
+
+   if ( SCIPeventGetType(event) == SCIP_EVENTTYPE_GLBCHANGED )
+   {
+      assert( SCIPisEQ(scip, SCIPeventGetNewbound(event), 1.0) );
+      assert( SCIPisEQ(scip, SCIPeventGetOldbound(event), 0.0) );
+
+      SCIPdebugMsg(scip, "Mark variable <%s> as globally fixed to 1.\n", SCIPvarGetName(var));
+      assert( ! propdata->bg1[varidx] );
+      propdata->bg1[varidx] = TRUE;
+      propdata->bg1list[propdata->nbg1++] = varidx;
+      assert( propdata->nbg1 <= propdata->npermvars );
+   }
 
    return SCIP_OKAY;
 }
@@ -401,6 +417,8 @@ SCIP_RETCODE getSymmetries(
       assert( propdata->permvarmap != NULL );
       assert( propdata->permvars != NULL );
       assert( propdata->permvarsevents != NULL );
+      assert( propdata->bg0list != NULL );
+      assert( propdata->bg0 != NULL );
       assert( propdata->bg1list != NULL );
       assert( propdata->bg1 != NULL );
       assert( propdata->inactiveperms != NULL );
@@ -415,11 +433,13 @@ SCIP_RETCODE getSymmetries(
             /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
              * variables, for which no event has been catched. Since there currently is no way of checking whether a var
              * event has been caught for a particular variable, we use the stored eventfilter positions. */
-            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
                   propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[v]) );
          }
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
       }
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0list, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
@@ -431,6 +451,9 @@ SCIP_RETCODE getSymmetries(
       propdata->permstrans = NULL;
       propdata->permvars = NULL;
       propdata->permvarsevents = NULL;
+      propdata->bg0 = NULL;
+      propdata->bg0list = NULL;
+      propdata->nbg0 = 0;
       propdata->bg1 = NULL;
       propdata->bg1list = NULL;
       propdata->nbg1 = 0;
@@ -468,6 +491,8 @@ SCIP_RETCODE getSymmetries(
       /* insert variables into hashmap and capture variables */
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg0, propdata->npermvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg0list, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1list, propdata->npermvars) );
 
@@ -477,6 +502,7 @@ SCIP_RETCODE getSymmetries(
          SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
          SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[v]) );
 
+         propdata->bg0[v] = FALSE;
          propdata->bg1[v] = FALSE;
          propdata->permvarsevents[v] = -1;
 
@@ -484,7 +510,7 @@ SCIP_RETCODE getSymmetries(
          if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY )
          {
             /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1; also store filter position */
-            SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+            SCIP_CALL( SCIPcatchVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
                   propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, &propdata->permvarsevents[v]) );
          }
 
@@ -775,6 +801,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    )
 {
    SCIP_Shortbool* inactiveperms;
+   SCIP_Shortbool* bg0;
    SCIP_Shortbool* bg1;
    SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
@@ -783,6 +810,8 @@ SCIP_RETCODE propagateOrbitalFixing(
 #ifndef NDEBUG
    SCIP_Real* permvarsobj = NULL;
 #endif
+   int* bg0list;
+   int nbg0;
    int* bg1list;
    int nbg1;
    int nactiveperms;
@@ -849,6 +878,60 @@ SCIP_RETCODE propagateOrbitalFixing(
    for (p = 0; p < nperms; ++p)
       propdata->inactiveperms[p] = FALSE;
 
+   /* get pointers for bg0 */
+   bg0 = propdata->bg0;
+   bg0list = propdata->bg0list;
+   nbg0 = propdata->nbg0;
+
+   /* filter out permutations that move variables that are fixed to 0 */
+   for (j = 0; j < nbg0 && nactiveperms > 0; ++j)
+   {
+      int* pt;
+
+      v = bg0list[j];
+      assert( 0 <= v && v < npermvars );
+      assert( bg0[v] );
+
+      pt = permstrans[v];
+      assert( pt != NULL );
+      for (p = 0; p < nperms; ++p)
+      {
+         int img;
+
+         /* skip inactive permutations */
+         if ( inactiveperms[p] )
+            continue;
+
+         img = pt[p];
+
+         if ( img != v )
+         {
+#ifndef NDEBUG
+            SCIP_VAR* varv = permvars[v];
+            SCIP_VAR* varimg = permvars[img];
+
+            /* check whether moved variables have the same type (might have been aggregated in the meanwhile) */
+            assert( SCIPvarGetType(varv) == SCIPvarGetType(varimg) ||
+               (SCIPvarIsBinary(varv) && SCIPvarIsBinary(varimg)) ||
+               (SCIPvarGetType(varv) == SCIP_VARTYPE_IMPLINT && SCIPvarGetType(varimg) == SCIP_VARTYPE_CONTINUOUS &&
+                  SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
+                  SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) ||
+               (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
+                  SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
+                  SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
+            assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
+#endif
+
+            /* we are moving a variable globally fixed to 0 to a variable not of this type */
+            if ( ! bg0[img] )
+            {
+               inactiveperms[p] = TRUE; /* mark as inactive */
+               --nactiveperms;
+            }
+         }
+      }
+   }
+
    /* filter out permutations that move variables that are fixed to different values */
    for (j = 0; j < nbg1 && nactiveperms > 0; ++j)
    {
@@ -898,7 +981,7 @@ SCIP_RETCODE propagateOrbitalFixing(
       }
    }
 
-   /* clean bg1 list - need to do this after the main loop! */
+   /* Clean bg1 list - need to do this after the main loop! (Not needed for bg0.) */
    for (j = propdata->nbg1; j < nbg1; ++j)
       bg1[bg1list[j]] = FALSE;
 
@@ -1017,11 +1100,13 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
          /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
           * variables, for which no event has been catched. Since there currently is no way of checking whether a var
           * event has been caught for a particular variable, we use the stored eventfilter positions. */
-         SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED,
+         SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
                propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[v]) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0list, propdata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
@@ -1033,6 +1118,9 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->permstrans = NULL;
    propdata->permvars = NULL;
    propdata->permvarsevents = NULL;
+   propdata->bg0 = NULL;
+   propdata->bg0list = NULL;
+   propdata->nbg0 = 0;
    propdata->bg1 = NULL;
    propdata->bg1list = NULL;
    propdata->nbg1 = 0;
@@ -1240,6 +1328,9 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->movedpermvars = NULL;
    propdata->inactiveperms = NULL;
    propdata->lastrestart = 0;
+   propdata->bg0 = NULL;
+   propdata->bg0list = NULL;
+   propdata->nbg0 = 0;
    propdata->bg1 = NULL;
    propdata->bg1list = NULL;
    propdata->nbg1 = 0;
