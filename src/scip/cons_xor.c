@@ -2379,8 +2379,8 @@ SCIP_RETCODE checkSystemGF2(
             if ( SCIPvarIsActive(var) && ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
-               assert( nvarsmat == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvarsmat) );
+               assert( nvarsmat == SCIPhashmapGetImageInt(varhash, var) );
                xorvals[nvarsmat] = SCIPvarGetObj(var) * (1.0 - SCIPgetSolVal(scip, currentsol, var));
                xorvars[nvarsmat++] = var;
             }
@@ -2537,7 +2537,7 @@ SCIP_RETCODE checkSystemGF2(
             if ( SCIPvarIsActive(var) && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
                assert( SCIPhashmapExists(varhash, var) );
-               idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+               idx = SCIPhashmapGetImageInt(varhash, var);
                assert( idx < nvarsmat );
                assert( 0 <= xorbackidx[idx] && xorbackidx[idx] < nvarsmat );
                A[nconssmat][xorbackidx[idx]] = 1;
@@ -2620,8 +2620,8 @@ SCIP_RETCODE checkSystemGF2(
             /* fix variables according to computed unique solution */
             for( j = 0; j < nvarsmat; ++j )
             {
-               assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
-               assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+               assert( SCIPhashmapGetImageInt(varhash, xorvars[j]) < nvars );
+               assert( xorbackidx[SCIPhashmapGetImageInt(varhash, xorvars[j])] == j );
                assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                if( x[j] == 0 )
                {
@@ -2675,8 +2675,8 @@ SCIP_RETCODE checkSystemGF2(
                {
                   if ( x[j] != 0 )
                   {
-                     assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
-                     assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                     assert( SCIPhashmapGetImageInt(varhash, xorvars[j]) < nvars );
+                     assert( xorbackidx[SCIPhashmapGetImageInt(varhash, xorvars[j])] == j );
                      assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                      SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                   }

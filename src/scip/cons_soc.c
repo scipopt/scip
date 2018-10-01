@@ -5521,7 +5521,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
 
    for( j = 0; j < consdata->nvars; ++j )
    {
-      quadelems[j].idx1 = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->vars[j]);
+      quadelems[j].idx1 = SCIPhashmapGetImageInt(scipvar2nlpivar, consdata->vars[j]);
       quadelems[j].idx2 = quadelems[j].idx1;
       quadelems[j].coef = consdata->coefs[j] * consdata->coefs[j];
 
@@ -5536,7 +5536,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
          rhs -= quadelems[j].coef * consdata->offsets[j] * consdata->offsets[j];
       }
    }
-   quadelems[consdata->nvars].idx1 = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->rhsvar);
+   quadelems[consdata->nvars].idx1 = SCIPhashmapGetImageInt(scipvar2nlpivar, consdata->rhsvar);
    quadelems[consdata->nvars].idx2 = quadelems[consdata->nvars].idx1;
    quadelems[consdata->nvars].coef = - consdata->rhscoeff * consdata->rhscoeff;
 
