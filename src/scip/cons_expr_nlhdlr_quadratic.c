@@ -582,10 +582,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
    *success = FALSE;
 
-   /* TODO if in presolve, then we might want to join propagation */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
    /* don't check if enforcement is already ensured */
    if( *enforcedbelow && *enforcedabove )
       return SCIP_OKAY;
@@ -716,8 +712,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nlexprdata->nquadexprs) );
 
-   /* check if we can do something more: check curvature of quadratic function stored in nlexprdata */
-   SCIP_CALL( checkCurvature(scip, nlexprdata) );
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      /* check if we can do something more: check curvature of quadratic function stored in nlexprdata
+       * this is currently only used to decide whether we want to separate, so it can be skipped if in presolve
+       */
+      SCIP_CALL( checkCurvature(scip, nlexprdata) );
+   }
+   else
+   {
+      nlexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
+   }
 
    if( nlexprdata->curvature == SCIP_EXPRCURV_CONVEX )
    {
