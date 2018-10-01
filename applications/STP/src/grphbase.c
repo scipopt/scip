@@ -1173,7 +1173,6 @@ SCIP_RETCODE graph_pc_getSap(
    /* new pseudo-root */
    pseudoroot = (*newgraph)->knots;
    graph_knot_add((*newgraph), -1);
-   graph->prize[pseudoroot] = 0.0;
 
    max = 0.0;
    for( k = 0; k < nnodes; k++ )
