@@ -5441,18 +5441,13 @@ SCIP_RETCODE reduce_boundPrune(
    assert(graph->source >= 0);
    assert(graph_valid(graph));
    assert(!graph->extended);
+   assert( graph->stp_type != STP_RPCSPG || Is_term(graph->term[root]) );
 
    mstobj = 0.0;
    *nelims = 0;
 
    if( nterms <= 2 )
       return SCIP_OKAY;
-
-   assert( graph->stp_type != STP_RPCSPG || Is_term(graph->term[root]) );
-
-   if( !pcmw )
-      for( int k = 0; k < nnodes; k++ )
-         graph->mark[k] = (graph->grad[k] > 0);
 
    /* initialize cost and costrev array */
    maxcost = 0.0;
@@ -5467,21 +5462,20 @@ SCIP_RETCODE reduce_boundPrune(
          maxcost = graph->cost[e];
    }
 
-   /* no MWCSP? */
-   if( !mw )
+   if( !pcmw )
    {
       GRAPH* adjgraph;
       PATH* mst;
+
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
 
       SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
       /* build Voronoi regions, concomitantly building adjgraph and computing radii values*/
       SCIP_CALL( graph_voronoiWithRadius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
 
-      /* get 2nd next terminals to all non-terminal nodes */
       graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
-
-      /* get 3th next terminals to all non-terminal nodes */
       graph_get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
       assert(adjgraph != NULL);
@@ -5515,13 +5509,18 @@ SCIP_RETCODE reduce_boundPrune(
    }
    else
    {
-      /* build Voronoi regions */
-      graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
-
-      /* get 2nd next positive node to all non-positive nodes */
-      graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      if( mw )
+      {
+         graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
+         graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      }
+      else
+      {
+         SCIP_CALL( graph_voronoiWithRadius(scip, graph, NULL, vnoi, radius, cost, costrev, vbase, heap, state) );
+         graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+         graph_get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      }
    }
-
 
    /* for (rooted) prize collecting an maximum weight problems: correct radius values */
    if( graph->stp_type == STP_RPCSPG )
@@ -5580,7 +5579,10 @@ SCIP_RETCODE reduce_boundPrune(
       if( SCIPisGT(scip, radiim2, mstobj) )
          bound = radiim2;
       else
+      {
+         assert(!pcmw);
          bound = mstobj;
+      }
    }
 
    for( int redrounds = 0; redrounds < 3; redrounds++ )

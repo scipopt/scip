@@ -2655,7 +2655,7 @@ SCIP_RETCODE graph_voronoiWithRadius(
          if( nnodes > 1 )
             heap[++count] = i;
 
-         if( !mw )
+         if( !mw && adjgraph != NULL )
          {
             adjgraph->mark[adjgraph->knots] = TRUE;
             graph_knot_add(adjgraph, -1);
@@ -2714,103 +2714,78 @@ SCIP_RETCODE graph_voronoiWithRadius(
                      rad[vbk] = path[k].dist;
                   if( SCIPisGT(scip, rad[vbm], path[m].dist) )
                      rad[vbm] = path[m].dist;
-#if 0
-                  if( SCIPisGT(scip, path[m].dist + graph->prize[vbm], path[k].dist + graph->prize[vbk]) )
-                  ecost = graph->prize[vbm] - path[k].dist;
-                  else
-                  ecost = graph->prize[vbk] - path[m].dist;
-                  if( SCIPisLT(scip, ecost, 0.0) )
-                  ecost = 0.0;
-                  /* find edge in adjgraph */
-                  for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
-                  if( adjgraph->head[ne] == nodesid[vbm] )
-                  break;
-
-                  /* edge exists? */
-                  if( ne != EAT_LAST )
-                  {
-                     assert(ne >= 0);
-                     assert(adjgraph->head[ne] == nodesid[vbm]);
-                     assert(adjgraph->tail[ne] == nodesid[vbk]);
-                     if( SCIPisLT(scip, adjgraph->cost[ne], ecost) )
-                     {
-                        adjgraph->cost[ne] = ecost;
-                        adjgraph->cost[Edge_anti(ne)] = ecost;
-                     }
-                  }
-                  else
-                  {
-                     graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
-                  }
-#endif
                }
                else
                {
-                  int ne;
-
-                  if( graph->stp_type == STP_DHCSTP )
-                  {
-                     SCIP_Real c1;
-                     SCIP_Real c2;
-
-                     if( m == root )
-                        c1 = path[m].dist + costrev[i];
-                     else
-                        c1 = path[m].dist + cost[i];
-                     if( k == root )
-                        c2 = path[k].dist + cost[i];
-                     else
-                        c2 = path[k].dist + costrev[i];
-
-                     if( SCIPisGT(scip, c1, c2) )
-                        ecost = c2;
-                     else
-                        ecost = c1;
-                  }
-                  else
-                  {
-                     if( SCIPisGT(scip, path[m].dist, path[k].dist) )
-                        ecost = path[k].dist + cost[i];
-                     else
-                        ecost = path[m].dist + cost[i];
-                  }
-
-                  if( pc )
-                  {
-                     if( SCIPisGT(scip, ecost, graph->prize[vbm]) && root != vbm && !graph_pc_knotIsFixedTerm(graph, vbm) )
-                        ecost = graph->prize[vbm];
-
-                     if( SCIPisGT(scip, ecost, graph->prize[vbk]) && root != vbk && !graph_pc_knotIsFixedTerm(graph, vbk) )
-                        ecost = graph->prize[vbk];
-                  }
-
-                  /* find edge in adjgraph */
-                  for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
-                     if( adjgraph->head[ne] == nodesid[vbm] )
-                        break;
-
-                  /* edge exists? */
-                  if( ne != EAT_LAST )
-                  {
-                     assert(ne >= 0);
-                     assert(adjgraph->head[ne] == nodesid[vbm]);
-                     assert(adjgraph->tail[ne] == nodesid[vbk]);
-                     if( SCIPisGT(scip, adjgraph->cost[ne], ecost) )
-                     {
-                        adjgraph->cost[ne] = ecost;
-                        adjgraph->cost[Edge_anti(ne)] = ecost;
-                     }
-                  }
-                  else
-                  {
-                     graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
-                  }
 
                   if( SCIPisGT(scip, rad[vbk], path[k].dist + ((vbk == root) ? cost[i] : costrev[i])) )
                      rad[vbk] = path[k].dist + ((vbk == root) ? cost[i] : costrev[i]);
 
                   if( SCIPisGT(scip, rad[vbm], path[m].dist + ((vbm == root) ? costrev[i] : cost[i])) )
                      rad[vbm] = path[m].dist + ((vbm == root) ? costrev[i] : cost[i]);
+
+                  if( adjgraph != NULL )
+                  {
+                     int ne;
+
+                     if( graph->stp_type == STP_DHCSTP )
+                     {
+                        SCIP_Real c1;
+                        SCIP_Real c2;
+
+                        if( m == root )
+                           c1 = path[m].dist + costrev[i];
+                        else
+                           c1 = path[m].dist + cost[i];
+                        if( k == root )
+                           c2 = path[k].dist + cost[i];
+                        else
+                           c2 = path[k].dist + costrev[i];
+
+                        if( SCIPisGT(scip, c1, c2) )
+                           ecost = c2;
+                        else
+                           ecost = c1;
+                     }
+                     else
+                     {
+                        if( SCIPisGT(scip, path[m].dist, path[k].dist) )
+                           ecost = path[k].dist + cost[i];
+                        else
+                           ecost = path[m].dist + cost[i];
+                     }
+
+                     if( pc )
+                     {
+                        if( SCIPisGT(scip, ecost, graph->prize[vbm]) && root != vbm && !graph_pc_knotIsFixedTerm(graph, vbm) )
+                           ecost = graph->prize[vbm];
+
+                        if( SCIPisGT(scip, ecost, graph->prize[vbk]) && root != vbk && !graph_pc_knotIsFixedTerm(graph, vbk) )
+                           ecost = graph->prize[vbk];
+                     }
+
+                     /* find edge in adjgraph */
+                     for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
+                        if( adjgraph->head[ne] == nodesid[vbm] )
+                           break;
+
+                     /* edge exists? */
+                     if( ne != EAT_LAST )
+                     {
+                        assert(ne >= 0);
+                        assert(adjgraph->head[ne] == nodesid[vbm]);
+                        assert(adjgraph->tail[ne] == nodesid[vbk]);
+                        if( SCIPisGT(scip, adjgraph->cost[ne], ecost) )
+                        {
+                           adjgraph->cost[ne] = ecost;
+                           adjgraph->cost[Edge_anti(ne)] = ecost;
+                        }
+                     }
+                     else
+                     {
+                        graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
+                     }
+                  }
                }
             }
 
