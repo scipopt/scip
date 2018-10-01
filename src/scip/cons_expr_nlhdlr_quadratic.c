@@ -582,6 +582,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
    *success = FALSE;
 
+   /* TODO if in presolve, then we might want to join propagation */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    /* don't check if enforcement is already ensured */
    if( *enforcedbelow && *enforcedabove )
       return SCIP_OKAY;
