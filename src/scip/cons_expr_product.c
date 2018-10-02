@@ -765,7 +765,8 @@ SCIP_RETCODE simplifyFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   factor,             /**< expression to be simplified */
    SCIP_Real*            simplifiedcoef,     /**< coefficient of parent product expression */
-   EXPRNODE**            simplifiedfactor    /**< pointer to store the resulting expression node/list of nodes */
+   EXPRNODE**            simplifiedfactor,   /**< pointer to store the resulting expression node/list of nodes */
+   SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
    const char* factortype;
@@ -779,6 +780,7 @@ SCIP_RETCODE simplifyFactor(
    /* enforces SP7 */
    if( strcmp(factortype, "val") == 0 )
    {
+      *changed = TRUE;
       *simplifiedcoef *= SCIPgetConsExprExprValueValue(factor);
       return SCIP_OKAY;
    }
@@ -786,6 +788,8 @@ SCIP_RETCODE simplifyFactor(
    /* enforces SP2 */
    if( strcmp(factortype, EXPRHDLR_NAME) == 0 )
    {
+      *changed = TRUE;
+
       /* assert SP8 */
       assert(SCIPgetConsExprExprProductCoef(factor) == 1.0);
       debugSimplify("[simplifyFactor] seeing a product: include its children\n"); /*lint !e506 !e681*/
@@ -819,8 +823,9 @@ SCIP_RETCODE mergeProductExprlist(
    SCIP*                 scip,               /**< SCIP data structure */
    EXPRNODE*             tomerge,            /**< list to merge */
    EXPRNODE**            finalchildren,      /**< pointer to store the result of merge between tomerge and *finalchildren */
-   EXPRNODE**            unsimplifiedchildren/**< the list of children that should go to the product expression; they are
+   EXPRNODE**            unsimplifiedchildren,/**< the list of children that should go to the product expression; they are
                                                   unsimplified when seen as children of a simplified product */
+   SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
    EXPRNODE* tomergenode;
@@ -884,6 +889,8 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CONSEXPR_EXPR* power;
          SCIP_CONSEXPR_EXPR* simplifiedpower;
 
+         *changed = TRUE;
+
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, SCIPfindConshdlr(scip, "expr"), &power, base1, expo1 + expo2) );
          SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, power, &simplifiedpower) ); /* calls simplifyPow */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &power) );
@@ -913,7 +920,6 @@ SCIP_RETCODE mergeProductExprlist(
          }
          SCIP_CALL( freeExprNode(scip, &aux) );
 
-         /* continue */
          continue;
       }
 
@@ -927,6 +933,7 @@ SCIP_RETCODE mergeProductExprlist(
       }
       else
       {
+         *changed = TRUE;
          assert(compareres == 1);
 
          /* insert: if current is the first node, then insert at beginning; otherwise, insert between previous and current */
@@ -1016,6 +1023,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    EXPRNODE* unsimplifiedchildren;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
+   SCIP_Bool changed;
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
@@ -1040,11 +1048,11 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
 
       /* enforces SP2 and SP7 */
       tomerge = NULL;
-      SCIP_CALL( simplifyFactor(scip, first->expr, &simplifiedcoef, &tomerge) );
+      SCIP_CALL( simplifyFactor(scip, first->expr, &simplifiedcoef, &tomerge, &changed) );
 
       /* enforces SP4 and SP5
        * note: merge frees (or uses) the nodes of the tomerge list */
-      SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren) );
+      SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren, &changed) );
 
       /* free first */
       SCIP_CALL( freeExprlist(scip, &first) );
@@ -1052,6 +1060,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       /* if the simplified coefficient is 0, we can return value 0 */
       if( simplifiedcoef == 0.0 )
       {
+         changed = TRUE;
          SCIP_CALL( freeExprlist(scip, &finalchildren) );
          SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
          assert(finalchildren == NULL);
@@ -1141,9 +1150,16 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
    /* build product expression from list */
-   else
+   else if( changed )
    {
       SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
 
 CLEANUP:
