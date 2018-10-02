@@ -3920,7 +3920,7 @@ SCIP_RETCODE getActiveVariables(
    }
    else
    {
-      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e845*/
+      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e774 !e845*/
       {
          SCIPerrorMessage("Null pointer"); /* should not happen */
          SCIPABORT();
