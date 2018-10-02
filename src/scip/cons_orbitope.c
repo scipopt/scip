@@ -1380,8 +1380,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
  * rows in the new ordering if it differs from the row of the first branching variable, and so on.
  *
  * The roworder array stores this reordering, where acutally only the first maxrowlabel entries encode the
- * reordering in reverse order. That is, entry maxrowlabel encodes the first row w.r.t. this order, entry
- * (maxrowlabel - 1) encodes the second row, and so on.
+ * reordering.
  */
 static
 SCIP_RETCODE computeDynamicRowOrder(
@@ -1455,8 +1454,11 @@ SCIP_RETCODE computeDynamicRowOrder(
       node = SCIPnodeGetParent(node);
    }
 
-   /* insert branching decisions of current path into global row order */
-   for (i = 0; i < nbranchdecision; ++i)
+   /* Insert branching decisions of current path into global row order.
+    * Iterate in reverse order over branching decisions to get the path
+    * from the root to the current node.
+    */
+   for (i = nbranchdecision - 1; i >= 0; --i)
    {
       if ( ! rowused[branchdecisions[i]] )
       {
@@ -1547,18 +1549,18 @@ SCIP_RETCODE propagateFullOrbitopeCons(
 
    for (i = 0; i < nrowsused; ++i)
    {
-      /* roworder is initialized if dynamic is TRUE */
-      int origrow = dynamic ? roworder[i] : i; /*lint !e644*/
-      int lexminrow = dynamic ? nrowsused - 1 - i : i;
+      int origrow;
+
+      origrow = dynamic ? roworder[i] : i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 )
-            lexminfixes[lexminrow][j] = 1;
+            lexminfixes[i][j] = 1;
          else if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 || j == n - 1 )
-            lexminfixes[lexminrow][j] = 0;
+            lexminfixes[i][j] = 0;
          else
-            lexminfixes[lexminrow][j] = 2;
+            lexminfixes[i][j] = 2;
       }
    }
 
@@ -1614,7 +1616,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[nrowsused - 1 - maxdiscriminating] : maxdiscriminating;
+         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
 
          assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
 #endif
@@ -1624,8 +1626,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    }
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
-    * Free entries in the first column are set to 1. Since the first row appears last in
-    * roworder, the i-th row in roworder is the (nrowsused - i)-th row in lexminfixes.
+    * Free entries in the first column are set to 1.
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
@@ -1635,17 +1636,18 @@ SCIP_RETCODE propagateFullOrbitopeCons(
 
    for (i = 0; i < nrowsused; ++i)
    {
-      int origrow = dynamic ? roworder[i] : i;
-      int lexmaxrow = dynamic ? nrowsused - 1 - i : i;
+      int origrow;
+
+      origrow = dynamic ? roworder[i] : i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 )
-            lexmaxfixes[lexmaxrow][j] = 0;
+            lexmaxfixes[i][j] = 0;
          else if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 || j == 0 )
-            lexmaxfixes[lexmaxrow][j] = 1;
+            lexmaxfixes[i][j] = 1;
          else
-            lexmaxfixes[lexmaxrow][j] = 2;
+            lexmaxfixes[i][j] = 2;
       }
    }
 
@@ -1699,7 +1701,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[nrowsused - 1 - maxdiscriminating] : maxdiscriminating;
+         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
 
          assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
 #endif
@@ -1715,7 +1717,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    {
       for (i = 0; i < nrowsused; ++i)
       {
-         int origrow = dynamic ? roworder[nrowsused - 1 - i] : i;
+         int origrow = dynamic ? roworder[i] : i;
 
          if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
             break;
@@ -1790,8 +1792,8 @@ SCIP_RETCODE propagateCons(
  *  are only due to the fixed variables that are in or above the minimum fixed row of each pair of adjacent
  *  columns of the lexmin and lexmax matrices.
  *
- *  Since the storage of an integer is not enough to store the complete information about the fixing
- *  nor a complete shifted column, we have to use the linear time algorithm for finding the lexmin and lexmax
+ *  Since the storage of an integer is not enough to store the complete information about the fixing,
+ *  we have to use the linear time algorithm for finding the lexmin and lexmax
  *  matrices and determine from this the minimum fixed rows.
  */
 static
@@ -1869,18 +1871,18 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
    for (i = 0; i < nrowsused; ++i)
    {
-      /* roworder is initialized if dynamic is TRUE */
-      int origrow = dynamic ? roworder[i] : i; /*lint !e644*/
-      int lexminrow = dynamic ? nrowsused - 1 - i : i;
+      int origrow;
+
+      origrow = dynamic ? roworder[i] : i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 )
-            lexminfixes[lexminrow][j] = 1;
+            lexminfixes[i][j] = 1;
          else if ( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 || j == n - 1 )
-            lexminfixes[lexminrow][j] = 0;
+            lexminfixes[i][j] = 0;
          else
-            lexminfixes[lexminrow][j] = 2;
+            lexminfixes[i][j] = 2;
       }
    }
 
@@ -1935,7 +1937,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[nrowsused - 1 - maxdiscriminating] : maxdiscriminating;
+         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
 
          assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
 #endif
@@ -1956,8 +1958,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    }
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
-    * Free entries in the first column are set to 1. Since the first row appears last in
-    * roworder, the i-th row in roworder is the (nrowsused - i)-th row in lexminfixes.
+    * Free entries in the first column are set to 1.
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
    for (i = 0; i < nrowsused; ++i)
@@ -1971,17 +1972,18 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
    for (i = 0; i < nrowsused; ++i)
    {
-      int origrow = dynamic ? roworder[i] : i;
-      int lexmaxrow = dynamic ? nrowsused - 1 - i : i;
+      int origrow;
+
+      origrow = dynamic ? roworder[i] : i;
 
       for (j = 0; j < n; ++j)
       {
          if ( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
-            lexmaxfixes[lexmaxrow][j] = 0;
+            lexmaxfixes[i][j] = 0;
          else if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 || j == 0 )
-            lexmaxfixes[lexmaxrow][j] = 1;
+            lexmaxfixes[i][j] = 1;
          else
-            lexmaxfixes[lexmaxrow][j] = 2;
+            lexmaxfixes[i][j] = 2;
       }
    }
 
@@ -2034,7 +2036,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[nrowsused - 1 - maxdiscriminating] : maxdiscriminating;
+         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
 
          assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
 #endif
@@ -2063,7 +2065,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
       for (i = 0; i <= ub; ++i)
       {
-         int origrow = dynamic ? roworder[nrowsused - 1 - i] : i;
+         int origrow = dynamic ? roworder[i] : i;
 
          if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 ||
             SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
