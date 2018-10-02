@@ -2688,6 +2688,45 @@ SCIP_RETCODE canonicalizeConstraints(
              */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
          }
+
+         /* scale l <= c * f(x) <= r with c < 0 by -1; the result is -u <= -c * f(x) <= -l */
+         if( SCIPgetConsExprExprHdlr(consdata->expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+         {
+            SCIP_Real* coefs;
+            SCIP_Real constant;
+            int nchildren;
+
+            coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+            constant = SCIPgetConsExprExprSumConstant(consdata->expr);
+            nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+            /* ensure that the first coefficient is positive */
+            if( coefs[0] < 0.0 )
+            {
+               SCIP_CONSEXPR_EXPR* expr;
+               SCIP_Real* newcoefs;
+               int k;
+
+               /* allocate memory */
+               SCIP_CALL( SCIPallocBufferArray(scip, &newcoefs, nchildren) );
+
+               for( k = 0; k < nchildren; ++k )
+                  newcoefs[k] = -coefs[k];
+
+               /* create a new sum expression */
+               SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr, nchildren, SCIPgetConsExprExprChildren(consdata->expr), newcoefs, -constant) );
+
+               /* replace expression in constraint data and scale sides */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+               consdata->expr = expr;
+               SCIPswapReals(&consdata->lhs, &consdata->rhs);
+               consdata->lhs = -consdata->lhs;
+               consdata->rhs = -consdata->rhs;
+
+               /* free memory */
+               SCIPfreeBufferArray(scip, &newcoefs);
+            }
+         }
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
