@@ -112,7 +112,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consexprhdlr, sumexpr, simplifiedexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sumexpr, simplifiedexpr) );
 
    /* release no longer used sumexpr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
