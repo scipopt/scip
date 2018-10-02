@@ -24,33 +24,39 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_iterator.h"
 #include "scip/struct_cons_expr.h"
 
 static SCIP_CONSHDLR* conshdlr;
 
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(check_nuses)
+SCIP_RETCODE check_nuses(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   rootexpr            /**< expression from which to check number of uses */
+   )
 {
-   int expectednuses;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
 
-   assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+   assert(conshdlr != NULL);
 
-   /* root is captured by the walker!!! */
-   expectednuses = 1;
-   if( SCIPgetConsExprExprWalkParent(expr) == NULL )
-      expectednuses = 2;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
-   if( expr->nuses != expectednuses )
+   for( expr = rootexpr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
    {
-      printf("following expression is captured too many times (%d, expected %d)\n",
-            expr->nuses, expectednuses);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
-      assert(expr->nuses == expectednuses);
+      if( expr->nuses != 1 )
+      {
+         printf("following expression is captured too many times (%d, expected 1)\n", expr->nuses);
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         assert(expr->nuses == 1);
+      }
    }
 
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -112,8 +118,8 @@ Test(parse, simple)
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr_xy5, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
-   /* check that the expression is capture correctly */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, check_nuses, NULL, NULL, NULL, NULL) );
+   /* check that the expression is captured correctly */
+   SCIP_CALL( check_nuses(scip, expr_xy5) );
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
@@ -193,7 +199,8 @@ Test(parse, unusual_var_name)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check that the expression is capture correctly */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, check_nuses, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( check_nuses(scip, expr) );
+
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

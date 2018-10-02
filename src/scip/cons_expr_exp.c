@@ -226,7 +226,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateExp)
 
 /** expression reverse propagaton callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropExp)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 

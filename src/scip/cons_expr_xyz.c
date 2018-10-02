@@ -83,7 +83,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
 
 /** expression compare callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareXyz)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
 {  /*lint --e{715}*/
    assert(expr1 != NULL);
    assert(expr2 != NULL);
@@ -214,7 +214,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXyz)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXyz)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 

@@ -474,7 +474,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childbounds;
    SCIP_INTERVAL left;

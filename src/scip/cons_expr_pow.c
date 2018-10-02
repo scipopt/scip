@@ -899,7 +899,7 @@ void estimateRoot(
  * base_1 < base2 or, base_1 = base_2 and expo_1 < expo_2
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(comparePow)
 {  /*lint --e{715}*/
    SCIP_Real expo1;
    SCIP_Real expo2;
@@ -1266,20 +1266,20 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
       {
          /* print function with opening parenthesis */
          SCIPinfoMessage(scip, file, "(");
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
       {
          assert(currentchild == 0);
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
       {
 
          SCIP_Real exponent = SCIPgetConsExprExprPowExponent(expr);
@@ -1293,7 +1293,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
       default: ;
    }
 
@@ -1513,7 +1513,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 
 /** expression reverse propagaton callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
 {  /*lint --e{715}*/
    SCIP_INTERVAL interval;
    SCIP_INTERVAL child;

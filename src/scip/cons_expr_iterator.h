@@ -60,12 +60,97 @@ SCIP_Bool SCIPexpriteratorIsInit(
  *
  * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
  *
+ * \note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
+ *
  * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
+ *
+ * More details on the DFS mode:
+ * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
+ * natural way of implementing this algorithms is using recursion.
+ * In general, a function which traverses the tree in depth-first looks like
+ * <pre>
+ * fun( expr )
+ *    enterexpr()
+ *    continue skip or abort
+ *       for( child in expr->children )
+ *          visitingchild()
+ *          continue skip or abort
+ *          fun(child, data, proceed)
+ *          visitedchild()
+ *          continue skip or abort
+ *    leaveexpr()
+ * </pre>
+ * Given that some expressions might be quite deep we provide this functionality in an iterative fashion.
+ *
+ * Consider an expression (x*y) + z + log(x-y).
+ * The corresponding expression graph is
+ * <pre>
+ *           [+]
+ *       /    |   \
+ *    [*]     |    [log]
+ *    / \     |      |
+ *   /   \    |     [-]
+ *   |   |    |     / \
+ *  [x] [y]  [z]  [x] [y]
+ * </pre>
+ * (where [x] and [y] are actually the same expression).
+ *
+ * If given a pointer to the [+] expression is given as root to this expression, it will iterate
+ * the graph in a depth-first manner and stop at various stages.
+ * - When entering an expression, it stops in the enterexpr stage.
+ *   The SCIPexpriteratorGetParentDFS() function indicates from where the expression has been entered (NULL for the root expression).
+ * - Before visiting a child of an expression, it stops in the visitingchild stage.
+ *   The SCIPexpriteratorGetChildIdxDFS() function returns which child will be visited (as an index in the current expr's children array).
+ *   Use SCIPexpriteratorGetChildExprDFS() to obtain the corresponding expression.
+ * - When returning from visiting a child of an expression, it stops in the visitedchild stage.
+ *   Again the SCIPexpriteratorGetChildExprDFS() function returns which child has been visited.
+ * - When leaving an expression, it stops in the leaveexpr stage.
+ *
+ * Thus, for the above expression, the expression are visited in the following order and stages:
+ * - enterexpr([+])
+ * - visitingchild([+])  currentchild == 0
+ * - enterexpr([*])
+ * - visitingchild([*])  currentchild == 0
+ * - enterexpr([x])
+ * - leaveexpr([x])
+ * - visitedchild([*])   currentchild == 0
+ * - visitingchild([*])  currentchild == 1
+ * - enterexpr([y])
+ * - leaveexpr([y])
+ * - visitedchild([*])   currentchild == 1
+ * - leaveexpr([*])
+ * - visitedchild([+])   currentchild == 0
+ * - visitingchild([+])  currentchild == 1
+ * - enterexpr([z])
+ * - leaveexpr([z])
+ * - visitedchild([+])   currentchild == 1
+ * - visitingchild([+])  currentchild == 2
+ * - enterexpr([log])
+ * - visitingchild([log]) currentchild == 0
+ * - enterexpr([-])
+ * - visitingchild([-])  currentchild == 0
+ * - enterexpr([x])
+ * - leaveexpr([x])
+ * - visitedchild([-])   currentchild == 0
+ * - visitingchild([-])  currentchild == 1
+ * - enterexpr([y])
+ * - leaveexpr([y])
+ * - visitedchild([-])   currentchild == 1
+ * - leaveexpr([-])
+ * - visitedchild([log]) currentchild == 0
+ * - leaveexpr([log])
+ * - visitedchild([+])   currentchild == 2
+ * - leaveexpr([+])
+ *
+ * The caller can direct the iterator to skip parts of the tree:
+ * If calling SCIPexpriteratorSkipDFS() in enterexpr stage, all children of that expression will be skipped. The leaveexpr stage will still be next.
+ * If calling SCIPexpriteratorSkipDFS() in visitingchild stage, visiting the current child will be skipped.
+ * If calling SCIPexpriteratorSkipDFS() in visitedchild child, visiting the remaining children will be skipped.
  */
 EXTERN
 SCIP_RETCODE SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator */
+   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator, can be NULL */
    SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
    SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    );
@@ -92,14 +177,14 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_CONSEXPREXPRWALK_STAGE values
+ * @param stopstages should be a bitwise OR of different SCIP_CONSEXPRITERATOR_STAGE values
  *
  * If the current stage is not one of the stopstages, then the iterator will be moved on.
  */
 EXTERN
 void SCIPexpriteratorSetStagesDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   unsigned int                stopstages   /**< the stages in which to stop when iterating via DFS */
+   SCIP_CONSEXPRITERATOR_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
    );
 
 /** gets the current expression that the expression iterator points to */
@@ -113,7 +198,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
  * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_STAGE SCIPexpriteratorGetStageDFS(
+SCIP_CONSEXPRITERATOR_STAGE SCIPexpriteratorGetStageDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
@@ -143,7 +228,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetCurrentUserData(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
@@ -152,7 +237,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetCurrentUserData(
  * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetChildUserDataDFS(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
    );
 
@@ -161,7 +246,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetChildUserDataDFS(
  * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
-SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
+SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
    );
@@ -173,7 +258,7 @@ SCIP_CONSEXPREXPRWALK_IO SCIPexpriteratorGetExprUserData(
 EXTERN
 void SCIPexpriteratorSetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored */
+   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored */
    );
 
 /** sets the iterator specific user data of the current expressions current child
@@ -183,7 +268,7 @@ void SCIPexpriteratorSetCurrentUserData(
 EXTERN
 void SCIPexpriteratorSetChildUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPREXPRWALK_IO    userdata     /**< data to be stored in current child */
+   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored in current child */
    );
 
 /** moves the iterator to the next expression according to the mode of the expression iterator

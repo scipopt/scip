@@ -611,7 +611,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
  *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareSum)
 {  /*lint --e{715}*/
    SCIP_Real const1;
    SCIP_Real* coefs1;
@@ -732,7 +732,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -748,7 +748,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
       {
          SCIP_Real coef;
 
@@ -777,7 +777,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -787,7 +787,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
       default: ;
    }
 
@@ -1179,7 +1179,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSum)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    assert(scip != NULL);

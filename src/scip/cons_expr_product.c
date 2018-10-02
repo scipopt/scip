@@ -1165,7 +1165,7 @@ CLEANUP:
  *  Example: y * z < x * y * z
  */
 static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareProduct)
+SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareProduct)
 {  /*lint --e{715}*/
    int compareresult;
    int i;
@@ -1295,7 +1295,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -1318,7 +1318,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
       {
          /* print multiplication sign, if not first factor */
          if( exprdata->coefficient != 1.0 || currentchild > 0 )
@@ -1328,12 +1328,12 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
       {
          break;
       }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
          if( EXPRHDLR_PRECEDENCE <= parentprecedence )
@@ -1342,6 +1342,10 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          }
          break;
       }
+
+      default:
+         /* all stages should have been covered above */
+         SCIPABORT();
    }
 
    return SCIP_OKAY;
@@ -1785,7 +1789,7 @@ CLEANUP:
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
+SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
