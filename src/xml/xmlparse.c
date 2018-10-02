@@ -1097,7 +1097,7 @@ XML_NODE* xmlProcess(
        * to get a better error message.
        */
       if ( access(myfilename, R_OK) != 0 )
-         SCIPstrncpy(myfilename, filename, filenamelen + 5);
+         (void) SCIPstrncpy(myfilename, filename, filenamelen + 5);
    }
 #endif
    ppos.fp = FOPEN(myfilename, "r");

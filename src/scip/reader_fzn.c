@@ -3920,7 +3920,7 @@ SCIP_RETCODE getActiveVariables(
    }
    else
    {
-      if( *nvars > 0 && (vars == NULL || scalars == NULL) )
+      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e845*/
       {
          SCIPerrorMessage("Null pointer"); /* should not happen */
          SCIPABORT();
@@ -3929,6 +3929,7 @@ SCIP_RETCODE getActiveVariables(
 
       for( v = 0; v < *nvars; ++v )
       {
+         assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
       }
    }
