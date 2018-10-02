@@ -2563,6 +2563,74 @@ SCIP_RETCODE reformulateConsExprExpr(
    return SCIP_OKAY;
 }
 
+
+/** scales the sides of the constraint l <= sum_i c_i f_i(x) <= r according to the following rules:
+ *
+ *  let n_+ the number of positive coefficients c_i and n_- be the number of negative coefficients
+ *
+ *   i. scale by -1 if n_+ < n_-
+ *
+ *  ii. scale by -1 if n_+ = n_- & r = INF
+ */
+static
+SCIP_RETCODE scaleConsSides(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons                /**< expression constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( SCIPgetConsExprExprHdlr(consdata->expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      SCIP_Real* coefs;
+      SCIP_Real constant;
+      int nchildren;
+      int counter = 0;
+
+      coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+      constant = SCIPgetConsExprExprSumConstant(consdata->expr);
+      nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+      /* compute n_+ - n_i */
+      for( i = 0; i < nchildren; ++i )
+         counter += coefs[i] > 0 ? 1 : -1;
+
+      if( counter < 0 || (counter == 0 && SCIPisInfinity(scip, consdata->rhs)) )
+      {
+         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_Real* newcoefs;
+
+         /* allocate memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &newcoefs, nchildren) );
+
+         for( i = 0; i < nchildren; ++i )
+            newcoefs[i] = -coefs[i];
+
+         /* create a new sum expression */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr, nchildren, SCIPgetConsExprExprChildren(consdata->expr), newcoefs, -constant) );
+
+         /* replace expression in constraint data and scale sides */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+         consdata->expr = expr;
+         SCIPswapReals(&consdata->lhs, &consdata->rhs);
+         consdata->lhs = -consdata->lhs;
+         consdata->rhs = -consdata->rhs;
+
+         /* free memory */
+         SCIPfreeBufferArray(scip, &newcoefs);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** simplifies expressions and replaces common subexpressions for a set of constraints
  * @todo put the constant to the constraint sides
  */
@@ -2688,6 +2756,9 @@ SCIP_RETCODE canonicalizeConstraints(
              */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
          }
+
+         /* scale constraint sides */
+         SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i]) );
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
