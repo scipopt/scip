@@ -24,6 +24,8 @@ Interface changes
 
 ### New API functions
 
+- SCIPhashmapInsertInt(), SCIPhashmapSetImageInt(), and SCIPhashmapGetImageInt() to use integer values as images in hashmaps
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -60,6 +62,7 @@ Fixed bugs
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
 - fixed OPB reader for instances without explicit plus signs
+- correct dual solution values for bound constraints
 
 Miscellaneous
 -------------
