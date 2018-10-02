@@ -181,8 +181,8 @@ SCIP_RETCODE consdataFree(
    if ( usedynamicprop )
    {
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
@@ -221,10 +221,11 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
+
    if ( usedynamicprop )
    {
       SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rowused, nspcons) );
    }
 
@@ -234,9 +235,10 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e866*/
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
+      (*consdata)->roworder[i] = i;
+
       if ( usedynamicprop )
       {
-         (*consdata)->roworder[i] = nspcons;
          (*consdata)->rowused[i] = FALSE;
       }
    }
@@ -1533,10 +1535,10 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          return SCIP_OKAY;
 
       nrowsused = consdata->nrowsused;
-      roworder = consdata->roworder;
    }
    else
       nrowsused = m;
+   roworder = consdata->roworder;
 
    /* Initialize lexicographically minimal matrix by fixed entries at the current node.
     * Free entries in the last column are set to 0.
@@ -1551,7 +1553,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    {
       int origrow;
 
-      origrow = dynamic ? roworder[i] : i;
+      origrow = roworder[i];
 
       for (j = 0; j < n; ++j)
       {
@@ -1616,7 +1618,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
+         origrow = roworder[maxdiscriminating];
 
          assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
 #endif
@@ -1638,7 +1640,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    {
       int origrow;
 
-      origrow = dynamic ? roworder[i] : i;
+      origrow = roworder[i];
 
       for (j = 0; j < n; ++j)
       {
@@ -1701,7 +1703,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
+         origrow = roworder[maxdiscriminating];
 
          assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
 #endif
@@ -1717,7 +1719,9 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    {
       for (i = 0; i < nrowsused; ++i)
       {
-         int origrow = dynamic ? roworder[i] : i;
+         int origrow;
+
+         origrow = roworder[i];
 
          if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
             break;
@@ -1848,11 +1852,12 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
       assert( consdata->roworder != NULL );
       assert( consdata->nrowsused > 0 );
 
-      roworder = consdata->roworder;
       nrowsused = consdata->nrowsused;
    }
    else
       nrowsused = m;
+   roworder = consdata->roworder;
+
 
    assert( inferinfo <= consdata->nspcons );
 
@@ -1873,7 +1878,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       int origrow;
 
-      origrow = dynamic ? roworder[i] : i;
+      origrow = roworder[i];
 
       for (j = 0; j < n; ++j)
       {
@@ -1937,7 +1942,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
+         origrow = roworder[maxdiscriminating];
 
          assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
 #endif
@@ -1974,7 +1979,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       int origrow;
 
-      origrow = dynamic ? roworder[i] : i;
+      origrow = roworder[i];
 
       for (j = 0; j < n; ++j)
       {
@@ -2036,7 +2041,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
          assert( maxdiscriminating >= 0 );
          assert( maxdiscriminating < nrowsused );
 
-         origrow = dynamic ? roworder[maxdiscriminating] : maxdiscriminating;
+         origrow = roworder[maxdiscriminating];
 
          assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
 #endif
@@ -2065,7 +2070,9 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
       for (i = 0; i <= ub; ++i)
       {
-         int origrow = dynamic ? roworder[i] : i;
+         int origrow;
+
+         origrow = roworder[i];
 
          if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 ||
             SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
@@ -2742,7 +2749,7 @@ SCIP_RETCODE separateCoversOrbisack(
 
       for (i = 0; i < nrowsused; ++i)
       {
-         origrow = dynamic ? roworder[i] : i;
+         origrow = roworder[i];
 
          assert( origrow >= 0 );
          assert( origrow < nrows );
@@ -2765,7 +2772,9 @@ SCIP_RETCODE separateCoversOrbisack(
 
             for (k = 0; k <= i; ++k)
             {
-               int origrow2 = dynamic ? roworder[k] : k;
+               int origrow2;
+
+               origrow2 = roworder[k];
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[origrow2][j], coeffs1[k]) );
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[origrow2][j + 1], coeffs2[k]) );
