@@ -1035,6 +1035,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr), SCIPgetConsExprExprNChildren(expr),
             &unsimplifiedchildren) );
 
+   changed = FALSE;
+
    /* while there are still children to process */
    finalchildren  = NULL;
    simplifiedcoef = SCIPgetConsExprExprProductCoef(expr);

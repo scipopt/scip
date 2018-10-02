@@ -560,8 +560,9 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    nchildren = SCIPgetConsExprExprNChildren(expr);
    coefs     = SCIPgetConsExprExprSumCoefs(expr);
 
-   /* while there are still children to process */
    changed = FALSE;
+
+   /* while there are still children to process */
    finalchildren  = NULL;
    simplifiedconstant = SCIPgetConsExprExprSumConstant(expr);
    for( i = 0; i < nchildren; i++ )
