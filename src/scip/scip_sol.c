@@ -2012,19 +2012,13 @@ SCIP_RETCODE SCIPgetDualSolVal(
    SCIP_CONS* transcons;
    int nvars;
    SCIP_Bool success;
-#ifndef NDEBUG
-   SCIP_CONSHDLR* conshdlr;
-#endif
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(dualsolval != NULL);
 
-#ifndef NDEBUG
-   conshdlr = SCIPconsGetHdlr(cons);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
-#endif
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear" ) == 0);
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
    assert(success);  /* is always successful, since we only have linear constraints */
