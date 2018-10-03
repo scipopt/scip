@@ -2041,10 +2041,9 @@ SCIP_RETCODE SCIPgetDualSolVal(
    {
       if( nvars > 1 )
          (*dualsolval) = SCIPgetDualsolLinear(scip, transcons);
-
-      /* the constraint is a bound constraint */
       else
       {
+         /* the constraint is a bound constraint */
          SCIP_VAR** vars;
          SCIP_Real* vals;
          SCIP_Real activity;
