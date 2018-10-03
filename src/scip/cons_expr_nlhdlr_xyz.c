@@ -149,7 +149,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxXyz)
 }
 
 
-/** callback to detect structure in expression tree */
+/** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
 #if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaXyz)

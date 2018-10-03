@@ -535,6 +535,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_expr_value.o \
 			scip/cons_expr_var.o \
 			scip/cons_expr_entropy.o \
+			scip/cons_expr_nlhdlr_bilinear.o \
 			scip/cons_expr_nlhdlr_convex.o \
 			scip/cons_expr_nlhdlr_default.o \
 			scip/cons_expr_nlhdlr_quadratic.o \

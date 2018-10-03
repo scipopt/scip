@@ -1121,7 +1121,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   unsigned int                priority,     /**< priority of nonlinear handler */
+   int                         priority,     /**< priority of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
@@ -1209,14 +1209,31 @@ const char* SCIPgetConsExprNlhdlrDesc(
 
 /** gives priority of nonlinear handler */
 EXTERN
-unsigned int SCIPgetConsExprNlhdlrPriority(
+int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
+
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+EXTERN
+SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name           /**< name of nonlinear handler */
+   );
 
 /** gives handler data of nonlinear handler */
 EXTERN
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives nonlinear handler expression data
+ *
+ * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
+ */
+EXTERN
+SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprNlhdlrExprData(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*        expr           /**< expression */
 );
 
 /** returns whether nonlinear handler implements the reformulation callback */
