@@ -1615,6 +1615,9 @@ SCIP_RETCODE readScenarios(
 
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
+            assert(scenario == NULL);
+
+            addscenario = FALSE;
          }
 
          if( strcmp(wrongroot, stoinputField3(stoi)) == 0 )
@@ -1650,7 +1653,7 @@ SCIP_RETCODE readScenarios(
          numscenarios++;
          addscenario = TRUE;
       }
-      else
+      else if( addscenario )
       {
          SCIP_CALL( addScenarioEntry(scip, scenario, stoinputField2(stoi), stoinputField1(stoi),
                atof(stoinputField3(stoi))) );
