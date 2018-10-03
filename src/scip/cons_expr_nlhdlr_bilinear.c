@@ -883,6 +883,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
 
    *success = FALSE;
 
+   /* only during solving will we have the extra inequalities that we rely on so much here */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    /* check for product expressions with two children */
    if( SCIPgetConsExprExprHdlrProduct(conshdlr) == SCIPgetConsExprExprHdlr(expr) && SCIPgetConsExprExprNChildren(expr) == 2 )
    {
