@@ -1032,8 +1032,8 @@ int SCIPtimFindStage(
 
    if( stagenum < 0 )
    {
-      SCIPerrorMessage("Stage %d was not found in the TIM file. Check the SMPS files (COR, TIM and STO)\n", stage);
-      SCIP_ABORT();
+      SCIPerrorMessage("Stage <%s> was not found in the TIM file. Check the SMPS files (COR, TIM and STO)\n", stage);
+      SCIPABORT();
    }
 
    return stagenum;
