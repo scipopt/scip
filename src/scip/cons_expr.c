@@ -40,6 +40,7 @@
 #include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_nlhdlr_bilinear.h"
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
@@ -9581,6 +9582,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for convex expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrConvex(scip, conshdlr) );
 
+   /* include nonlinear handler for bilinear expressions */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
+
    return SCIP_OKAY;
 }
 
@@ -9891,7 +9895,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   unsigned int                priority,     /**< priority of nonlinear handler */
+   int                         priority,     /**< priority of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
@@ -10076,13 +10080,35 @@ const char* SCIPgetConsExprNlhdlrDesc(
 }
 
 /** gives priority of nonlinear handler */
-unsigned int SCIPgetConsExprNlhdlrPriority(
+int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
    )
 {
    assert(nlhdlr != NULL);
 
    return nlhdlr->priority;
+}
+
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name           /**< name of nonlinear handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int h;
+
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), name) == 0 )
+         return conshdlrdata->nlhdlrs[h];
+
+   return NULL;
 }
 
 /** gives handler data of nonlinear handler */
@@ -10093,6 +10119,26 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    assert(nlhdlr != NULL);
 
    return nlhdlr->data;
+}
+
+/** gives nonlinear handler expression data
+ *
+ * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
+ */
+SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprNlhdlrExprData(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_CONSEXPR_EXPR*        expr           /**< expression */
+   )
+{
+   int e;
+
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      if( expr->enfos[e]->nlhdlr == nlhdlr )
+         return expr->enfos[e]->nlhdlrexprdata;
+   }
+
+   return NULL;
 }
 
 /** returns whether nonlinear handler implements the reformulation callback */
