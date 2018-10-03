@@ -2035,7 +2035,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
     * corresponding dual solution value would be zero. however, if the constraint contains exactly one variable we need
     * to check the reduced costs of the variable.
     */
-   if( nvars > 1 && transcons == NULL )
+   if( nvars == 0 || (nvars > 1 && transcons == NULL) )
       (*dualsolval) = 0.0;
    else
    {
