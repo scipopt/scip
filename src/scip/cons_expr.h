@@ -426,7 +426,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
 
 /** overwrites/replaces a child of an expressions
  *
- * @note the old child is released and the newchild is captured
+ * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
 EXTERN
 SCIP_RETCODE SCIPreplaceConsExprExprChild(

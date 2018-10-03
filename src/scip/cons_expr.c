@@ -7542,7 +7542,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
 
 /** overwrites/replaces a child of an expressions
  *
- * @note the old child is released and the newchild is captured
+ * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
 SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -7558,6 +7558,10 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
    assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
    assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
+
+   /* do nothing if child is not changing */
+   if( newchild == expr->children[childidx] )
+      return SCIP_OKAY;
 
    /* capture new child (do this before releasing the old child in case there are equal */
    SCIPcaptureConsExprExpr(newchild);
