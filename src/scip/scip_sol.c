@@ -2027,6 +2027,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
 #endif
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+   assert( success );  /* is always successful, since we only have linear constraints */
 
    if( boundconstraint != NULL )
       *boundconstraint = (nvars == 1);
@@ -2044,12 +2045,6 @@ SCIP_RETCODE SCIPgetDualSolVal(
       (*dualsolval) = 0.0;
    else
    {
-      if( !success )
-      {
-         SCIPABORT();
-         return SCIP_INVALIDCALL;
-      }
-
       if( nvars > 1 )
          (*dualsolval) = SCIPgetDualsolLinear(scip, transcons);
 
