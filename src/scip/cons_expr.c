@@ -2463,14 +2463,16 @@ SCIP_RETCODE reformulateConsExprExpr(
          case SCIP_CONSEXPRITERATOR_VISITEDCHILD:
          {
             SCIP_CONSEXPR_EXPR* newchild;
+            SCIP_CONSEXPR_EXPR* child;
 
             newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            child = SCIPexpriteratorGetChildExprDFS(it);
             assert(newchild != NULL);
 
             /* if child got simplified, replace it with the new child */
-            if( newchild != expr->children[SCIPexpriteratorGetChildIdxDFS(it)] )
+            if( newchild != child )
             {
-               ++(expr->children[SCIPexpriteratorGetChildIdxDFS(it)]->exprhdlr->nsimplified);
+               ++(child->exprhdlr->nsimplified);
                SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
             }
 
