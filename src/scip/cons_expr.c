@@ -2467,9 +2467,14 @@ SCIP_RETCODE reformulateConsExprExpr(
             newchild = (SCIP_CONSEXPR_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
             assert(newchild != NULL);
 
-            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+            /* if child got simplified, replace it with the new child */
+            if( newchild != expr->children[SCIPexpriteratorGetChildIdxDFS(it)] )
+            {
+               ++(expr->children[SCIPexpriteratorGetChildIdxDFS(it)]->exprhdlr->nsimplified);
+               SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+            }
 
-            /* SCIPreplaceConsExprExprChild has captured the new child and we don't need it anymore */
+            /* we do not need to hold newchild anymore */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );
 
             break;
@@ -2749,6 +2754,7 @@ SCIP_RETCODE canonicalizeConstraints(
 
             /* store simplified expression */
             consdata->expr = simplified;
+            ++(consdata->expr->exprhdlr->nsimplified);
          }
          else
          {
@@ -4804,8 +4810,8 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "Simplified", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -4814,6 +4820,7 @@ void printExprHdlrStatistics(
 
       SCIPinfoMessage(scip, file, "  %-17s:", exprhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplifycalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplified);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
@@ -5250,6 +5257,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       exprhdlr->ndomreds = 0;
       exprhdlr->nbranchscores = 0;
       exprhdlr->nsimplifycalls = 0;
+      exprhdlr->nsimplified = 0;
 
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->sepatime) );
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->proptime) );
