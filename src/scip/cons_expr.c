@@ -3507,9 +3507,9 @@ SCIP_RETCODE createNlRow(
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   /* if root is a sum, then split into linear, quadratic, and expression */
    if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprsumhdlr )
    {
+      /* if root is a sum, then split into linear, quadratic, and expression */
       SCIP_CONSEXPR_EXPR* child;
       SCIP_Real* coefs;
 
@@ -3625,6 +3625,37 @@ SCIP_RETCODE createNlRow(
          SCIPfreeBufferArray(scip, &varsusage);
          SCIPfreeBufferArray(scip, &reindexvars);
       }
+   }
+   else if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprpowhdlr &&
+      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 &&
+      SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(consdata->expr)[0]) )
+   {
+      /* if root is a x^2, then set the quadratic part of the nlrow */
+      SCIP_QUADELEM quadelem;
+
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(consdata->expr)[0])) );
+      quadelem.idx1 = 0;
+      quadelem.idx2 = 0;
+      quadelem.coef = 1.0;
+
+      SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, quadelem) );
+   }
+   else if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprprodhdlr &&
+      SCIPgetConsExprExprNChildren(consdata->expr) == 2 &&
+      SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(consdata->expr)[0]) &&
+      SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(consdata->expr)[1]) )
+   {
+      /* if root is a bilinear term x*y, then set the quadratic part of the nlrow */
+      SCIP_QUADELEM quadelem;
+
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(consdata->expr)[0])) );
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(consdata->expr)[1])) );
+
+      quadelem.idx1 = 0;
+      quadelem.idx2 = 1;
+      quadelem.coef = 1.0;
+
+      SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, quadelem) );
    }
    else
    {
