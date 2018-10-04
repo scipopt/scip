@@ -2995,6 +2995,29 @@ SCIP_RETCODE canonicalizeConstraints(
 
    havechange = FALSE;
 
+   /* free nonlinear handlers information from expressions */  /* TODO can skip this in first presolve round */
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+
+      assert(conss != NULL);
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIPdebugMsg(scip, "free nonlinear handler data for expression %p\n", (void*)expr);
+
+         assert(expr->auxvar == NULL);  /* should not have been created yet or have been removed in INITPRE (if restart) */
+
+         /* remove nonlinear handlers in expression and their data */
+         SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+      }
+   }
+
    /* allocate memory for storing locks of each constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
@@ -3035,29 +3058,6 @@ SCIP_RETCODE canonicalizeConstraints(
       }
    }
 #endif
-
-   /* free nonlinear handlers information from expressions */  /* TODO can skip this in first presolve round */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CONSEXPR_EXPR* expr;
-
-      assert(conss != NULL);
-      assert(conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIPdebugMsg(scip, "free nonlinear handler data for expression %p\n", (void*)expr);
-
-         assert(expr->auxvar == NULL);  /* should not have been created yet or have been removed in INITPRE (if restart) */
-
-         /* remove nonlinear handlers in expression and their data */
-         SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
-      }
-   }
 
    for( i = 0; i < nconss; ++i )
    {
@@ -3146,16 +3146,16 @@ SCIP_RETCODE canonicalizeConstraints(
       }
    }
 
-   /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-   {
-      SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
-   }
-
    /* restore locks */
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( addLocks(scip, conss[i], nlockspos[i], nlocksneg[i]) );
+   }
+
+   /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   {
+      SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
    }
 
    /* free allocated memory */
