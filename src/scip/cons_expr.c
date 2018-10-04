@@ -2438,7 +2438,8 @@ SCIP_RETCODE reformulateConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_Bool               simplify,         /**< should the expression be simplified or reformulated? */
-   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+   SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
+   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -2456,6 +2457,7 @@ SCIP_RETCODE reformulateConsExprExpr(
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
+   *changed = FALSE;
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
@@ -2472,7 +2474,6 @@ SCIP_RETCODE reformulateConsExprExpr(
             /* if child got simplified, replace it with the new child */
             if( newchild != child )
             {
-               ++(child->exprhdlr->nsimplified);
                SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
             }
 
@@ -2493,6 +2494,8 @@ SCIP_RETCODE reformulateConsExprExpr(
                if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
                {
                   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &refexpr) );
+                  if( expr != refexpr )
+                     *changed = TRUE;
                }
                else
                {
@@ -2538,10 +2541,12 @@ SCIP_RETCODE reformulateConsExprExpr(
 
                      /* stop calling other nonlinear handlers as soon as the reformulation was successful */
                      if( refexpr != expr )
+                     {
+                        *changed = TRUE;
                         break;
+                     }
                   }
                }
-
 
                /* no nonlinear handlers implements the reformulation callback -> capture expression manually */
                if( refexpr == NULL )
@@ -2584,7 +2589,8 @@ static
 SCIP_RETCODE scaleConsSides(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons                /**< expression constraint */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_Bool*            changed             /**< buffer to store if the expression of cons changed */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2605,6 +2611,26 @@ SCIP_RETCODE scaleConsSides(
       coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
       constant = SCIPgetConsExprExprSumConstant(consdata->expr);
       nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+
+      /* handle special case when constraint is l <= -f(x) <= r and f(x) not a sum: simplfy ensures f is not a sum */
+      if( nchildren == 1 && constant == 0.0 && coefs[0] == -1.0 )
+      {
+         SCIP_CONSEXPR_EXPR* expr;
+         expr = consdata->expr;
+
+         consdata->expr = SCIPgetConsExprExprChildren(expr)[0];
+         assert(SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr));
+
+         SCIPcaptureConsExprExpr(consdata->expr);
+
+         SCIPswapReals(&consdata->lhs, &consdata->rhs);
+         consdata->lhs = -consdata->lhs;
+         consdata->rhs = -consdata->rhs;
+
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+         *changed = TRUE;
+         return SCIP_OKAY;
+      }
 
       /* compute n_+ - n_i */
       for( i = 0; i < nchildren; ++i )
@@ -2633,6 +2659,8 @@ SCIP_RETCODE scaleConsSides(
 
          /* free memory */
          SCIPfreeBufferArray(scip, &newcoefs);
+
+         *changed = TRUE;
       }
    }
 
@@ -2739,24 +2767,27 @@ SCIP_RETCODE canonicalizeConstraints(
       if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
+         SCIP_Bool changed;
 
-         /* TODO check whether something has changed because of SCIPsimplifyConsExprExpr */
-         havechange = TRUE;
-
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified) );
+         changed = FALSE;
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified, &changed) );
          consdata->issimplified = TRUE;
+
+         if( changed )
+            havechange = TRUE;
 
          /* If root expression changed, then we need to take care updating the locks as well (the consdata is the one holding consdata->expr "as a child").
           * If root expression did not change, some subexpression may still have changed, but the locks were taking care of in the corresponding SCIPreplaceConsExprExprChild() call.
           */
          if( simplified != consdata->expr )
          {
+            assert(changed);
+
             /* release old expression */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
             /* store simplified expression */
             consdata->expr = simplified;
-            ++(consdata->expr->exprhdlr->nsimplified);
          }
          else
          {
@@ -2767,20 +2798,26 @@ SCIP_RETCODE canonicalizeConstraints(
          }
 
          /* scale constraint sides */
-         SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i]) );
+         SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
       if( reformulate && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
       {
          SCIP_CONSEXPR_EXPR* refexpr;
+         SCIP_Bool changed;
 
          if( consdata->expr != NULL )
          {
-            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr) );
+            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr, &changed) );
+
+            if( changed )
+               havechange = TRUE;
 
             if( refexpr != consdata->expr )
             {
+               assert(changed);
+
                /* release old expression */
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
@@ -7001,6 +7038,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
 
       /* update statistics */
       ++(expr->exprhdlr->nsimplifycalls);
+      if( expr != *simplifiedexpr )
+         ++(expr->exprhdlr->nsimplified);
    }
 
    return SCIP_OKAY;
@@ -9125,13 +9164,14 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+   SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
+   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
 )
 {
    assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified, changed) );
 
    return SCIP_OKAY;
 }
@@ -9146,13 +9186,14 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
+   SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
+   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
    )
 {
    assert(rootexpr != NULL);
    assert(refrootexpr != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr, changed) );
 
    return SCIP_OKAY;
 }

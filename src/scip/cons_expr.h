@@ -850,7 +850,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
+   SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
+   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
    );
 
 /** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
@@ -862,7 +863,8 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexpr       /**< buffer to store reformulated expression */
+   SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
+   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
    );
 
 /** sets the curvature of an expression */
