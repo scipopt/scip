@@ -162,6 +162,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
 
    /* nonlinear handler */
    SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
@@ -656,6 +657,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
    conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
    conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
+   conshdlrdata->exprpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
 
    /* copy nonlinear handlers */
    for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
@@ -3476,15 +3478,19 @@ SCIP_RETCODE createNlRow(
    SCIP_CONS*            cons                /**< expression constraint */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;
-   SCIP_EXPR* classicexpr;
+   SCIP_EXPR* classicexpr = NULL;
    SCIP_VAR** nlvars;
    int nnlvars;
    int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3501,68 +3507,104 @@ SCIP_RETCODE createNlRow(
    if( consdata->expr == NULL )
       return SCIP_OKAY;
 
-   /* make classic expression */
-   SCIP_CALL( makeClassicExpr(scip, consdata->expr, &classicexpr, consdata->varexprs, consdata->nvarexprs) );
-
-   /* reserve memory for variables array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
-
-   /* if root is sum, then split off linear part */
-   if( SCIPexprGetOperator(classicexpr) == SCIP_EXPR_LINEAR )
+   /* if root is a sum, then split into linear, quadratic, and expression */
+   if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprsumhdlr )
    {
-      SCIP_Real* newlincoefs;
-      SCIP_EXPR** newchildren;
-      int nnewchildren;
-      int* varsusage;
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_Real* coefs;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, consdata->nvarexprs) );
-      BMSclearMemoryArray(varsusage, consdata->nvarexprs);
+      /* constant term of sum */
+      SCIP_CALL( SCIPchgNlRowConstant(scip, consdata->nlrow, SCIPgetConsExprExprSumConstant(consdata->expr)) );
 
-      SCIPexprGetVarsUsage(classicexpr, varsusage);
+      coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
 
-      nnewchildren = 0;
-      SCIP_CALL( SCIPallocBufferArray(scip, &newlincoefs, SCIPexprGetNChildren(classicexpr)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &newchildren, SCIPexprGetNChildren(classicexpr)) );
-      for( i = 0; i < SCIPexprGetNChildren(classicexpr); ++i )
+      for( i = 0; i < SCIPgetConsExprExprNChildren(consdata->expr); ++i )
       {
-         int idx = -1;
+         child = SCIPgetConsExprExprChildren(consdata->expr)[i];
 
-         if( SCIPexprGetOperator(SCIPexprGetChildren(classicexpr)[i]) == SCIP_EXPR_VARIDX )
+         if( SCIPisConsExprExprVar(child) )
          {
-            idx = SCIPexprGetOpIndex(SCIPexprGetChildren(classicexpr)[i]);
-            assert(varsusage[idx] >= 1);
+            /* linear term */
+            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(child), coefs[i]) );
          }
-
-         if( idx >= 0 && varsusage[idx] == 1 )
+         else if( SCIPgetConsExprExprHdlr(child) == conshdlrdata->exprpowhdlr &&
+            SCIPgetConsExprExprPowExponent(child) == 2.0 &&
+            SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(child)[0]) )
          {
-            /* printf("%g*<%s>\n", SCIPexprGetLinearCoefs(classicexpr)[i], SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[idx]))); */
+            /* square term  */
+            SCIP_QUADELEM quadelem;
 
-            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(consdata->varexprs[idx]), SCIPexprGetLinearCoefs(classicexpr)[i]) );
+            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]));
+            if( quadelem.idx1 == -1 )
+            {
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0])) );
+               quadelem.idx1 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
+            }
+            quadelem.idx2 = quadelem.idx1;
+            quadelem.coef = coefs[i];
 
-            --varsusage[idx];
+            SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, quadelem) );
+         }
+         else if( SCIPgetConsExprExprHdlr(child) == conshdlrdata->exprprodhdlr &&
+            SCIPgetConsExprExprNChildren(child) == 2 &&
+            SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(child)[0]) &&
+            SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(child)[1]) )
+         {
+            /* bilinear term */
+            SCIP_QUADELEM quadelem;
 
-            SCIPexprFreeDeep(SCIPblkmem(scip), &SCIPexprGetChildren(classicexpr)[i]);
+            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]));
+            if( quadelem.idx1 == -1 )
+            {
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0])) );
+               quadelem.idx1 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
+            }
+
+            quadelem.idx2 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[1]));
+            if( quadelem.idx2 == -1 )
+            {
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[1])) );
+               quadelem.idx2 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
+            }
+
+            quadelem.coef = coefs[i];
+
+            SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, quadelem) );
          }
          else
          {
-            newlincoefs[nnewchildren] = SCIPexprGetLinearCoefs(classicexpr)[i];
-            newchildren[nnewchildren] = SCIPexprGetChildren(classicexpr)[i];
-            ++nnewchildren;
+            /* general nonlinear term */
+            SCIP_EXPR* classicchild;
+
+            /* make classic expression of child i */
+            SCIP_CALL( makeClassicExpr(scip, child, &classicchild, consdata->varexprs, consdata->nvarexprs) );
+
+            /* create or extend classicexpr */
+            if( classicexpr == NULL )
+            {
+               SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &classicexpr, 1, &classicchild, coefs + i, 0.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPexprAddToLinear(SCIPblkmem(scip), classicexpr, 1, &coefs[i], &classicchild, 0.0) );
+            }
          }
       }
 
-      if( nnewchildren < SCIPexprGetNChildren(classicexpr) )
+      if( classicexpr != NULL )
       {
-         SCIP_EXPR* newexpr;
+         /* reindex variables in classicexpr so that only used variables are left */
+         int* varsusage;
          int* reindexvars;
 
-         SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), &newexpr, nnewchildren, newchildren, newlincoefs, SCIPexprGetLinearConstant(classicexpr)) );
+         /* get count how often variables are used in expr */
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, consdata->nvarexprs) );
+         BMSclearMemoryArray(varsusage, consdata->nvarexprs);
+         SCIPexprGetVarsUsage(classicexpr, varsusage);
 
-         SCIPexprFreeShallow(SCIPblkmem(scip), &classicexpr);
-
-         classicexpr = newexpr;
-
+         /* sort out unused variables and collect and reindex remaining variables */
          SCIP_CALL( SCIPallocBufferArray(scip, &reindexvars, consdata->nvarexprs) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
          nnlvars = 0;
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
@@ -3580,36 +3622,39 @@ SCIP_RETCODE createNlRow(
 
          SCIPexprReindexVars(classicexpr, reindexvars);
 
+         SCIPfreeBufferArray(scip, &varsusage);
          SCIPfreeBufferArray(scip, &reindexvars);
       }
-      else
-      {
-         nnlvars = consdata->nvarexprs;
-         for( i = 0; i < consdata->nvarexprs; ++i )
-            nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
-      }
-
-      SCIPfreeBufferArray(scip, &varsusage);
-      SCIPfreeBufferArray(scip, &newchildren);
-      SCIPfreeBufferArray(scip, &newlincoefs);
    }
    else
    {
+      /* make classic expression */
+      SCIP_CALL( makeClassicExpr(scip, consdata->expr, &classicexpr, consdata->varexprs, consdata->nvarexprs) );
+
+      /* collect variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
+
       nnlvars = consdata->nvarexprs;
       for( i = 0; i < consdata->nvarexprs; ++i )
          nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
    }
+   assert((classicexpr != NULL) == (nlvars != NULL));
 
-   /* make classic expression tree */
-   SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, classicexpr, nnlvars, 0, NULL) );
+   if( classicexpr != NULL )
+   {
+      /* make classic expression tree */
+      SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, classicexpr, nnlvars, 0, NULL) );
 
-   /* set variables in expression tree */
-   SCIP_CALL( SCIPexprtreeSetVars(exprtree, nnlvars, nlvars) );
-   SCIPfreeBufferArray(scip, &nlvars);
+      /* set variables in expression tree */
+      SCIP_CALL( SCIPexprtreeSetVars(exprtree, nnlvars, nlvars) );
+      SCIPfreeBufferArray(scip, &nlvars);
 
-   SCIP_CALL( SCIPsetNlRowExprtree(scip, consdata->nlrow, exprtree) );
+      /* add expression tree in nlrow (this will make a copy) */
+      SCIP_CALL( SCIPsetNlRowExprtree(scip, consdata->nlrow, exprtree) );
 
-   SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      /* free exprtree */
+      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+   }
 
    return SCIP_OKAY;
 }
