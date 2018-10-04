@@ -47,6 +47,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_Longint            ncutoffs;      /**< number of cutoffs found so far by this expression handler */
    SCIP_Longint            ndomreds;      /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint            nsimplifycalls; /**< number of times, the simplification callback was called */
+   SCIP_Longint            nsimplified;   /**< number of times the simplification callback was succesful */
    SCIP_Longint            nbranchscores; /**< number of times, branching scores were added by (or for) this expression handler */
 
    SCIP_CLOCK*             sepatime;      /**< time used for separation or estimation */
