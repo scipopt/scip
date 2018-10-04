@@ -84,12 +84,13 @@ SCIP_RETCODE checkCurvature(
    SCIP_CONSEXPR_EXPR* origexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_Bool changed;
 
    /* create and print expression */
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
 
    /* simplify expression */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* print simplified expression */
