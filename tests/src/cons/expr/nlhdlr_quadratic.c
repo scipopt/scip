@@ -372,7 +372,7 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <w>*<z>", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
-   cr_expect(changed);
+   cr_expect_not(changed);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
@@ -408,7 +408,7 @@ Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x>)^2 + sin(<y>)^2 + cos(<z>)^2", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
-   cr_expect_not(changed);
+   cr_expect(changed);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
