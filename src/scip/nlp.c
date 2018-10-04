@@ -903,7 +903,7 @@ SCIP_RETCODE nlrowAddLinearCoef(
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
    assert(var    != NULL);
-   assert(!SCIPsetIsZero(set, coef));
+   assert(coef   != 0.0);
 
    /* assert that only active variables are added once the row is in the NLP */
    assert(nlrow->nlpindex == -1 || SCIPvarIsActive(var) );
