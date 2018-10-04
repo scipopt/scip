@@ -946,6 +946,33 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
    return (Is_term(g->term[node]) && g->term2edge[node] < 0);
 }
 
+
+/** check whether terminal is not a leaf in at least one optimal tree */
+SCIP_Bool graph_pc_termIsNonLeaf(
+   const GRAPH*          g,                  /**< the graph */
+   int                   term                /**< terminl to be checked */
+   )
+{
+   int e;
+
+   assert(g      != NULL);
+   assert(term   >= 0);
+   assert(term   < g->knots);
+   assert(graph_pc_isPcMw(g));
+   assert(g->term2edge);
+   assert(Is_term(g->term[term]));
+   assert(!g->extended);
+
+   for( e = g->inpbeg[term]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int neighbor = g->tail[e];
+      if( g->mark[neighbor] && g->cost[e] < g->prize[term] )
+         break;
+   }
+
+   return (e == EAT_LAST);
+}
+
 /** updates term2edge array for new graph */
 void graph_pc_updateTerm2edge(
    GRAPH*                newgraph,           /**< the new graph */

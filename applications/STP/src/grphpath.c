@@ -241,6 +241,51 @@ inline static void correctX(
    }
 }
 
+
+inline static void correctXwalk(
+   SCIP* scip,
+   int* heap,
+   int* state,
+   int* count,    /* pointer to store the number of elements on the heap */
+   SCIP_Real*  pathdist,
+   int*   pathedge,
+   int    l,
+   int    e,
+   SCIP_Real newcost
+   )
+{
+   int    t;
+   int    c;
+   int    j;
+
+   pathdist[l] = newcost;
+
+   if( pathedge != NULL )
+      pathedge[l] = e;
+
+   if (state[l] == UNKNOWN)
+   {
+      heap[++(*count)] = l;
+      state[l]      = (*count);
+   }
+
+   /* Heap shift up
+    */
+   j = state[l];
+   c = j / 2;
+
+   while( (j > 1) && pathdist[heap[c]] > pathdist[heap[j]] )
+   {
+      t              = heap[c];
+      heap[c]        = heap[j];
+      heap[j]        = t;
+      state[heap[j]] = j;
+      state[heap[c]] = c;
+      j              = c;
+      c              = j / 2;
+   }
+}
+
 void heap_add(
    int* heap,     /* heaparray */
    int* state,
@@ -730,39 +775,48 @@ SCIP_Real graph_sdWalks(
       /* get nearest labelled node */
       const int k = nearestX(heap, state, &count, dist);
       assert(k != end && k != start);
-
-      if( SCIPisGT(scip, dist[k], distlimit) )
-         break;
+      assert(SCIPisLE(scip, dist[k], distlimit));
 
       if( Is_term(g->term[k]) )
-      {
-         dist[k] = MAX(dist[k] - g->prize[k], 0.0);
          state[k] = CONNECT;
-      }
       else
-      {
          state[k] = UNKNOWN;
-      }
 
       /* correct incident nodes */
       for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int m = g->head[e];
-         if( (state[m] != CONNECT) && g->mark[m] &&
-               (dist[m] > dist[k] + cost[e]) )
-         {
-            if( !visited[m] )
-            {
-               visitlist[(*nvisits)++] = m;
-               visited[m] = TRUE;
-            }
 
-            if( m == end )
+         if( (state[m] != CONNECT) && g->mark[m] )
+         {
+            const SCIP_Real distnew = dist[k] + cost[e];
+
+            if( (distnew <= distlimit) && (distnew < dist[m]) )
             {
-               dist[end] = dist[k] + cost[e];
-               continue;
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( m == end )
+               {
+                  nchecks = edgelimit;
+                  dist[end] = distnew;
+                  break;
+               }
+
+               if( Is_term(g->term[m]) )
+               {
+                  const SCIP_Real newcost = MAX(distnew - g->prize[m], 0.0);
+                  correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
+               }
+               else
+               {
+                  correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
+               }
             }
-            correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
          }
          nchecks++;
       }
