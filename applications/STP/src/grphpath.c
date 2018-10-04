@@ -173,7 +173,7 @@ inline static void correct(
    /* Heap shift up */
    j = state[l];
    c = j / 2;
-   while( (j > 1) && SCIPisGT(scip, path[heap[c]].dist, path[heap[j]].dist) )
+   while( (j > 1) && path[heap[c]].dist > path[heap[j]].dist )
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -214,10 +214,10 @@ inline static void correctX(
    int    j;
 
    pathdist[l] = (pathdist[k] + cost);
-   pathedge[l] = e;
 
-   /* Ist der Knoten noch ganz frisch ?
-    */
+   if( pathedge != NULL )
+      pathedge[l] = e;
+
    if (state[l] == UNKNOWN)
    {
       heap[++(*count)] = l;
@@ -229,7 +229,7 @@ inline static void correctX(
    j = state[l];
    c = j / 2;
 
-   while( (j > 1) && SCIPisGT(scip, pathdist[heap[c]], pathdist[heap[j]]) )
+   while( (j > 1) && pathdist[heap[c]] > pathdist[heap[j]] )
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -278,14 +278,15 @@ inline static void resetX(
    int* heap,
    int* state,
    int* count,
-   int    node
+   int node,
+   SCIP_Real distnew
    )
 {
    int    t;
    int    c;
    int    j;
 
-   pathdist[node] = 0.0;
+   pathdist[node] = distnew;
 
    heap[++(*count)] = node;
    state[node]      = (*count);
@@ -294,7 +295,7 @@ inline static void resetX(
    j = state[node];
    c = j / 2;
 
-   while( (j > 1) && SCIPisGT(scip, pathdist[heap[c]], pathdist[heap[j]]) )
+   while( (j > 1) && pathdist[heap[c]] > pathdist[heap[j]] )
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -660,6 +661,118 @@ void graph_sdPaths(
 }
 
 
+/** modified Dijkstra along walks for PcMw, returns special distance between start and end */
+SCIP_Real graph_sdWalks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real             distlimit,          /**< distance limit of the search */
+   int                   start,              /**< start */
+   int                   end,                /**< end */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  heap,               /**< array representing a heap */
+   int*                  state,              /**< array to indicate whether a node has been scanned */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+   )
+{
+   int count;
+   int nchecks;
+
+   assert(g != NULL);
+   assert(heap != NULL);
+   assert(dist != NULL);
+   assert(cost != NULL);
+   assert(visitlist != NULL);
+   assert(nvisits != NULL);
+   assert(visited != NULL);
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+
+   *nvisits = 0;
+
+   if( g->grad[start] == 0 || g->grad[end] == 0 )
+      return FARAWAY;
+
+   assert(g->mark[start] && g->mark[end]);
+
+   count = 0;
+   nchecks = 0;
+   dist[start] = 0.0;
+   state[start] = CONNECT;
+   visitlist[(*nvisits)++] = start;
+
+   g->mark[start] = FALSE;
+   g->mark[end] = FALSE;
+
+   for( int e = g->outbeg[start]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int m = g->head[e];
+
+      if( g->mark[m] && (distlimit >= cost[e]) )
+      {
+         assert(!visited[m]);
+
+         visitlist[(*nvisits)++] = m;
+         visited[m] = TRUE;
+         correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
+
+         if( ++nchecks > edgelimit )
+            break;
+      }
+   }
+   g->mark[end] = TRUE;
+
+   while( count > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labelled node */
+      const int k = nearestX(heap, state, &count, dist);
+      assert(k != end && k != start);
+
+      if( SCIPisGT(scip, dist[k], distlimit) )
+         break;
+
+      if( Is_term(g->term[k]) )
+      {
+         dist[k] = MAX(dist[k] - g->prize[k], 0.0);
+         state[k] = CONNECT;
+      }
+      else
+      {
+         state[k] = UNKNOWN;
+      }
+
+      /* correct incident nodes */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+         if( (state[m] != CONNECT) && g->mark[m] &&
+               (dist[m] > dist[k] + cost[e]) )
+         {
+            if( !visited[m] )
+            {
+               visitlist[(*nvisits)++] = m;
+               visited[m] = TRUE;
+            }
+
+            if( m == end )
+            {
+               dist[end] = dist[k] + cost[e];
+               continue;
+            }
+            correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
+         }
+         nchecks++;
+      }
+   }
+
+   g->mark[start] = TRUE;
+   return dist[end];
+}
+
+
 /** limited Dijkstra for PCSTP, taking terminals into account */
 void graph_path_PcMwSd(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1002,7 +1115,7 @@ void graph_path_st(
                {
                   assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
-                  resetX(scip, pathdist, heap, state, &count, node);
+                  resetX(scip, pathdist, heap, state, &count, node, 0.0);
                }
             }
             /* have all terminals been reached? */
@@ -1119,7 +1232,7 @@ void graph_path_st_rpc(
                {
                   assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
-                  resetX(scip, pathdist, heap, state, &count, node);
+                  resetX(scip, pathdist, heap, state, &count, node, 0.0);
                }
             }
             /* have all terminals been reached? */
@@ -1228,7 +1341,7 @@ void graph_path_st_pcmw(
                {
                   assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
-                  resetX(scip, pathdist, heap, state, &count, node);
+                  resetX(scip, pathdist, heap, state, &count, node, 0.0);
                   assert(state[node]);
                }
             }
@@ -1381,7 +1494,7 @@ void graph_path_st_pcmw_full(
                {
                   assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
-                  resetX(scip, pathdist, heap, state, &count, node);
+                  resetX(scip, pathdist, heap, state, &count, node, 0.0);
                   assert(state[node]);
                }
             }
@@ -1631,7 +1744,7 @@ void graph_path_st_rpcmw(
                   assert(pathedge[node] != - 1);
 
                   connected[node] = TRUE;
-                  resetX(scip, pathdist, heap, state, &count, node);
+                  resetX(scip, pathdist, heap, state, &count, node, 0.0);
                }
             }
 

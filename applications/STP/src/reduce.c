@@ -1228,6 +1228,7 @@ SCIP_RETCODE redLoopPc(
    int danelims;
    int sdnelims;
    int sdcnelims;
+   int sdwnelims;
    int bd3nelims;
    int degnelims;
    int nvslnelims;
@@ -1235,6 +1236,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool da = dualascent;
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdc = TRUE;
+   SCIP_Bool sdw = TRUE;
    SCIP_Bool bd3 = TRUE;
    SCIP_Bool nvsl = TRUE;
    SCIP_Bool rerun = TRUE;
@@ -1280,6 +1282,7 @@ SCIP_RETCODE redLoopPc(
       bd3nelims = 0;
       nvslnelims = 0;
       degnelims = 0;
+      sdwnelims = 0;
       brednelims = 0;
 
       if( sd || extensive )
@@ -1303,6 +1306,18 @@ SCIP_RETCODE redLoopPc(
             sdc = FALSE;
 
          SCIPdebugMessage("SDsp: %d \n", sdcnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sdw || extensive )
+      {
+         SCIP_CALL( reduce_sdWalk(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+
+         if( sdwnelims <= reductbound )
+            sdw = FALSE;
+
+         printf("SDw: %d \n", sdwnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }

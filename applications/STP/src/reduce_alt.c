@@ -50,6 +50,35 @@
 #define STP_RED_ANSMAXNEIGHBORS 25
 
 
+static
+void sdwalk_reset(
+   int                   nnodes,
+   int                   nvisits,
+   const  int*           visitlist,
+   SCIP_Real*            dist,
+   int*                  state,
+   STP_Bool*             visited
+)
+{
+   for( int k = 0; k < nvisits; k++ )
+   {
+      const int node = visitlist[k];
+      visited[node] = FALSE;
+      dist[node] = FARAWAY;
+      state[node] = UNKNOWN;
+   }
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+   {
+      assert(visited[k] == FALSE);
+      assert(state[k] == UNKNOWN);
+      assert(dist[k] == FARAWAY);
+   }
+#endif
+}
+
+
 /* can edge be deleted in SD test in case of equality? If so, 'forbidden' array is adapted */
 static
 SCIP_Bool sddeltable(
@@ -2456,6 +2485,87 @@ SCIP_RETCODE reduce_sdspSap(
    return SCIP_OKAY;
 }
 
+/** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
+SCIP_RETCODE reduce_sdWalk(
+   SCIP*                 scip,
+   int                   edgelimit,
+   const int*            edgestate,
+   GRAPH*                g,
+   SCIP_Real*            dist,
+   int*                  heap,
+   int*                  state,
+   int*                  visitlist,
+   STP_Bool*            visited,
+   int*                  nelims
+   )
+{
+   const int nnodes = g->knots;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(heap != NULL);
+   assert(nelims != NULL);
+   assert(visited != NULL);
+   assert(visitlist != NULL);
+   assert(!g->extended);
+   assert(graph_pc_isPcMw(g));
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int e;
+      if( !g->mark[i] )
+         continue;
+
+      /* traverse neighbours */
+      e = g->outbeg[i];
+      while( e != EAT_LAST )
+      {
+         SCIP_Real sd1;
+         SCIP_Real sd2;
+         const SCIP_Real ecost = g->cost[e];
+         int nvisits;
+         const int i2 = g->head[e];
+         const int enext = g->oeat[e];
+
+         /* avoid double checking */
+         if( i2 < i || !g->mark[i2] )
+         {
+            e = enext;
+            continue;
+         }
+
+         sd1 = graph_sdWalks(scip, g, g->cost, ecost, i2, i, edgelimit, dist, heap, state, visitlist, &nvisits, visited);
+         sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
+
+         sd2 = graph_sdWalks(scip, g, g->cost, ecost, i, i2, edgelimit, dist, heap, state, visitlist, &nvisits, visited);
+         sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
+
+         if( sd2 <= ecost || sd1 <= ecost )
+         {
+            if( !checkstate || (edgestate[e] != EDGE_BLOCKED) )
+            {
+               graph_edge_del(scip, g, e, TRUE);
+               (*nelims)++;
+            }
+         }
+         e = enext;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /** SD test using only limited dijkstra from both endpoints of an edge */
 SCIP_RETCODE reduce_sdsp(
    SCIP*                 scip,
@@ -2740,7 +2850,6 @@ SCIP_RETCODE reduce_sdsp(
 
    return SCIP_OKAY;
 }
-
 
 #define STP_BDR_MAXDEGREE 4
 #define STP_BDR_MAXDNEDGES 6
