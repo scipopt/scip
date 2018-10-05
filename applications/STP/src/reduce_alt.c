@@ -3083,7 +3083,8 @@ SCIP_RETCODE reduce_bd34(
    int*                  memlbltail,         /**< array for internal use */
    int*                  memlblhead,         /**< array for internal use */
    int*                  nelims,             /**< point to return number of eliminations */
-   int                   limit               /**< limit for edges to consider for each vertex */
+   int                   limit,              /**< limit for edges to consider for each vertex */
+   SCIP_Real*            offset              /**< offset */
    )
 {
    SCIP_Real cutoffs[STP_BD_MAXDNEDGES];
@@ -3154,22 +3155,52 @@ SCIP_RETCODE reduce_bd34(
       for( int i = 0; i < nnodes; i++ )
       {
          int edgecount;
-         if( Is_term(g->term[i]) || g->grad[i] != degree )
-            continue;
+
+         if( pc )
+         {
+            int pcdegree;
+
+            if( !g->mark[i] || graph_pc_knotIsFixedTerm(g, i) )
+               continue;
+
+            if( Is_term(g->term[i]) && !graph_pc_termIsNonLeaf(g, i) )
+               continue;
+
+            pcdegree = graph_pc_realDegree(g, i, FALSE);
+
+            if( pcdegree != degree )
+               continue;
+         }
+         else
+         {
+            if( Is_term(g->term[i]) || g->grad[i] != degree )
+               continue;
+         }
 
          edgecount = 0;
          for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
-            ecost[edgecount] = g->cost[e];
-            adjvert[edgecount++] = g->head[e];
+            const int head = g->head[e];
+
+            if( g->mark[head] )
+            {
+               ecost[edgecount] = g->cost[e];
+               adjvert[edgecount++] = g->head[e];
+            }
+            else
+            {
+               assert(pc && Is_term(g->term[i]));
+            }
          }
 
          /* vertex of degree 3? */
          if( degree == 3 )
          {
-            const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2];
+            const SCIP_Real iprize = (pc && Is_term(g->term[i])) ? g->prize[i] : 0.0;
+            const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] - iprize;
 
             assert(edgecount == 3);
+            assert(iprize <= ecost[0] && iprize <= ecost[1] && iprize <= ecost[2]);
 
             if( pc )
             {
@@ -3201,20 +3232,34 @@ SCIP_RETCODE reduce_bd34(
                cutoffs[1] = sd[2];
                cutoffs[2] = sd[1];
 
+               if( Is_term(g->term[i]) )
+               {
+                  assert(offset != NULL);
+                  *offset += g->prize[i];
+               }
+
                SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, &success));
                assert(success);
                assert(g->grad[i] == 0);
 
                SCIPdebugMessage("BD3 Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
                (*nelims)++;
+
+
             }
          }
          /* vertex of degree 4? */
          else if( degree == 4 )
          {
             int k;
-            SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
+            const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
             SCIP_Real mstcost;
+
+            if( Is_term(g->term[i]) )
+            {
+               assert(pc);
+               continue;
+            }
 
             assert(edgecount == 4);
 
@@ -3609,7 +3654,6 @@ SCIP_RETCODE reduce_sl(
 {
    SCIP_QUEUE* queue;
    SCIP_Real cost;
-   const int root = g->source;
    const int nnodes = g->knots;
    STP_Bool foundterms;
    STP_Bool* forbidden;
@@ -3742,7 +3786,7 @@ SCIP_RETCODE reduce_sl(
 
             if( pc )
             {
-               assert(g->stp_type != STP_RPCSPG || g->prize[root] == FARAWAY);
+               assert(g->stp_type != STP_RPCSPG || g->prize[g->source] == FARAWAY);
 
                if( !SCIPisLE(scip, g->cost[minedge] + vnoi[tail].dist + vnoi[head].dist, g->prize[vbase[head]]) )
                   continue;

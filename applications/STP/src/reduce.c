@@ -1317,7 +1317,7 @@ SCIP_RETCODE redLoopPc(
          if( sdwnelims <= reductbound )
             sdw = FALSE;
 
-         printf("SDw: %d \n", sdwnelims);
+         SCIPdebugMessage("SDw: %d \n", sdwnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1328,7 +1328,7 @@ SCIP_RETCODE redLoopPc(
 
       if( bd3 && dualascent )
       {
-         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND) );
+         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND, &fix) );
          if( bd3nelims <= reductbound )
          {
             bd3 = FALSE;
@@ -1588,7 +1588,7 @@ SCIP_RETCODE redLoopStp(
 
          if( bd3 || extensive )
          {
-            SCIP_CALL(reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND));
+            SCIP_CALL(reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND, &fix));
             if( bd3nelims <= reductbound )
                bd3 = FALSE;
             else

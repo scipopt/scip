@@ -55,32 +55,6 @@ SCIP_Bool adjterms(
 }
 #endif
 
-/* returns degree of non-root vertex in non-extended graph */
-static
-int realDegreePc(
-   const GRAPH*          g,                  /**< graph data structure */
-   int                   i,                  /**< the vertex to be checked */
-   SCIP_Bool             pc,                 /**< prize-collecting problem (otherwise rooted prize-collecting */
-   SCIP_Bool             fixedterm           /**< fixed terminal? */
-)
-{
-   const int ggrad = g->grad[i];
-   int newgrad;
-
-   assert(g != NULL);
-   assert(!g->extended);
-   assert(!Is_pterm(g->term[i]));
-   assert(i != g->source);
-
-   if( !Is_term(g->term[i]) || fixedterm )
-      newgrad = ggrad;
-   else if( pc )
-      newgrad = ggrad - 2;
-   else
-      newgrad = ggrad - 1;
-
-   return newgrad;
-}
 
 /** count numbers of chains */
 static
@@ -1475,7 +1449,7 @@ SCIP_RETCODE reduce_simple_pc(
          }
 
          /* terminal of (real) degree 0? */
-         if( realDegreePc(g, i, pc, fixedterm) == 0 )
+         if( graph_pc_realDegree(g, i, fixedterm) == 0 )
          {
             assert(!fixedterm);
 
@@ -1488,7 +1462,7 @@ SCIP_RETCODE reduce_simple_pc(
             }
          }
          /* terminal of (real) degree 1? */
-         else if( realDegreePc(g, i, pc, fixedterm) == 1 )
+         else if( graph_pc_realDegree(g, i, fixedterm) == 1 )
          {
             int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -1501,7 +1475,7 @@ SCIP_RETCODE reduce_simple_pc(
             SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, count, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
-         else if( realDegreePc(g, i, pc, fixedterm) == 2 )
+         else if( graph_pc_realDegree(g, i, fixedterm) == 2 )
          {
             if( !is_maxprize(scip, g, i, &maxprize) )
             {
