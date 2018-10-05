@@ -75,8 +75,9 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   /* go to PRESOLVING stage */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
+   /* go to SOLVING stage */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -179,6 +180,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
+   SCIP_Bool infeasible;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
@@ -191,7 +193,8 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert(!infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
@@ -279,7 +282,8 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );

@@ -81,6 +81,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
+
+   /* we currently do not get active in presolve, the core will call the exprhdlr directly */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
