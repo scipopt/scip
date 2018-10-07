@@ -763,7 +763,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
    );
 
 /** @name Differentiation methods
- * Automatic differentiation Backward mode:
+ * Gradients (Automatic differentiation Backward mode)
  * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
  * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
  * f
@@ -785,7 +785,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * Initially, we set root->derivative to 1.0.
  * Then, traversing the tree in Depth First (see SCIPexpriteratorInit), for every expr that *has* children,
  * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
+ * child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative
  * Example:
  * f->derivative = 1.0
  * s->derivative = d_s f * f->derivative = d_s f
@@ -802,6 +802,50 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * y->derivative += d_t t * t->derivative = d_t t * d_t f
  *
  * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
+ *
+ * Note that, to compute this, we only need to know, for each expression, its partial derivatives w.r.t a given child
+ * at a point. This is what the callback SCIP_DECL_CONSEXPR_EXPRBWDIFF should return.
+ * Indeed, from child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative,
+ * note that at the moment of processing a child, we already know expr->derivative, so the only
+ * missing piece of information is 'the derivative of expr w.r.t child evaluated at point'.
+ *
+ * An equivalent way of interpreting the procedure is that expr->derivative stores the derivative of the root w.r.t expr.
+ * This way, x->derivative and y->derivative will contain the partial derivatives of root w.r.t to the variable,
+ * that is, the gradient. Note, however, that this analogy is only correct for leave expressions, since
+ * the derivative value of an intermediate expression gets overwritten.
+ *
+ *
+ * Hessian (Automatic differentiation Backward on Forward mode)
+ * Computing the Hessian is more complicated since it is the derivative of the gradient, which is a function with more than one output.
+ * We compute the Hessian by computing 'directions' of the Hessian, that is H*u for different 'u'
+ * This is easy in general, since it is the gradient of the *scalar* function `grad f^T u`, that is, the directional derivative of f
+ * in the direction u, D_u f.
+ * This is easily computed via the so called forward mode.
+ * Just as above, expr->derivative stores the partial derivative of the root w.r.t expr,
+ * expr->dot stores the directional derivative of expr in the direction 'u'.
+ * Then, by the chain rule, expr->dot = sum_(c : children) d_c expr * c->dot.
+ * Starting with x_i->dot = u_i, we can compute expr->dot for every expression at the same time we evaluate expr.
+ * Computing expr->dot is the purpose of the callback SCIP_DECL_CONSEXPR_EXPRFWDIFF.
+ * Obviously, when this callback is called, the dots of all children are known
+ * (just like evaluation, where the value of all children are known).
+ *
+ * Once we have this information, we compute the gradient of this function, following the same idea as before.
+ * We define expr->bardot to be the directional derivative in direction u of the partial derivative of the root w.r.t expr `grad f^T u` w.r.t expr,
+ * that is D_u (d_expr f) = D_u (expr->derivative).
+ *
+ * This way, x_i->bardot = D_u (d_(x_i) f) = e_i^T H_f u. Hence vars->bardot contain H_f u.
+ * By the chain rule, product rule, and definition we have
+ *
+ * expr->bardot = D_u (d_expr f) =
+ * D_u ( d_parent f * d_expr parent ) =
+ * D_u( parent->derivative * d_expr parent ) =
+ * d_expr parent * D_u (parent->derivative) + parent->derivative * D_u (d_expr parent) =
+ * parent->bardot * d_expr parent + parent->derivative * D_u (d_expr parent)
+ *
+ * Note that we have computed parent->bardot and parent->derivative at this point,
+ * while (d_expr parent) is the return of SCIP_DECL_CONSEXPR_EXPRBWDIFF.
+ * Hence the only information we need to compute is D_u (d_expr parent).
+ * This is the purpose of the callback SCIP_DECL_CONSEXPR_EXPRBWFWDIFF.
  *
  * @{
  */
