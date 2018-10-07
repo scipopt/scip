@@ -1540,7 +1540,7 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffProduct)
  * = sum_(j != k) Pi_(i != j, k) x_i  x^dot_j
  * */
 static
-SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSum)
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffProduct)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* partialchild;
    int c;
@@ -2188,6 +2188,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrFwdiff(scip, consexprhdlr, exprhdlr, fwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwfwdiff(scip, consexprhdlr, exprhdlr, bwfwdiffProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );

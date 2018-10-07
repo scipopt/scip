@@ -1776,6 +1776,71 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
    return SCIP_OKAY;
 }
 
+/** derivative evaluation callback:
+ * computes <gradient, children.dot>
+ * if expr is child^p, then computes
+ * p child^(p-1) dot(child)
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffPow)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real exponent;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   assert(exponent != 1.0 && exponent != 0.0);
+
+   /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
+   if( exponent > 0.0 && exponent < 1.0 && SCIPgetConsExprExprValue(child) == 0.0 )
+      *dot = SCIP_INVALID;
+   else
+      *dot = exponent * pow(SCIPgetConsExprExprValue(child), exponent - 1.0) * SCIPgetConsExprExprDot(child);
+
+   return SCIP_OKAY;
+}
+
+/** expression backward forward derivative evaluation callback
+ * computes partial/partial child ( <gradient, children.dot> )
+ * if expr is child^n, then computes
+ * n * (n - 1) child^(n-2) dot(child)
+ * */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffPow)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real exponent;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(childidx == 0);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   assert(exponent != 1.0 && exponent != 0.0);
+
+   /* x^exponent is not twice differentiable for x = 0 and exponent in ]0,2[ */
+   if( exponent > 0.0 && exponent < 2.0 && SCIPgetConsExprExprValue(child) == 0.0 )
+      *bardot = SCIP_INVALID;
+   else
+      *bardot = exponent * (exponent - 1.0) * pow(SCIPgetConsExprExprValue(child), exponent - 2.0) * SCIPgetConsExprExprDot(child);
+
+   return SCIP_OKAY;
+}
+
 /** expression derivative evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffPow)
@@ -3024,6 +3089,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrFwdiff(scip, consexprhdlr, exprhdlr, fwdiffPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwfwdiff(scip, consexprhdlr, exprhdlr, bwfwdiffPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvaturePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityPow) );
