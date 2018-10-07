@@ -13993,6 +13993,7 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             if( diff )
             {
                /* call expression eval callback */
+               assert(expr->exprhdlr->fwdiff != NULL);
                SCIP_CALL( expr->exprhdlr->fwdiff(scip, expr, &expr->dot, NULL) );
 
                if( expr->dot == SCIP_INVALID ) /*lint !e777*/
@@ -14209,6 +14210,46 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
  * Hessian
  */
 
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+static
+SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeConsExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_CONSEXPR_EXPR* varexpr;
+   SCIP_HASHMAP* var2expr;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
+   assert(expr != NULL);
+   assert(var != NULL);
+   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
+
+   /* return 0.0 for value expression */
+   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+      return 0.0;
+
+   /* check if an error occurred during the last SCIPcomputeConsExprHessianDir() call */
+   if( expr->bardot == SCIP_INVALID ) /*lint !e777*/
+      return SCIP_INVALID;
+
+   /* use variable to expressions mapping which is stored as the expression handler data */
+   var2expr = (SCIP_HASHMAP*)SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
+   assert(var2expr != NULL);
+   assert(SCIPhashmapExists(var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   assert(varexpr != NULL);
+   assert(SCIPisConsExprExprVar(varexpr));
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->bardot;
+}
+
 /** computes the hessian * v at a given point
  *
  * Evaluates children, if necessary.
@@ -14261,7 +14302,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
 
    /* set up direction */
    for( v = 0; v < consdata->nvarexprs; ++v )
-      consdata->varexprs[v]->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]) );
+      consdata->varexprs[v]->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]));
 
    /* evaluate expression and directional derivative */
    SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag, TRUE) );
@@ -14280,7 +14321,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    {
       assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
-      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff )
+      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff == NULL )
       {
          rootexpr->derivative = SCIP_INVALID;
          rootexpr->bardot = SCIP_INVALID;

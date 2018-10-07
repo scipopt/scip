@@ -280,7 +280,9 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffVar)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
 
-   return SCIPgetConsExprExprDot(expr);
+   *dot = SCIPgetConsExprExprDot(expr);
+
+   return SCIP_OKAY;
 }
 
 /** expression derivative evaluation callback */
