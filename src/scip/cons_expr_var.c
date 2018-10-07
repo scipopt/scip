@@ -273,6 +273,27 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffVar)
    return SCIP_INVALIDCALL;
 }
 
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffVar)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+
+   return SCIPgetConsExprExprDot(expr);
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffVar)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+
+   /* this should never happen because variable expressions do not have children */
+   return SCIP_INVALIDCALL;
+}
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
@@ -382,6 +403,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrFwdiff(scip, consexprhdlr, exprhdlr, fwdiffVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwfwdiff(scip, consexprhdlr, exprhdlr, bwfwdiffVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityVar) );
