@@ -226,7 +226,7 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
       SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->evalsol, SCIPgetConsExprExprVarVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
    }
 
-   SCIP_CALL_ABORT( SCIPevalConsExprExpr(evaldata->scip, evaldata->conshdlr, evaldata->nlhdlrexprdata->nlexpr, evaldata->evalsol, 0) );
+   SCIP_CALL_ABORT( SCIPevalConsExprExpr(evaldata->scip, evaldata->conshdlr, evaldata->nlhdlrexprdata->nlexpr, evaldata->evalsol, 0, FALSE) );
 
    return SCIPgetConsExprExprValue(evaldata->nlhdlrexprdata->nlexpr);
 }
@@ -1606,7 +1606,7 @@ SCIP_RETCODE estimateConvexSecant(
    }
 
    SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, left) );
-   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0, FALSE) );
 
    /* evaluation error or a too large constant -> skip */
    fleft = SCIPgetConsExprExprValue(nlexpr);
@@ -1617,7 +1617,7 @@ SCIP_RETCODE estimateConvexSecant(
    }
 
    SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, right) );
-   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, nlexpr, nlhdlrdata->evalsol, 0, FALSE) );
 
    /* evaluation error or a too large constant -> skip */
    fright = SCIPgetConsExprExprValue(nlexpr);
@@ -1793,7 +1793,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvexConcave)
    assert(nlhdlrexprdata->nlexpr != NULL);
    assert(auxvalue != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), nlhdlrexprdata->nlexpr, sol, 0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), nlhdlrexprdata->nlexpr, sol, 0, FALSE) );
    *auxvalue = SCIPgetConsExprExprValue(nlhdlrexprdata->nlexpr);
 
    return SCIP_OKAY;

@@ -764,6 +764,17 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
    return SCIP_OKAY;
 }
 
+/** expression backward forward derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSum)
+{  /*lint --e{715}*/
+   assert(bardot != NULL);
+
+   *bardot = 0.0;
+
+   return SCIP_OKAY;
+}
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)

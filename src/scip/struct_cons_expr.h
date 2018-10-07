@@ -67,6 +67,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff));      /**< backward derivative evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff));      /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff));  /**< backward over forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa));  /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa));  /**< separation deinitialization callback (can be NULL) */
