@@ -972,6 +972,53 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
    return SCIP_OKAY;
 }
 
+/** derivative evaluation callback:
+ * computes <gradient, children.dot>
+ * if expr is SIN(child), then computes
+ * COS(child) dot(child)
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffSin)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+   *dot = COS(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+
+   return SCIP_OKAY;
+}
+
+/** expression backward forward derivative evaluation callback
+ * computes partial/partial child ( <gradient, children.dot> )
+ * if expr is SIN(child), then computes
+ * -SIN(child) dot(child)
+ * */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSin)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(childidx == 0);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+   *bardot = -SIN(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+
+   return SCIP_OKAY;
+}
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
@@ -1246,6 +1293,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrFwdiff(scip, consexprhdlr, exprhdlr, fwdiffSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwfwdiff(scip, consexprhdlr, exprhdlr, bwfwdiffSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySin) );
 
