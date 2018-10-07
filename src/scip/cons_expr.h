@@ -142,6 +142,14 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
    SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
 );
 
+/** set the forward derivative evaluation callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrFwdiff(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff))  /**< derivative evaluation callback (can be NULL) */
+);
+
 /** set the interval evaluation callback of an expression handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
@@ -209,6 +217,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrVar(
 SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrValue(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** gives the value of directional derivative from the last evaluation of a directional derivate of expression (or SCIP_INVALID if there was an error) */
+EXTERN
+SCIP_Real SCIPgetConsExprExprDot(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** returns expression handler for sum expressions */

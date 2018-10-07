@@ -320,7 +320,7 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
 
 /** derivative evaluation callback
  *
- * The method computes the derivative of an expression using backward automatic differentiation.
+ * The method computes the partial derivative of expr w.r.t its child at childidx.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -333,6 +333,22 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
    SCIP_CONSEXPR_EXPR* expr, \
    int childidx, \
    SCIP_Real* val)
+
+/** forward derivative evaluation callback
+ *
+ * The method evaluates the directional derivative of an expression by taking the directional derivative of its children into account and their values.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - dot : buffer to store derivative value
+ *  - direction : direction of the derivative (useful only for var expressions)
+ */
+#define SCIP_DECL_CONSEXPR_EXPRFWDIFF(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Real* dot, \
+   SCIP_SOL* direction)
 
 /** expression (point-) evaluation callback
  *
