@@ -13946,6 +13946,8 @@ SCIP_RETCODE SCIPevalConsExprExpr(
     */
    expr->evalvalue = SCIP_INVALID;
    expr->evaltag = soltag;
+   if( diff )
+      expr->dot = SCIP_INVALID;
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
@@ -13986,6 +13988,16 @@ SCIP_RETCODE SCIPevalConsExprExpr(
 
             if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
                goto TERMINATE;
+
+            /* compute forward diff */
+            if( diff )
+            {
+               /* call expression eval callback */
+               SCIP_CALL( expr->exprhdlr->fwdiff(scip, expr, &expr->dot, NULL) );
+
+               if( expr->dot == SCIP_INVALID ) /*lint !e777*/
+                  goto TERMINATE;
+            }
 
             break;
          }
@@ -14222,6 +14234,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_Real derivative;
+   SCIP_Real hessiandir;
    unsigned int difftag;
    SCIP_CONSEXPR_EXPR* rootexpr;
    SCIP_CONSDATA* consdata;
@@ -14267,9 +14280,10 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    {
       assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
-      if( expr->exprhdlr->bwdiff == NULL )
+      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff )
       {
          rootexpr->derivative = SCIP_INVALID;
+         rootexpr->bardot = SCIP_INVALID;
          break;
       }
 
@@ -14283,31 +14297,41 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
       /* update differentiation tag of the child */
       child->difftag = difftag;
 
-      /* call backward differentiation callback */
+      /* call backward and forward-backward differentiation callback */
       if( child->exprhdlr == conshdlrdata->exprvalhdlr )
       {
          derivative = 0.0;
+         hessiandir = 0.0;
       }
       else
       {
          derivative = SCIP_INVALID;
+         hessiandir = SCIP_INVALID;
          SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+         SCIP_CALL( (*expr->exprhdlr->bwfwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &hessiandir, NULL) );
 
-         if( derivative == SCIP_INVALID ) /*lint !e777*/
+         if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID ) /*lint !e777*/
          {
             rootexpr->derivative = SCIP_INVALID;
+            rootexpr->bardot = SCIP_INVALID;
             break;
          }
       }
 
-      /* update partial derivative stored in the child expression
+      /* update partial derivative and hessian stored in the child expression
        * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
        * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
        */
       if( !SCIPisConsExprExprVar(child) )
+      {
          child->derivative = expr->derivative * derivative;
+         child->bardot = expr->bardot * derivative + expr->derivative * hessiandir;
+      }
       else
+      {
          child->derivative += expr->derivative * derivative;
+         child->bardot += expr->bardot * derivative + expr->derivative * hessiandir;
+      }
    }
 
    SCIPexpriteratorFree(&it);
