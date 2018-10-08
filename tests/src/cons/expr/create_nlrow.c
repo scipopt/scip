@@ -81,7 +81,7 @@ void teardown(void)
 /* TEST SUITE */
 TestSuite(test_create_nlrow, .init = setup, .fini = teardown);
 
-Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
+Test(test_create_nlrow, noquad)
 {
    input = "2*<x1> + 3.2*<x2> + 0.5*<x3>^3 - 4*<x4> + <x5> + 10";
 
@@ -134,7 +134,7 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
 
-Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
+Test(test_create_nlrow, nolin)
 {
    input = "2*<x1>^2 + 3.2*<x1>*<x2> + 0.5*<x3>^3 - 4*<x4>*<x5>";
 
@@ -193,28 +193,31 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
 
-Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
+Test(test_create_nlrow, complex)
 {
+   SCIP_CONS* transcons;
+
    input = "2*<x1>^2 + <x1> + 3.2*<x1>*<x2> + <x2>^2 +exp(<x2>) + 0.5*<x3>^3 - 4*<x4>*<x5> + 5*<x4> - 10*<x5>^2 + <x1>*<x3>*<x5> - 1";
 
    /* create constraint from input string */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr) );
 
-   /* add constraint to SCIP and release it */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );
+   /* add constraint to SCIP */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", expr, 0, 1) );
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
-
-   consdata = SCIPconsGetData(consexpr);
-   cr_assert(consdata != NULL);
-
-   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
-   SCIP_CALL( createNlRow(scip, consexpr) );
+   SCIP_CALL( SCIPgetTransformedCons(scip, consexpr, &transcons) );
+   assert(transcons != NULL);
+
+   consdata = SCIPconsGetData(transcons);
+   cr_assert(consdata != NULL);
+
+   SCIP_CALL( createNlRow(scip, transcons) );
 
    nlrow = consdata->nlrow;
    cr_assert(nlrow != NULL);
@@ -222,8 +225,8 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    /* check linear part */
    cr_expect_eq(nlrow->constant, -1);
    cr_assert_eq(nlrow->nlinvars, 2);
-   cr_expect_eq(nlrow->linvars[0], x1);
-   cr_expect_eq(nlrow->linvars[1], x4);
+   cr_expect_eq(nlrow->linvars[0], SCIPvarGetTransVar(x1));
+   cr_expect_eq(nlrow->linvars[1], SCIPvarGetTransVar(x4));
 
    /* check quadratic part */
    cr_assert_eq(nlrow->nquadelems, 5);
@@ -243,22 +246,19 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_expect_eq(nlrow->quadelems[4].coef, -10);
    cr_expect_eq(nlrow->quadelems[4].idx1, 3);
    cr_expect_eq(nlrow->quadelems[4].idx2, 3);
-   cr_expect_eq(nlrow->quadvars[0], x1);
-   cr_expect_eq(nlrow->quadvars[1], x2);
-   cr_expect_eq(nlrow->quadvars[2], x4);
-   cr_expect_eq(nlrow->quadvars[3], x5);
+   cr_expect_eq(nlrow->quadvars[0], SCIPvarGetTransVar(x1));
+   cr_expect_eq(nlrow->quadvars[1], SCIPvarGetTransVar(x2));
+   cr_expect_eq(nlrow->quadvars[2], SCIPvarGetTransVar(x4));
+   cr_expect_eq(nlrow->quadvars[3], SCIPvarGetTransVar(x5));
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
    cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 4);
-   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x1);
-   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[1], x2);
-   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], x3);
-   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], x5);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], SCIPvarGetTransVar(x1));
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[1], SCIPvarGetTransVar(x2));
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], SCIPvarGetTransVar(x3));
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], SCIPvarGetTransVar(x5));
 
-   SCIP_CALL( freeVarExprs(scip, consdata) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
