@@ -93,14 +93,16 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    /* add constraint to SCIP and release it */
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
 
+   consdata = SCIPconsGetData(consexpr);
+   cr_assert(consdata != NULL);
+
    /* goto solving stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    SCIP_CALL( createNlRow(scip, consexpr) );
 
-   consdata = SCIPconsGetData(consexpr);
-   cr_assert(consdata != NULL);
+
    nlrow = consdata->nlrow;
    cr_assert(nlrow != NULL);
 
@@ -120,15 +122,9 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    cr_assert(nlrow ->quadvarshash == NULL);
 
    /* check non-quadratic part */
-   cr_assert(nlrow->exprtree == NULL);
-   cr_assert(consdata->expr != NULL);
-   cr_assert_eq(consdata->expr->exprhdlr, SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_assert_eq(SCIPgetConsExprExprPowExponent(consdata->expr), 3);
-   cr_assert_eq(consdata->expr->nchildren, 1);
-   cr_assert(SCIPisConsExprExprVar(consdata->expr->children[0]));
-   cr_assert(SCIPgetConsExprExprVarVar(consdata->expr->children[0]) == x3);
-   cr_assert_eq(consdata->nvarexprs, 1);
-   cr_assert_eq(consdata->varexprs[0], consdata->expr->children[0]);
+   cr_assert(nlrow->exprtree != NULL);
+   cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
+   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
