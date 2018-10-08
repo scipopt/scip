@@ -28,13 +28,14 @@ static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONS* consexpr;
 static SCIP_CONSDATA* consdata;
+static SCIP_CONSEXPR_EXPR* expr;
+static SCIP_CONSEXPR_EXPR* simplifiedexpr;
 static SCIP_NLROW* nlrow;
 static SCIP_VAR* x1;
 static SCIP_VAR* x2;
 static SCIP_VAR* x3;
 static SCIP_VAR* x4;
 static SCIP_VAR* x5;
-static SCIP_Bool success;
 static const char* input;
 
 static
@@ -82,15 +83,14 @@ TestSuite(test_create_nlrow, .init = setup, .fini = teardown);
 
 Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
 {
-   input = "[expr] <test>: 2*<x1> + 3.2*<x2> + 0.5*<x3>^3 - 4*<x4> + <x5> + 10 <= 2";
+   input = "2*<x1> + 3.2*<x2> + 0.5*<x3>^3 - 4*<x4> + <x5> + 10";
 
    /* create constraint from input string */
-   success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr) );
 
    /* add constraint to SCIP and release it */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
 
    consdata = SCIPconsGetData(consexpr);
@@ -127,20 +127,21 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
    cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
 
 Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
 {
-   input = "[expr] <test>: 2*<x1>^2 + 3.2*<x1>*<x2> + 0.5*<x3>^3 - 4*<x4>*<x5> <= 2";
+   input = "2*<x1>^2 + 3.2*<x1>*<x2> + 0.5*<x3>^3 - 4*<x4>*<x5>";
 
    /* create constraint from input string */
-   success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr) );
 
    /* add constraint to SCIP and release it */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
 
    consdata = SCIPconsGetData(consexpr);
@@ -188,15 +189,14 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
 
 Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
 {
-   input = "[expr] <test>: 2*<x1>^2 + <x1> + 3.2*<x1>*<x2> + <x2>^2 +exp(<x2>) + 0.5*<x3>^3 - 4*<x4>*<x5> + 5*<x4> - 10*<x5>^2 + <x1>*<x3>*<x5> - 1 <= 2";
+   input = "2*<x1>^2 + <x1> + 3.2*<x1>*<x2> + <x2>^2 +exp(<x2>) + 0.5*<x3>^3 - 4*<x4>*<x5> + 5*<x4> - 10*<x5>^2 + <x1>*<x3>*<x5> - 1";
 
    /* create constraint from input string */
-   success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr) );
 
    /* add constraint to SCIP and release it */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );
    SCIP_CALL( SCIPaddCons(scip, consexpr) );
 
    consdata = SCIPconsGetData(consexpr);
