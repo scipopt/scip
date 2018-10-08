@@ -127,8 +127,10 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
    cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
+   SCIP_CALL( freeVarExprs(scip, consdata) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
 
@@ -172,8 +174,8 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_expect_eq(nlrow->quadelems[1].idx1, 0);
    cr_expect_eq(nlrow->quadelems[1].idx2, 1);
    cr_expect_eq(nlrow->quadelems[2].coef, -4.0);
-   cr_expect_eq(nlrow->quadelems[2].idx1, 3);
-   cr_expect_eq(nlrow->quadelems[2].idx2, 4);
+   cr_expect_eq(nlrow->quadelems[2].idx1, 2);
+   cr_expect_eq(nlrow->quadelems[2].idx2, 3);
    cr_expect_eq(nlrow->quadvars[0], x1);
    cr_expect_eq(nlrow->quadvars[1], x2);
    cr_expect_eq(nlrow->quadvars[2], x4);
@@ -184,6 +186,10 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
    cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
+   SCIP_CALL( freeVarExprs(scip, consdata) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
 
@@ -214,7 +220,7 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_assert(nlrow != NULL);
 
    /* check linear part */
-   cr_expect_eq(nlrow->constant, 1);
+   cr_expect_eq(nlrow->constant, -1);
    cr_assert_eq(nlrow->nlinvars, 2);
    cr_expect_eq(nlrow->linvars[0], x1);
    cr_expect_eq(nlrow->linvars[1], x4);
@@ -232,11 +238,11 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_expect_eq(nlrow->quadelems[2].idx1, 1);
    cr_expect_eq(nlrow->quadelems[2].idx2, 1);
    cr_expect_eq(nlrow->quadelems[3].coef, -4.0);
-   cr_expect_eq(nlrow->quadelems[3].idx1, 3);
-   cr_expect_eq(nlrow->quadelems[3].idx2, 4);
-   cr_expect_eq(nlrow->quadelems[4].coef, 5);
-   cr_expect_eq(nlrow->quadelems[4].idx1, 4);
-   cr_expect_eq(nlrow->quadelems[4].idx2, 4);
+   cr_expect_eq(nlrow->quadelems[3].idx1, 2);
+   cr_expect_eq(nlrow->quadelems[3].idx2, 3);
+   cr_expect_eq(nlrow->quadelems[4].coef, -10);
+   cr_expect_eq(nlrow->quadelems[4].idx1, 3);
+   cr_expect_eq(nlrow->quadelems[4].idx2, 3);
    cr_expect_eq(nlrow->quadvars[0], x1);
    cr_expect_eq(nlrow->quadvars[1], x2);
    cr_expect_eq(nlrow->quadvars[2], x4);
@@ -250,5 +256,9 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], x3);
    cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], x5);
 
+   SCIP_CALL( freeVarExprs(scip, consdata) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexpr) );
+   SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
