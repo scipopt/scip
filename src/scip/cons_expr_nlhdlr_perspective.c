@@ -22,6 +22,11 @@
 
 #include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_linear.h"
+#include "scip/struct_cons.h"
+#include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_var.h"
+#include "cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "perspective"
@@ -42,13 +47,95 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
+   SCIP_Bool   detected;
+   SCIP_CONS** vbdconss;       /**< varbound constraints */
+   int         nvbdconss;      /**< number of varbound constraints */
 };
 
 /*
  * Local methods
  */
 
-/* TODO: put your local methods here, and declare them static */
+
+static
+SCIP_RETCODE findUnivariateVar(
+   SCIP* scip,                             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR* expr,               /**< expression to check */
+   SCIP_VAR**          expr_var            /**< the variable of a proper univariate function */
+   )
+{
+   int c;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* var;
+
+   SCIPdebugMsg(scip, NULL, "\nExpr handler: %s", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+
+   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   {
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         child = SCIPgetConsExprExprChildren(expr)[c];
+
+         /* check that the continuous var is the same in all children */
+         if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+         {
+            if( SCIPgetConsExprExprPowExponent(child) != 2 )
+            {
+               SCIPdebugMsg(scip, NULL, "\nThe sum expression is not quadratic");
+               *expr_var = NULL;
+               return SCIP_OKAY;
+            }
+            var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]);
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            {
+               SCIPdebugMsg(scip, NULL, "\nSquared binary variable, not reformulating");
+               *expr_var = NULL;
+               return SCIP_OKAY;
+            }
+            if( *expr_var == NULL )
+               *expr_var = var;
+            else if( *expr_var != var )
+            {
+               *expr_var = NULL;
+               return SCIP_OKAY;
+            }
+         }
+         else if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+         {
+            var = SCIPgetConsExprExprVarVar(child);
+            if( *expr_var != NULL )
+            {
+               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(*expr_var) != SCIP_VARTYPE_BINARY && *expr_var != var )
+               {
+                  SCIPdebugMsg(scip, NULL, "\nFound two different non-binary variables");
+                  *expr_var = NULL;
+                  return SCIP_OKAY;
+               }
+            }
+            else
+               *expr_var = var;
+         }
+         else
+         {
+            if( strcmp("value", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) != 0 )
+            {
+               SCIPdebugMsg(scip, NULL, "\nThe sum expression is not quadratic");
+               *expr_var = NULL;
+               return SCIP_OKAY;
+            }
+         }
+      }
+   }
+
+   /* TODO: check other constraint handlers, detect other types of nonlinear constraints: pow, exp, etc? */
+
+   if( *expr_var != NULL )
+      SCIPdebugMsg(scip, NULL, "\nThe function is quadratic univariate");
+   else
+      SCIPdebugMsg(scip, NULL, "\nThe function is not of the proper form");
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of nonlinear handler
@@ -98,43 +185,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_CONSHDLR* linconshdlr;
-   SCIP_CONSHDLR* varboundconshdlr;
-   int c;
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata != NULL);
-
-   /* look for important constraint handlers */
-   linconshdlr = SCIPfindConshdlr(scip, "linear");
-   varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
-
-   for( c = 0; c < SCIPgetNConss(scip); ++c )
-   {
-      SCIP_CONS* cons = SCIPgetConss(scip)[c];
-      assert(cons != NULL);
-
-      if( SCIPconsGetHdlr(cons) == linconshdlr )
-      {
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /* TODO extract information with interface functions from cons_linear.h */
-      }
-      else if( SCIPconsGetHdlr(cons) == varboundconshdlr )
-      {
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /* TODO extract information with interface functions from cons_varbound.h */
-      }
-      else
-      {
-         /* TODO check whether other constraint handlers are important */
-      }
-   }
-
-   /* TODO store data in nlhdlrdata */
 
    return SCIP_OKAY;
 }
@@ -144,8 +194,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
-
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    /* TODO free the memory that has been allocated in HDLRINIT */
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrdata)->vbdconss, nlhdlrdata->nvbdconss);
 
    return SCIP_OKAY;
 }
@@ -281,10 +333,141 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_VAR* bvar;
+   SCIP_Real pmin = -SCIPinfinity(scip), pmax = SCIPinfinity(scip), bvarcoef = 0;
+   int c;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( !nlhdlrdata->detected )
+   {
+      SCIP_CONSHDLR* varboundconshdlr;
+      SCIP_CONSHDLR* linconshdlr;
+
+      nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+      assert(nlhdlrdata != NULL);
+
+      /* look for important constraint handlers */
+      linconshdlr = SCIPfindConshdlr(scip, "linear");
+      varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
+
+      for( c = 0; c < SCIPgetNConss(scip); ++c )
+      {
+         SCIP_CONS* cons = SCIPgetConss(scip)[c];
+         assert(cons != NULL);
+
+         if( SCIPconsGetHdlr(cons) == linconshdlr )
+         {
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            if( SCIPgetNVarsLinear(scip, cons) == 2 )
+            {
+               SCIP_VARTYPE vartype1 = SCIPvarGetType(SCIPgetVarsLinear(scip, cons)[0]);
+               SCIP_VARTYPE vartype2 = SCIPvarGetType(SCIPgetVarsLinear(scip, cons)[1]);
+
+               if( (vartype1 == SCIP_VARTYPE_BINARY && vartype2 == SCIP_VARTYPE_CONTINUOUS) || (vartype2 == SCIP_VARTYPE_BINARY && vartype1 == SCIP_VARTYPE_CONTINUOUS)  )
+               {
+                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrdata->vbdconss, nlhdlrdata->nvbdconss, nlhdlrdata->nvbdconss+1) );
+                  nlhdlrdata->vbdconss[nlhdlrdata->nvbdconss] = cons;
+                  nlhdlrdata->nvbdconss++;
+               }
+            }
+         }
+         else if( SCIPconsGetHdlr(cons) == varboundconshdlr )
+         {
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrdata->vbdconss, nlhdlrdata->nvbdconss, nlhdlrdata->nvbdconss+1) );
+            nlhdlrdata->vbdconss[nlhdlrdata->nvbdconss] = cons;
+            nlhdlrdata->nvbdconss++;
+         }
+         else
+         {
+            /* TODO check whether other constraint handlers are important */
+         }
+      }
+
+      SCIPdebugMsg(scip, NULL, "Var bound constraints found:\n");
+      for( c = 0; c < nlhdlrdata->nvbdconss; c++ )
+      {
+         SCIP_CALL( SCIPprintCons(scip, nlhdlrdata->vbdconss[c], NULL) );
+         SCIPdebugMsg(scip, NULL, "\n");
+      }
+
+      nlhdlrdata->detected = TRUE;
+   }
 
    /* TODO detect structure */
 
+   /* is the expression univariate (disregarding adding binary variables)? if yes, expr_var stores the continuous var */
+   SCIP_VAR* expr_var = NULL;
+   SCIP_CALL( findUnivariateVar(scip, expr, &expr_var) );
+
+   /* no reformulation is possible */
+   if( expr_var == NULL )
+   {
+      *refexpr = expr;
+      SCIPcaptureConsExprExpr(*refexpr);
+      return SCIP_OKAY;
+   }
+
+   /* check if expr_var is semicontinuous */
+   for( c = 0; c < nlhdlrdata->nvbdconss; ++c )
+   {
+      SCIP_CONS* vbcons = nlhdlrdata->vbdconss[c];
+      int bpos, cpos;
+      if( SCIPgetVarsLinear(scip, vbcons)[0] == expr_var )
+      {
+         bpos = 1;
+         cpos = 0;
+      }
+      else if( SCIPgetVarsLinear(scip, vbcons)[1] == expr_var )
+      {
+         bpos = 0;
+         cpos = 1;
+      }
+      else
+      {
+         continue;
+      }
+
+      bvar = SCIPgetVarsLinear(scip, vbcons)[bpos];
+      if( SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip) )
+         pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / SCIPgetValsLinear(scip, vbcons)[cpos];
+      else if( SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip) )
+         pmin = -SCIPgetValsLinear(scip, vbcons)[bpos] / SCIPgetValsLinear(scip, vbcons)[cpos];
+      else /* currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
+         SCIPdebugMsg(scip, NULL, "\nThe varbound constraint of this form can't be handled now");
+      break;
+   }
+   if( pmin == -SCIPinfinity(scip) || pmax == SCIPinfinity(scip) )
+   {
+      SCIPdebugMsg(scip, NULL, "\nThe variable does not have proper on/off bounds");
+      *refexpr = expr;
+      SCIPcaptureConsExprExpr(*refexpr);
+      return SCIP_OKAY;
+   }
+   else
+      SCIPdebugMsg(scip, NULL, "\nFound a semicont variable, pmin = %f, pmax = %f", pmin, pmax);
+
+   /* find the coefficient of the binary variable, if not found leave it at 0 */
+   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   {
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
+
+         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+         {
+            if( SCIPgetConsExprExprVarVar(child) == bvar )
+               bvarcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+         }
+      }
+   }
+
+   SCIPdebugMsg(scip, NULL, "\nc = %f", bvarcoef);
+
    /* TODO create expression and store it in refexpr */
+
 
    /* set refexpr to expr and capture it if no reformulation is possible */
    *refexpr = expr;
