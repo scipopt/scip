@@ -109,7 +109,7 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
 
    /* check linear part */
    cr_expect_eq(nlrow->constant, 10);
-   cr_expect_eq(nlrow->nlinvars, 4);
+   cr_assert_eq(nlrow->nlinvars, 4);
    cr_expect_eq(nlrow->linvars[0], x1);
    cr_expect_eq(nlrow->linvars[1], x2);
    cr_expect_eq(nlrow->linvars[2], x4);
@@ -162,8 +162,8 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_expect_eq(nlrow->nlinvars, 0);
 
    /* check quadratic part */
-   cr_expect_eq(nlrow->nquadelems, 3);
-   cr_expect_eq(nlrow->nquadvars, 4);
+   cr_assert_eq(nlrow->nquadelems, 3);
+   cr_assert_eq(nlrow->nquadvars, 4);
    cr_expect_eq(nlrow->quadelems[0].coef, 2.0);
    cr_expect_eq(nlrow->quadelems[0].idx1, 0);
    cr_expect_eq(nlrow->quadelems[0].idx2, 0);
@@ -215,13 +215,13 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
 
    /* check linear part */
    cr_expect_eq(nlrow->constant, 1);
-   cr_expect_eq(nlrow->nlinvars, 2);
+   cr_assert_eq(nlrow->nlinvars, 2);
    cr_expect_eq(nlrow->linvars[0], x1);
    cr_expect_eq(nlrow->linvars[1], x4);
 
    /* check quadratic part */
-   cr_expect_eq(nlrow->nquadelems, 5);
-   cr_expect_eq(nlrow->nquadvars, 4);
+   cr_assert_eq(nlrow->nquadelems, 5);
+   cr_assert_eq(nlrow->nquadvars, 4);
    cr_expect_eq(nlrow->quadelems[0].coef, 2.0);
    cr_expect_eq(nlrow->quadelems[0].idx1, 0);
    cr_expect_eq(nlrow->quadelems[0].idx2, 0);
