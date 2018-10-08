@@ -47,7 +47,7 @@ void setup(void)
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   cr_assert(conshdlr != NULL);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -74,7 +74,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x5) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   cr_expect_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /* TEST SUITE */
@@ -108,24 +108,24 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    cr_assert(nlrow != NULL);
 
    /* check linear part */
-   cr_assert_eq(nlrow->constant, 10);
-   cr_assert_eq(nlrow->nlinvars, 4);
-   cr_assert_eq(nlrow->linvars[0], x1);
-   cr_assert_eq(nlrow->linvars[1], x2);
-   cr_assert_eq(nlrow->linvars[2], x4);
-   cr_assert_eq(nlrow->linvars[3], x5);
+   cr_expect_eq(nlrow->constant, 10);
+   cr_expect_eq(nlrow->nlinvars, 4);
+   cr_expect_eq(nlrow->linvars[0], x1);
+   cr_expect_eq(nlrow->linvars[1], x2);
+   cr_expect_eq(nlrow->linvars[2], x4);
+   cr_expect_eq(nlrow->linvars[3], x5);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow->nquadelems, 0);
-   cr_assert_eq(nlrow->nquadvars, 0);
-   cr_assert(nlrow->quadelems == NULL);
-   cr_assert(nlrow->quadvars == NULL);
-   cr_assert(nlrow->quadvarshash == NULL);
+   cr_expect_eq(nlrow->nquadelems, 0);
+   cr_expect_eq(nlrow->nquadvars, 0);
+   cr_expect(nlrow->quadelems == NULL);
+   cr_expect(nlrow->quadvars == NULL);
+   cr_expect(nlrow->quadvarshash == NULL);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
-   cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
+   cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
@@ -158,30 +158,30 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_assert(nlrow != NULL);
 
    /* check linear part */
-   cr_assert_eq(nlrow->constant, 0);
-   cr_assert_eq(nlrow->nlinvars, 0);
+   cr_expect_eq(nlrow->constant, 0);
+   cr_expect_eq(nlrow->nlinvars, 0);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow->nquadelems, 3);
-   cr_assert_eq(nlrow->nquadvars, 4);
-   cr_assert_eq(nlrow->quadelems[0].coef, 2.0);
-   cr_assert_eq(nlrow->quadelems[0].idx1, 0);
-   cr_assert_eq(nlrow->quadelems[0].idx2, 0);
-   cr_assert_eq(nlrow->quadelems[1].coef, 3.2);
-   cr_assert_eq(nlrow->quadelems[1].idx2, 0);
-   cr_assert_eq(nlrow->quadelems[1].idx2, 1);
-   cr_assert_eq(nlrow->quadelems[2].coef, -4.0);
-   cr_assert_eq(nlrow->quadelems[2].idx2, 3);
-   cr_assert_eq(nlrow->quadelems[2].idx2, 4);
-   cr_assert_eq(nlrow->quadvars[0], x1);
-   cr_assert_eq(nlrow->quadvars[1], x2);
-   cr_assert_eq(nlrow->quadvars[2], x4);
-   cr_assert_eq(nlrow->quadvars[3], x5);
+   cr_expect_eq(nlrow->nquadelems, 3);
+   cr_expect_eq(nlrow->nquadvars, 4);
+   cr_expect_eq(nlrow->quadelems[0].coef, 2.0);
+   cr_expect_eq(nlrow->quadelems[0].idx1, 0);
+   cr_expect_eq(nlrow->quadelems[0].idx2, 0);
+   cr_expect_eq(nlrow->quadelems[1].coef, 3.2);
+   cr_expect_eq(nlrow->quadelems[1].idx2, 0);
+   cr_expect_eq(nlrow->quadelems[1].idx2, 1);
+   cr_expect_eq(nlrow->quadelems[2].coef, -4.0);
+   cr_expect_eq(nlrow->quadelems[2].idx2, 3);
+   cr_expect_eq(nlrow->quadelems[2].idx2, 4);
+   cr_expect_eq(nlrow->quadvars[0], x1);
+   cr_expect_eq(nlrow->quadvars[1], x2);
+   cr_expect_eq(nlrow->quadvars[2], x4);
+   cr_expect_eq(nlrow->quadvars[3], x5);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
-   cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
+   cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
 
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
@@ -214,41 +214,41 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_assert(nlrow != NULL);
 
    /* check linear part */
-   cr_assert_eq(nlrow->constant, 1);
-   cr_assert_eq(nlrow->nlinvars, 2);
-   cr_assert_eq(nlrow->linvars[0], x1);
-   cr_assert_eq(nlrow->linvars[1], x4);
+   cr_expect_eq(nlrow->constant, 1);
+   cr_expect_eq(nlrow->nlinvars, 2);
+   cr_expect_eq(nlrow->linvars[0], x1);
+   cr_expect_eq(nlrow->linvars[1], x4);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow->nquadelems, 5);
-   cr_assert_eq(nlrow->nquadvars, 4);
-   cr_assert_eq(nlrow->quadelems[0].coef, 2.0);
-   cr_assert_eq(nlrow->quadelems[0].idx1, 0);
-   cr_assert_eq(nlrow->quadelems[0].idx2, 0);
-   cr_assert_eq(nlrow->quadelems[1].coef, 3.2);
-   cr_assert_eq(nlrow->quadelems[1].idx2, 0);
-   cr_assert_eq(nlrow->quadelems[1].idx2, 1);
-   cr_assert_eq(nlrow->quadelems[2].coef, 1);
-   cr_assert_eq(nlrow->quadelems[2].idx2, 1);
-   cr_assert_eq(nlrow->quadelems[2].idx2, 1);
-   cr_assert_eq(nlrow->quadelems[3].coef, -4.0);
-   cr_assert_eq(nlrow->quadelems[3].idx2, 3);
-   cr_assert_eq(nlrow->quadelems[3].idx2, 4);
-   cr_assert_eq(nlrow->quadelems[4].coef, 5);
-   cr_assert_eq(nlrow->quadelems[4].idx2, 4);
-   cr_assert_eq(nlrow->quadelems[4].idx2, 4);
-   cr_assert_eq(nlrow->quadvars[0], x1);
-   cr_assert_eq(nlrow->quadvars[1], x2);
-   cr_assert_eq(nlrow->quadvars[2], x4);
-   cr_assert_eq(nlrow->quadvars[3], x5);
+   cr_expect_eq(nlrow->nquadelems, 5);
+   cr_expect_eq(nlrow->nquadvars, 4);
+   cr_expect_eq(nlrow->quadelems[0].coef, 2.0);
+   cr_expect_eq(nlrow->quadelems[0].idx1, 0);
+   cr_expect_eq(nlrow->quadelems[0].idx2, 0);
+   cr_expect_eq(nlrow->quadelems[1].coef, 3.2);
+   cr_expect_eq(nlrow->quadelems[1].idx2, 0);
+   cr_expect_eq(nlrow->quadelems[1].idx2, 1);
+   cr_expect_eq(nlrow->quadelems[2].coef, 1);
+   cr_expect_eq(nlrow->quadelems[2].idx2, 1);
+   cr_expect_eq(nlrow->quadelems[2].idx2, 1);
+   cr_expect_eq(nlrow->quadelems[3].coef, -4.0);
+   cr_expect_eq(nlrow->quadelems[3].idx2, 3);
+   cr_expect_eq(nlrow->quadelems[3].idx2, 4);
+   cr_expect_eq(nlrow->quadelems[4].coef, 5);
+   cr_expect_eq(nlrow->quadelems[4].idx2, 4);
+   cr_expect_eq(nlrow->quadelems[4].idx2, 4);
+   cr_expect_eq(nlrow->quadvars[0], x1);
+   cr_expect_eq(nlrow->quadvars[1], x2);
+   cr_expect_eq(nlrow->quadvars[2], x4);
+   cr_expect_eq(nlrow->quadvars[3], x5);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
-   cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 4);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x1);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[1], x2);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], x3);
-   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], x5);
+   cr_expect_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 4);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x1);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[1], x2);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], x3);
+   cr_expect_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], x5);
 
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
