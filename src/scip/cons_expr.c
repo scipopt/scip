@@ -3482,8 +3482,8 @@ SCIP_RETCODE createNlRow(
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;
    SCIP_EXPR* classicexpr = NULL;
-   SCIP_VAR** nlvars;
-   int nnlvars;
+   SCIP_VAR** nlvars = NULL;
+   int nnlvars = 0;
    int i;
 
    assert(scip != NULL);
