@@ -96,12 +96,11 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    consdata = SCIPconsGetData(consexpr);
    cr_assert(consdata != NULL);
 
-   /* goto solving stage */
+   /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    SCIP_CALL( createNlRow(scip, consexpr) );
-
 
    nlrow = consdata->nlrow;
    cr_assert(nlrow != NULL);
@@ -145,12 +144,11 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    consdata = SCIPconsGetData(consexpr);
    cr_assert(consdata != NULL);
 
-   /* goto solving stage */
+   /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    SCIP_CALL( createNlRow(scip, consexpr) );
-
 
    nlrow = consdata->nlrow;
    cr_assert(nlrow != NULL);
@@ -180,6 +178,73 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_assert(nlrow->exprtree != NULL);
    cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 1);
    cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x3);
+
+   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+}
+
+Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
+{
+   input = "[expr] <test>: 2*<x1>^2 + <x1> + 3.2*<x1>*<x2> + <x2>^2 +exp(<x2>) + 0.5*<x3>^3 - 4*<x4>*<x5> + 5*<x4> - 10*<x5>^2 + <x1>*<x3>*<x5> - 1 <= 2";
+
+   /* create constraint from input string */
+   success = FALSE;
+   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add constraint to SCIP and release it */
+   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+
+   consdata = SCIPconsGetData(consexpr);
+   cr_assert(consdata != NULL);
+
+   cr_assert(consdata->expr != NULL);
+
+   /* goto presolved stage */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   SCIP_CALL( createNlRow(scip, consexpr) );
+
+   nlrow = consdata->nlrow;
+   cr_assert(nlrow != NULL);
+
+   /* check linear part */
+   cr_assert_eq(nlrow->constant, 1);
+   cr_assert_eq(nlrow->nlinvars, 2);
+   cr_assert_eq(nlrow->linvars[0], x1);
+   cr_assert_eq(nlrow->linvars[1], x4);
+
+   /* check quadratic part */
+   cr_assert_eq(nlrow ->nquadelems, 5);
+   cr_assert_eq(nlrow ->nquadvars, 4);
+   cr_assert_eq(nlrow ->quadelems[0].coef, 2.0);
+   cr_assert_eq(nlrow ->quadelems[0].idx1, 0);
+   cr_assert_eq(nlrow ->quadelems[0].idx2, 0);
+   cr_assert_eq(nlrow ->quadelems[1].coef, 3.2);
+   cr_assert_eq(nlrow ->quadelems[1].idx2, 0);
+   cr_assert_eq(nlrow ->quadelems[1].idx2, 1);
+   cr_assert_eq(nlrow ->quadelems[2].coef, 1);
+   cr_assert_eq(nlrow ->quadelems[2].idx2, 1);
+   cr_assert_eq(nlrow ->quadelems[2].idx2, 1);
+   cr_assert_eq(nlrow ->quadelems[3].coef, -4.0);
+   cr_assert_eq(nlrow ->quadelems[3].idx2, 3);
+   cr_assert_eq(nlrow ->quadelems[3].idx2, 4);
+   cr_assert_eq(nlrow ->quadelems[4].coef, 5);
+   cr_assert_eq(nlrow ->quadelems[4].idx2, 4);
+   cr_assert_eq(nlrow ->quadelems[4].idx2, 4);
+   cr_assert_eq(nlrow ->quadvars[0], x1);
+   cr_assert_eq(nlrow ->quadvars[1], x2);
+   cr_assert_eq(nlrow ->quadvars[2], x4);
+   cr_assert_eq(nlrow ->quadvars[3], x5);
+
+   /* check non-quadratic part */
+   cr_assert(nlrow->exprtree != NULL);
+   cr_assert_eq(SCIPexprtreeGetNVars(nlrow->exprtree), 4);
+   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[0], x1);
+   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[1], x2);
+   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[2], x3);
+   cr_assert_eq(SCIPexprtreeGetVars(nlrow->exprtree)[3], x5);
 
    SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
 }
