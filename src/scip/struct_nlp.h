@@ -52,6 +52,8 @@
 #include "scip/def.h"
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
+#include "scip/type_misc.h"
+#include "scip/type_event.h"
 #include "nlpi/type_nlpi.h"
 #include "nlpi/type_expr.h"
 
