@@ -96,6 +96,8 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    consdata = SCIPconsGetData(consexpr);
    cr_assert(consdata != NULL);
 
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
    /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
@@ -114,11 +116,11 @@ Test(test_create_nlrow, noquad, .init = setup, .fini = teardown)
    cr_assert_eq(nlrow->linvars[3], x5);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow ->nquadelems, 0);
-   cr_assert_eq(nlrow ->nquadvars, 0);
-   cr_assert(nlrow ->quadelems == NULL);
-   cr_assert(nlrow ->quadvars == NULL);
-   cr_assert(nlrow ->quadvarshash == NULL);
+   cr_assert_eq(nlrow->nquadelems, 0);
+   cr_assert_eq(nlrow->nquadvars, 0);
+   cr_assert(nlrow->quadelems == NULL);
+   cr_assert(nlrow->quadvars == NULL);
+   cr_assert(nlrow->quadvarshash == NULL);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
@@ -144,6 +146,8 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    consdata = SCIPconsGetData(consexpr);
    cr_assert(consdata != NULL);
 
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
    /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
@@ -158,21 +162,21 @@ Test(test_create_nlrow, nolin, .init = setup, .fini = teardown)
    cr_assert_eq(nlrow->nlinvars, 0);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow ->nquadelems, 3);
-   cr_assert_eq(nlrow ->nquadvars, 4);
-   cr_assert_eq(nlrow ->quadelems[0].coef, 2.0);
-   cr_assert_eq(nlrow ->quadelems[0].idx1, 0);
-   cr_assert_eq(nlrow ->quadelems[0].idx2, 0);
-   cr_assert_eq(nlrow ->quadelems[1].coef, 3.2);
-   cr_assert_eq(nlrow ->quadelems[1].idx2, 0);
-   cr_assert_eq(nlrow ->quadelems[1].idx2, 1);
-   cr_assert_eq(nlrow ->quadelems[2].coef, -4.0);
-   cr_assert_eq(nlrow ->quadelems[2].idx2, 3);
-   cr_assert_eq(nlrow ->quadelems[2].idx2, 4);
-   cr_assert_eq(nlrow ->quadvars[0], x1);
-   cr_assert_eq(nlrow ->quadvars[1], x2);
-   cr_assert_eq(nlrow ->quadvars[2], x4);
-   cr_assert_eq(nlrow ->quadvars[3], x5);
+   cr_assert_eq(nlrow->nquadelems, 3);
+   cr_assert_eq(nlrow->nquadvars, 4);
+   cr_assert_eq(nlrow->quadelems[0].coef, 2.0);
+   cr_assert_eq(nlrow->quadelems[0].idx1, 0);
+   cr_assert_eq(nlrow->quadelems[0].idx2, 0);
+   cr_assert_eq(nlrow->quadelems[1].coef, 3.2);
+   cr_assert_eq(nlrow->quadelems[1].idx2, 0);
+   cr_assert_eq(nlrow->quadelems[1].idx2, 1);
+   cr_assert_eq(nlrow->quadelems[2].coef, -4.0);
+   cr_assert_eq(nlrow->quadelems[2].idx2, 3);
+   cr_assert_eq(nlrow->quadelems[2].idx2, 4);
+   cr_assert_eq(nlrow->quadvars[0], x1);
+   cr_assert_eq(nlrow->quadvars[1], x2);
+   cr_assert_eq(nlrow->quadvars[2], x4);
+   cr_assert_eq(nlrow->quadvars[3], x5);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
@@ -198,7 +202,7 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    consdata = SCIPconsGetData(consexpr);
    cr_assert(consdata != NULL);
 
-   cr_assert(consdata->expr != NULL);
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
 
    /* goto presolved stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -216,27 +220,27 @@ Test(test_create_nlrow, complex, .init = setup, .fini = teardown)
    cr_assert_eq(nlrow->linvars[1], x4);
 
    /* check quadratic part */
-   cr_assert_eq(nlrow ->nquadelems, 5);
-   cr_assert_eq(nlrow ->nquadvars, 4);
-   cr_assert_eq(nlrow ->quadelems[0].coef, 2.0);
-   cr_assert_eq(nlrow ->quadelems[0].idx1, 0);
-   cr_assert_eq(nlrow ->quadelems[0].idx2, 0);
-   cr_assert_eq(nlrow ->quadelems[1].coef, 3.2);
-   cr_assert_eq(nlrow ->quadelems[1].idx2, 0);
-   cr_assert_eq(nlrow ->quadelems[1].idx2, 1);
-   cr_assert_eq(nlrow ->quadelems[2].coef, 1);
-   cr_assert_eq(nlrow ->quadelems[2].idx2, 1);
-   cr_assert_eq(nlrow ->quadelems[2].idx2, 1);
-   cr_assert_eq(nlrow ->quadelems[3].coef, -4.0);
-   cr_assert_eq(nlrow ->quadelems[3].idx2, 3);
-   cr_assert_eq(nlrow ->quadelems[3].idx2, 4);
-   cr_assert_eq(nlrow ->quadelems[4].coef, 5);
-   cr_assert_eq(nlrow ->quadelems[4].idx2, 4);
-   cr_assert_eq(nlrow ->quadelems[4].idx2, 4);
-   cr_assert_eq(nlrow ->quadvars[0], x1);
-   cr_assert_eq(nlrow ->quadvars[1], x2);
-   cr_assert_eq(nlrow ->quadvars[2], x4);
-   cr_assert_eq(nlrow ->quadvars[3], x5);
+   cr_assert_eq(nlrow->nquadelems, 5);
+   cr_assert_eq(nlrow->nquadvars, 4);
+   cr_assert_eq(nlrow->quadelems[0].coef, 2.0);
+   cr_assert_eq(nlrow->quadelems[0].idx1, 0);
+   cr_assert_eq(nlrow->quadelems[0].idx2, 0);
+   cr_assert_eq(nlrow->quadelems[1].coef, 3.2);
+   cr_assert_eq(nlrow->quadelems[1].idx2, 0);
+   cr_assert_eq(nlrow->quadelems[1].idx2, 1);
+   cr_assert_eq(nlrow->quadelems[2].coef, 1);
+   cr_assert_eq(nlrow->quadelems[2].idx2, 1);
+   cr_assert_eq(nlrow->quadelems[2].idx2, 1);
+   cr_assert_eq(nlrow->quadelems[3].coef, -4.0);
+   cr_assert_eq(nlrow->quadelems[3].idx2, 3);
+   cr_assert_eq(nlrow->quadelems[3].idx2, 4);
+   cr_assert_eq(nlrow->quadelems[4].coef, 5);
+   cr_assert_eq(nlrow->quadelems[4].idx2, 4);
+   cr_assert_eq(nlrow->quadelems[4].idx2, 4);
+   cr_assert_eq(nlrow->quadvars[0], x1);
+   cr_assert_eq(nlrow->quadvars[1], x2);
+   cr_assert_eq(nlrow->quadvars[2], x4);
+   cr_assert_eq(nlrow->quadvars[3], x5);
 
    /* check non-quadratic part */
    cr_assert(nlrow->exprtree != NULL);
