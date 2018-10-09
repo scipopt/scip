@@ -416,6 +416,7 @@ SCIP_VAR* SCIPgetConsExprExprVarVar(
    )
 {
    assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    return (SCIP_VAR*)SCIPgetConsExprExprData(expr);
 }
