@@ -1110,6 +1110,26 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
    SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
    );
 
+/** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
+EXTERN
+SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Real*            coef                /**< pointer to store the coefficient */
+   );
+
+/** returns a variable that appears linearly that may be increased without making any other constraint infeasible */
+EXTERN
+SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Real*            coef                /**< pointer to store the coefficient */
+   );
+
 /** @} */
 
 /**@name Nonlinear Handler Methods */
