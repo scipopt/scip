@@ -6108,7 +6108,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
          }
-         else if( conshdlrdata->subnlpheur == NULL || sol == NULL )
+         else if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible && !completely )
          {
             /* if we don't want to pass to subnlp heuristic and don't need to print reasons, then can stop checking here */
             return SCIP_OKAY;
