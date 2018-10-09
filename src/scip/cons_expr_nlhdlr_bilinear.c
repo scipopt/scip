@@ -892,12 +892,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    {
       SCIP_CONSEXPR_EXPR* child1 = SCIPgetConsExprExprChildren(expr)[0];
       SCIP_CONSEXPR_EXPR* child2 = SCIPgetConsExprExprChildren(expr)[1];
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+
       assert(child1 != NULL);
       assert(child2 != NULL);
 
+      var1 = SCIPgetConsExprExprAuxVar(child1);
+      var2 = SCIPgetConsExprExprAuxVar(child2);
 
       /* detection is only successful if both children have an auxiliary variable */
-      if( SCIPgetConsExprExprAuxVar(child1) != NULL && SCIPgetConsExprExprAuxVar(child2) != NULL )
+      if( var1 != NULL && var2 != NULL && !SCIPvarIsBinary(var1) && !SCIPvarIsBinary(var2) )
       {
          *success = TRUE;
 
