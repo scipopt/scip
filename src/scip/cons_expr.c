@@ -2433,13 +2433,13 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
 /** helper function to either simplify or reformulate an expression and its subexpressions */
 static
-SCIP_RETCODE reformulateConsExprExpr(
+SCIP_RETCODE simplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_Bool               simplify,         /**< should the expression be simplified or reformulated? */
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
-   )
+)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
@@ -2560,6 +2560,65 @@ SCIP_RETCODE reformulateConsExprExpr(
    assert(*simplified != NULL);
 
    SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+
+/** helper function to either reformulate an expression and its subexpressions */
+static
+SCIP_RETCODE reformulateConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
+   SCIP_CONSEXPR_EXPR**    reformulated      /**< buffer to store simplified expression */
+)
+{
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+   assert(reformulated != NULL);
+
+   /* reformulate at the root node  */
+
+   SCIP_CONSEXPR_EXPR* refexpr = NULL;
+
+   /* use nonlinear handler to reformulate the expression */
+
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int k;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* iterate through nonlinear handlers and call reformulation callbacks;
+    *
+    * TODO store nonlinear handlers that implement the reformulation callback separately
+    * TODO sort nonlinear handlers according to their priorities
+    */
+   for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
+   {
+      assert(conshdlrdata->nlhdlrs[k] != NULL);
+
+      if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
+      {
+         SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k], rootexpr, &refexpr) );
+         assert(refexpr != NULL);
+
+         /* stop calling other nonlinear handlers as soon as the reformulation was successful */
+         if( refexpr != rootexpr )
+            break;
+      }
+   }
+
+   /* no nonlinear handlers implements the reformulation callback -> capture expression manually */
+   if( refexpr == NULL )
+   {
+      refexpr = rootexpr;
+      SCIPcaptureConsExprExpr(refexpr);
+   }
+
+   *reformulated = refexpr;
+   assert(*reformulated != NULL);
 
    return SCIP_OKAY;
 }
@@ -9117,7 +9176,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
+   SCIP_CALL( simplifyConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
 
    return SCIP_OKAY;
 }
@@ -9138,7 +9197,7 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    assert(rootexpr != NULL);
    assert(refrootexpr != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, refrootexpr) );
 
    return SCIP_OKAY;
 }

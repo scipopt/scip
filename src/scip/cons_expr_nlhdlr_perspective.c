@@ -68,7 +68,7 @@ SCIP_RETCODE findUnivariateVar(
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* var;
 
-   SCIPdebugMsg(scip, NULL, "\nExpr handler: %s", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+   SCIPinfoMessage(scip, NULL, "\nExpr handler: %s", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
 
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
    {
@@ -81,14 +81,14 @@ SCIP_RETCODE findUnivariateVar(
          {
             if( SCIPgetConsExprExprPowExponent(child) != 2 )
             {
-               SCIPdebugMsg(scip, NULL, "\nThe sum expression is not quadratic");
+               SCIPinfoMessage(scip, NULL, "\nThe sum expression is not quadratic");
                *expr_var = NULL;
                return SCIP_OKAY;
             }
             var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]);
             if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
-               SCIPdebugMsg(scip, NULL, "\nSquared binary variable, not reformulating");
+               SCIPinfoMessage(scip, NULL, "\nSquared binary variable, not reformulating");
                *expr_var = NULL;
                return SCIP_OKAY;
             }
@@ -107,7 +107,7 @@ SCIP_RETCODE findUnivariateVar(
             {
                if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(*expr_var) != SCIP_VARTYPE_BINARY && *expr_var != var )
                {
-                  SCIPdebugMsg(scip, NULL, "\nFound two different non-binary variables");
+                  SCIPinfoMessage(scip, NULL, "\nFound two different non-binary variables");
                   *expr_var = NULL;
                   return SCIP_OKAY;
                }
@@ -119,7 +119,7 @@ SCIP_RETCODE findUnivariateVar(
          {
             if( strcmp("value", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) != 0 )
             {
-               SCIPdebugMsg(scip, NULL, "\nThe sum expression is not quadratic");
+               SCIPinfoMessage(scip, NULL, "\nThe sum expression is not quadratic");
                *expr_var = NULL;
                return SCIP_OKAY;
             }
@@ -130,9 +130,9 @@ SCIP_RETCODE findUnivariateVar(
    /* TODO: check other constraint handlers, detect other types of nonlinear constraints: pow, exp, etc? */
 
    if( *expr_var != NULL )
-      SCIPdebugMsg(scip, NULL, "\nThe function is quadratic univariate");
+      SCIPinfoMessage(scip, NULL, "\nThe function is quadratic univariate");
    else
-      SCIPdebugMsg(scip, NULL, "\nThe function is not of the proper form");
+      SCIPinfoMessage(scip, NULL, "\nThe function is not of the proper form");
 
    return SCIP_OKAY;
 }
@@ -360,7 +360,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 
          if( SCIPconsGetHdlr(cons) == linconshdlr )
          {
-            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             if( SCIPgetNVarsLinear(scip, cons) == 2 )
             {
                SCIP_VARTYPE vartype1 = SCIPvarGetType(SCIPgetVarsLinear(scip, cons)[0]);
@@ -386,11 +385,11 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          }
       }
 
-      SCIPdebugMsg(scip, NULL, "Var bound constraints found:\n");
+      SCIPinfoMessage(scip, NULL, "\nVar bound constraints found:\n");
       for( c = 0; c < nlhdlrdata->nvbdconss; c++ )
       {
          SCIP_CALL( SCIPprintCons(scip, nlhdlrdata->vbdconss[c], NULL) );
-         SCIPdebugMsg(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "\n");
       }
 
       nlhdlrdata->detected = TRUE;
@@ -426,28 +425,32 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          cpos = 1;
       }
       else
-      {
          continue;
-      }
 
-      bvar = SCIPgetVarsLinear(scip, vbcons)[bpos];
-      if( SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip) )
-         pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / SCIPgetValsLinear(scip, vbcons)[cpos];
-      else if( SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip) )
-         pmin = -SCIPgetValsLinear(scip, vbcons)[bpos] / SCIPgetValsLinear(scip, vbcons)[cpos];
+
+      bvar = SCIPgetVarsLinear(scip, vbcons)[bpos]; /* TODO what if there are varbounds with different bvars? */
+
+      SCIP_Bool leq0 = SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip);
+      SCIP_Bool geq0 = SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip);
+      SCIP_Real ccoef = SCIPgetValsLinear(scip, vbcons)[cpos];
+      if( (leq0 && ccoef > 0) || (geq0 && ccoef < 0) )
+         pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
+      else if( (geq0 && ccoef > 0) || (leq0 && ccoef < 0) )
+         pmin = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
       else /* currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
-         SCIPdebugMsg(scip, NULL, "\nThe varbound constraint of this form can't be handled now");
-      break;
+         SCIPinfoMessage(scip, NULL, "\nThe varbound constraint of this form can't be handled now");
+      if( pmin != -SCIPinfinity(scip) && pmax != SCIPinfinity(scip) )
+         break;
    }
    if( pmin == -SCIPinfinity(scip) || pmax == SCIPinfinity(scip) )
    {
-      SCIPdebugMsg(scip, NULL, "\nThe variable does not have proper on/off bounds");
+      SCIPinfoMessage(scip, NULL, "\nThe variable does not have proper on/off bounds, %f, %f", pmin, pmax);
       *refexpr = expr;
       SCIPcaptureConsExprExpr(*refexpr);
       return SCIP_OKAY;
    }
    else
-      SCIPdebugMsg(scip, NULL, "\nFound a semicont variable, pmin = %f, pmax = %f", pmin, pmax);
+      SCIPinfoMessage(scip, NULL, "\nFound a semicont variable, pmin = %f, pmax = %f", pmin, pmax);
 
    /* find the coefficient of the binary variable, if not found leave it at 0 */
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
@@ -464,7 +467,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
       }
    }
 
-   SCIPdebugMsg(scip, NULL, "\nc = %f", bvarcoef);
+   SCIPinfoMessage(scip, NULL, "\nc = %f", bvarcoef);
 
    /* TODO create expression and store it in refexpr */
 

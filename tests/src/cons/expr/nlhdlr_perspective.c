@@ -28,6 +28,8 @@
 #include "scip/cons_varbound.h"
 #include "scip/scip.h"
 
+#define SCIP_DEBUG
+
 
 /*
  * TEST
@@ -102,18 +104,24 @@ void teardown(void)
 /* test detection callback of nonlinear handler */
 Test(nlhdlrperspective, detect, .init = setup, .fini = teardown)
 {
-   SCIP_CONS* cons;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
    SCIP_CONS* vubcons;
    SCIP_CONS* vlbcons;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* expr1;
+   SCIP_CONSEXPR_EXPR* expr2;
    SCIP_Bool success;
    SCIP_Real vals[2];
    SCIP_VAR* vars[2];
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x> + <z>", NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-   SCIP_CALL( SCIPaddCons(scip, cons)  );
+   /* create expression constraints */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x> + <z>", NULL, &expr1) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, (char*)"nlin1", expr1, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPaddCons(scip, cons1)  );
+
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<y>^2 + exp(<y>) + <x>^3 + <x>*<w> + <y> + <x> + exp(<x>) + 2", NULL, &expr2) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, (char*)"nlin2", expr2, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPaddCons(scip, cons2)  );
 
    /* create varbound constraint */
    vals[0] = 2;
@@ -134,8 +142,10 @@ Test(nlhdlrperspective, detect, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* release */
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseCons(scip, &vubcons) );
    SCIP_CALL( SCIPreleaseCons(scip, &vlbcons) );
 }
