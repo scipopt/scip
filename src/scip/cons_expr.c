@@ -176,6 +176,7 @@ struct SCIP_ConshdlrData
    /* other plugins */
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
    SCIP_HEUR*               subnlpheur;      /**< a pointer to the subnlp heuristic, if available */
+   SCIP_HEUR*               trysolheur;      /**< a pointer to the trysol heuristic, if available */
 
    /* expression iterator */
    int                      nactiveiter;     /**< number of currently active iterators */
@@ -5332,8 +5333,9 @@ SCIP_DECL_CONSINIT(consInitExpr)
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
-   /* get subnlp heuristic for later use */
+   /* get heuristics for later use */
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
+   conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
    /* reset statistics in expression handlers */
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
@@ -5404,6 +5406,7 @@ SCIP_DECL_CONSEXIT(consExitExpr)
    }
 
    conshdlrdata->subnlpheur = NULL;
+   conshdlrdata->trysolheur = NULL;
 
    return SCIP_OKAY;
 }
