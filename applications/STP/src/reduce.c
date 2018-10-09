@@ -30,7 +30,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 #define REDUCE_C
 #define STP_RED_SDSPBOUND    200         /**< visited edges bound for SDSP test  */
-#define STP_RED_SDSPBOUND2   600         /**< visited edges bound for SDSP test  */
+#define STP_RED_SDSPBOUND2   2000        /**< visited edges bound for SDSP test  */
 #define STP_RED_BD3BOUND     500         /**< visited edges bound for BD3 test  */
 #define STP_RED_EXTENSIVE FALSE
 #define STP_RED_MWTERMBOUND 400
@@ -1312,12 +1312,18 @@ SCIP_RETCODE redLoopPc(
 
       if( sdw || extensive )
       {
+         int sdwnelims2 = 0;
+
          SCIP_CALL( reduce_sdWalk(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+         SCIPdebugMessage("SDw: %d \n", sdwnelims);
+
+         SCIP_CALL(reduce_sdWalk2(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+         SCIPdebugMessage("SDw2: %d \n", sdwnelims2);
+         sdwnelims += sdwnelims2;
 
          if( sdwnelims <= reductbound )
             sdw = FALSE;
 
-         SCIPdebugMessage("SDw: %d \n", sdwnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1336,7 +1342,7 @@ SCIP_RETCODE redLoopPc(
          else
          {
             SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-            SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL) );
+            SCIP_CALL( reduce_sdWalk(scip, ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
          }
 
          SCIPdebugMessage("bd3: %d \n", bd3nelims);
@@ -1402,7 +1408,7 @@ SCIP_RETCODE redLoopPc(
             break;
       }
 
-      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims <= reductbound )
+      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims <= reductbound )
          rerun = FALSE;
 
       if( !rerun && advancedrun && g->terms > 2 )

@@ -976,6 +976,7 @@ int reduceWithNodeReplaceBounds(
    SCIP_Real cutoffsrev[STP_DABD_MAXDNEDGES];
    int nfixed = 0;
    const int nnodes = graph->knots;
+   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
 
    for( int k = 0; k < nnodes; k++ )
       nodetouched[k] = 0;
@@ -985,6 +986,11 @@ int reduceWithNodeReplaceBounds(
    {
       for( int k = 0; k < nnodes; k++ )
       {
+         if( rpc )
+         {
+            int todo; // check for fixed term
+         }
+
          if( degree != graph->grad[k] || Is_gterm(graph->term[k]) )
             continue;
 
