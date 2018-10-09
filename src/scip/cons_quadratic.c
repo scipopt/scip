@@ -11395,8 +11395,8 @@ void consdataFindUnlockedLinearVar(
    )
 {
    int i;
-   int poslock;
-   int neglock;
+   int downlock;
+   int uplock;
 
    consdata->linvar_maydecrease = -1;
    consdata->linvar_mayincrease = -1;
@@ -11408,16 +11408,16 @@ void consdataFindUnlockedLinearVar(
       assert(consdata->lincoefs[i] != 0.0);
       if( consdata->lincoefs[i] > 0.0 )
       {
-         poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;  /* lhs <= x -> downlock on x */
+         uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;    /* x <= rhs -> uplock on x */
       }
       else
       {
-         poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;  /* -x <= rhs -> downlock on x */
+         uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;    /* lhs <= -x -> uplock on x */
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - downlock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -11426,7 +11426,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+      if( SCIPvarGetNLocksUpType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - uplock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
