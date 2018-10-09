@@ -63,7 +63,7 @@ Fixed bugs
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
-- fixed recognition of variable with only one lock in cons_bivariate and cons_quadratic
+- fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
 
 Miscellaneous
 -------------
