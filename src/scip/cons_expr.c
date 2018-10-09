@@ -4892,7 +4892,7 @@ SCIP_RETCODE enforceConstraints(
    return SCIP_OKAY;
 }
 
-/** checks for a linear variable that can be increase or decreased without harming feasibility */
+/** checks for a linear variable that can be increased or decreased without harming feasibility */
 static
 void consdataFindUnlockedLinearVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4931,7 +4931,7 @@ void consdataFindUnlockedLinearVar(
 
          if( coef > 0.0 )
          {
-            poslock= !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
             neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
          else
@@ -4942,7 +4942,7 @@ void consdataFindUnlockedLinearVar(
 
          if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
          {
-            /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
+            /* for a*x + f(y) \in [lhs, rhs], we can decrease x without harming other constraints */
             /* if we have already one candidate, then take the one where the loss in the objective function is less */
             if( (consdata->linvardecr == NULL) ||
                (SCIPvarGetObj(consdata->linvardecr) / consdata->linvardecrcoef > SCIPvarGetObj(var) / coef) )
@@ -4954,7 +4954,7 @@ void consdataFindUnlockedLinearVar(
 
          if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
          {
-            /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
+            /* for a*x + f(y) \in [lhs, rhs], we can increase x without harm */
             /* if we have already one candidate, then take the one where the loss in the objective function is less */
             if( (consdata->linvarincr == NULL) ||
                (SCIPvarGetObj(consdata->linvarincr) / consdata->linvarincrcoef > SCIPvarGetObj(var) / coef) )
@@ -5066,7 +5066,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n",
-               SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+               SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint !e613*/
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->linvarincrcoef * delta;
@@ -10318,7 +10318,7 @@ SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   /* check for a linear variable that can be increased or decreased without harming feasibility */
    consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
 
    *var = consdata->linvardecr;
@@ -10346,7 +10346,7 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   /* check for a linear variable that can be increased or decreased without harming feasibility */
    consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
 
    *var = consdata->linvarincr;
