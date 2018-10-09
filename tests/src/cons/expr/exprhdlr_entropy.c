@@ -299,13 +299,15 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR* expr1;
    SCIP_CONSEXPR_EXPR* expr2;
    SCIP_CONSEXPR_EXPR* expr3;
+   SCIP_Bool changed = FALSE;
 
    /* expr1 = <5.0>, expr2 = entropy(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3, &changed));
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
+   cr_expect(changed);
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), -5.0 * log(5.0)));
 
@@ -316,8 +318,10 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of x and log(x) is transformed to sum of entropy expression
     * expr1 is buffer for simplification and expr2 is used to store children
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1));
+   changed = FALSE;
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1, &changed));
 
+   cr_expect(changed);
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPgetConsExprExprHdlrSum(conshdlr));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
    cr_expect(SCIPgetConsExprExprSumCoefs(expr1)[0] == -1.0);
@@ -333,8 +337,10 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    /* test if product of -x and log(x) is transformed to entropy expression
     * expr1 is buffer for simplification
     */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1));
+   changed = FALSE;
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1, &changed));
 
+   cr_expect(changed);
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr1)[0] == xexpr);

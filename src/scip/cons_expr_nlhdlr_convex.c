@@ -136,6 +136,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
+
+   /* we currently cannot contribute in presolve */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    curvature = SCIPgetConsExprExprCurvature(expr);
 
    /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */

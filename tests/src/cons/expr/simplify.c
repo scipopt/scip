@@ -108,6 +108,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    SCIP_CONSEXPR_EXPR* simplified_again;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real values[2];
+   SCIP_Bool changed;
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
@@ -123,7 +124,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    values[1] = SCIPgetConsExprExprValue(expr);
 
    /* simplify */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
 
    /* check type of simplified expression */
    cr_expect_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(simplified)), type);
@@ -136,7 +137,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    cr_expect_float_eq(values[1], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip));
 
    /* test that the same expression is obtained when simplifying again */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again, &changed) );
    cr_expect_eq(SCIPcompareConsExprExprs(simplified, simplified_again), 0);
 
    /* release expressions */

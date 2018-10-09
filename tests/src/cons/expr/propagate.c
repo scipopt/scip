@@ -96,13 +96,14 @@ Test(propagate, sum)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -2.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
    SCIP_CALL( SCIPchgVarLb(scip, y, -3.0) ); SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
 
    /* create cons 0.5 <= 2x -y + 0.5 <= 1.5*/
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2*<t_x>[C]-<t_y>[C] + 0.5", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
 
@@ -137,6 +138,7 @@ Test(propagate, product)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, 1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
@@ -144,7 +146,7 @@ Test(propagate, product)
 
    /* create cons 0.0 <= 0.5x^2/y <= 1 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "0.5*<t_x>^2/<t_y>", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
 
@@ -189,6 +191,7 @@ Test(propagate, productwithzero)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
@@ -197,7 +200,7 @@ Test(propagate, productwithzero)
 
    /* create cons 1 <= x*y*z <= 8 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>*<t_y>*<t_z>", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    cr_assert_eq(expr->nchildren, 3);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 8.0) );
@@ -239,13 +242,14 @@ Test(propagate, abs)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, -3.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 4.0) );
 
    /* create cons 1.0 <= |x| <= 2.5 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "abs(<t_x>)", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
 
@@ -277,13 +281,14 @@ Test(propagate, exp)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
 
    /* create cons -1 <= exp(x) <= 2 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "exp(<t_x>[C])", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
 
@@ -317,13 +322,14 @@ Test(propagate, log)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 7.0) );
 
    /* create cons -1  <= log(x) <= 1 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "log(<t_x>[C])", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
 
@@ -357,13 +363,14 @@ Test(propagate, sin)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.5) );
 
    /* create cons -1 <= sin(x) <= 0.5 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "sin(<t_x>[C])", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
 
@@ -397,6 +404,7 @@ Test(propagate, entropy)
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    int ntightenings;
+   SCIP_Bool changed;
 
    /*
     * first test
@@ -408,7 +416,7 @@ Test(propagate, entropy)
 
    /* create cons -1 <= entropy(x) <= 0.09482446409 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "entropy(<t_x>[C])", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, -0.9 * log(0.9)) );
 
@@ -443,7 +451,7 @@ Test(propagate, entropy)
 
    /* create cons 0.23025850929 <= entropy(y) <= 1/e */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "entropy(<t_y>[C])", NULL, &originalexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, originalexpr, &expr, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -0.1 * log(0.1), exp(-1)) );
 
