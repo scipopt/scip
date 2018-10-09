@@ -182,6 +182,7 @@ SCIP_RETCODE readBounds(
          ub = -SCIPinfinity(scip);
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(ubstring, "%lf", &ub);
          if( nread != 1 )
          {
