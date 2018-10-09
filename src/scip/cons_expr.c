@@ -10299,6 +10299,63 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
    return SCIP_OKAY;
 }
 
+/** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
+SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Real*            coef                /**< pointer to store the coefficient */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+   assert(coef != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
+
+   *var = consdata->linvardecr;
+   *coef = consdata->linvardecrcoef;
+
+   return SCIP_OKAY;
+}
+
+/** returns a variable that appears linearly that may be increased without making any other constraint infeasible */
+SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Real*            coef                /**< pointer to store the coefficient */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+   assert(coef != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check for a linear variable that can be increase or decreased without harming feasibility */
+   consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
+
+   *var = consdata->linvarincr;
+   *coef = consdata->linvarincrcoef;
+
+   return SCIP_OKAY;
+}
+
+
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP*                       scip,         /**< SCIP data structure */
