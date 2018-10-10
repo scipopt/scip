@@ -68,7 +68,7 @@
 #define USEOFFSETVAR TRUE
 
 #define SYM_CONS_LIMIT 20000         /**< maximum number of symmetry inequalities for MWCSP and PCSPG */
-#define CYC_CONS_LIMIT 15000         /**< maximum number of symmetry inequalities for PCSPG */
+#define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
 
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000

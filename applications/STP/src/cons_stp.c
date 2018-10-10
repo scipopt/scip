@@ -97,7 +97,7 @@
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 #define DA_MAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
 #define DA_MAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
-#define DA_EPS (5.0 * 1e-7)
+#define DA_EPS (5e-7)
 
 /* *
 #define FLOW_FACTOR     100000
@@ -404,7 +404,6 @@ SCIP_RETCODE sep_flow(
    SCIP_Real sum;
    int    i;
    int    k;
-   int    j;
    int    ind;
    int    layer;
    int    count = 0;
@@ -485,16 +484,20 @@ SCIP_RETCODE sep_flow(
             continue;
 
          /* the value of each outgoing edge needs to be smaller than the sum of the ingoing edges */
-         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
+         for( int ijedge = g->outbeg[i]; ijedge != EAT_LAST; ijedge = g->oeat[ijedge] )
          {
-            ind = layer * g->edges + j;
-            sum = (xval != NULL) ? -xval[ind] : -1.0;
+            const int j = g->head[ijedge];
 
-            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-            {
-               ind  = layer * g->edges + k;
-               sum += (xval != NULL) ? xval[ind] : 0.0;
-            }
+            assert(layer == 0);
+            assert(xval != NULL);
+
+            ind = ijedge;
+            sum = -xval[ind];
+
+            for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+               if( g->tail[e] != j )
+                  sum += xval[e];
+
             if( SCIPisFeasNegative(scip, sum) )
             {
                SCIP_Bool infeasible;
@@ -504,19 +507,17 @@ SCIP_RETCODE sep_flow(
 
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-               ind = layer * g->edges + j;
+               ind = ijedge;
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
 
-               for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
+               for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
                {
-                  ind  = layer * g->edges + k;
-
-                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
+                  if( g->tail[e] != j )
+                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[e], 1.0) );
                }
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
@@ -820,7 +821,7 @@ SCIP_RETCODE sep_2cut(
             {
                /* push as much as possible out of perpetually dormant nodes (possibly to other dormant nodes) */
                assert(w[head] == 0);
-#if 1 /* for debug */
+#ifndef NDEBUG
                residual[e] = 0;
 #endif
                excess[head] += capa[e];

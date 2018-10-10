@@ -840,7 +840,16 @@ SCIP_Real graph_sdWalks(
 
          visitlist[(*nvisits)++] = m;
          visited[m] = TRUE;
-         correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
+
+         if( Is_term(g->term[m]) )
+         {
+            const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
+            correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
+         }
+         else
+         {
+            correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
+         }
 
          if( ++nchecks > edgelimit )
             break;
@@ -1037,6 +1046,104 @@ SCIP_Real graph_sdWalksExt(
    return dist[end];
 }
 
+
+/** modified Dijkstra along walks for PcMw */
+SCIP_Bool graph_sdWalksConnected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const STP_Bool*       endpoint,           /**< stores whether search should be ended at vertex */
+   int                   start,              /**< start vertex */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  heap,               /**< array representing a heap */
+   int*                  state,              /**< array to indicate whether a node has been scanned */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+   )
+{
+   int count;
+   int nchecks;
+   const SCIP_Real prize = g->prize[start];
+
+   assert(g != NULL);
+   assert(heap != NULL);
+   assert(dist != NULL);
+   assert(cost != NULL);
+   assert(visitlist != NULL);
+   assert(nvisits != NULL);
+   assert(visited != NULL);
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+   assert(Is_term(g->term[start]));
+   assert(g->grad[start] > 0);
+   assert(g->mark[start]);
+
+   *nvisits = 0;
+   nchecks = 0;
+   count = 1;
+   heap[count] = start;
+   state[start] = count;
+   dist[start] = 0.0;
+   visitlist[(*nvisits)++] = start;
+   g->mark[start] = FALSE;
+
+   while( count > 0 && nchecks <= edgelimit )
+   {
+      int todo; // try extended
+      /* get nearest labelled node */
+      const int k = nearestX(heap, state, &count, dist);
+      assert(k != start);
+      assert(SCIPisLE(scip, dist[k], prize));
+
+      if( Is_term(g->term[k]) )
+         state[k] = CONNECT;
+      else
+         state[k] = UNKNOWN;
+
+      /* correct incident nodes */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( (state[m] != CONNECT) && g->mark[m] )
+         {
+            const SCIP_Real distnew = dist[k] + cost[e];
+
+            if( (distnew <= prize) && (distnew < dist[m]) )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( endpoint[m] )
+               {
+                  g->mark[start] = TRUE;
+                  return TRUE;
+               }
+
+               if( Is_term(g->term[m]) )
+               {
+                  const SCIP_Real newcost = distnew - g->prize[m];
+                  correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
+               }
+               else
+               {
+                  correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
+               }
+            }
+         }
+         nchecks++;
+      }
+   }
+
+   g->mark[start] = TRUE;
+   return FALSE;
+}
 
 /** limited Dijkstra for PCSTP, taking terminals into account */
 void graph_path_PcMwSd(
