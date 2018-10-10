@@ -1094,7 +1094,6 @@ SCIP_Bool graph_sdWalksConnected(
       int todo; // try extended
       /* get nearest labelled node */
       const int k = nearestX(heap, state, &count, dist);
-      assert(k != start);
       assert(SCIPisLE(scip, dist[k], prize));
 
       if( Is_term(g->term[k]) )
@@ -1120,7 +1119,7 @@ SCIP_Bool graph_sdWalksConnected(
                }
 
                /* finished already? */
-               if( endpoint[m] )
+               if( endpoint != NULL && endpoint[m] )
                {
                   g->mark[start] = TRUE;
                   return TRUE;

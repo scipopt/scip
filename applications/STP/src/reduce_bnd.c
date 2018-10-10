@@ -1112,7 +1112,7 @@ int reduceWithEdgeFixingBounds(
 
 /** find roots for PC and MW during DA reduction */
 static
-void findDaRoots(
+SCIP_RETCODE findDaRoots(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const GRAPH*          transgraph,         /**< graph data structure */
@@ -1229,86 +1229,157 @@ void findDaRoots(
       }
    }
 
+   printf("1. new roots in rerun %d all roots: %d, nodes: %d edges: %d terms: %d \n", nroots - *rootscount,
+         nroots, nnodes, graph->edges, graph->terms);
+
    /* could more roots be found? */
    if( nroots > *rootscount && graph->terms > 2 )
    {
       /*
-       * try to find additional roots by shortest path computations
+       * try to find additional roots by connecting walks
        */
 
-      SCIP_Real maxprize = 0.0;
-      int qstart = *rootscount;
+      SCIP_Real* dist;
+      STP_Bool* visited;
+      int nvisits;
+      SCIP_Bool rerunwalks = TRUE;
+
+      SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
+      SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
 
       for( int i = 0; i < nnodes; i++ )
       {
+         visited[i] = FALSE;
          state[i] = UNKNOWN;
-         vnoi[i].dist = FARAWAY;
-         vnoi[i].edge = UNKNOWN;
-
-         if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
-            maxprize = graph->prize[i];
+         dist[i] = FARAWAY;
       }
-
-      for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
+      for( int rounds = 0; rounds < 3 && rerunwalks; rounds++ )
       {
-         const int oldnroots = nroots;
+         rerunwalks = FALSE;
 
-         SCIPdebugMessage("root-finding round %d \n", rounds);
-
-         for( int i = qstart; i < nroots; i++ )
+         for( int i = 0; i < nnodes; i++ )
          {
-            int nlabeled;
-            const int term = roots[i];
-            assert(nodearrchar[term]);
-            assert(Is_term(graph->term[term]));
-            assert(SCIPisPositive(scip, graph->prize[term]));
+            SCIP_Bool connected;
+            if( !Is_term(graph->term[i]) || nodearrchar[i] || graph_pc_knotIsFixedTerm(graph, i) )
+               continue;
 
-            /* look for terminals in neighborhood of term */
-            graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
+            assert(graph->path_heap != NULL);
+            connected = graph_sdWalksConnected(scip, graph, graph->cost, nodearrchar, i, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
+                  visited);
 
-            /* check labelled nodes */
-            for( int k = 0; k < nlabeled; k++ )
+            if( connected )
             {
-               const int l = vbase[k];
+               assert(nroots < graph->terms);
 
-               assert(graph->mark[l]);
-               assert(state[l] != UNKNOWN);
+               roots[nroots++] = i;
+               nodearrchar[i] = TRUE;
+               rerunwalks = TRUE;
 
-               if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
-               {
-                  roots[nroots++] = l;
-                  nodearrchar[l] = TRUE;
-
-                  SCIPdebugMessage("added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
-               }
-
-               /* restore data structures */
-               state[l] = UNKNOWN;
-               vnoi[l].dist = FARAWAY;
-               vnoi[l].edge = UNKNOWN;
+               SCIPdebugMessage("WALK-CONNECT: added new root %d prize: %f  \n", i, graph->prize[i]);
             }
-         }
+
+            for( int k = 0; k < nvisits; k++ )
+            {
+               const int node = pathedge[k];
+               visited[node] = FALSE;
+               dist[node] = FARAWAY;
+               state[node] = UNKNOWN;
+            }
+
 #ifndef NDEBUG
-         for( int k = 0; k < nnodes; k++ )
-         {
-            assert(state[k] == UNKNOWN);
-            assert(vnoi[k].dist == FARAWAY);
-            assert(vnoi[k].edge == UNKNOWN);
+            for( int k = 0; k < nnodes; k++ )
+            {
+               assert(state[k] == UNKNOWN);
+               assert(visited[k] == FALSE);
+               assert(dist[k] == FARAWAY);
+            }
+#endif
          }
+      } /* for rounds < 3 */
+      SCIPfreeBufferArray(scip, &visited);
+      SCIPfreeBufferArray(scip, &dist);
+
+      {
+         int deleteme;
+
+         SCIP_Real maxprize = 0.0; // !!
+         int qstart = *rootscount;
+
+         for( int i = 0; i < nnodes; i++ )
+         {
+            state[i] = UNKNOWN;
+            vnoi[i].dist = FARAWAY;
+            vnoi[i].edge = UNKNOWN;
+
+            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
+               maxprize = graph->prize[i];
+         }
+
+         for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
+         {
+            const int oldnroots = nroots;
+
+            SCIPdebugMessage("root-finding round %d \n", rounds);
+
+            for( int i = qstart; i < nroots; i++ )
+            {
+               int nlabeled;
+               const int term = roots[i];
+               assert(nodearrchar[term]);
+               assert(Is_term(graph->term[term]));
+               assert(SCIPisPositive(scip, graph->prize[term]));
+
+               /* look for terminals in neighborhood of term */
+               graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
+
+               /* check labelled nodes */
+               for( int k = 0; k < nlabeled; k++ )
+               {
+                  const int l = vbase[k];
+
+                  assert(graph->mark[l]);
+                  assert(state[l] != UNKNOWN);
+
+                  if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
+                  {
+                     assert(nroots < graph->terms);
+
+                     roots[nroots++] = l;
+                     nodearrchar[l] = TRUE;
+                     return SCIP_ERROR;
+                     //printf("SP: added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
+                  }
+
+                  /* restore data structures */
+                  state[l] = UNKNOWN;
+                  vnoi[l].dist = FARAWAY;
+                  vnoi[l].edge = UNKNOWN;
+               }
+            }
+#ifndef NDEBUG
+            for( int k = 0; k < nnodes; k++ )
+            {
+               assert(state[k] == UNKNOWN);
+               assert(vnoi[k].dist == FARAWAY);
+               assert(vnoi[k].edge == UNKNOWN);
+            }
 #endif
 
-         qstart = oldnroots;
-      }
+            qstart = oldnroots;
+         }
+      } // deleteme
       SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
-   }
 
-   if( rerun )
-      SCIPdebugMessage("new roots in rerun %d \n", nroots - *rootscount);
+   } /* look for additional roots */
+
+   printf("new roots in rerun %d all roots: %d, nodes: %d  \n", nroots - *rootscount, nroots, nnodes);
 
    *rootscount = nroots;
 
    if( graphextended )
       graph_pc_2trans(graph);
+
+   return SCIP_OKAY;
 }
 
 
@@ -2439,11 +2510,10 @@ SCIP_RETCODE reduce_deleteConflictEdges(
    int* edgemark;
    const int nedges = g->edges;
    const int nancestors = MAX(g->edges, g->orgedges) / 2;
-   const SCIP_Bool pc = graph_pc_isPcMw(g);
 
    assert(scip != NULL && g != NULL);
    assert(g->ancestors != NULL);
-   assert(!pc || !g->extended);
+   assert(!graph_pc_isPcMw(g) || !g->extended);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, nancestors) );
 
@@ -2467,7 +2537,7 @@ SCIP_RETCODE reduce_deleteConflictEdges(
 
          if( conflict )
          {
-            assert(!pc || (!Is_pterm(g->term[g->head[e]]) && !Is_pterm(g->term[g->tail[e]])));
+            assert(!graph_pc_isPcMw(g) || (!Is_pterm(g->term[g->head[e]]) && !Is_pterm(g->term[g->tail[e]])));
             graph_edge_del(scip, g, e, TRUE);
          }
       }
@@ -4028,8 +4098,8 @@ SCIP_RETCODE reduce_daPcMw(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
 
-      findDaRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, prizesum, FALSE, FALSE,
-            vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots);
+      SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, prizesum, FALSE, FALSE,
+            vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots));
 
       /* should prize of terminals be changed? */
       if( nroots > 0 && markroots  )
@@ -4136,8 +4206,8 @@ SCIP_RETCODE reduce_daPcMw(
       if( markroots )
       {
          const int oldnroots = nroots;
-         findDaRoots(scip, graph, transgraph, cost, cost, lpobjval, lpobjval, upperbound, prizesum, TRUE, TRUE,
-               vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots);
+         SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, cost, lpobjval, lpobjval, upperbound, prizesum, TRUE, TRUE,
+               vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots) );
 
          /* should prize of terminals be changed? */
          if( nroots > oldnroots  )
