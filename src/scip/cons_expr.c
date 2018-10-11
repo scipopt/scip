@@ -4710,9 +4710,6 @@ SCIP_RETCODE separatePointExpr(
          SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
             expr->enfos[e]->auxvalue, TRUE, mincutviolation, *separated, &hdlrresult) );
 
-         /* if overestimation was successful, then no more need for underestimation
-          * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
-          */
          if( hdlrresult == SCIP_CUTOFF )
          {
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
@@ -4723,8 +4720,8 @@ SCIP_RETCODE separatePointExpr(
          if( hdlrresult == SCIP_SEPARATED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
-            underestimate = FALSE;
             *separated = TRUE;
+            /* TODO or should we always just stop here? */
          }
       }
 
