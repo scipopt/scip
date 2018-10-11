@@ -674,6 +674,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
+ * - isroot indicates whether expression defines a constraint, that is, is the root of an expression
  * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
  * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
  * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
@@ -685,6 +686,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool isroot, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
    SCIP_Bool* enforcedbelow, \
    SCIP_Bool* enforcedabove, \

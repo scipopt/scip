@@ -1773,7 +1773,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenforcemethods = enforcemethods;
       nlhdlrenforcedbelow = enforcedbelow;
       nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, isroot, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
       assert(nlhdlrenforcemethods >= enforcemethods);
@@ -10751,7 +10751,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    assert(success != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, isroot, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
