@@ -674,6 +674,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
+ * - isroot indicates whether expression defines a constraint, that is, is the root of an expression
  * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
  * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
  * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
@@ -685,6 +686,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool isroot, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
    SCIP_Bool* enforcedbelow, \
    SCIP_Bool* enforcedabove, \
@@ -816,7 +818,21 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler separation callback
  *
- * The method tries to separate a given point by means of the nonlinear handler.
+ * The method tries to find an affine hyperplane (a cut) that separates a given point
+ * from the set defined by either
+ *   expr - auxvar <= 0 (if !overestimate)
+ * or
+ *   expr - auxvar >= 0 (if  overestimate),
+ * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ *
+ * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
+ * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
+ *
+ * Note, that the NLHDLR may also choose to separate for a relaxation of the mentioned sets,
+ * e.g., expr <= upperbound(auxvar)  or  expr >= lowerbound(auxvar).
+ * This is especially useful in situations where expr is the root expression of a constraint
+ * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
+ * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
  *
  * input:
  *  - scip : SCIP main data structure

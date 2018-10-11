@@ -1710,6 +1710,7 @@ SCIP_RETCODE detectNlhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
+   SCIP_Bool             isroot,             /**< expression is a root expression, that is, it defines a constraint */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
    SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
@@ -1751,8 +1752,8 @@ SCIP_RETCODE detectNlhdlr(
    enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
    enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
 
-   SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p (%s); start with below %d above %d\n",
-      (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
+   SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); start with below %d above %d\n",
+      isroot ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
 
    for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
@@ -1772,7 +1773,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenforcemethods = enforcemethods;
       nlhdlrenforcedbelow = enforcedbelow;
       nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, isroot, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
       assert(nlhdlrenforcemethods >= enforcemethods);
@@ -1941,49 +1942,10 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* create auxiliary variable for root expression */
+         /* ensure auxiliary variable for root expression exists (not always necessary, but it simplifies things) */
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
          assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
-      }
 
-      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
-      expr = SCIPexpriteratorGetCurrent(it);
-      while( !SCIPexpriteratorIsEnd(it) )
-      {
-         if( expr->nenfos > 0 )
-         {
-            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
-             * then also the subtree has been investigated already and we can stop iterating further down
-             */
-            expr = SCIPexpriteratorSkipDFS(it);
-            continue;
-         }
-
-         /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
-          *   an auxvar equals (or approximates) to value of this expression
-          *   thus, we need to find nlhdlrs
-          * during presolve: we do detect for all expressions for now, expecting the handler to only become
-          *   active if they want to contribute in propagation
-          */
-         if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-         {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
-
-            if( *infeasible )
-               break;
-         }
-
-         expr = SCIPexpriteratorGetNext(it);
-      }
-
-      if( *infeasible )
-      {
-         SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
-         break;
-      }
-
-      if( consdata->expr->auxvar != NULL )
-      {
          /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
          SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, FALSE, infeasible, NULL) );
          if( *infeasible )
@@ -2000,6 +1962,51 @@ SCIP_RETCODE detectNlhdlrs(
                consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
             break;
          }
+      }
+
+      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
+      expr = SCIPexpriteratorGetCurrent(it);
+      while( !SCIPexpriteratorIsEnd(it) )
+      {
+         if( expr->nenfos > 0 )
+         {
+            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+             * then also the subtree has been investigated already and we can stop iterating further down
+             * HOWEVER: most likely we have been running DETECT with isroot=FALSE, which may interest less nlhdlrs
+             * thus, if expr is the root expression, then rerun DETECT
+             */
+            if( expr == consdata->expr )
+            {
+               SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+            }
+            else
+            {
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+         }
+
+         /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
+          *   an auxvar equals (or approximates) to value of this expression or we are at the root expression (expr==consdata->expr)
+          *   thus, we need to find nlhdlrs
+          * during presolve: we do detect for all expressions for now, expecting the handler to only become
+          *   active if they want to contribute in propagation
+          */
+         if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+         {
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+
+            if( *infeasible )
+               break;
+         }
+
+         expr = SCIPexpriteratorGetNext(it);
+      }
+
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
+         break;
       }
    }
 
@@ -10749,7 +10756,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    assert(success != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, isroot, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
