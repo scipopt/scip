@@ -4558,8 +4558,8 @@ SCIP_RETCODE separatePointExprNlhdlr(
    /* call separation callback of the nlhdlr */
    SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, &ncuts) );
 
-   /* if it was not running (e.g., because it was not available), then try with estimator callback */
-   if( *result != SCIP_DIDNOTRUN )
+   /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
+   if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
       return SCIP_OKAY;
 
    /* now call the estimator callback of the nlhdlr */
