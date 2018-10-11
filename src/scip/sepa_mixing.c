@@ -59,7 +59,7 @@ struct SCIP_SepaData
 };
 
 /*
- * Local methods
+ * local methods
  */
 
 /** adds the given cut */
@@ -158,7 +158,6 @@ SCIP_RETCODE separateCuts(
    int i;
    int k;
 
-   
    *cutoff = FALSE;
    *ncuts = 0;
    vars = SCIPgetVars(scip);
@@ -175,7 +174,6 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &vubmixsigns, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
-   
 
    for( i=firstnonbinvars; i<nvars; i++ )
    {
@@ -184,7 +182,6 @@ SCIP_RETCODE separateCuts(
       cutnnz = 0;
       cutrhs = 0;
       vlbmixsize = 0;
-      
       var=vars[i];
 //      if( strchr( SCIPvarGetName(var), 'I') != NULL )
 //         continue;
@@ -219,7 +216,7 @@ SCIP_RETCODE separateCuts(
       maxabscoef = 0.0;
       maxabsind = -1;
       lb = SCIPvarGetLbGlobal(var);
-      if( lb < SCIPvarGetLbLocal(var) ) 
+      if( lb < SCIPvarGetLbLocal(var) )
       {
          /* This is a lcoal cut */
          islocallb = TRUE;
@@ -262,7 +259,7 @@ SCIP_RETCODE separateCuts(
                /* this implied bounds constraint is redundant */
                continue;
             }
-            if( vlbcoefs[j] > 0 ) 
+            if( vlbcoefs[j] > 0 )
             {
                coef = maxactivity - lb;
                constant = 0;
@@ -289,9 +286,7 @@ SCIP_RETCODE separateCuts(
       }
       if( vlbmixsize == 0 )
          goto VUB;
-      
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds,  vlbmixsigns, vlbmixsize);
-      
       /* the nonbinary variables */
       activity = -(SCIPvarGetLPSol(var) - lb);
       cutcoefs[cutnnz] = -1;
@@ -349,7 +344,7 @@ VUB:
       maxabscoef = 0.0;
       maxabsind = -1;
       ub = SCIPvarGetUbGlobal(var);
-      if( ub > SCIPvarGetUbLocal(var) ) 
+      if( ub > SCIPvarGetUbLocal(var) )
       {
          /* This is a lcoal cut */
          islocalub = TRUE;
@@ -388,7 +383,7 @@ VUB:
                /* this implied bounds constraint is redundant */
                continue;
             }
-            if( vubcoefs[j] > 0 ) 
+            if( vubcoefs[j] > 0 )
             {
                coef = ub - minactivity;
                constant = minactivity;
@@ -415,9 +410,7 @@ VUB:
       }
       if( vubmixsize == 0 )
          goto CONFLICT;
-      
       SCIPsortDownRealRealIntInt(vubmixsols, vubmixcoefs, vubmixinds,  vubmixsigns, vubmixsize);
-      
       /* the nonbinary variables */
       activity = SCIPvarGetLPSol(var) - ub;
       cutcoefs[cutnnz] = 1;
@@ -463,7 +456,7 @@ CONFLICT:
 
       if( (vlbmixsize == 0) || (vubmixsize == 0) )
          continue;
-      cutislocal = islocallb || islocalub; 
+      cutislocal = islocallb || islocalub;
       for( j=0; j<vlbmixsize; j++ )
       {
          SCIP_Real solval;
