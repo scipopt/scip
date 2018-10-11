@@ -143,6 +143,7 @@ Test(upgradexor, intvariables2, .description = "test upgrading method of XOR con
    SCIP_CONS* cons;
    SCIP_CONS* xorcons;
    SCIP_VAR* xvars_t[MAXNVARS];
+   SCIP_VAR* ivar_t;
 
    assert( MAXNVARS >= 3 );
 
@@ -171,8 +172,10 @@ Test(upgradexor, intvariables2, .description = "test upgrading method of XOR con
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[0], &xvars_t[0]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[1], &xvars_t[1]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[2], &xvars_t[2]) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, ivar, &ivar_t) );
 
    cr_assert( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
+   cr_assert( SCIPvarGetAggrVar(ivar_t) == SCIPgetIntVarXor(scip, xorcons) ); /* the integer variable should be aggregated */
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &xorcons) );
@@ -183,6 +186,7 @@ Test(upgradexor, intvariables3, .description = "test upgrading method of XOR con
    SCIP_CONS* cons;
    SCIP_CONS* xorcons;
    SCIP_VAR* xvars_t[MAXNVARS];
+   SCIP_VAR* ivar_t;
 
    assert( MAXNVARS >= 3 );
 
@@ -211,8 +215,10 @@ Test(upgradexor, intvariables3, .description = "test upgrading method of XOR con
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[0], &xvars_t[0]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[1], &xvars_t[1]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[2], &xvars_t[2]) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, ivar, &ivar_t) );
 
    cr_assert( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
+   cr_assert( SCIPgetIntVarXor(scip, xorcons) == ivar_t ); /* the integer variable should remain unchanged */
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &xorcons) );
