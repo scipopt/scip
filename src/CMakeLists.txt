@@ -70,6 +70,7 @@ set(scipsources
     scip/cons_expr_nlhdlr_convex.c
     scip/cons_expr_nlhdlr_default.c
     scip/cons_expr_nlhdlr_quadratic.c
+    scip/cons_expr_nlhdlr_soc.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
