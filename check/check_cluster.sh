@@ -58,6 +58,7 @@ OPTCOMMAND=${25}
 SETCUTOFF=${26}
 VISUALIZE=${27}
 CLUSTERNODES=${28}
+SLURMACCOUNT=${29}
 
 # check if all variables defined (by checking the last one)
 if test -z $CLUSTERNODES
@@ -207,11 +208,17 @@ do
 		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores -v -v "
-		    if test "$CLUSTERNODES" = "all"
+
+                    if test "$SLURMACCOUNT" == ""
+	            then
+                                  SLURMACCOUNT=$ACCOUNT
+                    fi
+
+                    if test "$CLUSTERNODES" = "all"
 		    then
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		    else
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
 		    # -V to copy all environment variables

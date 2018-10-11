@@ -6315,28 +6315,28 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       /* check if linear variable can be rounded up or down without harming other constraints */
       if( consdata->z != NULL )
       {
-         int poslock;
-         int neglock;
+         int downlock;
+         int uplock;
 
          if( consdata->zcoef > 0.0 )
          {
-            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
          }
          else
          {
-            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - downlock == 0 )
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
             SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+         if( SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) - uplock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;

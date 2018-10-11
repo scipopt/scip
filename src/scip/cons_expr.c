@@ -4558,8 +4558,8 @@ SCIP_RETCODE separatePointExprNlhdlr(
    /* call separation callback of the nlhdlr */
    SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, &ncuts) );
 
-   /* if it was not running (e.g., because it was not available), then try with estimator callback */
-   if( *result != SCIP_DIDNOTRUN )
+   /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
+   if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
       return SCIP_OKAY;
 
    /* now call the estimator callback of the nlhdlr */
@@ -4710,9 +4710,6 @@ SCIP_RETCODE separatePointExpr(
          SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
             expr->enfos[e]->auxvalue, TRUE, mincutviolation, *separated, &hdlrresult) );
 
-         /* if overestimation was successful, then no more need for underestimation
-          * having under- and overestimate being TRUE should only happen if evalvalue is invalid (domain error) anyway
-          */
          if( hdlrresult == SCIP_CUTOFF )
          {
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
@@ -4723,8 +4720,8 @@ SCIP_RETCODE separatePointExpr(
          if( hdlrresult == SCIP_SEPARATED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
-            underestimate = FALSE;
             *separated = TRUE;
+            /* TODO or should we always just stop here? */
          }
       }
 
