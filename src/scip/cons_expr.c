@@ -1710,7 +1710,7 @@ SCIP_RETCODE detectNlhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
-   SCIP_Bool             isroot,             /**< expression is an root expression, that is, it defines a constraint */
+   SCIP_Bool             isroot,             /**< expression is a root expression, that is, it defines a constraint */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
    SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
@@ -1972,7 +1972,7 @@ SCIP_RETCODE detectNlhdlrs(
          {
             /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
              * then also the subtree has been investigated already and we can stop iterating further down
-             * HOWEVER: we have likely have running DETECT with isroot=FALSE, which may interest less nlhdlrs
+             * HOWEVER: most likely we have been running DETECT with isroot=FALSE, which may interest less nlhdlrs
              * thus, if expr is the root expression, then rerun DETECT
              */
             if( expr == consdata->expr )

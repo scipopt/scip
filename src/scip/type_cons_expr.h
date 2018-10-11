@@ -818,7 +818,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler separation callback
  *
- * The method tries to find a linear hyperplane (a cut) that separates a given point
+ * The method tries to find an affine hyperplane (a cut) that separates a given point
  * from the set defined by either
  *   expr - auxvar <= 0 (if !overestimate)
  * or
