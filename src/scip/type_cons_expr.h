@@ -818,7 +818,21 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler separation callback
  *
- * The method tries to separate a given point by means of the nonlinear handler.
+ * The method tries to find a linear hyperplane (a cut) that separates a given point
+ * from the set defined by either
+ *   expr - auxvar <= 0 (if !overestimate)
+ * or
+ *   expr - auxvar >= 0 (if  overestimate),
+ * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ *
+ * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
+ * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
+ *
+ * Note, that the NLHDLR may also choose to separate for a relaxation of the mentioned sets,
+ * e.g., expr <= upperbound(auxvar)  or  expr >= lowerbound(auxvar).
+ * This is especially useful in situations where expr is the root expression of a constraint
+ * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
+ * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
  *
  * input:
  *  - scip : SCIP main data structure
