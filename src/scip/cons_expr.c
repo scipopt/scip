@@ -1972,10 +1972,18 @@ SCIP_RETCODE detectNlhdlrs(
          {
             /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
              * then also the subtree has been investigated already and we can stop iterating further down
-             * TODO if expr == consdata->expr (thus, root expr), then we should rerun detect with isroot=TRUE ?
+             * HOWEVER: we have likely have running DETECT with isroot=FALSE, which may interest less nlhdlrs
+             * thus, if expr is the root expression, then rerun DETECT
              */
-            expr = SCIPexpriteratorSkipDFS(it);
-            continue;
+            if( expr == consdata->expr )
+            {
+               SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+            }
+            else
+            {
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
          }
 
          /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
