@@ -205,6 +205,7 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_intobj.c
     scip/sepa_mcf.c
+    scip/sepa_mixing.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
@@ -748,6 +749,7 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_intobj.h
     scip/sepa_mcf.h
+    scip/sepa_mixing.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepastore.h
