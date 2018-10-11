@@ -236,6 +236,7 @@ SCIP_RETCODE readCnf(
          while( tok != NULL )
          {
             /* parse literal and check for errors */
+            /* coverity[secure_coding] */
             if( sscanf(tok, "%d", &v) != 1 )
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);

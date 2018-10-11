@@ -31,6 +31,7 @@
 
 #include "xml.h"
 #include "xmldef.h"
+#include "scip/misc.h"
 
 
 #include <sys/types.h>
@@ -1096,7 +1097,7 @@ XML_NODE* xmlProcess(
        * to get a better error message.
        */
       if ( access(myfilename, R_OK) != 0 )
-         strcpy(myfilename, filename);
+         (void)SCIPstrncpy(myfilename, filename, (int)filenamelen + 5);
    }
 #endif
    ppos.fp = FOPEN(myfilename, "r");

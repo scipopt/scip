@@ -50,11 +50,11 @@ export MODE=performance
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
 
 export CRITERION_DIR=""
-export IPOPT_DIR=/optimi/usr/sw/ipopt
-export BLISS_DIR=/optimi/usr/sw/bliss
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
+export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
 # Find out what day of week it is: mon-1 .. sun-7
 DAY_OF_WEEK=`date +%u`
@@ -174,8 +174,8 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_default.set q"
 
   # create more required symlinks
-  ln -fs /optimi/kombadon/IP check/
-  ln -fs /optimi/kombadon/MINLP check/
+  ln -fs /nfs/optimi/kombadon/IP check/
+  ln -fs /nfs/optimi/kombadon/MINLP check/
 
   #######################
   ### Submit Testruns ###

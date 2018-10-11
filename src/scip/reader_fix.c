@@ -145,6 +145,7 @@ SCIP_RETCODE readSol(
          value = -SCIPinfinity(scip);
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {

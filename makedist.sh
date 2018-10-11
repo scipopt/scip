@@ -36,6 +36,7 @@ git ls-files -c | xargs tar --transform "s|^|${NAME}/|" -chf $NAME.tar \
 --exclude="makepictures.sh" \
 --exclude="suppressions.*" \
 --exclude="tex/*" \
+--exclude="interfaces/matlab" \
 --exclude="check/check_*" \
 --exclude="check/*cluster*" \
 --exclude="check/checkcuts.py" \
