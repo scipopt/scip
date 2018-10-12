@@ -225,6 +225,8 @@ SCIP_RETCODE separateCuts(
          islocallb = TRUE;
          lb = SCIPvarGetLbLocal(var);
       }
+      if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var)) )
+         goto VUB;
 
       /* obtain a new lower (and global) bound if possible */
       for( j=0; j < nvlb; j++ )
@@ -286,6 +288,8 @@ SCIP_RETCODE separateCuts(
       }
       if( vlbmixsize == 0 )
          goto VUB;
+      if( SCIPisFeasLT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
+         goto VUB;
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds,  vlbmixsigns, vlbmixsize);
       /* the nonbinary variables */
       activity = -(SCIPvarGetLPSol(var) - lb);
@@ -344,6 +348,8 @@ VUB:
       maxabscoef = 0.0;
       maxabsind = -1;
       ub = SCIPvarGetUbGlobal(var);
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLPSol(var)) )
+         goto CONFLICT;
       if( sepadata->uselocalbounds && ub > SCIPvarGetUbLocal(var) )
       {
          /* This is a lcoal cut */
@@ -406,6 +412,8 @@ VUB:
          }
       }
       if( vubmixsize == 0 )
+         goto CONFLICT;
+      if( SCIPisFeasLT(scip, (ub - SCIPvarGetLPSol(var)), maxabscoef) )
          goto CONFLICT;
       SCIPsortDownRealRealIntInt(vubmixsols, vubmixcoefs, vubmixinds,  vubmixsigns, vubmixsize);
       /* the nonbinary variables */
