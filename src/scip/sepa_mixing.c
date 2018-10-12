@@ -136,6 +136,7 @@ SCIP_RETCODE separateCuts(
    int*                  ncuts               /**< pointer to store the number of generated cuts */
    )
 {
+   SCIP_SEPADATA* sepadata;
    SCIP_VAR* var;
    SCIP_VAR** vars;
    SCIP_Real* vlbmixcoefs;
@@ -156,13 +157,12 @@ SCIP_RETCODE separateCuts(
    int firstnonbinvars;
    int nvars;
    int i;
-   int k;
-
+   int k; 
+   sepadata = SCIPsepaGetData(sepa);
    *cutoff = FALSE;
    *ncuts = 0;
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-//   firstnonbinvars = nvars - SCIPgetNContVars(scip);
    firstnonbinvars = SCIPgetNBinVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsols, nvars) );
@@ -216,27 +216,24 @@ SCIP_RETCODE separateCuts(
       maxabscoef = 0.0;
       maxabsind = -1;
       lb = SCIPvarGetLbGlobal(var);
-      if( lb < SCIPvarGetLbLocal(var) )
+      if( sepadata->uselocalbounds && lb < SCIPvarGetLbLocal(var) )
       {
          /* This is a lcoal cut */
          islocallb = TRUE;
          lb = SCIPvarGetLbLocal(var);
       }
 
-      if( uselocalbounds )
+      /* obtain a new lower bound if possible */
+      for( j=0; j < nvlb; j++ )
       {
-         /* obtain a new lower bound if possible */
-         for( j=0; j < nvlb; j++ )
+         SCIP_Real tmplb;
+         if( SCIPvarIsBinary(vlbvars[j]) && (SCIPvarGetProbindex(vlbvars[j]) >= 0) )
          {
-            SCIP_Real tmplb;
-            if( SCIPvarIsBinary(vlbvars[j]) && (SCIPvarGetProbindex(vlbvars[j]) >= 0) )
+            tmplb = (vlbcoefs[j] > 0) ? vlbconsts[j] : (vlbconsts[j] + vlbcoefs[j]);
+            if( tmplb >= lb )
             {
-               tmplb = (vlbcoefs[j] > 0) ? vlbconsts[j] : (vlbconsts[j] + vlbcoefs[j]);
-               if( tmplb >= lb )
-               {
-                  islocallb = FALSE;
-                  lb = tmplb;
-               }
+               islocallb = FALSE;
+               lb = tmplb;
             }
          }
       }
@@ -344,27 +341,24 @@ VUB:
       maxabscoef = 0.0;
       maxabsind = -1;
       ub = SCIPvarGetUbGlobal(var);
-      if( ub > SCIPvarGetUbLocal(var) )
+      if( sepadata->uselocalbounds && ub > SCIPvarGetUbLocal(var) )
       {
          /* This is a lcoal cut */
          islocalub = TRUE;
          ub = SCIPvarGetUbLocal(var);
       }
 
-      if( uselocalbounds )
+      /* obtain a new upper bound if possible */
+      for( j=0; j < nvub; j++ )
       {
-         /* obtain a new upper bound if possible */
-         for( j=0; j < nvub; j++ )
+         SCIP_Real tmpub;
+         if( SCIPvarIsBinary(vubvars[j]) && (SCIPvarGetProbindex(vubvars[j]) >= 0) )
          {
-            SCIP_Real tmpub;
-            if( SCIPvarIsBinary(vubvars[j]) && (SCIPvarGetProbindex(vubvars[j]) >= 0) )
+            tmpub = (vubcoefs[j] < 0) ? vubconsts[j] : (vubconsts[j] + vubcoefs[j]);
+            if( tmpub <= ub )
             {
-               tmpub = (vubcoefs[j] < 0) ? vubconsts[j] : (vubconsts[j] + vubcoefs[j]);
-               if( tmpub <= ub )
-               {
-                  islocalub = FALSE;
-                  ub = tmpub;
-               }
+               islocalub = FALSE;
+               ub = tmpub;
             }
          }
       }
