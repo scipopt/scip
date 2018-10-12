@@ -437,6 +437,7 @@ SCIP_RETCODE appendVarSOS2(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+   assert( consdata->nvars >= 0 );
 
    /* are we in the transformed problem? */
    transformed = SCIPconsIsTransformed(cons);
@@ -449,13 +450,24 @@ SCIP_RETCODE appendVarSOS2(
    assert( var != NULL );
    assert( transformed == SCIPvarIsTransformed(var) );
 
-   SCIP_CALL( consdataEnsurevarsSizeSOS2(scip, consdata, consdata->nvars + 1, FALSE) );
+   if ( consdata->weights != NULL )
+   {
+      SCIP_CALL( consdataEnsurevarsSizeSOS2(scip, consdata, consdata->nvars + 1, TRUE) );
+   }
+   else
+   {
+      SCIP_CALL( consdataEnsurevarsSizeSOS2(scip, consdata, consdata->nvars + 1, FALSE) );
+   }
 
    /* insert variable */
    consdata->vars[consdata->nvars] = var;
-   assert( consdata->weights != NULL || consdata->nvars > 0 );
-   if ( consdata->weights != NULL && consdata->nvars > 0 )
-      consdata->weights[consdata->nvars] = consdata->weights[consdata->nvars-1] + 1.0;
+   if ( consdata->weights != NULL )
+   {
+      if ( consdata->nvars > 0 )
+         consdata->weights[consdata->nvars] = consdata->weights[consdata->nvars-1] + 1.0;
+      else
+         consdata->weights[consdata->nvars] = 0.0;
+   }
    ++consdata->nvars;
 
    /* handle the new variable */
@@ -2038,8 +2050,7 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** targetvars;
-   SCIP_Real* sourceweights;
-   SCIP_Real* targetweights;
+   SCIP_Real* targetweights = NULL;
    const char* consname;
    int nvars;
    int v;
@@ -2048,6 +2059,7 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    assert( sourcescip != NULL );
    assert( sourcecons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+   assert( valid != NULL );
 
    *valid = TRUE;
 
@@ -2063,22 +2075,20 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
 
    /* get variables and weights of the source constraint */
    nvars = sourceconsdata->nvars;
+   assert( nvars >= 0 );
 
-   if ( nvars == 0 )
-      return SCIP_OKAY;
-
-   sourcevars = sourceconsdata->vars;
-   assert( sourcevars != NULL );
-   sourceweights = sourceconsdata->weights;
-   assert( sourceweights != NULL );
-
-   /* duplicate variable array */
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
-   SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceweights, nvars) );
+   /* duplicate weights array */
+   if ( sourceconsdata->weights != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceconsdata->weights, nvars) );
+   }
 
    /* get copied variables in target SCIP */
-   for( v = 0; v < nvars && *valid; ++v )
+   sourcevars = sourceconsdata->vars;
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
+   for (v = 0; v < nvars && *valid; ++v)
    {
+      assert( sourcevars != NULL );
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, consmap, global, valid) );
    }
 
@@ -2090,7 +2100,7 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArray(sourcescip, &targetweights);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
 
    return SCIP_OKAY;

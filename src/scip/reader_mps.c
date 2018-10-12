@@ -1881,6 +1881,7 @@ SCIP_RETCODE readSOS(
             case 2: 
                SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
                break;
+            /* coverity[dead_error_begin] */
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
@@ -4423,6 +4424,7 @@ SCIP_RETCODE SCIPwriteMps(
                rowvals[1] = -1.0;
 
                /* compute maximal length for rowname */
+               /* coverity[negative_returns] */
                n = (int) log10((double)nrowvars) + 1 + l;
 
                /* assure maximal allowed value */

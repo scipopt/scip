@@ -75,10 +75,11 @@ EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
+SLURMACCOUNT    =       ""
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	6.0.1
+SCIP_VERSION	=	6.0.0.2
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -201,7 +202,7 @@ LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
 endif
 
 ARFLAGS		=	cr
-DFLAGS		=	-MM
+DFLAGS		=	-MMD
 
 GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
@@ -294,7 +295,6 @@ CFLAGS		+=	$(USRCFLAGS)
 CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
-DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------

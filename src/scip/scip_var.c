@@ -6884,11 +6884,11 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
+            SCIP_CALL( SCIPhashmapInsertInt(classidx2newlabel, (void*)(size_t)currentlabel, classidx) ); /*lint !e571*/
          }
          else
          {
-            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+            localclassidx = SCIPhashmapGetImageInt(classidx2newlabel, (void*)(size_t)currentlabel); /*lint !e571*/
          }
       }
       assert(localclassidx - 1 >= 0);
@@ -7679,7 +7679,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
 	 {
             assert(id1 >= 0);
-	    SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1), fclose(gmlfile) );
+	    SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
@@ -7706,7 +7706,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
 	    {
                assert(id2 >= 0);
-	       SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1), fclose(gmlfile) );
+	       SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
@@ -8472,8 +8472,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 
 /** returns whether dual reductions are allowed during propagation and presolving
  *
- *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ *  @deprecated Please use SCIPallowStrongDualReds()
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -8481,17 +8480,49 @@ SCIP_Bool SCIPallowDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
 }
 
-/** returns whether propagation w.r.t. current objective is allowed */
+/** returns whether strong dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
+ *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
+ *        locks.
+ */
+SCIP_Bool SCIPallowStrongDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
+}
+
+/** returns whether propagation w.r.t. current objective is allowed
+ *
+ *  @deprecated Please use SCIPallowWeakDualReds()
+ */
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** returns whether weak dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ */
+SCIP_Bool SCIPallowWeakDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** marks the variable that it must not be multi-aggregated

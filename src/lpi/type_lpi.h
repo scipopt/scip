@@ -44,15 +44,16 @@ enum SCIP_LPParam
    SCIP_LPPAR_PRESOLVING     =  3,      /**< should LP solver use presolving? */
    SCIP_LPPAR_PRICING        =  4,      /**< pricing strategy */
    SCIP_LPPAR_LPINFO         =  5,      /**< should LP solver output information to the screen? */
-   SCIP_LPPAR_FEASTOL        =  6,      /**< feasibility tolerance for primal variables and slacks */
-   SCIP_LPPAR_DUALFEASTOL    =  7,      /**< feasibility tolerance for dual variables and reduced costs */
+   SCIP_LPPAR_FEASTOL        =  6,      /**< feasibility tolerance for primal variables and slacks, strictly positive */
+   SCIP_LPPAR_DUALFEASTOL    =  7,      /**< feasibility tolerance for dual variables and reduced costs, strictly positive */
    SCIP_LPPAR_BARRIERCONVTOL =  8,      /**< convergence tolerance used in barrier algorithm */
    SCIP_LPPAR_OBJLIM         =  9,      /**< objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   SCIP_LPPAR_LPITLIM        = 10,      /**< LP iteration limit */
-   SCIP_LPPAR_LPTILIM        = 11,      /**< LP time limit */
+   SCIP_LPPAR_LPITLIM        = 10,      /**< LP iteration limit, greater than or equal 0 */
+   SCIP_LPPAR_LPTILIM        = 11,      /**< LP time limit, positive */
    SCIP_LPPAR_MARKOWITZ      = 12,      /**< Markowitz tolerance */
    SCIP_LPPAR_ROWREPSWITCH   = 13,      /**< simplex algorithm shall use row representation of the basis
-                                         *   if number of rows divided by number of columns exceeds this value */
+                                         *   if number of rows divided by number of columns exceeds this value
+                                         *   (0 <= value or -1 = valu ; if negative, this change never occurs) */
    SCIP_LPPAR_THREADS        = 14,      /**< number of threads used to solve the LP */
    SCIP_LPPAR_CONDITIONLIMIT = 15,      /**< maximum condition number of LP basis counted as stable */
    SCIP_LPPAR_TIMING         = 16,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */

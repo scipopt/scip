@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.1
+ * @version  6.0.0.2
  *
  * \image html scippy.png
  */
@@ -838,7 +838,7 @@
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
- * - <code>depend</code> Creates dependencies files. This is only needed if you add files to \SCIP.
+ * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
  * - <code>check or test</code> Runs the check script, see \ref TEST.
  *
  * The \SCIP makefiles are structured as follows.
@@ -1036,10 +1036,6 @@
  *    .
  * - Once you have edited the makefile, you can use all the flags that can be used in \SCIP to
  *   compile your code, see \ref MAKE.
- *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
- *
- *
- *
  *
  */
 

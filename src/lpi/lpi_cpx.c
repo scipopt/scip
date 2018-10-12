@@ -3234,6 +3234,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: CPLEX solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -3247,6 +3252,7 @@ SCIP_Bool SCIPlpiIsStable(
       if( !primalfeasible )
          return FALSE;
    }
+#endif
 
    /* If the condition number of the basis should be checked, everything above the specified threshold is counted
     * as instable.
@@ -4414,6 +4420,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
 #if (CPX_VERSION <= 1230)
       ival = MIN(ival, CPX_INT_MAX);
 #endif
@@ -4501,25 +4509,56 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-09 <= dval <= 1e-04 */
+      if( dval < 1e-09 )
+         dval = 1e-09;
+      else if( dval > 1e-04 )
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-09 <= dval <= 1e-04 */
+      if( dval < 1e-09 )
+         dval = 1e-09;
+      else if( dval > 1e-04 )
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 1e-10 <= dval */
+      assert( dval >= 0.0 );
+      if( dval < 1e-10 )
+         dval = 1e-10;
+
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* Cplex poses no restriction on dval */
       if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
          setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
       else
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* Cplex requires dval non-negative
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-04 <= dval <= .99999 */
+      if( dval < 1e-04 )
+         dval = 1e-04;
+      else if( dval > .99999 )
+         dval = .99999;
+
       setDblParam(lpi, CPX_PARAM_EPMRK, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

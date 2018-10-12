@@ -3038,7 +3038,7 @@ void SCIPprintHeuristicStatistics(
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]),
          SCIPheurGetNBestSolsFound(scip->set->heurs[i]));
-         
+
       /* count heuristics that use diving; needed to determine output later */
       ndivesets += SCIPheurGetNDivesets(scip->set->heurs[i]);
    }
@@ -3289,17 +3289,24 @@ void SCIPprintRelaxatorStatistics(
    if( scip->set->nrelaxs == 0 )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds  ImprTime ReducedDom  Separated AddedConss\n");
 
    /* sort relaxators w.r.t. their name */
    SCIPsetSortRelaxsName(scip->set);
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
-         SCIPrelaxGetNCalls(scip->set->relaxs[i]));
+         SCIPrelaxGetNCalls(scip->set->relaxs[i]),
+         SCIPrelaxGetNCutoffs(scip->set->relaxs[i]),
+         SCIPrelaxGetNImprovedLowerbound(scip->set->relaxs[i]),
+         SCIPrelaxGetImprovedLowerboundTime(scip->set->relaxs[i]),
+         SCIPrelaxGetNReducedDomains(scip->set->relaxs[i]),
+         SCIPrelaxGetNSeparatedCuts(scip->set->relaxs[i]),
+         SCIPrelaxGetNAddedConss(scip->set->relaxs[i])
+         );
    }
 }
 

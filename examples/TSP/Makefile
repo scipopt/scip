@@ -74,7 +74,6 @@ MAINOBJ		=	cppmain.o \
 			HeurFrats.o \
 			Heur2opt.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
-MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
@@ -134,18 +133,12 @@ $(BINDIR):
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
-		-rm -f $(OBJDIR)/*.o
+		-rm -f $(OBJDIR)/*.o $(OBJDIR)/*.d
 		-rmdir $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
 
-.PHONY: depend
-depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
-		>$(MAINDEP)'
-
--include	$(MAINDEP)
+-include	$(MAINOBJFILES:.o=.d)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
@@ -153,10 +146,10 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(M
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
 #---- EOF --------------------------------------------------------------------

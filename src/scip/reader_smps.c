@@ -398,6 +398,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
                nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
             break;
+         /* coverity[dead_error_begin] */
          default:
             SCIPerrorMessage("This should not happen. Aborting.\n");
             SCIPABORT();

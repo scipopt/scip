@@ -1939,6 +1939,7 @@ SCIP_RETCODE generateUnderestimatorParallelYFacets(
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, 1.0 - t) );         /* tmp = 1 - t */
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &e2, SCIP_EXPR_MUL, e2, tmp) );            /* e2 = (1-t) * f(s, yub) */
 
+   /* coverity[copy_paste_error] */
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &vred, SCIP_EXPR_PLUS, e1, e2) );
    SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &vredtree, vred, 1, 0, NULL) );
 
@@ -2179,6 +2180,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
 
       /* construct vred := t * e1 + (1-t) * e2 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_VARIDX, 0) );          /* expr  = t */
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr1, SCIP_EXPR_MUL, expr, e1) );      /* expr1 = t * e1*/
 
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );           /* expr  = t */
@@ -2333,6 +2335,7 @@ SCIP_RETCODE generateOrthogonal_lx_ly_Underestimator(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_VARIDX, 0) );          /* expr  = t */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, 1.0) );         /* tmp   = 1.0 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr,  SCIP_EXPR_MINUS, tmp, expr) );   /* expr  = 1-t */
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MUL, e2, expr) );      /* expr2 = (1-t) * e2*/
 
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &vred, SCIP_EXPR_PLUS, expr1, expr2) );
@@ -2557,6 +2560,7 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, yval) );        /* tmp   = yval */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MINUS, tmp, expr2) );  /* expr2 = yval - ylb * t */
 
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, expr2, expr1) );   /* expr =  (yval-t*ylb)/(1-t) */
       subst[1] = expr;
 
@@ -2703,6 +2707,7 @@ SCIP_RETCODE generateOrthogonal_lx_uy_Underestimator(
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp,   SCIP_EXPR_CONST, yval) );        /* tmp   = yval */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr2, SCIP_EXPR_MINUS, tmp, expr2) );  /* expr2 = yval - yub * t */
 
+      /* coverity[copy_paste_error] */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_DIV, expr2, expr1) );   /* expr =  (yval-t*yub)/(1-t) */
       subst[1] = expr;
 
@@ -6310,28 +6315,28 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       /* check if linear variable can be rounded up or down without harming other constraints */
       if( consdata->z != NULL )
       {
-         int poslock;
-         int neglock;
+         int downlock;
+         int uplock;
 
          if( consdata->zcoef > 0.0 )
          {
-            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
          }
          else
          {
-            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - downlock == 0 )
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
             SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+         if( SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) - uplock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;

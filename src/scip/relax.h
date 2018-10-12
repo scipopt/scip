@@ -109,6 +109,7 @@ extern
 SCIP_RETCODE SCIPrelaxExec(
    SCIP_RELAX*           relax,              /**< relaxator */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
    SCIP_Real*            lowerbound,         /**< pointer to lower bound computed by the relaxator */

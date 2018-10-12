@@ -281,8 +281,8 @@
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
-#define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
-#define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
+#define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 #define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
@@ -1915,14 +1915,14 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowdualreds",
-            "should dual reductions in propagation methods and presolver be allowed?",
-            &(*set)->misc_allowdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWDUALREDS,
+            "misc/allowstrongdualreds",
+            "should strong dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowobjprop",
-            "should propagation to the current objective be allowed in propagation methods?",
-            &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            "misc/allowweakdualsreds",
+            "should weak dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/scaleobj",
