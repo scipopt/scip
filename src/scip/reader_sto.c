@@ -1608,6 +1608,8 @@ SCIP_RETCODE readScenarios(
 
       if( strcmp(stoinputField1(stoi), SC) == 0 )
       {
+         int stagenum;
+
          /* if a scenario has been created that needs to be added to the scenario tree */
          if( addscenario )
          {
@@ -1616,8 +1618,6 @@ SCIP_RETCODE readScenarios(
             /* freeing the scenario */
             SCIP_CALL( freeScenarioTree(scip, &scenario) );
             assert(scenario == NULL);
-
-            addscenario = FALSE;
          }
 
          if( strcmp(wrongroot, stoinputField3(stoi)) == 0 )
@@ -1647,7 +1647,14 @@ SCIP_RETCODE readScenarios(
          SCIP_CALL( setScenarioName(scip, scenario, stoinputField2(stoi)) );
          SCIP_CALL( setScenarioStageName(scip, scenario, stoinputField5(stoi)) );
          SCIP_CALL( setScenarioNum(scip, scenario, numscenarios) );
-         SCIP_CALL( setScenarioStageNum(scip, scenario, SCIPtimFindStage(scip, stoinputField5(stoi))) );
+
+         stagenum = SCIPtimFindStage(scip, stoinputField5(stoi));
+         if( stagenum < 0 )
+         {
+            stoinputSyntaxerror(stoi);
+            goto TERMINATE;
+         }
+         SCIP_CALL( setScenarioStageNum(scip, scenario, stagenum) );
          SCIP_CALL( setScenarioProbability(scip, scenario, atof(stoinputField4(stoi))) );
 
          numscenarios++;
@@ -2142,7 +2149,12 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    assert(scenario != NULL);
 
    stagenum = SCIPtimFindStage(scip, getScenarioStageName(scip, scenario));
-   assert(stagenum >= 0 && stagenum < SCIPtimGetNStages(scip));
+   if( stagenum < 0 || stagenum >= SCIPtimGetNStages(scip) )
+   {
+      SCIPerrorMessage("Unable to build stochastic program - stage <%s> was not found\n",
+         getScenarioStageName(scip, scenario));
+      return SCIP_READERROR;
+   }
 
    SCIPdebugMessage("Creating scenario at stage <%d>. Scenario: %d Stage: %d\n", stagenum, getScenarioNum(scip, scenario),
       getScenarioStageNum(scip, scenario));
@@ -2228,7 +2240,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       if( cons == NULL )
       {
          SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
-         SCIPABORT();
+         return SCIP_READERROR;
       }
       else
       {
@@ -2260,7 +2272,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             if( var == NULL )
             {
                SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               SCIPABORT();
+               return SCIP_READERROR;
             }
             else
             {
@@ -2284,7 +2296,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             if( var == NULL )
             {
                SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               SCIPABORT();
+               return SCIP_READERROR;
             }
             else
             {
