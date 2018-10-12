@@ -40,11 +40,14 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_mixing.h"
+#include "scip/scip_tree.h"
 #include <string.h>
 
 
 #define SEPA_NAME              "mixing"
 #define SEPA_DESC              "mixing inequality separator"
+#define DEFAULT_MAXROUNDS            -1 /**< maximal number of mixing separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
 #define SEPA_PRIORITY               -50
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
@@ -56,6 +59,8 @@
 struct SCIP_SepaData
 {
    SCIP_Bool             uselocalbounds;  /**< should local bounds be used? */
+   int                   maxrounds;          /**< maximal number of mixing separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
 };
 
 /*
@@ -183,8 +188,6 @@ SCIP_RETCODE separateCuts(
       cutrhs = 0;
       vlbmixsize = 0;
       var=vars[i];
-//      if( strchr( SCIPvarGetName(var), 'I') != NULL )
-//         continue;
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
       SCIP_VAR** vlbvars;
       SCIP_Real* vlbcoefs;
@@ -223,7 +226,7 @@ SCIP_RETCODE separateCuts(
          lb = SCIPvarGetLbLocal(var);
       }
 
-      /* obtain a new lower bound if possible */
+      /* obtain a new lower (and global) bound if possible */
       for( j=0; j < nvlb; j++ )
       {
          SCIP_Real tmplb;
@@ -313,8 +316,8 @@ SCIP_RETCODE separateCuts(
             }
          }
       }
-      /* adding the variable with maximal coefficient */
-      if( lastcoef + 1e-6 < maxabscoef )
+      /* adding the variable with maximal coefficient to make sure the cut is stronger enough */
+      if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
          cutrhs -= maxabssign*(maxabscoef - lastcoef);
          cutcoefs[cutnnz] = !maxabssign ? maxabscoef - lastcoef : lastcoef - maxabscoef;
@@ -348,7 +351,7 @@ VUB:
          ub = SCIPvarGetUbLocal(var);
       }
 
-      /* obtain a new upper bound if possible */
+      /* obtain a new upper bound (and global) if possible */
       for( j=0; j < nvub; j++ )
       {
          SCIP_Real tmpub;
@@ -435,7 +438,7 @@ VUB:
          }
       }
       /* adding the variable with maximal coefficient */
-      if( lastcoef + 1e-6 < maxabscoef )
+      if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
          cutrhs -= maxabssign*(maxabscoef - lastcoef);
          cutcoefs[cutnnz] = !maxabssign ? maxabscoef - lastcoef : lastcoef - maxabscoef;
@@ -540,6 +543,7 @@ SCIP_DECL_SEPAFREE(sepaFreeMixing)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
 {  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
    SCIP_VAR** vars;
    SCIP_Real* solvals;
    SCIP_Bool cutoff;
@@ -547,11 +551,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
    int nvars;
    int nfracs;
    int ncuts;
+   int ncalls;
+   int depth;
 
    assert(sepa != NULL);
    assert(scip != NULL);
 
    *result = SCIP_DIDNOTRUN;
+   depth = SCIPgetDepth(scip);
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+   sepadata = SCIPsepaGetData(sepa);
+   /* only call the mixing cut separator a given number of times at each node */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
 
    /* gets active problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
@@ -683,5 +696,13 @@ SCIP_RETCODE SCIPincludeSepaMixing(
          "should local bounds be used?",
          &sepadata->uselocalbounds, TRUE, DEFAULT_USELOACLBOUNDS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/mixing/maxrounds",
+         "maximal number of mixing separation rounds per node (-1: unlimited)",
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/mixing/maxroundsroot",
+         "maximal number of mixing separation rounds in the root node (-1: unlimited)",
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    return SCIP_OKAY;
 }
