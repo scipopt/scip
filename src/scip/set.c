@@ -71,7 +71,7 @@
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_MIDPULL        0.75 /**< fraction by which to move branching point of a continuous variable towards the middle of the domain */
-#define SCIP_DEFAULT_BRANCH_MIDPULL_RELDOMWIDTHTHRESHOLD 0.5 /**< multiply midpull by relative domain width if the latter is below this value */
+#define SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG 0.5 /**< multiply midpull by relative domain width if the latter is below this value */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 #define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
@@ -1198,9 +1198,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->branch_midpull, FALSE, SCIP_DEFAULT_BRANCH_MIDPULL, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "branching/midpull_reldomwidththreshold",
+         "branching/midpullreldomtrig",
          "multiply midpull by relative domain width if the latter is below this value",
-         &(*set)->branch_midpull_reldomwidththreshold, FALSE, SCIP_DEFAULT_BRANCH_MIDPULL_RELDOMWIDTHTHRESHOLD, 0.0, 1.0,
+         &(*set)->branch_midpullreldomtrig, FALSE, SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/lpgainnormalize",

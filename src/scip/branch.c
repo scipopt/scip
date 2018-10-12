@@ -2365,7 +2365,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          else
             reldomainwidth = SCIPsetEpsilon(set);
 
-         if( reldomainwidth < set->branch_midpull_reldomwidththreshold )
+         if( reldomainwidth < set->branch_midpullreldomtrig )
             midpull *= reldomainwidth;
 
          branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;

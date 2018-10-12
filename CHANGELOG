@@ -52,7 +52,7 @@ Interface changes
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
 
-- Added parameters branching/midpull and branching/midpull_reldomwidththreshold to control by how much to move
+- Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
   default of 0.75 and 0.5, respectively, uses a point that is 75*alpha% closer to the middle of the domain, where
   alpha is the relative width of the candidates domain (width of local domain divided by width of global domain),
