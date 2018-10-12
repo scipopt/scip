@@ -6884,11 +6884,11 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
+            SCIP_CALL( SCIPhashmapInsertInt(classidx2newlabel, (void*)(size_t)currentlabel, classidx) ); /*lint !e571*/
          }
          else
          {
-            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+            localclassidx = SCIPhashmapGetImageInt(classidx2newlabel, (void*)(size_t)currentlabel); /*lint !e571*/
          }
       }
       assert(localclassidx - 1 >= 0);
@@ -7679,7 +7679,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
 	 {
             assert(id1 >= 0);
-	    SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1), fclose(gmlfile) );
+	    SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
@@ -7706,7 +7706,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
 	    {
                assert(id2 >= 0);
-	       SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1), fclose(gmlfile) );
+	       SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 

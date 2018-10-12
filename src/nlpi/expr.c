@@ -4987,7 +4987,7 @@ SCIP_RETCODE exprparseReadVariable(
 
       /* store index of variable and variable name in varnames buffer */
       **varnames = varidx;
-      strncpy((char*)(*varnames + 1), varname, strlen(varname));
+      (void) SCIPstrncpy((char*)(*varnames + 1), varname, (int)strlen(varname)+1);
 
       /* insert variable into hashtable */
       SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
@@ -12125,7 +12125,7 @@ SCIP_RETCODE exprgraphRemoveVar(
       exprgraph->varbounds[varidx] = exprgraph->varbounds[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]  = exprgraph->varnodes[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]->data.intval = varidx;
-      SCIP_CALL( SCIPhashmapSetImage(exprgraph->varidxs, exprgraph->vars[varidx], (void*)(size_t)(varidx)) );
+      SCIP_CALL( SCIPhashmapSetImageInt(exprgraph->varidxs, exprgraph->vars[varidx], varidx) );
    }
    --exprgraph->nvars;
 
@@ -15012,7 +15012,7 @@ void SCIPexprgraphSetVarBounds(
    assert(var != NULL);
    assert(SCIPhashmapExists(exprgraph->varidxs, var));
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
    assert(exprgraph->vars[pos] == var);
 
@@ -15311,7 +15311,7 @@ SCIP_RETCODE SCIPexprgraphAddVars(
       exprgraph->vars[exprgraph->nvars] = vars[i];  /*lint !e613*/
       exprgraph->varnodes[exprgraph->nvars] = node;
       SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-      SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[i], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+      SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[i], exprgraph->nvars) ); /*lint !e613*/
       ++exprgraph->nvars;
 
       if( varnodes != NULL )
@@ -15541,7 +15541,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
    assert(coefs != NULL || ncoefs == 0);
    assert(vars  != NULL || ncoefs == 0);
 
-   varidx = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   varidx = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(varidx < exprgraph->nvars);
    assert(exprgraph->vars[varidx] == var);
    varnode = exprgraph->varnodes[varidx];
@@ -15633,7 +15633,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
          exprgraph->vars[exprgraph->nvars] = vars[0];  /*lint !e613*/
          exprgraph->varnodes[exprgraph->nvars] = varnode;
          SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-         SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[0], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+         SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[0], exprgraph->nvars) ); /*lint !e613*/
          ++exprgraph->nvars;
 
          /* call callback method, if set */
@@ -15711,7 +15711,7 @@ SCIP_Bool SCIPexprgraphFindVarNode(
       return FALSE;
    }
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
 
    *varnode = exprgraph->varnodes[pos];
@@ -16020,7 +16020,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          if( node->nuses > 0 )
          {
             ensureBlockMemoryArraySize(exprgraph->blkmem, &testvals, &testvalssize, ntestvals+1);
-            SCIP_CALL( SCIPhashmapInsert(testvalidx, (void*)node, (void*)(size_t)ntestvals) );
+            SCIP_CALL( SCIPhashmapInsertInt(testvalidx, (void*)node, ntestvals) );
             testvals[ntestvals] = SCIPexprgraphGetNodeVal(node);  /*lint !e613 !e794*/
             ++ntestvals;
          }
@@ -16208,8 +16208,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             assert(SCIPhashmapExists(testvalidx, (void*)node));
 
-            idx = (int)(size_t)(void*)SCIPhashmapGetImage(testvalidx, (void*)node);
+            idx = SCIPhashmapGetImageInt(testvalidx, (void*)node);
             assert(idx < ntestvals);
+            assert(testvals != NULL);
 
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);

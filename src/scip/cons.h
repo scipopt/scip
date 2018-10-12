@@ -928,7 +928,7 @@ SCIP_RETCODE SCIPconsGetVars(
    SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
    );
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @note The success pointer indicates if the contraint handler was able to return the number of variables
  *

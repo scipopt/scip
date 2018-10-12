@@ -347,7 +347,7 @@ SCIP_RETCODE setQuadraticObj(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      quadelems[i].idx1 = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      quadelems[i].idx1 = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       quadelems[i].idx2 = quadelems[i].idx1;
       quadelems[i].coef = 1.0;
    }
@@ -416,7 +416,7 @@ SCIP_RETCODE separateCuts(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      lininds[i] = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      lininds[i] = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       linvals[i] = - 2.0 * SCIPgetSolVal(scip, sol, var);
 
       /* if coefficient is too large, don't separate */
@@ -485,7 +485,7 @@ SCIP_RETCODE separateCuts(
             assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
             SCIP_CALL( SCIPsetSolVal(scip, projection, var,
-                     nlpisol[(int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void *)var)]) );
+                     nlpisol[SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void *)var)]) );
          }
          SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 
