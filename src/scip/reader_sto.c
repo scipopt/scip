@@ -1983,7 +1983,7 @@ SCIP_RETCODE findScenarioVar(
    if( (*scenariovar) == NULL )
    {
       SCIPerrorMessage("There is no scenario variable could be found.\n");
-      SCIPABORT();
+      return SCIP_READERROR;
    }
 
    return SCIP_OKAY;
