@@ -6948,6 +6948,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    if( c == nconss && (SCIPisInfinity(scip, SCIPgetUpperbound(scip)) || SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip))) )
    {
       SCIPdebugMsg(scip, "pass solution with objective value %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+      assert(solchanged);
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
       *success = TRUE;
