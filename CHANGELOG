@@ -64,6 +64,7 @@ Fixed bugs
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
 - fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
+- fixed update of constraint violations in solution repair in cons_bivariate, cons_quadratic, and cons_nonlinear
 
 Miscellaneous
 -------------
