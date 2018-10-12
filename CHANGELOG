@@ -14,6 +14,9 @@ Performance improvements
 
 - extended cut presolving staff by removing variable that have already be fixed at their bounds from the cut
 
+- Improved branching point selection when branching on externals branching candidates. Instead of using exactly the
+  LP solution, a point closer to the middle of the variables domain is chosen.
+
 Examples and applications
 -------------------------
 
@@ -48,6 +51,15 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+
+- Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
+  the branching point for an external branching candidate closer to the middle of the candidates domain. The
+  default of 0.75 and 0.5, respectively, uses a point that is 75*alpha% closer to the middle of the domain, where
+  alpha is the relative width of the candidates domain (width of local domain divided by width of global domain),
+  if the latter is below 0.5, and alpha=1.0 otherwise. That is, with the default settings, a branching point is
+  chosen closer to the middle of the candidates domain if the variables local domain is still similar to its
+  global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
+  domain.
 
 ### Data structures
 
