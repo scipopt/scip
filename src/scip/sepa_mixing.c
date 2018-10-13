@@ -288,8 +288,10 @@ SCIP_RETCODE separateCuts(
       }
       if( vlbmixsize == 0 )
          goto VUB;
-      if( SCIPisFeasLT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
+      if( SCIPisFeasGT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
+      {
          goto VUB;
+      }
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds,  vlbmixsigns, vlbmixsize);
       /* the nonbinary variables */
       activity = -(SCIPvarGetLPSol(var) - lb);
@@ -413,7 +415,7 @@ VUB:
       }
       if( vubmixsize == 0 )
          goto CONFLICT;
-      if( SCIPisFeasLT(scip, (ub - SCIPvarGetLPSol(var)), maxabscoef) )
+      if( SCIPisFeasGT(scip, (ub - SCIPvarGetLPSol(var)), maxabscoef) )
          goto CONFLICT;
       SCIPsortDownRealRealIntInt(vubmixsols, vubmixcoefs, vubmixinds,  vubmixsigns, vubmixsize);
       /* the nonbinary variables */
