@@ -1212,14 +1212,14 @@ SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
 
    assert(! varprio->usedistances || varprio->distances[ind1] == varprio->distances[ind2]);
 
-   /* if the indices tie considering reduced costs or distances are disabled -> use reduced cost information instead */
+   /* if the indices tie considering distances or distances are disabled -> use reduced cost information instead */
    if( varprio->useredcost )
    {
       assert(varprio->redcostscores != NULL);
 
-      if( SCIPisLT(scip, varprio->redcostscores[ind1], varprio->redcostscores[ind2]) )
+      if( varprio->redcostscores[ind1] < varprio->redcostscores[ind2] )
          return -1;
-      else if( SCIPisGT(scip, varprio->redcostscores[ind1], varprio->redcostscores[ind2]) )
+      else if( varprio->redcostscores[ind1] > varprio->redcostscores[ind2] )
          return 1;
    }
 
@@ -1231,9 +1231,9 @@ SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
       assert(varprio->pscostscores != NULL);
 
       /* prefer the variable with smaller pseudocost score */
-      if( SCIPisLT(scip, varprio->pscostscores[ind1], varprio->pscostscores[ind2]) )
+      if( varprio->pscostscores[ind1] < varprio->pscostscores[ind2] )
          return -1;
-      else if( SCIPisGT(scip, varprio->pscostscores[ind1], varprio->pscostscores[ind2]) )
+      else if( varprio->pscostscores[ind1] > varprio->pscostscores[ind2] )
          return 1;
    }
 
