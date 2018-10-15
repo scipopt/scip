@@ -1175,14 +1175,10 @@ static
 SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
 {  /*lint --e{715}*/
    VARPRIO* varprio;
-   SCIP* scip;
 
    varprio = (VARPRIO*)dataptr;
    assert(varprio != NULL);
    assert(varprio->randscores != NULL);
-
-   scip = varprio->scip;
-   assert(scip != NULL);
 
    if( ind1 == ind2 )
       return 0;
@@ -1222,8 +1218,6 @@ SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
       else if( varprio->redcostscores[ind1] > varprio->redcostscores[ind2] )
          return 1;
    }
-
-   assert(! varprio->useredcost || SCIPisEQ(scip, varprio->redcostscores[ind1], varprio->redcostscores[ind2]));
 
    /* use pseudo cost scores if reduced costs are disabled or a tie was found */
    if( varprio->usepscost )

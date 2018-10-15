@@ -1302,7 +1302,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    SCIPselectWeightedDownRealLongRealInt(tempsort, myweights, myprofits, myitems, realweights,
-      capacity, nmyitems, &greedymedianpos);
+      (SCIP_Real)capacity, nmyitems, &greedymedianpos);
 
    SCIPfreeBufferArray(scip, &realweights);
    SCIPfreeBufferArray(scip, &tempsort);
