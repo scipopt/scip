@@ -297,6 +297,8 @@ LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 DFLAGS		+=	$(USRDFLAGS)
 
+# skip config header
+FLAGS		+=  -DNO_CONFIG_HEADER
 
 #-----------------------------------------------------------------------------
 # Memory Management
