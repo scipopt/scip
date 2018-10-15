@@ -224,7 +224,7 @@
  */
 
 /**@page AUTHORS SCIP Authors
- * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
+ * <a class="el" href="#developers">Developers</a>
  *
  */
 
@@ -1140,7 +1140,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
+ *  <a href="download/files/scip_intro_01.pdf"><b>Queens</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of \SCIP as callable library.
@@ -1184,7 +1184,7 @@
  * An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
  *
  * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/Coloring"><b>here</b></a>.
+ * <a href="doc/applications/Coloring"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_CYCLECLUSTERING Cycle Clustering
@@ -1192,7 +1192,7 @@
  * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
  *
  * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/CycleClustering"><b>here</b></a>.
+ * <a href="doc/applications/CycleClustering"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_MINIISC MinIISC
@@ -1200,7 +1200,7 @@
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
  *
  * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/MinIISC"><b>here</b></a>.
+ * <a href="doc/applications/MinIISC"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_POLYSCIP PolySCIP
@@ -1208,7 +1208,7 @@
  *  A solver for multi-objective optimization problems.
  *
  * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>here</b></a>.
+ *  <a href="doc/applications/PolySCIP"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_SCHEDULER Scheduler
@@ -1216,7 +1216,7 @@
  *  A solver for scheduling problems.
  *
  * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>here</b></a>.
+ *  <a href="doc/applications/Scheduler"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS_STP Steiner Tree Problem
@@ -1224,7 +1224,7 @@
 *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
  *
  * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/STP"><b>here</b></a>.
+ *  <a href="doc/applications/STP"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS Application projects
@@ -1307,12 +1307,12 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
@@ -1359,7 +1359,7 @@
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
  * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
- * <a href="http://scip.zib.de/doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
+ * <a href="doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
@@ -1404,7 +1404,7 @@
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="#faq">the FAQ</a>), to apply primal heuristics
  * more aggressively. \SCIP shows us, which single parameters it changed therefore. Additionally, for pedagogical purposes,
  * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
  * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
@@ -1437,7 +1437,7 @@
  *
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="#faq">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
  *
  */
 
