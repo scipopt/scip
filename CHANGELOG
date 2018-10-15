@@ -32,6 +32,8 @@ Interface changes
 
 ### Changed parameters
 
+- default clock type for timing is now wallclock
+
 ### New parameters
 
 ### Data structures
