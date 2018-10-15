@@ -29,6 +29,13 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 #ifdef __cplusplus
 
 
