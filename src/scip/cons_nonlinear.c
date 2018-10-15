@@ -6748,8 +6748,8 @@ void consdataFindUnlockedLinearVar(
    )
 {
    int i;
-   int poslock;
-   int neglock;
+   int downlock;
+   int uplock;
 
    consdata->linvar_maydecrease = -1;
    consdata->linvar_mayincrease = -1;
@@ -6762,16 +6762,16 @@ void consdataFindUnlockedLinearVar(
       assert(consdata->lincoefs[i] != 0.0);
       if( consdata->lincoefs[i] > 0.0 )
       {
-         poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;  /* lhs <= x -> downlock on x */
+         uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;    /* x <= rhs -> uplock on x */
       }
       else
       {
-         poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;  /* -x <= rhs -> downlock on x */
+         uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;    /* lhs <= -x -> uplock on x */
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - downlock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -6780,7 +6780,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+      if( SCIPvarGetNLocksUpType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - uplock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -6825,6 +6825,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real delta;
    SCIP_Real gap;
    SCIP_Bool solviolbounds;
+   SCIP_Bool solchanged;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -6850,26 +6851,24 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   solchanged = FALSE;  /* so far newsol equals sol */
 
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* recompute violation of solution in case solution has changed
-       * get absolution violation and sign */
+      /* recompute violation of constraint in case solution is not original sol anymore */
+      if( solchanged )
+      {
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         assert(!solviolbounds);
+      }
+
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->lhs - consdata->activity;
-      }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->rhs - consdata->activity;
-      }
       else
          continue; /* constraint is satisfied */
 
@@ -6897,6 +6896,8 @@ SCIP_RETCODE proposeFeasibleSolution(
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -6929,6 +6930,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
 
+            solchanged = TRUE;
+
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
             if( SCIPisZero(scip, viol) )
@@ -6945,6 +6948,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    if( c == nconss && (SCIPisInfinity(scip, SCIPgetUpperbound(scip)) || SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip))) )
    {
       SCIPdebugMsg(scip, "pass solution with objective value %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+      assert(solchanged);
 
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
       *success = TRUE;

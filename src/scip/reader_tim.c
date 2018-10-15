@@ -1010,6 +1010,7 @@ int SCIPtimFindStage(
    SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
    int i;
+   int stagenum;
 
    reader = SCIPfindReader(scip, READER_NAME);
 
@@ -1019,13 +1020,23 @@ int SCIPtimFindStage(
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
+   stagenum = -1;
    for( i = 0; i < readerdata->nstages; i++ )
    {
       if( strcmp(readerdata->stagenames[i], stage) == 0 )
-         return i;
+      {
+         stagenum = i;
+         break;
+      }
    }
 
-   return -1;
+   if( stagenum < 0 )
+   {
+      SCIPerrorMessage("Stage <%s> was not found in the TIM file. Check the SMPS files (COR, TIM and STO)\n", stage);
+      SCIPABORT();
+   }
+
+   return stagenum;
 }
 
 /* returns the array of variables for a given stage */
