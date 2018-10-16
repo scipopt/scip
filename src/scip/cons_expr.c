@@ -5253,7 +5253,7 @@ SCIP_RETCODE presolMergeCons(
             SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata1->lhs,
                SCIPconsGetName(conss[i]), consdata1->rhs, consdata2->lhs, SCIPconsGetName(conss[j]), consdata2->rhs);
 
-            /* check whether locks needs to be updated */
+            /* check whether locks need to be updated */
             if( (SCIPisInfinity(scip, -consdata1->lhs) && !SCIPisInfinity(scip, -consdata2->lhs))
                || (SCIPisInfinity(scip, consdata1->rhs) && !SCIPisInfinity(scip, consdata2->rhs)) )
             {
@@ -6360,9 +6360,12 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* merge constraints with the same root expression */
-   SCIP_CALL( presolMergeCons(scip, conss, nconss, &success) );
-   if( success )
-      *result = SCIP_SUCCESS;
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      SCIP_CALL( presolMergeCons(scip, conss, nconss, &success) );
+      if( success )
+         *result = SCIP_SUCCESS;
+   }
 
    /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
