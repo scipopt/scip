@@ -13,18 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_coloring.c
  * @brief  main document page
  * @author Gerald Gamrath
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page COLORING_MAIN Overview
  * @version  0.1
  * @author   Gerald Gamrath
  *
- * This branch-and-price graph coloring code gives an example for 
+ * This branch-and-price graph coloring code gives an example for
  * a pricer and associated modules.
  *
  * It implements the approach described in
@@ -41,9 +41,9 @@
  * adjacent vertices have the same color; the number of colors needed should be minimized.
  *
  * We use the following integer programming model: We have binary
- * variables \f$ x_{s}, s \in \mathcal{S}\f$ where \f$\mathcal{S}\f$ 
+ * variables \f$ x_{s}, s \in \mathcal{S}\f$ where \f$\mathcal{S}\f$
  * is the set of all stable sets in the graph \f$G\f$.
- * 
+ *
  * The basic model is then:
  * \f[
  *  \begin{array}[t]{rl}
@@ -58,7 +58,7 @@
  * further stable sets during the solution process. This way it tries to improve the current LP
  * solution.
  *
- * Further information about particular modules like the pricing routine and the 
+ * Further information about particular modules like the pricing routine and the
  * branching rule can be found in the documentation of the corresponding files.
  *
  * The pricer pricer_coloring.c shows how to perform column generation in SCIP.  The constraint

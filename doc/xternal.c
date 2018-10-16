@@ -1179,52 +1179,12 @@
  *  </table>
  */
 
-/** @page APPLICATIONS_COLORING Coloring
- *
- * An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
- *
- * The documentation of this application can be accessed
- * <a href="doc/applications/Coloring"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_CYCLECLUSTERING Cycle Clustering
- *
- * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
- *
- * The documentation of this application can be accessed
- * <a href="doc/applications/CycleClustering"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_MINIISC MinIISC
- *
- *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *
- * The documentation of this application can be accessed
- * <a href="doc/applications/MinIISC"><b>here</b></a>.
- */
-
 /** @page APPLICATIONS_POLYSCIP PolySCIP
  *
  *  A solver for multi-objective optimization problems.
  *
  * The documentation of this application can be accessed
  *  <a href="doc/applications/PolySCIP"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_SCHEDULER Scheduler
- *
- *  A solver for scheduling problems.
- *
- * The documentation of this application can be accessed
- *  <a href="doc/applications/Scheduler"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_STP Steiner Tree Problem
- *
-*  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *
- * The documentation of this application can be accessed
- *  <a href="doc/applications/STP"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS Application projects
@@ -1235,7 +1195,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_COLORING
+ *  @subpage COLORING_MAIN
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -1243,7 +1203,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_CYCLECLUSTERING
+ *  @subpage CYCLECLUSTERING_MAIN
  *  </td>
  *  <td>
  *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
@@ -1251,7 +1211,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_MINIISC
+ *  @subpage MINIICS_MAIN
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
@@ -1276,7 +1236,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_SCHEDULER
+ *  @subpage SCHEDULER_MAIN
  *  </td>
  *  <td>
  *  A solver for scheduling problems.
@@ -1284,7 +1244,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_STP
+ *  @subpage STP_MAIN
  *  </td>
  *  <td>
  *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_stp.c
  * @brief  main document page
  * @author Daniel Rehfeldt
  * @author Gerald Gamrath
@@ -25,7 +25,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page STP_MAIN Overview
  * @author Daniel Rehfeldt
  * @author Gerald Gamrath
  * @author Thorsten Koch
