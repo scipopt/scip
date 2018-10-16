@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page COLORING_MAIN Overview
+/**@page COLORING_MAIN Coloring
  * @version  0.1
  * @author   Gerald Gamrath
  *

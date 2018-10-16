@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal_miniics.c
+/**@file   xternal_miniisc.c
  * @brief  main document page
  * @author Marc Pfetsch
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page MINIICS_MAIN Overview
+/**@page MINIICS_MAIN MinIICS
  * @version  0.1
  * @author   Marc Pfetsch
  *

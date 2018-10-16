@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page CYCLECLUSTERING_MAIN Overview
+/**@page CYCLECLUSTERING_MAIN CycleClustering
  * @version  0.1
  * @author   Leon Eifler
  *

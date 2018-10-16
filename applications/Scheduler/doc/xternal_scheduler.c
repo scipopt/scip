@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page SCHEDULER_MAIN Overview
+/**@page SCHEDULER_MAIN Scheduler
  * @author Stefan Heinz
  * @author Jens Schulz
  *

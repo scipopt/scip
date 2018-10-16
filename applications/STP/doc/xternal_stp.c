@@ -25,7 +25,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page STP_MAIN Overview
+/**@page STP_MAIN STP
  * @author Daniel Rehfeldt
  * @author Gerald Gamrath
  * @author Thorsten Koch

@@ -802,8 +802,8 @@ INPUT                  = . \
                          ../applications/Coloring/doc/xternal_coloring.c \
                          ../applications/CycleClustering/src \
                          ../applications/CycleClustering/doc/xternal_cycleclustering.c \
-                         ../applications/MinIICS/src \
-                         ../applications/MinIICS/doc/xternal_miniics.c \
+                         ../applications/MinIISC/src \
+                         ../applications/MinIISC/doc/xternal_miniisc.c \
                          ../applications/Ringpacking/src/ \
                          ../applications/Ringpacking/doc/xternal_ringpacking.c \
                          ../applications/STP/src \
@@ -1035,7 +1035,8 @@ EXAMPLE_RECURSIVE      = NO
 
 IMAGE_PATH             = pictures/ \
                          ../examples/Binpacking/doc/pics \
-                         ../applications/Ringpacking/doc/pics
+                         ../applications/Ringpacking/doc/pics \
+                         ../applications/STP/doc/pics
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program

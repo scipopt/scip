@@ -986,7 +986,7 @@
  *     - The \ref VRP_MAIN "Vehicle Routing Problem Example" is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
  *     - The \ref BINPACKING_MAIN "Binpacking Example"
- *       and the \ref APPLICATIONS_COLORING "Coloring application" are
+ *       and the \ref COLORING_MAIN "Coloring application" are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The \ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
