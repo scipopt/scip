@@ -5212,7 +5212,7 @@ SCIP_RETCODE proposeFeasibleSolution(
 
 /** merges constraints that have the same root expression */
 static
-SCIP_RETCODE presolMergeCons(
+SCIP_RETCODE presolMergeConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
@@ -6365,7 +6365,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    {
       SCIP_Bool success;
 
-      SCIP_CALL( presolMergeCons(scip, conss, nconss, &success) );
+      SCIP_CALL( presolMergeConss(scip, conss, nconss, &success) );
       if( success )
          *result = SCIP_SUCCESS;
    }
