@@ -1483,7 +1483,7 @@ SCIP_RETCODE propConss(
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
           */
-         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
+         if( !SCIPconsIsDeleted(conss[i]) && SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
             SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
             SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -5210,6 +5210,75 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** merges constraints that have the same root expression */
+static
+SCIP_RETCODE presolMergeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            success
+   )
+{
+   int i;
+
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* iterate through all pairs of constraints */
+   for( i = 0; i < nconss - 1; ++i )
+   {
+      SCIP_CONSDATA* consdata1;
+      SCIP_Bool updatedlocks;
+      int j;
+
+      if( SCIPconsIsDeleted(conss[i]) )
+         continue;
+
+      consdata1 = SCIPconsGetData(conss[i]);
+      updatedlocks = FALSE;
+
+      for( j = i + 1; j < nconss; ++j )
+      {
+         SCIP_CONSDATA* consdata2;
+
+         if( SCIPconsIsDeleted(conss[j]) )
+            continue;
+
+         consdata2 = SCIPconsGetData(conss[j]);
+
+         /* merge constraint sides; delete constraint */
+         if( consdata1->expr == consdata2->expr )
+         {
+            SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata1->lhs,
+               SCIPconsGetName(conss[i]), consdata1->rhs, consdata2->lhs, SCIPconsGetName(conss[j]), consdata2->rhs);
+
+            /* check whether locks needs to be updated */
+            if( (SCIPisInfinity(scip, -consdata1->lhs) && !SCIPisInfinity(scip, -consdata2->lhs))
+               || (SCIPisInfinity(scip, consdata1->rhs) && !SCIPisInfinity(scip, consdata2->rhs)) )
+            {
+               updatedlocks = TRUE;
+               SCIP_CALL( addLocks(scip, conss[i], -consdata1->nlockspos, -consdata1->nlocksneg) );
+            }
+
+            consdata1->lhs = MAX(consdata1->lhs, consdata2->lhs);
+            consdata1->rhs = MIN(consdata1->rhs, consdata2->rhs);
+
+            SCIP_CALL( SCIPdelCons(scip, conss[j]) );
+            *success = TRUE;
+         }
+      }
+
+      /* recompute locks */
+      if( updatedlocks )
+      {
+         SCIP_CALL( addLocks(scip, conss[i], consdata1->nlockspos, consdata1->nlocksneg) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** print statistics for expression handlers */
 static
 void printExprHdlrStatistics(
@@ -6277,6 +6346,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
    SCIP_Bool infeasible;
+   SCIP_Bool success;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -6288,6 +6358,11 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
+
+   /* merge constraints with the same root expression */
+   SCIP_CALL( presolMergeCons(scip, conss, nconss, &success) );
+   if( success )
+      *result = SCIP_SUCCESS;
 
    /* propagate constraints */
    SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
