@@ -5219,64 +5219,93 @@ SCIP_RETCODE presolMergeConss(
    SCIP_Bool*            success
    )
 {
-   int i;
+   SCIP_HASHMAP* expr2cons;
+   SCIP_Bool* updatelocks;
+   int* nlockspos;
+   int* nlocksneg;
+   int c;
 
    assert(success != NULL);
 
    *success = FALSE;
 
-   /* iterate through all pairs of constraints */
-   for( i = 0; i < nconss - 1; ++i )
+   /* not enough constraints available */
+   if( nconss <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2cons, SCIPblkmem(scip), nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &updatelocks, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
+
+   for( c = 0; c < nconss; ++c )
    {
-      SCIP_CONSDATA* consdata1;
-      SCIP_Bool updatedlocks;
-      int j;
+      SCIP_CONSDATA* consdata;
 
       /* ignore deleted constraints */
-      if( SCIPconsIsDeleted(conss[i]) )
+      if( SCIPconsIsDeleted(conss[c]) )
          continue;
 
-      consdata1 = SCIPconsGetData(conss[i]);
-      updatedlocks = FALSE;
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
 
-      for( j = i + 1; j < nconss; ++j )
+      /* add expression to the hash map if not seen so far */
+      if( !SCIPhashmapExists(expr2cons, (void*)consdata->expr) )
       {
-         SCIP_CONSDATA* consdata2;
-
-         /* ignore deleted constraints */
-         if( SCIPconsIsDeleted(conss[j]) )
-            continue;
-
-         consdata2 = SCIPconsGetData(conss[j]);
-
-         /* merge constraint sides; delete constraint */
-         if( consdata1->expr == consdata2->expr )
-         {
-            SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata1->lhs,
-               SCIPconsGetName(conss[i]), consdata1->rhs, consdata2->lhs, SCIPconsGetName(conss[j]), consdata2->rhs);
-
-            /* check whether locks need to be updated */
-            if( (SCIPisInfinity(scip, -consdata1->lhs) && !SCIPisInfinity(scip, -consdata2->lhs))
-               || (SCIPisInfinity(scip, consdata1->rhs) && !SCIPisInfinity(scip, consdata2->rhs)) )
-            {
-               SCIP_CALL( addLocks(scip, conss[i], -consdata1->nlockspos, -consdata1->nlocksneg) );
-               updatedlocks = TRUE;
-            }
-
-            consdata1->lhs = MAX(consdata1->lhs, consdata2->lhs);
-            consdata1->rhs = MIN(consdata1->rhs, consdata2->rhs);
-
-            SCIP_CALL( SCIPdelCons(scip, conss[j]) );
-            *success = TRUE;
-         }
+         SCIP_CALL( SCIPhashmapInsertInt(expr2cons, (void*)consdata->expr, c) );
       }
-
-      /* recompute locks */
-      if( updatedlocks )
+      else
       {
-         SCIP_CALL( addLocks(scip, conss[i], consdata1->nlockspos, consdata1->nlocksneg) );
+         SCIP_CONSDATA* imgconsdata;
+         int idx;
+
+         idx = SCIPhashmapGetImageInt(expr2cons, (void*)consdata->expr);
+         assert(idx >= 0 && idx < nconss);
+
+         imgconsdata = SCIPconsGetData(conss[idx]);
+         assert(imgconsdata != NULL);
+         assert(imgconsdata->expr == consdata->expr);
+
+         SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata->lhs,
+            SCIPconsGetName(conss[c]), consdata->rhs, imgconsdata->lhs, SCIPconsGetName(conss[idx]), imgconsdata->rhs);
+
+         /* check whether locks need to be updated */
+         if( !updatelocks[idx] && ((SCIPisInfinity(scip, -imgconsdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs))
+            || (SCIPisInfinity(scip, imgconsdata->rhs) && !SCIPisInfinity(scip, consdata->rhs))) )
+         {
+            nlockspos[idx] = imgconsdata->nlockspos;
+            nlocksneg[idx] = imgconsdata->nlocksneg;
+            SCIP_CALL( addLocks(scip, conss[idx], -imgconsdata->nlockspos, -imgconsdata->nlocksneg) );
+            updatelocks[idx] = TRUE;
+         }
+
+         /* update constraint sides */
+         imgconsdata->lhs = MAX(imgconsdata->lhs, consdata->lhs);
+         imgconsdata->rhs = MIN(imgconsdata->rhs, consdata->rhs);
+
+         /* delete constraint */
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         *success = TRUE;
       }
    }
+
+   /* restore locks of updated constraints */
+   if( *success )
+   {
+      for( c = 0; c < nconss; ++c )
+      {
+         if( updatelocks[c] )
+         {
+            SCIP_CALL( addLocks(scip, conss[c], nlockspos[c], nlocksneg[c]) );
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &nlocksneg);
+   SCIPfreeBufferArray(scip, &nlockspos);
+   SCIPfreeBufferArray(scip, &updatelocks);
+   SCIPhashmapFree(&expr2cons);
 
    return SCIP_OKAY;
 }
