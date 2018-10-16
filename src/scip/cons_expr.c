@@ -5232,6 +5232,7 @@ SCIP_RETCODE presolMergeCons(
       SCIP_Bool updatedlocks;
       int j;
 
+      /* ignore deleted constraints */
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
 
@@ -5242,6 +5243,7 @@ SCIP_RETCODE presolMergeCons(
       {
          SCIP_CONSDATA* consdata2;
 
+         /* ignore deleted constraints */
          if( SCIPconsIsDeleted(conss[j]) )
             continue;
 
@@ -5257,8 +5259,8 @@ SCIP_RETCODE presolMergeCons(
             if( (SCIPisInfinity(scip, -consdata1->lhs) && !SCIPisInfinity(scip, -consdata2->lhs))
                || (SCIPisInfinity(scip, consdata1->rhs) && !SCIPisInfinity(scip, consdata2->rhs)) )
             {
-               updatedlocks = TRUE;
                SCIP_CALL( addLocks(scip, conss[i], -consdata1->nlockspos, -consdata1->nlocksneg) );
+               updatedlocks = TRUE;
             }
 
             consdata1->lhs = MAX(consdata1->lhs, consdata2->lhs);
@@ -6346,7 +6348,6 @@ static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
    SCIP_Bool infeasible;
-   SCIP_Bool success;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -6362,6 +6363,8 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    /* merge constraints with the same root expression */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
+      SCIP_Bool success;
+
       SCIP_CALL( presolMergeCons(scip, conss, nconss, &success) );
       if( success )
          *result = SCIP_SUCCESS;
