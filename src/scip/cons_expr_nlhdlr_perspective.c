@@ -42,6 +42,7 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
+   SCIP_HASHMAP* semiContVars;  /**< previously detected semicontinuous variables */
 };
 
 /** nonlinear handler data */
@@ -56,84 +57,91 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
-
 static
-SCIP_RETCODE findUnivariateVar(
-   SCIP* scip,                             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR* expr,               /**< expression to check */
-   SCIP_VAR**          expr_var            /**< the variable of a proper univariate function */
+SCIP_Bool varIsSemicontinuous(
+   SCIP*                       scip,                  /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA*   nlhdlrdata,            /**< nonlinear handler data */
+   SCIP_VAR*                   var,                   /**< the variable to be checked */
+   SCIP_VAR**                  bvar                   /**< the binary variable assosiated with var, NULL if var is not semicontinuous */
    )
 {
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      return FALSE;
+
    int c;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* var;
+   SCIP_Real pmin = -SCIPinfinity(scip), pmax = SCIPinfinity(scip);
+   *bvar = NULL;
 
-   SCIPinfoMessage(scip, NULL, "\nExpr handler: %s", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-
-   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   /* check if var is semicontinuous */
+   for( c = 0; c < nlhdlrdata->nvbdconss; ++c )
    {
-      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      SCIP_CONS* vbcons = nlhdlrdata->vbdconss[c];
+      if(vbcons->consdata == NULL) continue;
+      int bpos, cpos;
+      if( SCIPgetVarsLinear(scip, vbcons)[0] == var )
       {
-         child = SCIPgetConsExprExprChildren(expr)[c];
-
-         /* check that the continuous var is the same in all children */
-         if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
-         {
-            if( SCIPgetConsExprExprPowExponent(child) != 2 )
-            {
-               SCIPinfoMessage(scip, NULL, "\nThe sum expression is not quadratic");
-               *expr_var = NULL;
-               return SCIP_OKAY;
-            }
-            var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]);
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-            {
-               SCIPinfoMessage(scip, NULL, "\nSquared binary variable, not reformulating");
-               *expr_var = NULL;
-               return SCIP_OKAY;
-            }
-            if( *expr_var == NULL )
-               *expr_var = var;
-            else if( *expr_var != var )
-            {
-               *expr_var = NULL;
-               return SCIP_OKAY;
-            }
-         }
-         else if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
-         {
-            var = SCIPgetConsExprExprVarVar(child);
-            if( *expr_var != NULL )
-            {
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(*expr_var) != SCIP_VARTYPE_BINARY && *expr_var != var )
-               {
-                  SCIPinfoMessage(scip, NULL, "\nFound two different non-binary variables");
-                  *expr_var = NULL;
-                  return SCIP_OKAY;
-               }
-            }
-            else
-               *expr_var = var;
-         }
-         else
-         {
-            if( strcmp("value", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) != 0 )
-            {
-               SCIPinfoMessage(scip, NULL, "\nThe sum expression is not quadratic");
-               *expr_var = NULL;
-               return SCIP_OKAY;
-            }
-         }
+         bpos = 1;
+         cpos = 0;
       }
+      else if( SCIPgetVarsLinear(scip, vbcons)[1] == var )
+      {
+         bpos = 0;
+         cpos = 1;
+      }
+      else
+         continue;
+
+
+      *bvar = SCIPgetVarsLinear(scip, vbcons)[bpos]; /* TODO what if there are varbounds with different bvars? */
+
+      SCIP_Bool leq0 = SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip);
+      SCIP_Bool geq0 = SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip);
+      SCIP_Real ccoef = SCIPgetValsLinear(scip, vbcons)[cpos];
+      /* currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
+      if( (leq0 && ccoef > 0) || (geq0 && ccoef < 0) )
+         pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
+      else if( (geq0 && ccoef > 0) || (leq0 && ccoef < 0) )
+         pmin = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
+      if( pmin != -SCIPinfinity(scip) && pmax != SCIPinfinity(scip) )
+         break;
+   }
+   if( pmin == -SCIPinfinity(scip) || pmax == SCIPinfinity(scip) )
+   {
+      *bvar = NULL;
+      return FALSE;
    }
 
-   /* TODO: check other constraint handlers, detect other types of nonlinear constraints: pow, exp, etc? */
+   SCIPinfoMessage(scip, NULL, "\nFound a semicontinuous variable, pmin = %f, pmax = %f", pmin, pmax);
+   return TRUE;
+}
 
-   if( *expr_var != NULL )
-      SCIPinfoMessage(scip, NULL, "\nThe function is quadratic univariate");
+
+
+static
+SCIP_RETCODE addRefterm(
+   SCIP*                  scip,
+   SCIP_CONSHDLR*         conshdlr,
+   SCIP_CONSEXPR_EXPR*    expr,
+   SCIP_Real              coef,
+   SCIP_CONSEXPR_EXPR**   refexpr,
+   SCIP_Bool              reformulate
+   )
+{
+   SCIP_CONSEXPR_EXPR* refterm;
+   if( reformulate )
+   {
+      /* TODO: reformulate */
+#if 0
+     refterm = reformulateTerm(expr);
+#endif
+      refterm = expr;
+   }
    else
-      SCIPinfoMessage(scip, NULL, "\nThe function is not of the proper form");
-
+      refterm = expr;
+   if( *refexpr == NULL )
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, refexpr, 1, &refterm, &coef, 0.0) );
+   else
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *refexpr, refterm, coef) );
    return SCIP_OKAY;
 }
 
@@ -335,8 +343,15 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_VAR* bvar;
-   SCIP_Real pmin = -SCIPinfinity(scip), pmax = SCIPinfinity(scip), bvarcoef = 0;
+   SCIP_CONSEXPR_EXPR* child;
    int c;
+
+#if 0
+   SCIPinfoMessage(scip, NULL, "\n------------------\nCalled for expr: ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+#endif
+
+   *refexpr = NULL;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
@@ -385,96 +400,143 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          }
       }
 
-      SCIPinfoMessage(scip, NULL, "\nVar bound constraints found:\n");
+#if 0
+      SCIPinfoMessage(scip, NULL, "\nVar bound constraints:\n");
       for( c = 0; c < nlhdlrdata->nvbdconss; c++ )
       {
          SCIP_CALL( SCIPprintCons(scip, nlhdlrdata->vbdconss[c], NULL) );
          SCIPinfoMessage(scip, NULL, "\n");
       }
+#endif
 
       nlhdlrdata->detected = TRUE;
    }
 
-   /* TODO detect structure */
+   /* TODO detect structure (assumes that the terms are sorted) */
 
-   /* is the expression univariate (disregarding adding binary variables)? if yes, expr_var stores the continuous var */
-   SCIP_VAR* expr_var = NULL;
-   SCIP_CALL( findUnivariateVar(scip, expr, &expr_var) );
+   SCIP_CONSEXPR_EXPR** children;
+   int nchildren;
 
-   /* no reformulation is possible */
-   if( expr_var == NULL )
-   {
-      *refexpr = expr;
-      SCIPcaptureConsExprExpr(*refexpr);
-      return SCIP_OKAY;
-   }
-
-   /* check if expr_var is semicontinuous */
-   for( c = 0; c < nlhdlrdata->nvbdconss; ++c )
-   {
-      SCIP_CONS* vbcons = nlhdlrdata->vbdconss[c];
-      int bpos, cpos;
-      if( SCIPgetVarsLinear(scip, vbcons)[0] == expr_var )
-      {
-         bpos = 1;
-         cpos = 0;
-      }
-      else if( SCIPgetVarsLinear(scip, vbcons)[1] == expr_var )
-      {
-         bpos = 0;
-         cpos = 1;
-      }
-      else
-         continue;
-
-
-      bvar = SCIPgetVarsLinear(scip, vbcons)[bpos]; /* TODO what if there are varbounds with different bvars? */
-
-      SCIP_Bool leq0 = SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip);
-      SCIP_Bool geq0 = SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip);
-      SCIP_Real ccoef = SCIPgetValsLinear(scip, vbcons)[cpos];
-      if( (leq0 && ccoef > 0) || (geq0 && ccoef < 0) )
-         pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
-      else if( (geq0 && ccoef > 0) || (leq0 && ccoef < 0) )
-         pmin = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
-      else /* currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
-         SCIPinfoMessage(scip, NULL, "\nThe varbound constraint of this form can't be handled now");
-      if( pmin != -SCIPinfinity(scip) && pmax != SCIPinfinity(scip) )
-         break;
-   }
-   if( pmin == -SCIPinfinity(scip) || pmax == SCIPinfinity(scip) )
-   {
-      SCIPinfoMessage(scip, NULL, "\nThe variable does not have proper on/off bounds, %f, %f", pmin, pmax);
-      *refexpr = expr;
-      SCIPcaptureConsExprExpr(*refexpr);
-      return SCIP_OKAY;
-   }
-   else
-      SCIPinfoMessage(scip, NULL, "\nFound a semicont variable, pmin = %f, pmax = %f", pmin, pmax);
-
-   /* find the coefficient of the binary variable, if not found leave it at 0 */
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
    {
-      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-      {
-         SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
-
-         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
-         {
-            if( SCIPgetConsExprExprVarVar(child) == bvar )
-               bvarcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
-         }
-      }
+      children = SCIPgetConsExprExprChildren(expr);
+      nchildren = SCIPgetConsExprExprNChildren(expr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &children, 0, 1) );
+      *children = expr;
+      nchildren = 1;
    }
 
-   SCIPinfoMessage(scip, NULL, "\nc = %f", bvarcoef);
+
+   SCIP_VAR* qvar = NULL;
+   int qvarpos = -1;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+
+      if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0)
+      {
+         if( varIsSemicontinuous(scip, nlhdlrdata, SCIPgetConsExprExprVarVar(child), &bvar) )
+         {
+            /* save the variable, do nothing */
+            qvar = SCIPgetConsExprExprVarVar(child);
+            qvarpos = c;
+            continue;
+         }
+         else
+            addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+      }
+      else if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+      {
+         SCIP_CONSEXPR_EXPR* powbase;
+         powbase = SCIPgetConsExprExprChildren(child)[0];
+         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(powbase))) != 0  )
+            continue;
+         SCIP_VAR* powvar;
+         powvar = SCIPgetConsExprExprVarVar(powbase);
+         if(SCIPvarGetType(powvar) != SCIP_VARTYPE_CONTINUOUS)
+            continue;
+         if( SCIPgetConsExprExprPowExponent(child) == 2) /* quadratic univariate */
+         {
+            if( qvar == powvar )
+            {
+               SCIP_CONSEXPR_EXPR* quadsum;
+               SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &quadsum, 1, &SCIPgetConsExprExprChildren(expr)[qvarpos], &SCIPgetConsExprExprSumCoefs(expr)[qvarpos], 0.0) );
+               SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, quadsum, child, SCIPgetConsExprExprSumCoefs(expr)[c]) );
+               addRefterm(scip, conshdlr, quadsum, 1.0, refexpr, TRUE);
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &quadsum) );
+            }
+            else
+            {
+               if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
+                  addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+               else
+                  addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+               if( qvar != NULL )
+               {
+                  addRefterm(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[qvarpos],
+                             SCIPgetConsExprExprSumCoefs(expr)[qvarpos], refexpr, FALSE);
+                  qvar = NULL;
+                  qvarpos = -1;
+               }
+            }
+
+         }
+         else /* univariate rational power (non-quadratic) */
+         {
+            if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
+               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+            else
+               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+         }
+      }
+      else if( strcmp("exp", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+      {
+         SCIP_CONSEXPR_EXPR* exppow;
+         exppow = SCIPgetConsExprExprChildren(child)[0];
+         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(exppow))) != 0  )
+            continue;
+         SCIP_VAR* expvar;
+         expvar = SCIPgetConsExprExprVarVar(exppow);
+         if(SCIPvarGetType(expvar) != SCIP_VARTYPE_CONTINUOUS)
+            continue;
+         if( varIsSemicontinuous(scip, nlhdlrdata, expvar, &bvar) )
+               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+         else
+               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+      }
+      else
+         addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+   }
+
+
+   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   {
+      SCIPsetConsExprExprSumConstant(*refexpr, SCIPgetConsExprExprSumConstant(expr));
+   }
+   else
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &children, nchildren);
+   }
+
+#if 0
+   SCIPinfoMessage(scip, NULL, "\n\nrefexpr:\n");
+   SCIPprintConsExprExpr(scip, conshdlr, *refexpr, NULL);
+   SCIPinfoMessage(scip, NULL, "\n\n");
+#endif
 
    /* TODO create expression and store it in refexpr */
 
+   *refexpr = NULL;
 
    /* set refexpr to expr and capture it if no reformulation is possible */
-   *refexpr = expr;
-   SCIPcaptureConsExprExpr(*refexpr);
+   if(*refexpr == NULL)
+   {
+      *refexpr = expr;
+      SCIPcaptureConsExprExpr(*refexpr);
+   }
 
    return SCIP_OKAY;
 }
