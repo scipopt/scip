@@ -2782,6 +2782,8 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 #endif
 
+   SCIP_CALL( SCIPupdateConsExprNlhdlrs(scip, conshdlr) );
+
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
@@ -9181,6 +9183,35 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    return SCIP_OKAY;
 }
 
+SCIP_RETCODE SCIPupdateConsExprNlhdlrs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr          /**< constraint handler */
+)
+{
+   assert(scip != NULL);
+
+   SCIP_CONSEXPR_EXPR* refexpr = NULL;
+
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int k;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* iterate through nonlinear handlers and call update callbackss */
+   for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
+   {
+      assert(conshdlrdata->nlhdlrs[k] != NULL);
+
+      if( SCIPhasConsExprNlhdlrUpdate(conshdlrdata->nlhdlrs[k]) )
+      {
+         SCIP_CALL( SCIPupdateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */  /* end of simplifying methods */
 
 /** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
@@ -10061,6 +10092,18 @@ void SCIPsetConsExprNlhdlrInitExit(
    nlhdlr->exit = exit_;
 }
 
+/** set the update callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrUpdate(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,         /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRUPDATE((*update)) /**< update callback */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->update = update;
+}
+
 /** set the reformulate callback of a nonlinear handler */
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
@@ -10180,6 +10223,14 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    return nlhdlr->data;
 }
 
+/** returns whether nonlinear handler implements the update callback */
+SCIP_Bool SCIPhasConsExprNlhdlrUpdate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+)
+{
+   return nlhdlr->update != NULL;
+}
+
 /** returns whether nonlinear handler implements the reformulation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
@@ -10251,6 +10302,27 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
 
    if( *success )
       ++nlhdlr->ndetections;
+
+   return SCIP_OKAY;
+}
+
+/** calls the update callback of a nonlinear handler */
+SCIP_DECL_CONSEXPR_NLHDLRUPDATE(SCIPupdateConsExprNlhdlr)
+{
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlr->reformulatetime != NULL);
+
+   if( nlhdlr->update == NULL )
+      return SCIP_OKAY;
+
+   /* call reformulation callback */
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->reformulatetime) );
+   SCIP_CALL( nlhdlr->update(scip, conshdlr, nlhdlr) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
+
+   /* TODO check whether the nonlinear handler was updated? */
 
    return SCIP_OKAY;
 }

@@ -1160,12 +1160,19 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
 );
 
+/** set the update callback of a nonlinear handler */
+void SCIPsetConsExprNlhdlrUpdate(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,         /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRUPDATE((*update)) /**< update callback */
+);
+
 /** set the reformulate callback of a nonlinear handler */
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
-   );
+);
 
 /** set the propagation callbacks of a nonlinear handler */
 EXTERN
@@ -1226,6 +1233,12 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
+/** returns whether nonlinear handler implements the update callback */
+EXTERN
+SCIP_Bool SCIPhasConsExprNlhdlrUpdate(
+   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
+);
+
 /** returns whether nonlinear handler implements the reformulation callback */
 EXTERN
 SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
@@ -1268,9 +1281,19 @@ SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
+EXTERN
+SCIP_RETCODE SCIPupdateConsExprNlhdlrs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr          /**< constraint handler */
+);
+
 /** call the detect callback of a nonlinear handler */
 EXTERN
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr);
+
+/** calls the update callback of a nonlinear handler */
+EXTERN
+SCIP_DECL_CONSEXPR_NLHDLRUPDATE(SCIPupdateConsExprNlhdlr);
 
 /** calls the reformulation callback of a nonlinear handler */
 EXTERN

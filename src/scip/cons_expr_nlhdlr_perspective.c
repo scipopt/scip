@@ -42,15 +42,15 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
-   SCIP_HASHMAP* semiContVars;  /**< previously detected semicontinuous variables */
 };
 
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_Bool   detected;
-   SCIP_CONS** vbdconss;       /**< varbound constraints */
-   int         nvbdconss;      /**< number of varbound constraints */
+   SCIP_HASHMAP* semiContVars;  /**< newly detected semicontinuous variables */
+   SCIP_Bool     detected;
+   SCIP_CONS**   vbdconss;       /**< varbound constraints */
+   int           nvbdconss;      /**< number of varbound constraints */
 };
 
 /*
@@ -97,7 +97,7 @@ SCIP_Bool varIsSemicontinuous(
       SCIP_Bool leq0 = SCIPgetRhsLinear(scip, vbcons) == 0 && SCIPgetLhsLinear(scip, vbcons) == -SCIPinfinity(scip);
       SCIP_Bool geq0 = SCIPgetLhsLinear(scip, vbcons) == 0 && SCIPgetRhsLinear(scip, vbcons) == SCIPinfinity(scip);
       SCIP_Real ccoef = SCIPgetValsLinear(scip, vbcons)[cpos];
-      /* currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
+      /* TODO currently handling only one-sided constraints with 0 lhs or rhs, could be generalised later */
       if( (leq0 && ccoef > 0) || (geq0 && ccoef < 0) )
          pmax = -SCIPgetValsLinear(scip, vbcons)[bpos] / ccoef;
       else if( (geq0 && ccoef > 0) || (leq0 && ccoef < 0) )
@@ -337,6 +337,13 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 #endif
 
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
+{
+   SCIPinfoMessage(scip, NULL, "\nUpdate called");
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler callback for reformulation */
 static
 SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
@@ -569,6 +576,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitPerspective, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulatePerspective);
+   SCIPsetConsExprNlhdlrUpdate(scip, nlhdlr, nlhdlrUpdatePerspective);
 
    return SCIP_OKAY;
 }
