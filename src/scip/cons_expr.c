@@ -1483,7 +1483,7 @@ SCIP_RETCODE propConss(
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
           */
-         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
+         if( !SCIPconsIsDeleted(conss[i]) && SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
             SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
             SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -5210,6 +5210,106 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** merges constraints that have the same root expression */
+static
+SCIP_RETCODE presolMergeConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            success             /**< pointer to store whether at least one constraint could be deleted */
+   )
+{
+   SCIP_HASHMAP* expr2cons;
+   SCIP_Bool* updatelocks;
+   int* nlockspos;
+   int* nlocksneg;
+   int c;
+
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* not enough constraints available */
+   if( nconss <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2cons, SCIPblkmem(scip), nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &updatelocks, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      /* ignore deleted constraints */
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* add expression to the hash map if not seen so far */
+      if( !SCIPhashmapExists(expr2cons, (void*)consdata->expr) )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(expr2cons, (void*)consdata->expr, c) );
+      }
+      else
+      {
+         SCIP_CONSDATA* imgconsdata;
+         int idx;
+
+         idx = SCIPhashmapGetImageInt(expr2cons, (void*)consdata->expr);
+         assert(idx >= 0 && idx < nconss);
+
+         imgconsdata = SCIPconsGetData(conss[idx]);
+         assert(imgconsdata != NULL);
+         assert(imgconsdata->expr == consdata->expr);
+
+         SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata->lhs,
+            SCIPconsGetName(conss[c]), consdata->rhs, imgconsdata->lhs, SCIPconsGetName(conss[idx]), imgconsdata->rhs);
+
+         /* check whether locks need to be updated */
+         if( !updatelocks[idx] && ((SCIPisInfinity(scip, -imgconsdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs))
+            || (SCIPisInfinity(scip, imgconsdata->rhs) && !SCIPisInfinity(scip, consdata->rhs))) )
+         {
+            nlockspos[idx] = imgconsdata->nlockspos;
+            nlocksneg[idx] = imgconsdata->nlocksneg;
+            SCIP_CALL( addLocks(scip, conss[idx], -imgconsdata->nlockspos, -imgconsdata->nlocksneg) );
+            updatelocks[idx] = TRUE;
+         }
+
+         /* update constraint sides */
+         imgconsdata->lhs = MAX(imgconsdata->lhs, consdata->lhs);
+         imgconsdata->rhs = MIN(imgconsdata->rhs, consdata->rhs);
+
+         /* delete constraint */
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         *success = TRUE;
+      }
+   }
+
+   /* restore locks of updated constraints */
+   if( *success )
+   {
+      for( c = 0; c < nconss; ++c )
+      {
+         if( updatelocks[c] )
+         {
+            SCIP_CALL( addLocks(scip, conss[c], nlockspos[c], nlocksneg[c]) );
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &nlocksneg);
+   SCIPfreeBufferArray(scip, &nlockspos);
+   SCIPfreeBufferArray(scip, &updatelocks);
+   SCIPhashmapFree(&expr2cons);
+
+   return SCIP_OKAY;
+}
+
 /** print statistics for expression handlers */
 static
 void printExprHdlrStatistics(
@@ -6287,6 +6387,16 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    {
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
+   }
+
+   /* merge constraints with the same root expression */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      SCIP_Bool success;
+
+      SCIP_CALL( presolMergeConss(scip, conss, nconss, &success) );
+      if( success )
+         *result = SCIP_SUCCESS;
    }
 
    /* propagate constraints */
