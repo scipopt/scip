@@ -124,6 +124,7 @@ struct key
 #define KEY_TERMINALS_GROUPS     3008
 #define KEY_TERMINALS_TR         3009
 #define KEY_TERMINALS_TF         3010
+#define KEY_TERMINALS_TL         3011
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -239,6 +240,7 @@ static const struct key keyword_table[] =
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
       {  "terminals.tf",             KEY_TERMINALS_TF,           "n"        },
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
+      {  "terminals.tl",             KEY_TERMINALS_TL,           "n"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
 
@@ -1019,6 +1021,8 @@ SCIP_RETCODE graph_load(
 
             if( p->format == NULL || !get_arguments(&curf, (const char*)( newformat[0] != '\0' ? newformat : p->format ), s, para) )
             {
+               int vertex;
+
                /* Now, what should we do ?
                 */
                switch(p->sw_code)
@@ -1201,7 +1205,7 @@ SCIP_RETCODE graph_load(
                   assert(g != NULL);
                   assert(presol != NULL);
 
-                  if( stp_type != STP_NWSPG )
+                  if( stp_type != STP_NWSPG && stp_type != STP_NWPTSPG )
                      stp_type = STP_NWSPG;
 
                   if( Is_term(g->term[nwcount]) )
@@ -1210,6 +1214,7 @@ SCIP_RETCODE graph_load(
                      /* add node-weight to edge-weights of all incoming edges */
                      for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
                         g->cost[i] += nodeweight;
+
                   nwcount++;
                   break;
                case KEY_NODEWEIGHTS_END :
@@ -1377,6 +1382,18 @@ SCIP_RETCODE graph_load(
                   assert(tgroups > 0);
                   graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, BLOCKED,  BLOCKED);
                   assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
+                  break;
+               case KEY_TERMINALS_TL :
+                  vertex = (int)para[0].n - 1;
+                  assert(g != NULL);
+                  assert(vertex >= 0);
+
+                  stp_type = STP_NWPTSPG;
+                  graph_knot_chg(g, vertex, 0);
+
+                  for( i = g->outbeg[vertex]; i != EAT_LAST; i = g->oeat[i] )
+                     g->cost[i] = FARAWAY;
+
                   break;
                case KEY_TERMINALS_TP :
                   assert(g != NULL);

@@ -77,6 +77,10 @@ void SCIPwriteStp(
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
          break;
 
+      case STP_NWPTSPG:
+         fprintf(fp, "\"%s\"\n", "STP_NWPTSPG");
+         break;
+
       case STP_RSMT:
          fprintf(fp, "\"%s\"\n", "RSMT");
          break;

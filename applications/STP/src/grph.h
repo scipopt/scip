@@ -41,13 +41,14 @@
 #define STP_RPCSPG                   3
 #define STP_NWSPG                    4
 #define STP_DCSTP                    5
-#define STP_REVENUES_BUDGET_HOPCONS  6
+#define STP_NWPTSPG                  6
 #define STP_RSMT                     7
 #define STP_OARSMT                   8
 #define STP_MWCSP                    9
 #define STP_DHCSTP                   10
 #define STP_GSTP                     11
 #define STP_RMWCSP                   12
+
 
 typedef unsigned char STP_Bool;
 
@@ -251,6 +252,7 @@ extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
+extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
 extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
 extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);

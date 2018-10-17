@@ -1345,7 +1345,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
             /* run local heuristic (with original costs) */
             if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
-                  && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP )
+                  && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
             {
                SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
                assert(graph_sol_valid(scip, solgraph, soledges));

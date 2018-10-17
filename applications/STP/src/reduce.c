@@ -1758,7 +1758,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( level0(scip, (*graph)) );
 
    /* if no reduction methods available, return */
-   if( (*graph)->stp_type == STP_DCSTP || (*graph)->stp_type == STP_RMWCSP )
+   if( (*graph)->stp_type == STP_DCSTP || (*graph)->stp_type == STP_RMWCSP || (*graph)->stp_type == STP_NWPTSPG )
    {
       graph_path_exit(scip, (*graph));
       return SCIP_OKAY;

@@ -237,12 +237,16 @@ SCIP_RETCODE central_terminal(
 
       for( i = 0; i < g->knots; i++ )
       {
+         if( g->stp_type == STP_NWPTSPG && graph_nw_knotIsLeaf(g, i) )
+            continue;
+
          if( Is_term(g->term[i]) && (g->grad[i] > degree) )
          {
             degree = g->grad[i];
             center = i;
          }
       }
+
       assert(degree > 0);
       *central_term = center;
       return SCIP_OKAY;
@@ -264,6 +268,9 @@ SCIP_RETCODE central_terminal(
    for( i = 0; i < g->knots; i++ )
    {
       if (!Is_term(g->term[i]))
+         continue;
+
+      if( g->stp_type == STP_NWPTSPG && graph_nw_knotIsLeaf(g, i) )
          continue;
 
       graph_path_exec(scip, g, FSP_MODE, i, cost, path);
@@ -2182,7 +2189,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
    if( mode == 'f' )
    {
-      assert(graph->stp_type == STP_SPG);
       probdata->mode = MODE_FLOW;
    }
    else if( mode == 'p' )
@@ -2197,10 +2203,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    assert(graph != NULL );
-
-   /* select a root node */
-   if( compcentral != CENTER_DEG && !pc && !mw && !rpc && graph->stp_type != STP_DHCSTP && graph->stp_type != STP_SAP && graph->stp_type != STP_RMWCSP )
-      SCIP_CALL( central_terminal(scip, graph, &(graph->source), compcentral) );
 
    /* print the graph */
    if( print )
@@ -2232,6 +2234,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    graph = packedgraph;
    probdata->stp_type = graph->stp_type;
+
+   /* select a root node */
+   if( graph->stp_type == STP_SPG || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_NWSPG )
+      SCIP_CALL( central_terminal(scip, graph, &(graph->source), compcentral) );
 
 #ifdef WITH_UG
    if( graph != NULL )
@@ -2896,7 +2902,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    ancestors = graph->ancestors;
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_SAP ||graph->stp_type == STP_DCSTP
-      || graph->stp_type == STP_NWSPG || graph->stp_type == STP_DHCSTP || graph->stp_type == STP_GSTP || graph->stp_type == STP_RSMT  )
+      || graph->stp_type == STP_NWSPG || graph->stp_type == STP_DHCSTP || graph->stp_type == STP_GSTP
+      || graph->stp_type == STP_RSMT || graph->stp_type == STP_NWPTSPG  )
    {
       GRAPH* solgraph;
       SCIP_QUEUE* queue;

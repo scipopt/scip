@@ -1084,7 +1084,6 @@ void graph_pc_2trans(
    GRAPH*                graph               /**< the graph */
    )
 {
-   const int root = graph->source;
    const int nnodes = graph->knots;;
 
    assert(graph != NULL);
@@ -1098,7 +1097,7 @@ void graph_pc_2trans(
          graph_knot_chg(graph, k, 0);
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
-         assert(k != root);
+         assert(k != graph->source);
          graph_knot_chg(graph, k, -2);
       }
    }
@@ -2381,10 +2380,7 @@ SCIP_RETCODE graph_pc_contractEdge(
    /* are both endpoints of the edge to be contracted terminals? */
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
    {
-      double costs = g->cost[ets]; // todo remove
       graph_pc_deleteTermExtension(scip, g, s);
-
-      assert(costs == g->cost[ets]);
 
       if( !graph_pc_knotIsFixedTerm(g, i ) )
          graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], i);
@@ -2421,6 +2417,21 @@ SCIP_Bool graph_pc_isPcMw(
    return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP);
 }
 
+/* is the vertex a leaf (for NWPTSPG) */
+SCIP_Bool graph_nw_knotIsLeaf(
+   const GRAPH*          g,                  /**< the graph */
+   int                   vertex              /**< the vertex  */
+)
+{
+   int e;
+   assert(g != NULL && g->stp_type == STP_NWPTSPG);
+
+   for( e = g->outbeg[vertex]; e != EAT_LAST; e = g->oeat[e] )
+      if( g->cost[e] < FARAWAY )
+         break;
+
+   return (e == EAT_LAST );
+}
 
 /** is this graph a rooted prize-collecting or rooted maximum-weight variant? */
 SCIP_Bool graph_pc_isRootedPcMw(
@@ -3225,7 +3236,7 @@ void graph_printInfo(
       strcpy(type, "STP_DCSTP");
       break;
    case 6:
-      strcpy(type, "STP_REVENUES_BUDGET_HOPCONS");
+      strcpy(type, "STP_NWPTSPG");
       break;
    case 7:
       strcpy(type, "STP_RSMT");

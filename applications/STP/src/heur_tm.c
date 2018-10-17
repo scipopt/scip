@@ -202,16 +202,15 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
       if( !g->mark[root] )
       {
+         return SCIP_ERROR;
+#if 0
          const int nedges = g->edges;
-         int todo;
-         printf("FAIL in prune! \n");
-         assert(0);
-
 
          for( i = 0; i < nedges; i++ )
             result[i] = CONNECT;
 
          return SCIP_OKAY;
+#endif
       }
    }
    else
@@ -2000,6 +1999,32 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       else if( runs > (nterms) && graph->stp_type == STP_RMWCSP )
          runs = nterms;
    }
+   else if( graph->stp_type == STP_NWPTSPG )
+   {
+      int count = 0;
+      const int shift = SCIPrandomGetInt(heurdata->randnumgen, 0, nnodes);
+
+      assert(!startsgiven);
+
+      /* add terminals */
+      for( k = 0; k < nnodes && count < runs; k++ )
+      {
+         const int v = (k + shift) % nnodes;
+         if( !Is_term(graph->term[v]) || graph_nw_knotIsLeaf(graph, v) )
+            continue;
+         start[count++] = v;
+      }
+
+      /* add non-terminals */
+      for( k = 0; k < nnodes && count < runs; k++ )
+      {
+         const int v = (k + shift) % nnodes;
+         if( Is_term(graph->term[v]) )
+            continue;
+         start[count++] = v;
+      }
+      runs = count;
+   }
    else if( startsgiven )
    {
       for( k = 0; k < MIN(runs, nnodes); k++ )
@@ -2238,6 +2263,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       {
          assert(start[r] >= 0);
          assert(start[r] < nnodes);
+
+         assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
 
          if( mode == TM_DIJKSTRA && graph->stp_type != STP_DCSTP )
          {
