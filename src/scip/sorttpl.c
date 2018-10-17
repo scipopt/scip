@@ -811,9 +811,11 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
 
    for( i = 0; i < len; i++ )
    {
-      SCIP_Real weight = weights != NULL ? weights[i] : 1.0;
+      if ( weights != NULL )
+         weightsum += weights[i];
+      else
+         weightsum += 1.0;
 
-      weightsum += weight;
       /* check that the weight sum exceeds the capacity at the median element */
       if( i == medianpos )
       {
@@ -822,7 +824,7 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
       else if( i < medianpos )
       {
          /* check that the partial sorting is correct w.r.t. the median element and that capacity is not exceeded */
-         assert(medianpos == len || !SORTTPL_ISBETTER(key[medianpos], key[i]));
+         assert(medianpos == len || ! SORTTPL_ISBETTER(key[medianpos], key[i]));
          assert(weightsum <= capacity);
       }
       else
