@@ -492,13 +492,16 @@ set(scipheaders
     scip/cons_disjunction.h
     scip/cons_expr.h
     scip/cons_expr_abs.h
+    scip/cons_expr_cos.h
     scip/cons_expr_exp.h
     scip/cons_expr_log.h
     scip/cons_expr_pow.h
     scip/cons_expr_product.h
+    scip/cons_expr_sin.h
     scip/cons_expr_sum.h
     scip/cons_expr_value.h
     scip/cons_expr_var.h
+    scip/cons_expr_nlhdlr_bilinear.h
     scip/cons_expr_nlhdlr_convex.h
     scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
