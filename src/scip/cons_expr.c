@@ -5216,7 +5216,7 @@ SCIP_RETCODE presolMergeConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< pointer to store whether at least one constraint could be deleted */
    )
 {
    SCIP_HASHMAP* expr2cons;
