@@ -1321,7 +1321,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       greedysolvalue += myprofits[j];
    }
 
-   assert(0 < greedysolweight && greedysolweight <= capacity );
+   assert(0 < greedysolweight && greedysolweight <= capacity);
    assert(greedysolvalue > 0.0);
 
    /* If the greedy solution is optimal by comparing to the LP solution, we take this solution. This happens if:
