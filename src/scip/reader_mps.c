@@ -965,10 +965,13 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+   SCIP_Bool     usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
    var = NULL;
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != 0 )
@@ -1001,7 +1004,16 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+         /* check whether we have seen this variable before, this would not allowed */
+         if( usevartable && SCIPfindVar(scip, colname) != NULL )
+         {
+            SCIPerrorMessage("Coeffients of column <%s> don't appear consecutively (line: %d)\n",
+               colname, mpsi->lineno);
+
+            return SCIP_READERROR;
+         }
 
          /* if the file type is a cor file, the the variable name must be stored */
          SCIP_CALL( addVarNameToStorage(scip, varnames, varnamessize, nvarnames, colname) );
