@@ -12,30 +12,33 @@ non-Unix platforms.
 Installation information using CMake
 ------------------------------------
 
-Please compile SCIP first,
+Please compile SCIP (or the entire SCIP Optimization Suite) first,
 see the INSTALL in the main SCIP directory for instructions,
 or refer to the online documentation of SCIP.
-SCIP-Jack can be compiled within the same build directory
+SCIP-Jack can be compiled in the same build directory
 as SCIP. If the build directory of SCIP is named "build",
 simply execute
 
 ```
-cd build
-make stp
+make scipstp
 ```
 
+in the build directory of SCIP.
+
 The STP application is part of the SCIP applications. To build all
-applications at once, use
+applications at once use
 
 ```
 make applications
 ```
 
+in the build directory of SCIP.
+
 It is also possible to build SCIP-Jack in a stand-alone
-build directory. Therefore, it is necessary to create the
+build directory. To this end it is necessary to create the
 stand-alone build directory first and generate the Makefile using
 CMake. It might be necessary to specify the SCIP build directory
-or installation directory, if SCIP has not yet been installed systemwide.
+or installation directory if SCIP has not yet been installed systemwide.
 
 ```
 mkdir build
