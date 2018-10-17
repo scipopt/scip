@@ -861,7 +861,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int hi;
    int lo;
    int j;
-   int recursiondepth;
+   int recursiondepth = 0;
    int localmedianpos = -1;
    SCIP_Real totalweightsum = 0.0;
    SCIP_Real residualcapacity;
@@ -869,14 +869,12 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    lo = 0;
    hi = len - 1;
    residualcapacity = capacity;
-   recursiondepth = 0;
 
    /* compute the total weight and stop if all items fit */
    if( weights != NULL )
    {
       for( j = 0; j < len; ++j )
          totalweightsum += weights[j];
-
    }
    else
       totalweightsum = len;
