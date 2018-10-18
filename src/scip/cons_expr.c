@@ -2782,7 +2782,8 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 #endif
 
-   SCIP_CALL( SCIPupdateConsExprNlhdlrs(scip, conshdlr) );
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      SCIP_CALL( SCIPupdateConsExprNlhdlrs(scip, conshdlr) );
 
    for( i = 0; i < nconss; ++i )
    {
