@@ -822,6 +822,8 @@ INPUT                  = . \
                          ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \
                          ../examples/GMI/doc/xternal_gmi.c \
+                         ../examples/Queens/src/ \
+                         ../examples/Queens/doc/xternal_queens.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
                          ../examples/SCFLP/src/ \

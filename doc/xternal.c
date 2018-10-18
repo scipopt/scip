@@ -1048,80 +1048,14 @@
  *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
  *  in the source code distribution.
  *
- *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
- *  - @subpage BRANCHANDPRICE Branch-and-price
- *  - @subpage BENDERSDECOMP Benders' decomposition
- *  - @subpage BRANCHANDCUT Branch-and-cut
- *  - @subpage CALLABLELIBRARY Callable library
- */
-
-/**@page BRANCHANDPRICE Branch-and-price
- *
  * <table>
  *  <tr>
- *  <td>
- *  @subpage BINPACKING_MAIN "Binpacking"
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
- *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  <td colspan="2">
+ *  <b>
+ *  Callable library
+ *  </b>
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage VRP_MAIN Vehicle Routing
- *  </td>
- *  <td>
- *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
- *  programming algorithm.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page BENDERSDECOMP Benders' decomposition
- *
- *  <table>
- *  <tr>
- *  <td>
- *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
- *  </td>
- *  <td>
- *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page BRANCHANDCUT Branch-and-cut
- *
- *  <table>
- *  <tr>
- *  <td>
- *  @subpage LOP_MAIN "Linear Ordering"
- *  </td>
- *  <td>
- *  An example for implementing a constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage TSP_MAIN "The TSP example"
- *  </td>
- *  <td>
- *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
- *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page CALLABLELIBRARY Callable library
- *
- *  <table>
  *  <tr>
  *  <td>
  *  @subpage CALLABLELIBRARY_MAIN "Callable Library Example"
@@ -1140,18 +1074,19 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="download/files/scip_intro_01.pdf"><b>Queens</b></a>
+ *  @subpage QUEENS_MAIN "The n-Queens Problem"
  *  </td>
  *  <td>
- *  An example showing the use of \SCIP as callable library.
+ *  Using SCIP's callable library for solving the n-queens problem.
  *  </td>
  *  </tr>
- *  </table>
- */
-
- /**@page OTHERPLUGINS Extending SCIP by custom plugins
- *
- *  <table>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Extending SCIP by custom plugins
+ *  </b>
+ *  </td>
+ *  </tr>
  *  <tr>
  *  <td>
  *  @subpage EVENTHDLR_MAIN "Event handler"
@@ -1174,6 +1109,70 @@
  *  </td>
  *  <td>
  *  An example about using custom relaxators.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Branch-and-cut
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage LOP_MAIN "Linear Ordering"
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage TSP_MAIN "The TSP example"
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Branch-and-price
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage BINPACKING_MAIN "Binpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
+ *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage VRP_MAIN Vehicle Routing
+ *  </td>
+ *  <td>
+ *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
+ *  programming algorithm.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Benders' decomposition
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition framework within SCIP.
  *  </td>
  *  </tr>
  *  </table>
