@@ -24,12 +24,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifdef WITH_READLINE
-#include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif
-
 #include "scip/scip.h"
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -39,6 +33,11 @@
 
 #include "scip/struct_dialog.h"
 
+#ifdef WITH_READLINE
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
 
 
 

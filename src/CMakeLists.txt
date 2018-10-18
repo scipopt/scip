@@ -973,7 +973,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} DESTINATION include/scip)
+install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -1002,7 +1002,7 @@ if(ZIMPL_FOUND)
 endif()
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
