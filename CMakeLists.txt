@@ -46,6 +46,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
+option(BOOST "should boost multiprecision be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -212,6 +213,12 @@ else()
     set(Readline_LIBRARY "")
 endif()
 
+#Multiprecision
+if(BOOST)
+    find_package(Boost COMPONENTS iostreams serialization system program_options REQUIRED)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 # GMP
 if(GMP)
     find_package(GMP)
@@ -219,6 +226,7 @@ endif()
 if(GMP_FOUND)
     include_directories(${GMP_INCLUDE_DIRS})
     add_definitions(-DWITH_GMP)
+    set(HAVE_GMP 1)
 else()
     set(GMP_LIBRARIES "")
 endif()
@@ -339,7 +347,8 @@ else()
     message(FATAL_ERROR "option SYM has wrong value")
 endif()
 
-
+#set(rat scip/rational.cpp)
+#set(RAT_LIBRARIES ${RAT_LIBRARIES})
 
 #
 # enable coverage support
