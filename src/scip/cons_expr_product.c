@@ -1239,7 +1239,7 @@ SCIP_RETCODE enforceSP12(
 
          for( i = 0; i < nchildren2; ++i )
          {
-            SCIP_CONSEXPR_EXPR* term = NULL;
+            SCIP_CONSEXPR_EXPR* term;
 
             term = SCIPgetConsExprExprChildren(finalchildren->next->expr)[i];
             SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term,
@@ -1260,7 +1260,7 @@ SCIP_RETCODE enforceSP12(
 
          for( i = 0; i < nchildren1; ++i )
          {
-            SCIP_CONSEXPR_EXPR* term = NULL;
+            SCIP_CONSEXPR_EXPR* term;
 
             term = SCIPgetConsExprExprChildren(finalchildren->expr)[i];
             SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term,
