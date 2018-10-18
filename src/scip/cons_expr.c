@@ -2038,7 +2038,7 @@ SCIP_RETCODE storeVarExprs(
 {
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs != NULL )
       return SCIP_OKAY;
 
@@ -6020,6 +6020,9 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->nlockspos == 0);
    assert((*consdata)->nlocksneg == 0);
 
+   /* free variable expressions */
+   SCIP_CALL( freeVarExprs(scip, *consdata) );
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
 
    /* free nonlinear row representation */
@@ -6773,32 +6776,55 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   /* check whether array is too small in order to store all variables */
+   if( varssize < consdata->nvarexprs )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      vars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      assert(vars[i] != NULL);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetVarsExpr NULL
-#endif
+
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   *nvars = consdata->nvarexprs;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetNVarsExpr NULL
-#endif
+
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 #if 0 /* TODO? */
@@ -6813,6 +6839,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExpr)
 #else
 #define consGetDiveBdChgsExpr NULL
 #endif
+
 
 /** output method of statistics table to output file stream 'file' */
 static
