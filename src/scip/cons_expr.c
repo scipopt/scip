@@ -2038,7 +2038,7 @@ SCIP_RETCODE storeVarExprs(
 {
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs != NULL )
       return SCIP_OKAY;
 
@@ -6020,6 +6020,9 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->nlockspos == 0);
    assert((*consdata)->nlocksneg == 0);
 
+   /* free variable expressions */
+   SCIP_CALL( freeVarExprs(scip, *consdata) );
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
 
    /* free nonlinear row representation */
@@ -6781,6 +6784,9 @@ SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
 
    /* check whether array is too small in order to store all variables */
    if( varssize < consdata->nvarexprs )
