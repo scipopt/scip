@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page MINIICS_MAIN MinIICS
+/**@page MINIISC_MAIN MinIISC
  * @version  0.1
  * @author   Marc Pfetsch
  *
