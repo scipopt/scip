@@ -23,6 +23,7 @@
 #include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_varbound.h"
 #include "scip/struct_cons.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_var.h"
@@ -47,16 +48,48 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_HASHMAP* semiContVars;  /**< newly detected semicontinuous variables */
+   SCIP_HASHMAP* oldSemiContVars;  /**< previously detected semicontinuous variables */
+   SCIP_HASHMAP* semiContVars;     /**< newly detected semicontinuous variables */
    SCIP_Bool     detected;
-   SCIP_CONS**   vbdconss;       /**< varbound constraints */
-   int           nvbdconss;      /**< number of varbound constraints */
+   SCIP_CONS**   vbdconss;         /**< varbound constraints */
+   int           nvbdconss;        /**< number of varbound constraints */
 };
+
+/** data of a semicontinuous variable */
+struct SCIP_SCVarData
+{
+   SCIP_Real             xmin;             /**< lower bound in the 'on' state */
+   SCIP_Real             xmax;             /**< upper bound in the 'on' state */
+   SCIP_VAR*             bvar;             /**< associated binary variable */
+};
+typedef struct SCIP_SCVarData SCIP_SCVARDATA;
 
 /*
  * Local methods
  */
 
+static
+SCIP_Bool varIsSemicontinuous(
+   SCIP*                       scip,                  /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA*   nlhdlrdata,            /**< nonlinear handler data */
+   SCIP_VAR*                   var,                   /**< the variable to be checked */
+   SCIP_VAR**                  bvar                   /**< the binary variable assosiated with var, NULL if var is not semicontinuous */
+)
+{
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      return FALSE;
+
+   SCIP_SCVARDATA* data = (SCIP_SCVARDATA*) SCIPhashmapGetImage(nlhdlrdata->semiContVars, var);
+   if( data != NULL && data->xmin != -SCIPinfinity(scip) && data->xmax != SCIPinfinity(scip) )
+   {
+      *bvar = data->bvar;
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+#if 0
 static
 SCIP_Bool varIsSemicontinuous(
    SCIP*                       scip,                  /**< SCIP data structure */
@@ -114,7 +147,7 @@ SCIP_Bool varIsSemicontinuous(
    SCIPinfoMessage(scip, NULL, "\nFound a semicontinuous variable, pmin = %f, pmax = %f", pmin, pmax);
    return TRUE;
 }
-
+#endif
 
 
 static
@@ -134,6 +167,8 @@ SCIP_RETCODE addRefterm(
 #if 0
      refterm = reformulateTerm(expr);
 #endif
+      SCIPinfoMessage(scip, NULL, "\nExpr can be reformulated: ");
+      SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
       refterm = expr;
    }
    else
@@ -206,6 +241,25 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    /* TODO free the memory that has been allocated in HDLRINIT */
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrdata)->vbdconss, nlhdlrdata->nvbdconss);
+   if(nlhdlrdata->semiContVars != NULL)
+      SCIPhashmapFree(&(nlhdlrdata)->semiContVars);
+
+   if(nlhdlrdata->oldSemiContVars != NULL)
+   {
+      for( int c = 0; c < SCIPhashmapGetNEntries(nlhdlrdata->oldSemiContVars); ++c )
+      {
+         SCIP_HASHMAPENTRY* entry;
+         SCIP_SCVARDATA* data;
+         entry = SCIPhashmapGetEntry(nlhdlrdata->oldSemiContVars, c);
+
+         if( entry != NULL )
+         {
+            data = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            SCIPfreeBlockMemory(scip, &data);
+         }
+      }
+      SCIPhashmapFree(&(nlhdlrdata)->oldSemiContVars);
+   }
 
    return SCIP_OKAY;
 }
@@ -340,7 +394,143 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
 {
-   SCIPinfoMessage(scip, NULL, "\nUpdate called");
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONS** conss;
+   SCIP_HASHMAP* newSCvars;
+   SCIP_VAR* x;
+   SCIP_Bool found = FALSE;
+   int c, nconss;
+
+   SCIP_CONSHDLR* varboundconshdlr;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* look for important constraint handlers */
+   varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
+   if( varboundconshdlr == NULL )
+      return SCIP_OKAY; /* nothing to do if there are no varbounds */
+
+   nconss = SCIPconshdlrGetNConss(varboundconshdlr);
+   conss = SCIPconshdlrGetConss(varboundconshdlr);
+
+   if( nlhdlrdata->semiContVars!= NULL )
+      SCIPhashmapFree(&(nlhdlrdata)->semiContVars);
+
+   SCIPhashmapCreate(&(nlhdlrdata)->semiContVars, SCIPblkmem(scip), nconss);
+   newSCvars = nlhdlrdata->semiContVars;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      x = SCIPgetVarVarbound(scip, conss[c]);
+      if( SCIPgetLhsVarbound(scip, conss[c]) != 0 && SCIPgetRhsVarbound(scip, conss[c]) != 0 )
+         continue;
+      SCIP_Real xmin = SCIPgetLhsVarbound(scip, conss[c]) == 0 ? -SCIPgetVbdcoefVarbound(scip, conss[c]) : -SCIPinfinity(scip);
+      SCIP_Real xmax = SCIPgetRhsVarbound(scip, conss[c]) == 0 ? -SCIPgetVbdcoefVarbound(scip, conss[c]) : SCIPinfinity(scip);
+      SCIP_VAR* bvar = SCIPgetVbdvarVarbound(scip, conss[c]);
+
+      SCIP_SCVARDATA* oldvardata;
+      if( nlhdlrdata->oldSemiContVars == NULL )
+         oldvardata = NULL;
+      else
+         oldvardata = (SCIP_SCVARDATA *) SCIPhashmapGetImage(nlhdlrdata->oldSemiContVars, x);
+
+      /* the variable was already detected as semicontinuous at a previous round */
+      if( oldvardata != NULL && oldvardata->xmin != -SCIPinfinity(scip) && oldvardata->xmax != SCIPinfinity(scip) )
+         continue;
+
+      /* the constraint does not add anything to existing semicontinuous var data */
+      if(oldvardata != NULL && oldvardata->bvar == bvar && oldvardata->xmin == xmin && oldvardata->xmax == xmax)
+         continue;
+
+      if( !SCIPhashmapExists(nlhdlrdata->semiContVars, x) )
+      {
+         SCIP_SCVARDATA* newvardata;
+         SCIP_CALL( SCIPallocBlockMemory(scip, &newvardata) );
+         newvardata->bvar = bvar;
+         newvardata->xmin = xmin;
+         newvardata->xmax = xmax;
+         SCIP_CALL( SCIPhashmapInsert(nlhdlrdata->semiContVars, x, newvardata) );
+         found = TRUE;
+      }
+      else
+      {
+         SCIP_SCVARDATA* newvardata;
+         newvardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->semiContVars, x);
+         if( bvar != newvardata->bvar )
+            continue;
+         if( xmin > newvardata->xmin )
+            newvardata->xmin = xmin;
+         if( xmax < newvardata->xmax )
+            newvardata->xmax = xmax;
+      }
+   }
+
+
+   if( newSCvars != NULL )
+   {
+      int nentries = SCIPhashmapGetNEntries(newSCvars);
+      for( c = 0; c < nentries; ++c )
+      {
+         SCIP_HASHMAPENTRY* entry;
+         entry = SCIPhashmapGetEntry(newSCvars, c);
+
+         if( entry != NULL )
+         {
+            SCIP_SCVARDATA* data = (SCIP_SCVARDATA*)SCIPhashmapEntryGetImage(entry);
+            SCIP_VAR* origin = (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry);
+            if( nlhdlrdata->oldSemiContVars == NULL )
+               SCIPhashmapCreate(&(nlhdlrdata)->oldSemiContVars, SCIPblkmem(scip), nentries);
+            SCIPhashmapInsert(nlhdlrdata->oldSemiContVars, origin, data);
+         }
+      }
+   }
+
+#if 0
+   SCIPinfoMessage(scip, NULL, "\nNew semicontinuous variables: ");
+   if( !found )
+      return SCIP_OKAY;
+   for( c = 0; c < SCIPhashmapGetNEntries(nlhdlrdata->semiContVars); ++c )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      SCIP_VAR* newx;
+      SCIP_SCVARDATA* newdata;
+      entry = SCIPhashmapGetEntry(nlhdlrdata->semiContVars, c);
+
+      if( entry != NULL )
+      {
+         newx = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         assert(newx != NULL);
+         newdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+
+         SCIPinfoMessage(scip, NULL, " \n%s: bvar = %s, xmin = %f, xmax = %f", SCIPvarGetName(newx), SCIPvarGetName(newdata->bvar), newdata->xmin, newdata->xmax);
+         assert(SCIPhashmapExists(nlhdlrdata->semiContVars, newx));
+      }
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIPinfoMessage(scip, NULL, "\nOld semicontinuous variables: ");
+   for( c = 0; c < SCIPhashmapGetNEntries(nlhdlrdata->oldSemiContVars); ++c )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      SCIP_VAR* newx;
+      SCIP_SCVARDATA* newdata;
+      entry = SCIPhashmapGetEntry(nlhdlrdata->oldSemiContVars, c);
+
+      if( entry != NULL )
+      {
+         newx = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         assert(newx != NULL);
+         newdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+
+         SCIPinfoMessage(scip, NULL, " \n%s: bvar = %s, xmin = %f, xmax = %f", SCIPvarGetName(newx), SCIPvarGetName(newdata->bvar), newdata->xmin, newdata->xmax);
+      }
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -358,17 +548,22 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
 #endif
 
-   *refexpr = NULL;
-
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
+   if(SCIPhashmapIsEmpty(nlhdlrdata->semiContVars) )
+   {
+      /* No new semicontinuous variables have been found by update */
+      *refexpr = expr;
+      SCIPcaptureConsExprExpr(*refexpr);
+      return SCIP_OKAY;
+   }
+
+#if 0
    if( !nlhdlrdata->detected )
    {
       SCIP_CONSHDLR* varboundconshdlr;
       SCIP_CONSHDLR* linconshdlr;
-
-      nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
       assert(nlhdlrdata != NULL);
 
       /* look for important constraint handlers */
@@ -407,17 +602,15 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          }
       }
 
-#if 0
       SCIPinfoMessage(scip, NULL, "\nVar bound constraints:\n");
       for( c = 0; c < nlhdlrdata->nvbdconss; c++ )
       {
          SCIP_CALL( SCIPprintCons(scip, nlhdlrdata->vbdconss[c], NULL) );
          SCIPinfoMessage(scip, NULL, "\n");
       }
-#endif
-
-      nlhdlrdata->detected = TRUE;
+            nlhdlrdata->detected = TRUE;
    }
+#endif
 
    /* TODO detect structure (assumes that the terms are sorted) */
 
@@ -528,15 +721,19 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
       SCIPfreeBlockMemoryArrayNull(scip, &children, nchildren);
    }
 
-#if 0
+
    SCIPinfoMessage(scip, NULL, "\n\nrefexpr:\n");
    SCIPprintConsExprExpr(scip, conshdlr, *refexpr, NULL);
    SCIPinfoMessage(scip, NULL, "\n\n");
-#endif
+
 
    /* TODO create expression and store it in refexpr */
 
-   *refexpr = NULL;
+   if( *refexpr != NULL )
+   {
+      SCIPreleaseConsExprExpr(scip,refexpr);
+      *refexpr = NULL;
+   }
 
    /* set refexpr to expr and capture it if no reformulation is possible */
    if(*refexpr == NULL)

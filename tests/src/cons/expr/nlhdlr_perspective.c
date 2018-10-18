@@ -45,6 +45,7 @@ static SCIP_VAR* w;
 static SCIP_VAR* z;
 
 static SCIP_CONSHDLR* conshdlr;
+static SCIP_CONSHDLR* vbdconshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
@@ -59,6 +60,7 @@ void setup(void)
    /* include cons_expr: this adds the operator handlers and nonlinear handlers; get quadratic handler and conshdlr */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert_not_null(conshdlr);
@@ -128,14 +130,14 @@ Test(nlhdlrperspective, detect, .init = setup, .fini = teardown)
    vals[1] = -4;
    vars[0] = x;
    vars[1] = z;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &vubcons, "vub", 2, vars, vals, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateConsVarbound(scip, &vubcons, "vub", x, z, -2.0, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, vubcons)  );
 
    vals[0] = 2;
    vals[1] = -2;
    vars[0] = x;
    vars[1] = z;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &vlbcons, "vlb", 2, vars, vals, 0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateConsVarbound(scip, &vlbcons, "vlb", x, z, -1.0, 0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, vlbcons)  );
 
    /* presolve */
