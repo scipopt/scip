@@ -55,10 +55,12 @@
  * In the following the problem is introduced and the solving process is delineated. Furthermore, the two main plugins are
  * sketched.
  *
- * -# \ref PROBLEM "Problem description and solving approach"
- * -# \ref PROBLEMDATA "Main problem data, creating the problem"
- * -# \ref CONS "Separating violated constraints"
- * -# \ref MAKEFILE "The Makefile"
+ * -# \subpage STP_PROBLEM "Problem description and solving approach"
+ * -# \subpage STP_PROBLEMDATA "Main problem data, creating the problem"
+ * -# \subpage STP_CONS "Separating violated constraints"
+ * -# \subpage STP_MAKEFILE "The Makefile"
+ * -# \subpage STP_MINCUT "Graph minimum cut routine"
+ * -# \subpage STP_MISC "Miscellaneous methods used for Steiner tree problems"
  *
  * Compiling the STP application
  * -----------------------------
@@ -66,7 +68,7 @@
  * See the @ref INSTALL "Install file"
  */
 
-/**@page PROBLEM Problem description and solving approach
+/**@page STP_PROBLEM Problem description and solving approach
  *
  * The Steiner tree problem in graphs (SPG) can be described as follows: Given an undirected connected graph
  * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of terminals,
@@ -154,7 +156,7 @@
 
 
 
-/**@page MAKEFILE The Makefile
+/**@page STP_MAKEFILE The Makefile
  *
  * The Makefile is based on the main \SCIP Makefile. This means that all compiling options which are
  * available for \SCIP are also available for the stp project. Below, you find a list
