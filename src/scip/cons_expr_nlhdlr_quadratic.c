@@ -49,16 +49,13 @@
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    int                   nlinexprs;          /**< number of expressions that appear linearly */
-   int                   linexprssize;       /**< size of linexprs and lincoefs arrays */
    SCIP_CONSEXPR_EXPR**  linexprs;           /**< expressions that appear linearly */
    SCIP_Real*            lincoefs;           /**< coefficients of expressions that appear linearly */
 
    int                   nquadexprs;         /**< number of expressions in quadratic terms */
-   int                   quadexprssize;      /**< size of quadexprterms array */
    SCIP_QUADEXPRTERM*    quadexprterms;      /**< array with quadratic expression terms */
 
    int                   nbilinexprterms;    /**< number of bilinear expressions terms */
-   int                   bilinexprtermssize; /**< size of bilinexprterms array */
    SCIP_BILINEXPRTERM*   bilinexprterms;     /**< bilinear expression terms array */
 
    SCIP_EXPRCURV         curvature;          /**< curvature of the quadratic representation of the expression */
@@ -89,9 +86,9 @@ void freeNlhdlrExprData(
 {
    int i;
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->linexprs), nlhdlrexprdata->linexprssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->lincoefs), nlhdlrexprdata->linexprssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->bilinexprterms), nlhdlrexprdata->bilinexprtermssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->linexprs), nlhdlrexprdata->nlinexprs);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->lincoefs), nlhdlrexprdata->nlinexprs);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->bilinexprterms), nlhdlrexprdata->nbilinexprterms);
 
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadactivities), nlhdlrexprdata->nquadexprs);
 
@@ -100,59 +97,9 @@ void freeNlhdlrExprData(
       SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadexprterms[i].adjbilin),
             nlhdlrexprdata->quadexprterms[i].adjbilinsize);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadexprterms), nlhdlrexprdata->quadexprssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadexprterms), nlhdlrexprdata->nquadexprs);
 }
 
-/** ensures, that linear vars and coefs arrays can store at least num entries */
-static
-SCIP_RETCODE nlhdlrexprdataEnsureLinearVarsSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(scip != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nlinexprs <= nlhdlrexprdata->linexprssize);
-
-   if( num > nlhdlrexprdata->linexprssize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->linexprs,  nlhdlrexprdata->linexprssize, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->lincoefs, nlhdlrexprdata->linexprssize, newsize) );
-      nlhdlrexprdata->linexprssize = newsize;
-   }
-   assert(num <= nlhdlrexprdata->linexprssize);
-
-   return SCIP_OKAY;
-}
-
-/** ensures, that quadratic variable terms array can store at least num entries */
-static
-SCIP_RETCODE nlhdlrexprdataEnsureQuadVarTermsSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(scip != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nquadexprs <= nlhdlrexprdata->quadexprssize);
-
-   if( num > nlhdlrexprdata->quadexprssize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->quadexprterms, nlhdlrexprdata->quadexprssize, newsize) );
-      nlhdlrexprdata->quadexprssize = newsize;
-   }
-   assert(num <= nlhdlrexprdata->quadexprssize);
-
-   return SCIP_OKAY;
-}
 
 /** ensures, that adjacency array can store at least num entries */
 static
@@ -175,31 +122,6 @@ SCIP_RETCODE nlhdlrexprdataEnsureAdjBilinSize(
       quadexprterm->adjbilinsize = newsize;
    }
    assert(num <= quadexprterm->adjbilinsize);
-
-   return SCIP_OKAY;
-}
-
-/** ensures, that bilinear term arrays can store at least num entries */
-static
-SCIP_RETCODE nlhdlrexprdataEnsureBilinSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(scip != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->nbilinexprterms <= nlhdlrexprdata->bilinexprtermssize);
-
-   if( num > nlhdlrexprdata->bilinexprtermssize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->bilinexprterms, nlhdlrexprdata->bilinexprtermssize, newsize) );
-      nlhdlrexprdata->bilinexprtermssize = newsize;
-   }
-   assert(num <= nlhdlrexprdata->bilinexprtermssize);
 
    return SCIP_OKAY;
 }
@@ -357,128 +279,6 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-
-/** add expression expr to quadratic terms: this means several things depending on what is known about expr
- * - if is the first time seeing this expr -> creates new quadratic term
- * - if it has been seen linearly before -> removes it from the linear exprs and creates a new quadratic term
- * - if it has been seen quadratically before, then
- *    - if is the first time seeing the expr quadratically (i.e sqrcoef * expr^2) -> add sqrcoef to existing quad term
- *    - expr is being seen in a bilinear term (expr * other_expr) -> add bilinear information to quadexprterm
- */
-static
-SCIP_RETCODE addExprToQuadexprterms(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to add to quadratic terms */
-   SCIP_Real             sqrcoef,            /**< coefficient of variable in quadartic term */
-   int                   bilinexprtermidx,   /**< index of bilin term where expr was seen: -1 if not coming from bilin term */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data (where the quadratic terms live) */
-   SCIP_HASHMAP*         expridx             /**< map between expressoins and its position in linear vars (if positive) or
-                                              * quadratic vars (if negative) */
-   )
-{
-   SCIP_QUADEXPRTERM* quadexprterm;
-
-   assert(expr != NULL);
-
-   if( SCIPhashmapExists(expridx, expr) ) /* expr has been seen before */
-   {
-      int idx;
-
-      idx = (int)(size_t)SCIPhashmapGetImage(expridx, expr);
-
-      if( idx >= 0 ) /* expr has been seen before, but only as a linearly -> new quadexprterm */
-      {
-         assert(expr == nlhdlrexprdata->linexprs[idx]);
-
-         SCIP_CALL( nlhdlrexprdataEnsureQuadVarTermsSize(scip, nlhdlrexprdata, nlhdlrexprdata->nquadexprs + 1) );
-
-         quadexprterm = &nlhdlrexprdata->quadexprterms[nlhdlrexprdata->nquadexprs];
-
-         quadexprterm->expr = expr;
-         quadexprterm->sqrcoef = sqrcoef;
-         quadexprterm->lincoef = nlhdlrexprdata->lincoefs[idx];
-         quadexprterm->nadjbilin = 0;
-         quadexprterm->adjbilinsize = 0;
-         quadexprterm->adjbilin = NULL;
-
-         /* when seen in a bilinear term -> store it */
-         if( bilinexprtermidx >= 0 )
-         {
-            SCIP_CALL( nlhdlrexprdataEnsureAdjBilinSize(scip, quadexprterm, quadexprterm->nadjbilin + 1) );
-
-            quadexprterm->adjbilin[quadexprterm->nadjbilin] = bilinexprtermidx;
-            quadexprterm->nadjbilin++;
-         }
-
-         /* expr now appears quadratically --> remove it from nlhdlrexprdata->linexprs */
-         nlhdlrexprdata->nlinexprs--;
-         if( idx < nlhdlrexprdata->nlinexprs )
-         {
-            nlhdlrexprdata->linexprs[idx] = nlhdlrexprdata->linexprs[nlhdlrexprdata->nlinexprs];
-            nlhdlrexprdata->lincoefs[idx] = nlhdlrexprdata->lincoefs[nlhdlrexprdata->nlinexprs];
-            SCIP_CALL( SCIPhashmapSetImage(expridx, (void *)nlhdlrexprdata->linexprs[idx], (void *)(size_t)idx) );
-         }
-
-         /* update index of expr */
-         SCIP_CALL( SCIPhashmapSetImage(expridx, (void *)expr, (void *)(size_t)(-nlhdlrexprdata->nquadexprs - 1)) );
-
-         /* update number of quadexprs */
-         nlhdlrexprdata->nquadexprs++;
-      }
-      else /* expr has been seen before quadratically (expr^2 or expr * other_expr) */
-      {
-         quadexprterm = &nlhdlrexprdata->quadexprterms[-idx-1];
-
-         if( bilinexprtermidx >= 0 ) /* quadratic expression seen again in a bilinear term; store which */
-         {
-            SCIP_CALL( nlhdlrexprdataEnsureAdjBilinSize(scip, quadexprterm, quadexprterm->nadjbilin + 1) );
-
-            quadexprterm->adjbilin[quadexprterm->nadjbilin] = bilinexprtermidx;
-            quadexprterm->nadjbilin++;
-         }
-         else /* first time seing quadratic expression in expr^2 from */
-         {
-            assert(bilinexprtermidx == -1);
-            assert(quadexprterm->expr == expr);
-            assert(quadexprterm->sqrcoef == 0.0);
-
-            quadexprterm->sqrcoef = sqrcoef;
-         }
-      }
-   }
-   else /* first time seeing expression; it appears in a quadratically (expr^2 or expr * other_expr) -> new quadexprterm */
-   {
-      SCIP_CALL( nlhdlrexprdataEnsureQuadVarTermsSize(scip, nlhdlrexprdata, nlhdlrexprdata->nquadexprs + 1) );
-
-      quadexprterm = &nlhdlrexprdata->quadexprterms[nlhdlrexprdata->nquadexprs];
-
-      quadexprterm->expr = expr;
-      quadexprterm->lincoef = 0.0;
-      quadexprterm->nadjbilin = 0;
-      quadexprterm->adjbilinsize = 0;
-      quadexprterm->adjbilin = NULL;
-
-      if( bilinexprtermidx >= 0 ) /* seen from a bilinear term; store which */
-      {
-         SCIP_CALL( nlhdlrexprdataEnsureAdjBilinSize(scip, quadexprterm, 1) );
-
-         quadexprterm->adjbilin[quadexprterm->nadjbilin] = bilinexprtermidx;
-         quadexprterm->nadjbilin++;
-         quadexprterm->sqrcoef = 0.0;
-      }
-      else /* seen from a quadratic term */
-      {
-         quadexprterm->sqrcoef = sqrcoef;
-      }
-
-      /* add expr to expridx */
-      SCIP_CALL( SCIPhashmapInsert(expridx, (void *)expr, (void *)(size_t)(-nlhdlrexprdata->nquadexprs - 1)) );
-
-      /* update number of quadvars */
-      nlhdlrexprdata->nquadexprs++;
-   }
-   return SCIP_OKAY;
-}
 
 /** creates auxiliary variable when necessary */
 static
@@ -696,12 +496,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    nlexprdata = *nlhdlrexprdata;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadexprterms, nquadterms) );
-   nlexprdata->quadexprssize = nquadterms;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->linexprs, nlinterms) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->lincoefs, nlinterms) );
-   nlexprdata->linexprssize = nlinterms; /* TODO: can I remove sizes entries? */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->bilinexprterms, nbilinterms) );
-   nlexprdata->bilinexprtermssize = nbilinterms;
 
    /* for every term of the expr */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
