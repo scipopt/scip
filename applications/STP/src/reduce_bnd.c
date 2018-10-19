@@ -1110,6 +1110,138 @@ int reduceWithEdgeFixingBounds(
 }
 
 
+/** submethod for findDaRoots*/
+static
+void findDaRootsMark(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const GRAPH*          transgraph,         /**< graph data structure */
+   const SCIP_Real*      cost,               /**< da reduced cost */
+   const SCIP_Real*      bestcost,           /**< best incumbent da reduced cost */
+   SCIP_Real             lpobjval,           /**< da lower bound */
+   SCIP_Real             bestlpobjval,       /**< best da lower bound */
+   SCIP_Real             upperbound,         /**< da upper bound */
+   SCIP_Bool             rerun,              /**< not the first run? */
+   SCIP_Bool             probrooted,         /**< is transgraph a rooted RMW or RPC? */
+   int                   pseudoterm,         /**< pseudo terminal */
+   int                   pseudoedge,         /**< pseudo terminal edge */
+   STP_Bool*             isfixedterm,        /**< bool array to indicate fixed terminals */
+   int*                  roots,              /**< root array */
+   int*                  rootscount,         /**< number of roots */
+   int*                  state,              /**< array */
+   int*                  pathedge,           /**< array */
+   STP_Bool*             visited,            /**< stores whether a node has been visited */
+   SCIP_Real*            dist                /**< distances array, initially set to FARAWAY */
+)
+{
+   int realterm = -1;
+   SCIP_Bool mark = FALSE;
+
+   assert(graph->grad[pseudoterm] == 2);
+
+   if( probrooted )
+   {
+      assert(transgraph->tail[transgraph->term2edge[pseudoterm]] == pseudoterm);
+
+      realterm = transgraph->head[transgraph->term2edge[pseudoterm]];
+   }
+   else
+   {
+      for( int e2 = transgraph->inpbeg[pseudoterm]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
+      {
+         if( transgraph->cost[e2] == 0.0 )
+            realterm = transgraph->tail[e2];
+         else
+            assert(pseudoedge == e2); /* that holds because of correspondence between graph and transgraph for the pseudo-terminal edge */
+      }
+   }
+   assert(realterm >= 0 && graph->mark[realterm]);
+   assert(realterm != graph->source && realterm != transgraph->source);
+   assert(Is_pterm(transgraph->term[realterm]) && Is_term(graph->term[realterm]));
+
+   if( rerun && isfixedterm[realterm] )
+      return;
+
+   if( SCIPisGT(scip, cost[pseudoedge], upperbound - lpobjval) || SCIPisGT(scip, bestcost[pseudoedge], upperbound - bestlpobjval) )
+   {
+      mark = TRUE;
+   }
+   else
+   {
+      /* get terminals that imply realterm and add corresponding reduced costs up */
+      int nvisits;
+      double costsum = cost[pseudoedge];
+      double bestcostsum = bestcost[pseudoedge];
+
+      assert(graph->path_heap != NULL);
+      mark = graph_sdWalksConnected(scip, graph, graph->cost, isfixedterm, realterm, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
+            visited, TRUE);
+
+#ifndef NDEBUG
+      for( int k = 0; k < graph->knots; k++ )
+      {
+         assert(state[k] == UNKNOWN);
+         assert(visited[k] == FALSE);
+         assert(dist[k] == FARAWAY);
+      }
+#endif
+
+      if( !mark )
+      {
+         for( int k = 0; k < nvisits; k++ )
+         {
+            const int node = pathedge[k];
+
+            if( Is_term(graph->term[node]) && node != realterm )
+            {
+               int nodepterm;
+               int rootedge;
+               assert(graph->mark[node]);
+               assert(!graph_pc_knotIsFixedTerm(graph, node));
+
+               nodepterm = graph->head[graph->term2edge[node]];
+               assert(graph->grad[nodepterm] == 2);
+
+               rootedge = graph_pc_getRoot2PtermEdge(graph, nodepterm);
+
+               assert(rootedge >= 0);
+               assert(graph->cost[rootedge] == transgraph->cost[rootedge]);
+               assert(graph->cost[rootedge] == graph->prize[node]);
+
+               costsum += cost[rootedge];
+               bestcostsum += bestcost[rootedge];
+            }
+         }
+
+         if( SCIPisGT(scip, costsum, upperbound - lpobjval) || SCIPisGT(scip, bestcostsum, upperbound - bestlpobjval) )
+            mark = TRUE;
+
+#if 0
+         if( mark )
+         {
+            printf("okXXX %f %f vs %f %d \n", costsum, bestcostsum, upperbound - lpobjval, realterm);
+            printf("base %.10f   %.10f \n", cost[pseudoedge], bestcost[pseudoedge]);
+            graph_knot_printInfo(graph, realterm);
+            printf("probrooted %d \n", probrooted);
+            printf("transgraph->source %d \n", transgraph->source);
+            printf("prize[] %f \n", graph->prize[realterm]);
+         }
+#endif
+      }
+   }
+
+   if( mark )
+   {
+      assert(realterm >= 0);
+
+      assert(SCIPisPositive(scip, graph->prize[realterm]));
+      assert((*rootscount) < graph->terms);
+
+      roots[(*rootscount)++] = realterm;
+      isfixedterm[realterm] = TRUE;
+   }
+}
+
 /** find roots for PC and MW during DA reduction */
 static
 SCIP_RETCODE findDaRoots(
@@ -1128,15 +1260,28 @@ SCIP_RETCODE findDaRoots(
    int*                  state,              /**< array */
    int*                  pathedge,           /**< array */
    int*                  vbase,              /**< array */
-   STP_Bool*             nodearrchar,        /**< bool array */
-   int*                  roots,              /**< root array */
+   STP_Bool*             isfixedterm,        /**< bool array */
+   int*                  roots,              /**< roots (fixed terminals) array */
    int*                  rootscount          /**< number of roots */
 )
 {
+   SCIP_Real* dist;
+   STP_Bool* visited;
    const int root = graph->source;
    const int nnodes = graph->knots;
    const SCIP_Bool graphextended = graph->extended;
    int nroots = *rootscount;
+   int nvisits;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
+   }
 
    assert(transgraph->extended);
 
@@ -1149,12 +1294,16 @@ SCIP_RETCODE findDaRoots(
     * get possible roots
     */
 
-   BMSclearMemoryArray(nodearrchar, nnodes);
+   BMSclearMemoryArray(isfixedterm, nnodes);
 
    if( rerun )
       for( int i = 0; i < nroots; i++ )
-         nodearrchar[roots[i]] = TRUE;
+         isfixedterm[roots[i]] = TRUE;
 
+   SCIPdebugMessage("before findDaRootsMark: all roots: %d, nodes: %d edges: %d terms: %d \n",
+         nroots, nnodes, graph->edges, graph->terms);
+
+   /* has transgraph non-artificial root (and arcs to pseudo-terminals)? */
    if( probrooted )
    {
       const int transroot = transgraph->source;
@@ -1166,27 +1315,12 @@ SCIP_RETCODE findDaRoots(
          const int pseudoterm = transgraph->head[e];
 
          if( Is_term(transgraph->term[pseudoterm]) && transgraph->term2edge[pseudoterm] >= 0 )
-         {
-            int realterm;
-            assert(transgraph->tail[transgraph->term2edge[pseudoterm]] == pseudoterm);
-
-            realterm = transgraph->head[transgraph->term2edge[pseudoterm]];
-            assert(Is_pterm(transgraph->term[realterm]));
-
-            if( rerun && nodearrchar[realterm] )
-               continue;
-
-            if( SCIPisGT(scip, cost[e], upperbound - lpobjval) || SCIPisGT(scip, bestcost[e], upperbound - bestlpobjval) )
-            {
-               assert(SCIPisPositive(scip, graph->prize[realterm]));
-               assert(nroots < graph->terms);
-
-               roots[nroots++] = realterm;
-               nodearrchar[realterm] = TRUE;
-            }
-         }
+            findDaRootsMark(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, rerun, probrooted, pseudoterm, e,
+                  isfixedterm, roots, &nroots, state, pathedge, visited, dist);
       }
+
    }
+   /* transgraph has artificial root, so no arcs to pseudo-terminals */
    else
    {
       for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -1194,42 +1328,12 @@ SCIP_RETCODE findDaRoots(
          const int pseudoterm = graph->head[e];
 
          if( Is_pterm(graph->term[pseudoterm]) )
-         {
-            int realterm = -1;
-            int e3 = -1;
-
-            assert(graph->grad[pseudoterm] == 2);
-
-            for( int e2 = transgraph->inpbeg[pseudoterm]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
-            {
-               if( transgraph->cost[e2] == 0.0 )
-                  realterm = transgraph->tail[e2];
-               else
-                  e3 = e2;
-            }
-
-            if( rerun && nodearrchar[realterm] )
-               continue;
-
-            assert(realterm >= 0);
-            assert(e3 >= 0);
-            assert(realterm != root);
-            assert(SCIPisEQ(scip, graph->cost[e], graph->cost[e3]));
-            assert(graph->mark[realterm]);
-
-            if( SCIPisGT(scip, cost[e3], upperbound - lpobjval) || SCIPisGT(scip, bestcost[e3], upperbound - bestlpobjval) )
-            {
-               assert(SCIPisPositive(scip, graph->prize[realterm]));
-               assert(nroots < graph->terms);
-
-               roots[nroots++] = realterm;
-               nodearrchar[realterm] = TRUE;
-            }
-         }
+            findDaRootsMark(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, rerun, probrooted, pseudoterm, e,
+                  isfixedterm, roots, &nroots, state, pathedge, visited, dist);
       }
    }
 
-   printf("1. new roots in rerun %d all roots: %d, nodes: %d edges: %d terms: %d \n", nroots - *rootscount,
+   SCIPdebugMessage("...after: new roots in rerun %d all roots: %d, nodes: %d edges: %d terms: %d \n\n", nroots - *rootscount,
          nroots, nnodes, graph->edges, graph->terms);
 
    /* could more roots be found? */
@@ -1238,21 +1342,8 @@ SCIP_RETCODE findDaRoots(
       /*
        * try to find additional roots by connecting walks
        */
-
-      SCIP_Real* dist;
-      STP_Bool* visited;
-      int nvisits;
       SCIP_Bool rerunwalks = TRUE;
 
-      SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
-      SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
-
-      for( int i = 0; i < nnodes; i++ )
-      {
-         visited[i] = FALSE;
-         state[i] = UNKNOWN;
-         dist[i] = FARAWAY;
-      }
       for( int rounds = 0; rounds < 3 && rerunwalks; rounds++ )
       {
          rerunwalks = FALSE;
@@ -1260,30 +1351,22 @@ SCIP_RETCODE findDaRoots(
          for( int i = 0; i < nnodes; i++ )
          {
             SCIP_Bool connected;
-            if( !Is_term(graph->term[i]) || nodearrchar[i] || graph_pc_knotIsFixedTerm(graph, i) )
+            if( !Is_term(graph->term[i]) || isfixedterm[i] || graph_pc_knotIsFixedTerm(graph, i) )
                continue;
 
             assert(graph->path_heap != NULL);
-            connected = graph_sdWalksConnected(scip, graph, graph->cost, nodearrchar, i, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
-                  visited);
+            connected = graph_sdWalksConnected(scip, graph, graph->cost, isfixedterm, i, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
+                  visited, TRUE);
 
             if( connected )
             {
                assert(nroots < graph->terms);
 
                roots[nroots++] = i;
-               nodearrchar[i] = TRUE;
+               isfixedterm[i] = TRUE;
                rerunwalks = TRUE;
 
                SCIPdebugMessage("WALK-CONNECT: added new root %d prize: %f  \n", i, graph->prize[i]);
-            }
-
-            for( int k = 0; k < nvisits; k++ )
-            {
-               const int node = pathedge[k];
-               visited[node] = FALSE;
-               dist[node] = FARAWAY;
-               state[node] = UNKNOWN;
             }
 
 #ifndef NDEBUG
@@ -1296,8 +1379,6 @@ SCIP_RETCODE findDaRoots(
 #endif
          }
       } /* for rounds < 3 */
-      SCIPfreeBufferArray(scip, &visited);
-      SCIPfreeBufferArray(scip, &dist);
 
       {
          int deleteme;
@@ -1311,7 +1392,7 @@ SCIP_RETCODE findDaRoots(
             vnoi[i].dist = FARAWAY;
             vnoi[i].edge = UNKNOWN;
 
-            if( Is_term(graph->term[i]) && !nodearrchar[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
+            if( Is_term(graph->term[i]) && !isfixedterm[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
                maxprize = graph->prize[i];
          }
 
@@ -1325,7 +1406,7 @@ SCIP_RETCODE findDaRoots(
             {
                int nlabeled;
                const int term = roots[i];
-               assert(nodearrchar[term]);
+               assert(isfixedterm[term]);
                assert(Is_term(graph->term[term]));
                assert(SCIPisPositive(scip, graph->prize[term]));
 
@@ -1340,12 +1421,12 @@ SCIP_RETCODE findDaRoots(
                   assert(graph->mark[l]);
                   assert(state[l] != UNKNOWN);
 
-                  if( Is_term(graph->term[l]) && !nodearrchar[l] && vnoi[l].dist <= graph->prize[l] )
+                  if( Is_term(graph->term[l]) && !isfixedterm[l] && vnoi[l].dist <= graph->prize[l] )
                   {
                      assert(nroots < graph->terms);
 
                      roots[nroots++] = l;
-                     nodearrchar[l] = TRUE;
+                     isfixedterm[l] = TRUE;
                      return SCIP_ERROR;
                      //printf("SP: added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
                   }
@@ -1368,16 +1449,21 @@ SCIP_RETCODE findDaRoots(
             qstart = oldnroots;
          }
       } // deleteme
+
+
       SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
 
    } /* look for additional roots */
 
-   printf("new roots in rerun %d all roots: %d, nodes: %d  \n", nroots - *rootscount, nroots, nnodes);
+   SCIPdebugMessage("new roots in rerun %d all roots: %d, nodes: %d  \n", nroots - *rootscount, nroots, nnodes);
 
    *rootscount = nroots;
 
    if( graphextended )
       graph_pc_2trans(graph);
+
+   SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &dist);
 
    return SCIP_OKAY;
 }

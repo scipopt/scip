@@ -110,6 +110,24 @@ inline static void sdwalk_update(
    }
 }
 
+inline static void sdwalk_reset(
+   int                   nvisits,            /**< number of visited nodes */
+   const int*            visitlist,          /**< stores all visited nodes */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  state,              /**< array to indicate whether a node has been scanned */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+)
+{
+   for( int k = 0; k < nvisits; k++ )
+   {
+      const int node = visitlist[k];
+      assert(node >= 0);
+
+      visited[node] = FALSE;
+      dist[node] = FARAWAY;
+      state[node] = UNKNOWN;
+   }
+}
 
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
@@ -1060,7 +1078,8 @@ SCIP_Bool graph_sdWalksConnected(
    int*                  state,              /**< array to indicate whether a node has been scanned */
    int*                  visitlist,          /**< stores all visited nodes */
    int*                  nvisits,            /**< number of visited nodes */
-   STP_Bool*             visited             /**< stores whether a node has been visited */
+   STP_Bool*             visited,            /**< stores whether a node has been visited */
+   SCIP_Bool             resetarrays         /**< should arrays be reset? */
    )
 {
    int count;
@@ -1079,6 +1098,15 @@ SCIP_Bool graph_sdWalksConnected(
    assert(Is_term(g->term[start]));
    assert(g->grad[start] > 0);
    assert(g->mark[start]);
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+   {
+      assert(state[k] == UNKNOWN);
+      assert(visited[k] == FALSE);
+      assert(dist[k] == FARAWAY);
+   }
+#endif
 
    *nvisits = 0;
    nchecks = 0;
@@ -1122,6 +1150,9 @@ SCIP_Bool graph_sdWalksConnected(
                if( endpoint != NULL && endpoint[m] )
                {
                   g->mark[start] = TRUE;
+                  if( resetarrays )
+                     sdwalk_reset(*nvisits, visitlist, dist, state, visited);
+
                   return TRUE;
                }
 
@@ -1141,6 +1172,10 @@ SCIP_Bool graph_sdWalksConnected(
    }
 
    g->mark[start] = TRUE;
+
+   if( resetarrays )
+      sdwalk_reset(*nvisits, visitlist, dist, state, visited);
+
    return FALSE;
 }
 

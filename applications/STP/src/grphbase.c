@@ -2417,6 +2417,24 @@ SCIP_Bool graph_pc_isPcMw(
    return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP);
 }
 
+/** get edge from root to pseudo terminal */
+int graph_pc_getRoot2PtermEdge(
+   const GRAPH*          graph,               /**< the graph */
+   int                   pseudoterm           /**< the pseudo terminal  */
+)
+{
+   int rootedge = -1;
+   assert(graph != NULL);
+   assert(graph->grad[pseudoterm] == 2);
+
+   for( int e = graph->inpbeg[pseudoterm]; e != EAT_LAST; e = graph->ieat[e] )
+      if( graph->tail[e] == graph->source )
+         rootedge = e;
+   assert(rootedge >= 0);
+
+   return rootedge;
+}
+
 /* is the vertex a leaf (for NWPTSPG) */
 SCIP_Bool graph_nw_knotIsLeaf(
    const GRAPH*          g,                  /**< the graph */
