@@ -381,7 +381,7 @@ SCIP_RETCODE reducePc(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   STP_Bool              dualascent,         /**< perform dual ascent reductions? */
+   STP_Bool              advanced,           /**< perform advanced (e.g. dual ascent) reductions? */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
@@ -417,7 +417,7 @@ SCIP_RETCODE reducePc(
    nedges = g->edges;
 
    /* for PCSPG more memory is necessary */
-   if( g->stp_type == STP_RPCSPG || !dualascent )
+   if( g->stp_type == STP_RPCSPG || !advanced )
       extnedges = nedges;
    else
       extnedges = nedges + 2 * (g->terms - 1);
@@ -440,7 +440,7 @@ SCIP_RETCODE reducePc(
    if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )
       bred = TRUE;
 
-   if( bred || dualascent )
+   if( bred || advanced )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &exedgearrreal2, extnedges) );
    }
@@ -449,7 +449,7 @@ SCIP_RETCODE reducePc(
       exedgearrreal2 = NULL;
    }
 
-   if( dualascent )
+   if( advanced )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, extnedges) );
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
@@ -469,7 +469,7 @@ SCIP_RETCODE reducePc(
 
    /* reduction loop */
    SCIP_CALL( redLoopPc(scip, g, vnoi, path, gnodearr, nodearrreal, exedgearrreal, exedgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, dualascent, bred, reductbound, userec) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, advanced, bred, userec && advanced, reductbound, userec) );
 
    /* free memory */
 
@@ -1188,7 +1188,7 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( level0(scip, g) );
 
    if( tryrmw && g->terms > 2 )
-      SCIP_CALL( graph_pc_mw2rmw(scip, g, prizesum) );
+      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
 
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -1216,6 +1216,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
    SCIP_Bool             bred,               /**< do bound-based reduction? */
+   SCIP_Bool             tryrpc,             /**< try to transform to rpc? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
@@ -1455,6 +1456,9 @@ SCIP_RETCODE redLoopPc(
 
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
+
+   if( !rpc && tryrpc && g->terms > 2 )
+      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
 
    *fixed += fix;
 

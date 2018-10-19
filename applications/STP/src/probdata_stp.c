@@ -2030,10 +2030,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIPdebugMessage("load type :: %d \n\n", graph->stp_type);
    SCIPdebugMessage("fixed: %f \n\n", presolinfo.fixed );
 
-   mw = (graph->stp_type == STP_MWCSP);
-   pc = (graph->stp_type == STP_PCSPG);
-   rpc = (graph->stp_type == STP_RPCSPG);
-
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
@@ -2234,6 +2230,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    graph = packedgraph;
    probdata->stp_type = graph->stp_type;
+
+   mw = (graph->stp_type == STP_MWCSP);
+   pc = (graph->stp_type == STP_PCSPG);
+   rpc = (graph->stp_type == STP_RPCSPG);
 
    /* select a root node */
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_NWSPG )

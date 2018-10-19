@@ -1983,8 +1983,8 @@ SCIP_RETCODE graph_pc_2rmw(
    return SCIP_OKAY;
 }
 
-/** transforms MWCSP to RMWCSP if possible */
-SCIP_RETCODE graph_pc_mw2rmw(
+/** transforms PCSPG or MWCSP to RPCSPG or RMWCSP if possible */
+SCIP_RETCODE graph_pc_pcmw2rooted(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    SCIP_Real             prizesum            /**< sum of positive prizes */
@@ -1994,16 +1994,23 @@ SCIP_RETCODE graph_pc_mw2rmw(
    int p;
    int newroot;
    int maxgrad;
+   int nfixedterms;
+   const int orgnterms = graph->terms;
    const int root = graph->source;
+   const int pc = (graph->stp_type == STP_PCSPG);
 
    assert(scip != NULL);
    assert(graph != NULL);
    assert(graph->term2edge != NULL);
    assert(graph->extended);
+   assert(pc || graph->stp_type == STP_MWCSP);
 
    newroot = -1;
    maxgrad = -1;
 
+   printf("attempt transformation to rooted problem \n");
+
+   nfixedterms = 0;
    e = graph->outbeg[root];
    while( e != EAT_LAST )
    {
@@ -2016,15 +2023,18 @@ SCIP_RETCODE graph_pc_mw2rmw(
          assert(Is_term(graph->term[k]));
          assert(graph->grad[k] == 2);
 
+         graph->cost[e] = FARAWAY;
+
          for( e2 = graph->outbeg[k]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
             if( graph->head[e2] != root )
                break;
 
          p = graph->head[e2];
          assert(e2 == graph->term2edge[k]);
-
          assert(Is_pterm(graph->term[p]));
          assert(SCIPisGE(scip, graph->prize[p], prizesum));
+
+         graph->prize[p] = FARAWAY;
 
          /* delete terminal */
          graph_knot_chg(graph, k, -1);
@@ -2041,6 +2051,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
             newroot = p;
             maxgrad = graph->grad[p];
          }
+         nfixedterms++;
       }
       e = enext;
    }
@@ -2068,11 +2079,25 @@ SCIP_RETCODE graph_pc_mw2rmw(
       while( graph->outbeg[root] != EAT_LAST )
          graph_edge_del(scip, graph, graph->outbeg[root], TRUE);
 
-      graph->stp_type = STP_RMWCSP;
+      if( pc )
+      {
+         graph->stp_type = STP_RPCSPG;
+         printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
 
+      }
+      else
+      {
+         graph->stp_type = STP_RMWCSP;
+         printf("...transformed MW to RMW; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+      }
+
+      assert(orgnterms - 1 == graph->terms);
    }
 
-   SCIPdebugMessage("Transformed MW to RMW \n");
+
+
+   if( !graph_pc_isRootedPcMw(graph) )
+      printf("...failed \n");
 
    return SCIP_OKAY;
 }
