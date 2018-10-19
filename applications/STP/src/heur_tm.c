@@ -566,7 +566,6 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
       for( int i = 0; i < nnodes; i++ )
          if( graph_pc_knotIsFixedTerm(g, i) && i != orgroot && mst[i].edge == UNKNOWN )
          {
-            printf("fail in TM reconstruction, fixed terminal %d not connected \n", i);
             *objresult = FARAWAY;
             return SCIP_OKAY;
          }
