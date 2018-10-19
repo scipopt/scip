@@ -1012,7 +1012,22 @@ SCIP_RETCODE createVariables(
             }
 #endif
 
-	      /* PRIZECOLLECTING STP */
+         if( graph_pc_isPcMw(graph) )
+         {
+            for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               const int head = graph->head[e];
+               if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
+               {
+                  assert(graph->grad[head] == 2);
+                  assert(graph->prize != NULL);
+
+                  /* variables are preferred to be branched on */
+                  SCIP_CALL(SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10 + (int )(10.0 * graph->prize[head])));
+               }
+            }
+         }
+
          if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
          {
             int* pseudoterms;
@@ -1053,10 +1068,6 @@ SCIP_RETCODE createVariables(
                   SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0));
 
                   assert(graph->prize != NULL);
-
-                  /* variables are preferred to be branched on */
-                  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10 + (int)(10.0 * graph->prize[head])) );
-
                   if( probdata->usesymcons )
                   {
                      assert(pseudoterms != NULL);
