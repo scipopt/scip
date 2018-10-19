@@ -100,32 +100,6 @@ void freeNlhdlrExprData(
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->quadexprterms), nlhdlrexprdata->nquadexprs);
 }
 
-
-/** ensures, that adjacency array can store at least num entries */
-static
-SCIP_RETCODE nlhdlrexprdataEnsureAdjBilinSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_QUADEXPRTERM*    quadexprterm,       /**< quadratic expression term */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(scip != NULL);
-   assert(quadexprterm != NULL);
-   assert(quadexprterm->nadjbilin <= quadexprterm->adjbilinsize);
-
-   if( num > quadexprterm->adjbilinsize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &quadexprterm->adjbilin, quadexprterm->adjbilinsize, newsize) );
-      quadexprterm->adjbilinsize = newsize;
-   }
-   assert(num <= quadexprterm->adjbilinsize);
-
-   return SCIP_OKAY;
-}
-
 /** first time seen quadratically and
  * seen before linearly --> --nlinterms; assign 2; ++nquadterms
  * not seen before linearly --> assing 1; ++nquadterms
