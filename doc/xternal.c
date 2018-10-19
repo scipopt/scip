@@ -1363,7 +1363,7 @@
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="FAQ.php#faq_usingscipasastandalonesolver">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="FAQ.php#howtochangebehaviour">the FAQ</a>), to apply primal heuristics
  * more aggressively. \SCIP shows us, which single parameters it changed therefore. Additionally, for pedagogical purposes,
  * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
  * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
@@ -1396,7 +1396,7 @@
  *
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.php#howtochangebehaviour">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="FAQ.php#faq_usingscipasastandalonesolver">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
  *
  */
 
