@@ -4893,7 +4893,7 @@ SCIP_RETCODE enforceConstraints(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
       consdata = SCIPconsGetData(conss[c]);
 
       /* compute max violation */
