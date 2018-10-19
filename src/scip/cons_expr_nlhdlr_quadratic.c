@@ -430,6 +430,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIPinfoMessage(scip, NULL, "Have to enforce: Below? %s. Above? %s\n", *enforcedbelow ? "no" : "yes", *enforcedabove ? "no" : "yes");
 #endif
    SCIPdebugMsg(scip, "checking if expr %p is a proper quadratic\n", (void*)expr);
+
    /* check if expression is a proper quadratic expression */
    properquadratic = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&seenexpr, SCIPblkmem(scip), 2*SCIPgetConsExprExprNChildren(expr)) );
@@ -476,7 +477,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       }
    }
 
-   printf("nlinterms = %d, nbilinterms = %d, nquadterms = %d\n", nlinterms, nbilinterms, nquadterms);
    if( ! properquadratic )
    {
       SCIPdebugMsg(scip, "expr %p is not a proper quadratic: can't be handled by us\n", (void*)expr);
@@ -531,7 +531,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
          }
          else
          {
-            /* TODO: we do not need to add it if we saw it only once */
             SCIP_CALL( SCIPhashmapInsertInt(expr2idx, child, nlexprdata->nquadexprs) );
 
             quadexprterm = &nlexprdata->quadexprterms[nlexprdata->nquadexprs];
@@ -571,14 +570,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
             bilinexprterm->expr1 = expr2;
             bilinexprterm->expr2 = expr1;
          }
-         printf("creating bilinear term expr1 * expr2 with counts %d %d\n", SCIPhashmapGetImageInt(seenexpr,
-               (void*)bilinexprterm->expr1), SCIPhashmapGetImageInt(seenexpr, (void*)bilinexprterm->expr2));
-         printf("expr1:\n");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, bilinexprterm->expr1, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-         printf("expr2:\n");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, bilinexprterm->expr2, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
 
          for( i = 0; i < 2; ++i )
          {
