@@ -11139,7 +11139,7 @@ SCIP_RETCODE lpBarrier(
    else
    {
       SCIPclockStart(stat->barrierlptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta = -SCIPclockGetTime(stat->barrierlptime);
    }
 
    /* call barrier algorithm */
@@ -11167,7 +11167,7 @@ SCIP_RETCODE lpBarrier(
    else
    {
       SCIPclockStop(stat->barrierlptime, set);
-      timedelta = -SCIPclockGetTime(stat->duallptime);
+      timedelta += SCIPclockGetTime(stat->barrierlptime);
    }
 
    /* count number of iterations */
