@@ -345,8 +345,8 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  * x^2 + x * y is also a proper quadratic expression
  *
  * For propagation, we store the quadratic in our data structure in the following way:
- * we cound how often a variable appears. Then, in a bilinear product, expr_i * expr_j,
- * we store it as expr_i * expr_j if and only if # expr_i appears >= # expr_j appears
+ * We count how often a variable appears. Then, in a bilinear product, expr_i * expr_j,
+ * we store it as expr_i * expr_j if and only if # expr_i appears >= # expr_j appears.
  *
  * @note:
  * - the expression needs to be simplified (in particular, it is assumed to be sorted)
@@ -358,7 +358,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  *  other_expr in the product
  *  - expr < other_expr * expr: u*v < w holds if and only if v < w (OR8), but here v = w
  *
- *  Thus, if we see somebody twice, it is a proper quadratic
+ *  Thus, if we see somebody twice, it is a proper quadratic.
  *
  * It also implies that
  *  - expr^2 < expr * other_expr
