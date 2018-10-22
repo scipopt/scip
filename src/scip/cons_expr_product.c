@@ -1066,7 +1066,7 @@ SCIP_RETCODE simplifyMultiplyChildren(
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-      /* enforces SP2 and SP7 */
+      /* enforces SP2, SP7 and SP13 */
       tomerge = NULL;
       SCIP_CALL( simplifyFactor(scip, first->expr, simplifiedcoef, &tomerge, changed) );
 
