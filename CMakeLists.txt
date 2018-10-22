@@ -434,7 +434,7 @@ endif()
 find_package(Criterion)
 
 # export compilation settings to header file
-configure_file(${CMAKE_SOURCE_DIR}/src/scip/config.h.in ${CMAKE_BINARY_DIR}/scip/config.h @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/scip/config.h @ONLY)
 include_directories(${CMAKE_BINARY_DIR})
 
 # go to src/ and compile the code
