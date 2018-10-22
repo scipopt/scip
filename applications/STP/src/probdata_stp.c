@@ -226,7 +226,7 @@ SCIP_RETCODE central_terminal(
 
    *central_term = g->source;
 
-   if( centertype == CENTER_OK )
+   if( centertype == CENTER_OK || g->grad[g->source] == 0)
       return SCIP_OKAY;
 
    /* Find knot of maximum degree.

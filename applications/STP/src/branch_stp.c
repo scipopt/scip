@@ -77,8 +77,9 @@ SCIP_Bool isProbCompatible(
    int                   probtype            /**< the problem type */
 )
 {
-   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT
-        || probtype == STP_PCSPG || probtype == STP_RPCSPG);
+   int todo; // only STP_RPCSPG!
+   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT );
+      //  || probtype == STP_PCSPG || probtype == STP_RPCSPG);
 }
 
 /** select vertex to branch on by choosing vertex of highest degree */
@@ -182,7 +183,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
       SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
 
    /* currently not supported because of next loop */
-   assert(!graph_pc_isPcMw(graph));
+   assert(!graph_pc_isPcMw(graph) || graph_pc_isRootedPcMw(graph));
 
    for( int k = 0; k < nnodes; k++ )
       if( !Is_term(graph->term[k]) && nodestatenew[k] == BRANCH_STP_VERTEX_TERM )
@@ -417,7 +418,6 @@ SCIP_RETCODE branchOnVertex(
    SCIP_CALL(SCIPaddConsNode(scip, vertexin, consin, NULL));
    SCIP_CALL(SCIPaddConsNode(scip, vertexout, consout, NULL));
 
-   /* release constraints */
    SCIP_CALL(SCIPreleaseCons(scip, &consin));
    SCIP_CALL(SCIPreleaseCons(scip, &consout));
 
@@ -521,7 +521,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    if( !isProbCompatible(g->stp_type) )
       return SCIP_OKAY;
-
+#if 0
+   if( graph_pc_isRootedPcMw(g) )
+      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
+#endif
    /* get vertex to branch on */
    if( branchruledata->branchtype == BRANCH_STP_ON_LP )
       SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );

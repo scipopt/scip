@@ -856,6 +856,198 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
  *  local functions
  */
 
+/* compute starting vertices and number of runs */
+static
+SCIP_RETCODE computeStarts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
+   const int*            orgstarts,          /**< original start vertices */
+   SCIP_Bool             startsgiven,        /**< start vertices given? */
+   int*                  dijkedge,           /**< temp */
+   SCIP_Real*            dijkdist,           /**< temp */
+   SCIP_Real*            nodepriority,       /**< nodepriority */
+   int*                  start,              /**< start vertices */
+   int*                  runsp,              /**< number of runs */
+   int*                  bestp               /**< pointer to best start vertex */
+   )
+{
+   int runs = *runsp;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nterms = graph->terms;
+
+   /* compute number of iterations and starting points for SPH */
+   if( graph_pc_isPcMw(graph) )
+   {
+      if( runs > (nterms - 1) && !graph_pc_isRootedPcMw(graph) )
+         runs = nterms - 1;
+      else if( runs > (nterms) && graph_pc_isRootedPcMw(graph) )
+         runs = nterms;
+   }
+   else if( graph->stp_type == STP_NWPTSPG )
+   {
+      int count = 0;
+      const int shift = SCIPrandomGetInt(heurdata->randnumgen, 0, nnodes);
+
+      assert(!startsgiven);
+
+      /* add terminals */
+      for( int k = 0; k < nnodes && count < runs; k++ )
+      {
+         const int v = (k + shift) % nnodes;
+         if( !Is_term(graph->term[v]) || graph_nw_knotIsLeaf(graph, v) )
+            continue;
+         start[count++] = v;
+      }
+
+      /* add non-terminals */
+      for( int k = 0; k < nnodes && count < runs; k++ )
+      {
+         const int v = (k + shift) % nnodes;
+         if( Is_term(graph->term[v]) )
+            continue;
+         start[count++] = v;
+      }
+      runs = count;
+   }
+   else if( startsgiven )
+   {
+      for( int k = 0; k < MIN(runs, nnodes); k++ )
+         start[k] = orgstarts[k];
+   }
+   else if( runs < nnodes || graph->stp_type == STP_DHCSTP )
+   {
+      int r = 0;
+      int* perm;
+
+      if( *bestp < 0 )
+      {
+         *bestp = root;
+      }
+      else
+      {
+         const int randint = SCIPrandomGetInt(heurdata->randnumgen, 0, 2);
+         if( randint == 0 )
+            *bestp = -1;
+         else if( randint == 1 )
+            *bestp = root;
+      }
+
+      if( graph->stp_type == STP_DHCSTP )
+         graph_path_execX(scip, graph, root, cost, dijkdist, dijkedge);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
+
+      /* are there no nodes are to be prioritized a priori? */
+      if( nodepriority == NULL )
+      {
+         for( int k = 0; k < nnodes; k++ )
+            perm[k] = k;
+         SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, nnodes);
+
+         /* use terminals (randomly permutated) as starting points for TM heuristic */
+         for( int k = 0; k < nnodes; k++ )
+         {
+            if( r >= runs || r >= nterms )
+               break;
+
+            if( Is_term(graph->term[perm[k]]) )
+               start[r++] = perm[k];
+         }
+
+         /* fill empty slots */
+         for( int k = 0; k < nnodes && r < runs; k++ )
+         {
+            if( graph->stp_type == STP_DHCSTP )
+            {
+               assert(dijkdist != NULL);
+               if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
+                  continue;
+            }
+            if( !Is_term(graph->term[perm[k]]) && graph->mark[k] )
+               start[r++] = perm[k];
+         }
+      }
+      else
+      {
+         SCIP_Real max = 0.0;
+         const int bbound = runs - runs / 3;
+
+         for( int k = 0; k < nnodes; k++ )
+         {
+            perm[k] = k;
+            if( SCIPisLT(scip, max, nodepriority[k]) && Is_term(graph->term[k]) )
+               max = nodepriority[k];
+         }
+         for( int k = 0; k < nnodes; k++ )
+         {
+            if( Is_term(graph->term[k]) )
+               nodepriority[k] += SCIPrandomGetReal(heurdata->randnumgen, 0.0, max);
+            else if( SCIPisLE(scip, 1.0, nodepriority[k]) )
+               nodepriority[k] = nodepriority[k] * SCIPrandomGetReal(heurdata->randnumgen, 1.0, 2.0);
+         }
+
+         SCIPsortRealInt(nodepriority, perm, nnodes);
+
+         for( int k = nnodes - 1; k >= 0; k-- )
+         {
+            if( r >= nterms || r >= bbound )
+               break;
+
+            if( Is_term(graph->term[perm[k]]) )
+            {
+               start[r++] = perm[k];
+               perm[k] = -1;
+            }
+         }
+
+         /* fill empty slots */
+         for( int k = nnodes - 1; k >= 0 && r < runs; k-- )
+         {
+            if( perm[k] == -1 )
+               continue;
+            if( graph->stp_type == STP_DHCSTP )
+            {
+               assert(dijkdist != NULL);
+               if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
+                  continue;
+            }
+            if( graph->mark[k] )
+               start[r++] = perm[k];
+         }
+      }
+      /* not all slots filled? */
+      if( r < runs )
+         runs = r;
+
+      if( *bestp >= 0 )
+      {
+         /* check whether we have a already selected the best starting node */
+         for( r = 0; r < runs; r++ )
+            if( start[r] == *bestp )
+               break;
+
+         /* no, we still have to */
+         if( r == runs && runs > 0 )
+            start[(int) heurdata->nexecs % runs] = *bestp;
+      }
+
+      SCIPfreeBufferArray(scip, &perm);
+   } /* runs < nnodes || STP_DHCSTP */
+   else
+   {
+      runs = nnodes;
+      for( int k = 0; k < nnodes; k++ )
+         start[k] = k;
+   } /* runs > nnodes */
+
+   *runsp = runs;
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_RETCODE prune(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1693,17 +1885,16 @@ SCIP_RETCODE runPcMW(
    )
 {
    SCIP_Real* terminalprio;
-   SCIP_Real obj;
    SCIP_Real min = FARAWAY;
    int* terminalperm;
-   const SCIP_Bool rmw = (graph->stp_type == STP_RMWCSP);
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int nterms = graph->terms;
    int t;
    STP_Bool* connected;
+
+   assert(maxruns <= nterms);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &terminalperm, nterms) );
@@ -1719,7 +1910,7 @@ SCIP_RETCODE runPcMW(
          {
             assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
             terminalperm[t] = k;
-            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
+            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
          }
    }
    else
@@ -1727,19 +1918,19 @@ SCIP_RETCODE runPcMW(
       for( int k = 0; k < nnodes; k++ )
          if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
          {
+            assert(nodepriority[k] >= 0.0);
             assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
             terminalperm[t] = k;
-            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
+            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
          }
    }
 
-   if( rmw || rpc )
+   if( graph_pc_isRootedPcMw(graph) )
    {
-      SCIP_Real max = 0.0;
+      SCIP_Real minprio = 0.0;
 
       for( int k = 0; k < t; k++ )
-         if( SCIPisGT(scip, terminalprio[k], max) )
-            max = terminalprio[k];
+         minprio = MIN(terminalprio[k], minprio);
 
       for( int k = 0; k < nnodes; k++ )
          graph->mark[k] = (graph->grad[k] > 0);
@@ -1758,14 +1949,19 @@ SCIP_RETCODE runPcMW(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( Is_term(graph->term[k]) && graph->mark[k] )
+         if( graph_pc_knotIsFixedTerm(graph, k) )
          {
+            assert(graph->mark[k]);
+
             if( k == root )
-               terminalprio[t] = FARAWAY;
+               terminalprio[t] = -FARAWAY;
 
             terminalperm[t] = k;
-            terminalprio[t++] = SCIPrandomGetReal(heurdata->randnumgen, max / 2.0, 1.5 * max);
+            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0, fabs(minprio) * (1.0 + (SCIP_Real) graph->grad[k] / (SCIP_Real) nnodes));
          }
+         /* isolated vertex? */
+         else if( Is_term(graph->term[k]) && graph->grad[k] == 1 )
+            terminalprio[t] = FARAWAY;
       }
 
       assert(nterms == t);
@@ -1776,14 +1972,56 @@ SCIP_RETCODE runPcMW(
       SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
    }
 
-   if( bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
-      terminalperm[nterms - 1] = bestincstart;
+   if( maxruns > 0 && bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
+   {
+      int r;
+
+      for( r = 0; r < maxruns; r++ )
+         if( terminalperm[r] == bestincstart )
+            break;
+
+      if( r == maxruns )
+         terminalperm[1] = bestincstart;
+   }
+
+   if(graph_pc_isRootedPcMw(graph)&& 1 )
+   {
+      int todo;
+
+      printf("source %d \n", graph->source);
+      printf("maxruns %d \n", maxruns);
+      printf("terms %d \n", graph->terms);
+   }
+
 
    /* local main loop */
    for( int r = 0; r < maxruns; r++ )
    {
+      SCIP_Real obj;
       const int start = terminalperm[r];
       SCIPdebugMessage("TM run=%d start=%d\n", r, start);
+
+      if( graph->grad[start] <= 1  )
+      {
+         /* only root remaining? */
+         if( graph->grad[start] == 0 && start == graph->source )
+         {
+            assert(graph_pc_isRootedPcMw(graph));
+
+            for( int e = 0; e < nedges; e++ )
+               best_result[e] = UNKNOWN;
+            (*success) = TRUE;
+         }
+
+         continue;
+      }
+      if(graph_pc_isRootedPcMw(graph) && 1 )
+      {
+         int todo;
+
+         graph_knot_printInfo(graph, start);
+         printf("...prio %f at %d  \n", terminalprio[r], r);
+      }
 
       if( pcmwfull )
       {
@@ -1846,7 +2084,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    )
 {
    SCIP_PQUEUE* pqueue = NULL;
-   SCIP_Longint nexecs;
    SCIP_Real* dijkdist = NULL;
    SCIP_Real** pathdist = NULL;
    SCIP_Real** node_dist = NULL;
@@ -1886,7 +2123,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    }
 
    best = bestincstart;
-   nexecs = heurdata->nexecs;
    (*success) = FALSE;
 
    if( runs < 1 )
@@ -1910,7 +2146,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    assert(nedges > 0);
    assert(nnodes > 0);
    assert(nterms > 0);
-   assert(nexecs >= 0);
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
@@ -1920,7 +2155,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    mode = heurdata->type;
    assert(mode == AUTO || mode == TM_SP || mode == TM_VORONOI || mode == TM_DIJKSTRA);
 
-   if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
+   if( graph_pc_isPcMw(graph) )
    {
       mode = TM_DIJKSTRA;
       graph_pc_2transcheck(graph);
@@ -1990,176 +2225,11 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
    }
 
-   /* compute number of iterations and starting points for SPH */
-   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_RPCSPG )
-   {
-      if( runs > (nterms - 1) && graph->stp_type != STP_RMWCSP )
-         runs = nterms - 1;
-      else if( runs > (nterms) && graph->stp_type == STP_RMWCSP )
-         runs = nterms;
-   }
-   else if( graph->stp_type == STP_NWPTSPG )
-   {
-      int count = 0;
-      const int shift = SCIPrandomGetInt(heurdata->randnumgen, 0, nnodes);
-
-      assert(!startsgiven);
-
-      /* add terminals */
-      for( k = 0; k < nnodes && count < runs; k++ )
-      {
-         const int v = (k + shift) % nnodes;
-         if( !Is_term(graph->term[v]) || graph_nw_knotIsLeaf(graph, v) )
-            continue;
-         start[count++] = v;
-      }
-
-      /* add non-terminals */
-      for( k = 0; k < nnodes && count < runs; k++ )
-      {
-         const int v = (k + shift) % nnodes;
-         if( Is_term(graph->term[v]) )
-            continue;
-         start[count++] = v;
-      }
-      runs = count;
-   }
-   else if( startsgiven )
-   {
-      for( k = 0; k < MIN(runs, nnodes); k++ )
-         start[k] = starts[k];
-   }
-   else if( runs < nnodes || graph->stp_type == STP_DHCSTP )
-   {
-      if( best < 0 )
-      {
-         best = root;
-      }
-      else
-      {
-         const int randint = SCIPrandomGetInt(heurdata->randnumgen, 0, 2);
-         if( randint == 0 )
-            best = -1;
-         else if( randint == 1 )
-            best = root;
-      }
-      r = 0;
-      if( graph->stp_type == STP_DHCSTP )
-         graph_path_execX(scip, graph, root, cost, dijkdist, dijkedge);
-
-      /* allocate memory for permutation array */
-      if( perm == NULL )
-         SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
-
-      /* are there no nodes are to be priorized a priori? */
-      if( nodepriority == NULL )
-      {
-         for( k = 0; k < nnodes; k++ )
-            perm[k] = k;
-         SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, nnodes);
-
-         /* use terminals (randomly permutated) as starting points for TM heuristic */
-         for( k = 0; k < nnodes; k++ )
-         {
-            if( r >= runs || r >= nterms )
-               break;
-
-            if( Is_term(graph->term[perm[k]]) )
-               start[r++] = perm[k];
-         }
-
-         /* fill empty slots */
-         for( k = 0; k < nnodes && r < runs; k++ )
-         {
-            if( graph->stp_type == STP_DHCSTP )
-            {
-               assert(dijkdist != NULL);
-               if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
-                  continue;
-            }
-            if( !Is_term(graph->term[perm[k]]) && graph->mark[k] )
-               start[r++] = perm[k];
-         }
-      }
-      else
-      {
-         SCIP_Real max = 0.0;
-         int bbound = runs - runs / 3;
-
-         for( k = 0; k < nnodes; k++ )
-         {
-            perm[k] = k;
-            if( SCIPisLT(scip, max, nodepriority[k]) && Is_term(graph->term[k]) )
-               max = nodepriority[k];
-         }
-         for( k = 0; k < nnodes; k++ )
-         {
-            if( Is_term(graph->term[k]) )
-            {
-               nodepriority[k] += SCIPrandomGetReal(heurdata->randnumgen, 0.0, max);
-            }
-            else if( SCIPisLE(scip, 1.0, nodepriority[k]) )
-            {
-               nodepriority[k] = nodepriority[k] * SCIPrandomGetReal(heurdata->randnumgen, 1.0, 2.0);
-            }
-         }
-
-         SCIPsortRealInt(nodepriority, perm, nnodes);
-
-         for( k = nnodes - 1; k >= 0; k-- )
-         {
-            if( r >= nterms || r >= bbound )
-               break;
-
-            if( Is_term(graph->term[perm[k]]) )
-            {
-               start[r++] = perm[k];
-               perm[k] = -1;
-            }
-         }
-
-         /* fill empty slots */
-         for( k = nnodes - 1; k >= 0 && r < runs; k-- )
-         {
-            if( perm[k] == -1 )
-               continue;
-            if( graph->stp_type == STP_DHCSTP )
-            {
-               assert(dijkdist != NULL);
-               if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
-                  continue;
-            }
-            if( graph->mark[k] )
-               start[r++] = perm[k];
-         }
-      }
-      /* not all slots filled? */
-      if( r < runs )
-         runs = r;
-
-      if( best >= 0 )
-      {
-         /* check whether we have a already selected the best starting node */
-         for( r = 0; r < runs; r++ )
-            if( start[r] == best )
-               break;
-
-         /* no, we still have to */
-         if( r == runs && runs > 0 )
-            start[nexecs % runs] = best;
-      }
-   } /* STP_DHCSTP */
-   else
-   {
-      runs = nnodes;
-      for( k = 0; k < nnodes; k++ )
-         start[k] = k;
-   }
+   SCIP_CALL( computeStarts(scip, heurdata, graph, cost, starts, startsgiven, dijkedge, dijkdist, nodepriority, start, &runs, &best) );
 
    /* perform SPH computations, differentiate between STP variants */
-   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
+   if( graph_pc_isPcMw(graph) )
    {
-      /* STP_PCSPG or STP_(R)MWCSP */
       SCIP_CALL( runPcMW(scip, heurdata, graph, bestnewstart, result, best_result, dijkedge, runs, best, dijkdist, cost, costrev, nodepriority, success, pcmwfull) );
    }
    else

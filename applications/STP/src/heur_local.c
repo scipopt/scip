@@ -245,6 +245,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    /* for PC variants test whether solution is trivial */
    if( mwpc )
    {
+      assert(graph->extended);
+
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && best_result[e] )
             break;
@@ -687,18 +689,30 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                k = graph->head[e];
                if( Is_term(graph->term[k]) )
                {
-                  graphmark[k] = FALSE;
-                  for( l = graph->outbeg[k]; l != EAT_LAST; l = graph->oeat[l] )
+                  int pterm;
+
+                  if( !graph_pc_knotIsFixedTerm(graph, k) )
                   {
-                     if( !Is_term(graph->term[graph->head[l]]) )
+                     graphmark[k] = FALSE;
+                     pterm = graph->head[graph->term2edge[k]];
+                     assert(Is_pterm(graph->term[pterm]));
+
+                     pinned[pterm] = TRUE;
+
+                     for( l = graph->outbeg[k]; l != EAT_LAST; l = graph->oeat[l] )
                      {
-                        assert(graph->head[l] != root);
-                        pinned[graph->head[l]] = TRUE;
+                        int deleteme;
+                        if( !Is_term(graph->term[graph->head[l]]) )
+                        {
+                           assert(graph->head[l] != root);
+                           assert(graph->head[l] == pterm);
+                        }
                      }
                   }
                }
             }
-            if( probtype != STP_RPCSPG )
+
+            if( !graph_pc_isRootedPcMw(graph) )
                graphmark[root] = FALSE;
          }
 
