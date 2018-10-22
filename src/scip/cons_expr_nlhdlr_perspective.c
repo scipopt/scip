@@ -445,9 +445,21 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
       if(oldvardata != NULL && oldvardata->bvar == bvar && oldvardata->xmin == xmin && oldvardata->xmax == xmax)
          continue;
 
-      if( !SCIPhashmapExists(nlhdlrdata->semiContVars, x) )
+      SCIP_SCVARDATA* newvardata;
+
+      if( oldvardata != NULL )
       {
-         SCIP_SCVARDATA* newvardata;
+         if( oldvardata->bvar != bvar )
+            continue;
+         if( xmin > oldvardata->xmin )
+            oldvardata->xmin = xmin;
+         if( xmax < oldvardata->xmax )
+            oldvardata->xmax = xmax;
+         SCIP_CALL( SCIPhashmapInsert(nlhdlrdata->semiContVars, x, oldvardata) );
+         SCIP_CALL( SCIPhashmapRemove(nlhdlrdata->semiContVars, x) );
+      }
+      else if( !SCIPhashmapExists(nlhdlrdata->semiContVars, x) )
+      {
          SCIP_CALL( SCIPallocBlockMemory(scip, &newvardata) );
          newvardata->bvar = bvar;
          newvardata->xmin = xmin;
@@ -457,7 +469,6 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
       }
       else
       {
-         SCIP_SCVARDATA* newvardata;
          newvardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->semiContVars, x);
          if( bvar != newvardata->bvar )
             continue;
@@ -483,7 +494,7 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
             SCIP_VAR* origin = (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry);
             if( nlhdlrdata->oldSemiContVars == NULL )
                SCIPhashmapCreate(&(nlhdlrdata)->oldSemiContVars, SCIPblkmem(scip), nentries);
-            SCIPhashmapInsert(nlhdlrdata->oldSemiContVars, origin, data);
+               SCIPhashmapInsert(nlhdlrdata->oldSemiContVars, origin, data);
          }
       }
    }
@@ -543,10 +554,10 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    SCIP_CONSEXPR_EXPR* child;
    int c;
 
-#if 0
+
+
    SCIPinfoMessage(scip, NULL, "\n------------------\nCalled for expr: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
-#endif
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
@@ -615,26 +626,30 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    /* TODO detect structure (assumes that the terms are sorted) */
 
    SCIP_CONSEXPR_EXPR** children;
+   SCIP_Real* coefs;
    int nchildren;
 
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
    {
       children = SCIPgetConsExprExprChildren(expr);
       nchildren = SCIPgetConsExprExprNChildren(expr);
+      coefs = SCIPgetConsExprExprSumCoefs(expr);
    }
    else
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &children, 0, 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &children, 1) );
       *children = expr;
       nchildren = 1;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &coefs, 1) );
+      *coefs = 1.0;
    }
 
 
    SCIP_VAR* qvar = NULL;
    int qvarpos = -1;
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   for( c = 0; c < nchildren; ++c )
    {
-      child = SCIPgetConsExprExprChildren(expr)[c];
+      child = children[c];
 
       if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0)
       {
@@ -646,7 +661,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
             continue;
          }
          else
-            addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+            addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
       else if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
       {
@@ -663,21 +678,21 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
             if( qvar == powvar )
             {
                SCIP_CONSEXPR_EXPR* quadsum;
-               SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &quadsum, 1, &SCIPgetConsExprExprChildren(expr)[qvarpos], &SCIPgetConsExprExprSumCoefs(expr)[qvarpos], 0.0) );
-               SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, quadsum, child, SCIPgetConsExprExprSumCoefs(expr)[c]) );
+               SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &quadsum, 1, &children[qvarpos], &coefs[qvarpos], 0.0) );
+               SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, quadsum, child, coefs[c]) ); /* todo: check the coefficients */
                addRefterm(scip, conshdlr, quadsum, 1.0, refexpr, TRUE);
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &quadsum) );
             }
             else
             {
                if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
-                  addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+                  addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
                else
-                  addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+                  addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
                if( qvar != NULL )
                {
-                  addRefterm(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[qvarpos],
-                             SCIPgetConsExprExprSumCoefs(expr)[qvarpos], refexpr, FALSE);
+                  addRefterm(scip, conshdlr, children[qvarpos],
+                             coefs[qvarpos], refexpr, FALSE);
                   qvar = NULL;
                   qvarpos = -1;
                }
@@ -687,9 +702,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          else /* univariate rational power (non-quadratic) */
          {
             if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
-               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+               addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
             else
-               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+               addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
          }
       }
       else if( strcmp("exp", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
@@ -703,22 +718,24 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          if(SCIPvarGetType(expvar) != SCIP_VARTYPE_CONTINUOUS)
             continue;
          if( varIsSemicontinuous(scip, nlhdlrdata, expvar, &bvar) )
-               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, TRUE);
+               addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
          else
-               addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+               addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
       else
-         addRefterm(scip, conshdlr, child, SCIPgetConsExprExprSumCoefs(expr)[c], refexpr, FALSE);
+         addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
    }
 
 
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
    {
-      SCIPsetConsExprExprSumConstant(*refexpr, SCIPgetConsExprExprSumConstant(expr));
+      if( *refexpr != NULL ) /* todo: handle single constant value case properly */
+         SCIPsetConsExprExprSumConstant(*refexpr, SCIPgetConsExprExprSumConstant(expr));
    }
    else
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &children, nchildren);
+      SCIPfreeBlockMemoryArrayNull(scip, &children, 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &coefs, 1);
    }
 
 
