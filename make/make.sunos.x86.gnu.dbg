@@ -1,4 +1,4 @@
-FLAGS		+=	-DNO_STRERROR_R -DROUNDING_FE
+FLAGS		+=	-DNO_STRERROR_R -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time
 CXXFLAGS	+=	$(GXXWARN) -std=c++0x -funit-at-a-time

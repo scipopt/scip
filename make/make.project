@@ -167,8 +167,8 @@ LIBBUILDFLAGS	=       $(ARFLAGS)
 LINT		=	flexelint
 DOXY		=	doxygen
 SPLINT		=       splint
-#SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -UROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
-SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -UROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
+#SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
+SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
