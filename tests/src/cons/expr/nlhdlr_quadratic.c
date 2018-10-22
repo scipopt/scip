@@ -134,9 +134,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   printf("blabla\n");
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   printf("blabla\n");
    providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
    cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
@@ -544,33 +542,34 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    cr_expect_eq(expr->children[1]->children[0], nlhdlrexprdata->quadexprterms[2].expr); /* finally y */
    cr_expect_eq(nlhdlrexprdata->bilinexprterms[0].expr1, nlhdlrexprdata->bilinexprterms[1].expr1); /* z should be the first on both */
 
-   ///* interval evaluate */
-   //SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   //SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   //SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
+#if 0
+   /* interval evaluate */
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
 
-   //cr_expect_float_eq(interval.inf, matinf, 1e-7); cr_expect_leq(interval.inf, matinf);
-   //cr_expect_float_eq(interval.sup, matsup, 1e-7); cr_expect_geq(interval.sup, matsup);
+   cr_expect_float_eq(interval.inf, matinf, 1e-7); cr_expect_leq(interval.inf, matinf);
+   cr_expect_float_eq(interval.sup, matsup, 1e-7); cr_expect_geq(interval.sup, matsup);
 
-   ///* test reverse propagation */
-   //{
-   //   SCIP_QUEUE* queue;
-   //   SCIP_Bool infeasible = FALSE;
-   //   int nreductions = 0;
-   //   SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
-   //   exprinterval.inf = 35;
-   //   exprinterval.sup = 35;
-   //   SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
-   //   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-   //   SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
-   //   SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
-   //   cr_expect_eq(nreductions, 2);
-   //   cr_expect_not(infeasible);
-   //   cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
-   //   cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
-   //   SCIPqueueFree(&queue);
-   //}
-
+   /* test reverse propagation */
+   {
+      SCIP_QUEUE* queue;
+      SCIP_Bool infeasible = FALSE;
+      int nreductions = 0;
+      SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
+      exprinterval.inf = 35;
+      exprinterval.sup = 35;
+      SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
+      cr_expect_eq(nreductions, 2);
+      cr_expect_not(infeasible);
+      cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
+      cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
+      SCIPqueueFree(&queue);
+   }
+#endif
 
    /* register enforcer info in expr and free */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
