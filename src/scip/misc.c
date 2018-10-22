@@ -10363,7 +10363,7 @@ void SCIPsplitFilename(
       lastdot = NULL;
 
    /* detect known compression extensions */
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    if( lastdot != NULL )
    {
       char* compext;
