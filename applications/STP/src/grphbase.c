@@ -2193,14 +2193,6 @@ int graph_pc_deleteTerm(
    graph_pc_knot2nonTerm(g, i);
    g->mark[i] = FALSE;
 
-#if 0
-   if( graph_pc_knotIsFixedTerm(g, i) )
-   {
-      graph_knot_del(g, i, TRUE);
-      return grad;
-   }
-#endif
-
    while( (e = g->outbeg[i]) != EAT_LAST )
    {
       const int i1 = g->head[e];
@@ -2217,6 +2209,7 @@ int graph_pc_deleteTerm(
    /* delete artificial terminal */
 
    graph_pc_knot2nonTerm(g, t);
+   g->mark[t] = FALSE;
 
    while( g->outbeg[t] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[t], TRUE);

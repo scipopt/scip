@@ -1984,7 +1984,7 @@ SCIP_RETCODE runPcMW(
          terminalperm[1] = bestincstart;
    }
 
-   if(graph_pc_isRootedPcMw(graph)&& 1 )
+   if(graph_pc_isRootedPcMw(graph)&& 0 )
    {
       int todo;
 
@@ -2015,7 +2015,7 @@ SCIP_RETCODE runPcMW(
 
          continue;
       }
-      if(graph_pc_isRootedPcMw(graph) && 1 )
+      if(graph_pc_isRootedPcMw(graph) && 0 )
       {
          int todo;
 

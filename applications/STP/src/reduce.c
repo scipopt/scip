@@ -218,6 +218,91 @@ SCIP_RETCODE level0save(
    return SCIP_OKAY;
 }
 
+/* remove unconnected vertices, including pseudo terminals, adapts g->mark */
+SCIP_RETCODE level0RpcRmw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp             /**< pointer to offset */
+)
+{
+   int* stackarr;
+   SCIP_Bool* gmark;
+   int stacksize;
+   const int nnodes = g->knots;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(offsetp != NULL);
+   assert(graph_pc_isRootedPcMw(g));
+   assert(g->extended);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+
+   BMSclearMemoryArray(gmark, nnodes);
+
+   stacksize = 0;
+   stackarr[stacksize++] = g->source;
+   assert(!gmark[g->source]);
+   gmark[g->source] = TRUE;
+
+   /* DFS loop */
+   while( stacksize != 0 )
+   {
+      const int node = stackarr[--stacksize];
+
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( !gmark[head] )
+         {
+            /* don't mark pseudo-terminals from the root */
+            if( node == g->source && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+            {
+               assert(g->cost[flipedge(a)] == FARAWAY && g->grad[head] == 2);
+               continue;
+            }
+
+            gmark[head] = TRUE;
+            stackarr[stacksize++] = head;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &stackarr);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !gmark[k] && (g->grad[k] > 0) && Is_term(g->term[k]) )
+      {
+         const int pterm = g->head[g->term2edge[k]];
+
+         assert(!graph_pc_knotIsFixedTerm(g, k));
+         assert(g->term2edge[k] >= 0);
+         assert(!gmark[pterm]);
+
+         *offsetp += g->prize[pterm];
+         graph_pc_deleteTerm(scip, g, k);
+      }
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !gmark[k] && (g->grad[k] > 0) )
+      {
+         assert(!graph_pc_knotIsFixedTerm(g, k));
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+         g->mark[k] = FALSE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &gmark);
+
+   return SCIP_OKAY;
+}
+
 
 /* remove unconnected vertices and checks whether problem is infeasible, overwrites g->mark */
 SCIP_RETCODE level0infeas(
@@ -1224,7 +1309,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real ub;
    SCIP_Real fix;
    SCIP_Real timelimit;
-   const SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
+   SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
    int nelims;
    int danelims;
    int sdnelims;
@@ -1459,6 +1544,11 @@ SCIP_RETCODE redLoopPc(
 
    if( !rpc && tryrpc && g->terms > 2 )
       SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
+
+   rpc = (g->stp_type == STP_RPCSPG);
+
+   if( rpc )
+      SCIP_CALL( level0RpcRmw(scip, g, &fix) );
 
    *fixed += fix;
 

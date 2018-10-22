@@ -819,8 +819,12 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             i = PRUNE_MAXREDROUNDS;
          }
 
+
          /* delete all vertices not reachable from the root */
-         SCIP_CALL( level0(scip, prunegraph) );
+         if( graph_pc_isRootedPcMw(prunegraph) )
+            SCIP_CALL(level0RpcRmw(scip, prunegraph, &offset));
+         else
+            SCIP_CALL(level0(scip, prunegraph));
 
          assert(graph_valid(prunegraph));
 
@@ -845,7 +849,10 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE));
 
          /* delete all vertices not reachable from the root */
-         SCIP_CALL( level0(scip, prunegraph) );
+         if( graph_pc_isRootedPcMw(prunegraph) )
+            SCIP_CALL(level0RpcRmw(scip, prunegraph, &offset));
+         else
+            SCIP_CALL(level0(scip, prunegraph));
 
          graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
