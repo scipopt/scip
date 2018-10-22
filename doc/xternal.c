@@ -1178,14 +1178,6 @@
  *  </table>
  */
 
-/** @page APPLICATIONS_POLYSCIP PolySCIP
- *
- *  A solver for multi-objective optimization problems.
- *
- * The documentation of this application can be accessed
- *  <a href="/doc/applications/PolySCIP"><b>here</b></a>.
- */
-
 /** @page APPLICATIONS Application projects
  *
  *  There are several extensions of \SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
@@ -1218,7 +1210,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_POLYSCIP
+ *  @subpage POLYSCIP_MAIN
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
