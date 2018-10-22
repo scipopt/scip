@@ -8701,7 +8701,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    assert(expr != NULL);
 
    /* call dot to generate postscript output and show it via ghostview */
-   f = popen("dot -Tps | gv -", "w");
+   f = popen("dot -Tps | gv --media=a3 -", "w");
    if( f == NULL )
    {
       SCIPerrorMessage("Calling popen() failed");
@@ -9507,6 +9507,8 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    SP11: no two children are expr*log(expr)
  *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
  *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
+ *    SP12: if it has two children, then neither of them is a sum (expand sums)
+ *    SP13: no child is a sum with a single term
  * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1

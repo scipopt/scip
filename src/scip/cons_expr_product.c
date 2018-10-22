@@ -94,6 +94,18 @@ typedef struct exprnode EXPRNODE;
  * Local methods
  */
 
+/** builds a simplified product from simplifiedfactors
+ * Note: this function also releases simplifiedfactors
+ */
+static
+SCIP_RETCODE buildSimplifiedProduct(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_Real                simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE**               simplifiedfactors, /**< factors of simplified product */
+   SCIP_Bool                changed,         /**< indicates whether some of the simplified factors was changed */
+   SCIP_CONSEXPR_EXPR**     simplifiedexpr   /**< buffer to store the simplified expression */
+   );
+
 /*  methods for handling linked list of expressions */
 /** inserts newnode at beginning of list */
 static
@@ -800,6 +812,22 @@ SCIP_RETCODE simplifyFactor(
       return SCIP_OKAY;
    }
 
+   /* enforces SP13: a sum with a unique child and no constant -> take the coefficient and use its child as factor */
+   if( strcmp(factortype, "sum") == 0 && SCIPgetConsExprExprNChildren(factor) == 1 &&
+         SCIPgetConsExprExprSumConstant(factor) == 0.0 )
+   {
+      *changed = TRUE;
+
+      /* assert SS8 and SS7 */
+      assert(SCIPgetConsExprExprSumCoefs(factor)[0] != 0.0 && SCIPgetConsExprExprSumCoefs(factor)[0] != 1.0);
+      debugSimplify("[simplifyFactor] seeing a sum of the form coef * child : take coef and child apart\n"); /*lint !e506 !e681*/
+
+      SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(factor), 1, simplifiedfactor) );
+      *simplifiedcoef *= SCIPgetConsExprExprSumCoefs(factor)[0];
+
+      return SCIP_OKAY;
+   }
+
    /* the given (simplified) expression `factor`, can be a child of a simplified product */
    assert(strcmp(factortype, EXPRHDLR_NAME) != 0);
    assert(strcmp(factortype, "val") != 0);
@@ -812,8 +840,8 @@ SCIP_RETCODE simplifyFactor(
  * Both, tomerge and finalchildren contain expressions that could be the children of a simplified product
  * (except for SP8 and SP10 which are enforced later).
  * However, the concatenation of both lists will not in general yield a simplified product expression,
- * because both SP4 and SP5 could be violated. So the purpose of this method is to enforce SP4 and SP5.
- * In the process of enforcing SP4, it could happen that SP2. Since enforcing SP2
+ * because both SP4 and SP5 could be violated.  So the purpose of this method is to enforce SP4 and SP5.
+ * In the process of enforcing SP4, it could happen that SP2 is violated. Since enforcing SP2
  * could generate further violations, we remove the affected children from finalchildren
  * and include them in unsimplifiedchildren for further processing.
  * @note: if tomerge has more than one element, then they are the children of a simplified product expression
@@ -999,6 +1027,442 @@ SCIP_RETCODE createData(
 }
 
 
+/** simplifies the given (simplified) exprs so that they can be factors of a simplified product;
+ * in particular, it will sort and multiply factors whose product leads to new expressions
+ */
+static
+SCIP_RETCODE simplifyMultiplyChildren(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**     exprs,           /**< factors to be simplified */
+   int                      nexprs,          /**< number of factors */
+   SCIP_Real*               simplifiedcoef,  /**< buffer to store coefficient of PI exprs; do not initialize */
+   EXPRNODE**               finalchildren,   /**< expr node list to store the simplified factors */
+   SCIP_Bool*               changed          /**< buffer to store whether some factor changed */
+   )
+{
+   EXPRNODE* unsimplifiedchildren;
+
+   /* set up list of current children (when looking at each of them individually, they are simplified, but as
+    * children of a product expression they might be unsimplified)
+    */
+   unsimplifiedchildren = NULL;
+   SCIP_CALL( createExprlistFromExprs(scip, exprs, nexprs, &unsimplifiedchildren) );
+
+   *changed = FALSE;
+
+   /* while there are still children to process */
+   *finalchildren  = NULL;
+   while( unsimplifiedchildren != NULL )
+   {
+      EXPRNODE* tomerge;
+      EXPRNODE* first;
+
+      first = listPopFirst(&unsimplifiedchildren);
+      assert(first != NULL);
+
+#ifdef SIMPLIFY_DEBUG
+      debugSimplify("simplifying factor:\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), first->expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+      /* enforces SP2, SP7 and SP13 */
+      tomerge = NULL;
+      SCIP_CALL( simplifyFactor(scip, first->expr, simplifiedcoef, &tomerge, changed) );
+
+      /* enforces SP4 and SP5 note: merge frees (or uses) the nodes of the tomerge list */
+      SCIP_CALL( mergeProductExprlist(scip, tomerge, finalchildren, &unsimplifiedchildren, changed) );
+
+      /* free first */
+      SCIP_CALL( freeExprlist(scip, &first) );
+
+      /* if the simplified coefficient is 0, we can return value 0 */
+      if( *simplifiedcoef == 0.0 )
+      {
+         *changed = TRUE;
+         SCIP_CALL( freeExprlist(scip, finalchildren) );
+         SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
+         assert(*finalchildren == NULL);
+         break;
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/* make sure product has at least two children
+ * - if it is empty; return value
+ * - if it has one child and coef = 1; return child
+ * - if it has one child and coef != 1; return (sum 0 coef expr)
+ */
+static
+SCIP_RETCODE enforceSP10(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_Real                simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE*                finalchildren,   /**< factors of simplified product */
+   SCIP_CONSEXPR_EXPR**     simplifiedexpr   /**< buffer to store the simplified expression */
+   )
+{
+   /* empty list --> return value */
+   if( finalchildren == NULL )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
+      return SCIP_OKAY;
+   }
+
+   /* one child and coef equal to 1 --> return child */
+   if( finalchildren->next == NULL && simplifiedcoef == 1.0 )
+   {
+      *simplifiedexpr = finalchildren->expr;
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      return SCIP_OKAY;
+   }
+
+   /* one child and coef different from 1 --> return (sum 0 coef child) */
+   if( finalchildren->next == NULL )
+   {
+      SCIP_CONSEXPR_EXPR* sum;
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &sum,
+               1, &(finalchildren->expr), &simplifiedcoef, 0.0) );
+
+      /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
+       * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
+       */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sum, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
+      return SCIP_OKAY;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check if it is entropy expression */
+static
+SCIP_RETCODE enforceSP11(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_Real                simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE*                finalchildren,   /**< factors of simplified product */
+   SCIP_CONSEXPR_EXPR**     simplifiedexpr   /**< buffer to store the simplified expression */
+   )
+{
+   SCIP_CONSEXPR_EXPR* entropicchild = NULL;
+
+   if( ! (finalchildren != NULL && finalchildren->next != NULL && finalchildren->next->next == NULL) )
+      return SCIP_OKAY;
+
+   /* could be log(expr) * expr, e.g., log(sin(x)) * sin(x) (OR11) */
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "log") == 0 )
+   {
+      assert(SCIPgetConsExprExprNChildren(finalchildren->expr) == 1);
+      if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->expr)[0], finalchildren->next->expr) )
+         entropicchild = finalchildren->next->expr;
+   }
+   /* could be expr * log(expr), e.g., (1 + abs(x)) log(1 + abs(x)) (OR11) */
+   else if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "log") == 0 )
+   {
+      assert(SCIPgetConsExprExprNChildren(finalchildren->next->expr) == 1);
+      if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->next->expr)[0], finalchildren->expr) )
+         entropicchild = finalchildren->expr;
+   }
+
+   /* success --> replace finalchildren by entropy expression */
+   if( entropicchild != NULL )
+   {
+      SCIP_CONSEXPR_EXPR* entropy;
+
+      simplifiedcoef *= -1.0;
+
+      SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, SCIPfindConshdlr(scip, "expr"), &entropy, entropicchild) );
+
+      /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) entropy as child */
+      if( simplifiedcoef != 1.0 )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
+                  1, &entropy, &simplifiedcoef, 0.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &entropy) );
+      }
+      else
+         *simplifiedexpr = entropy;
+   }
+
+   return SCIP_OKAY;
+}
+
+/* expands product of two sums or one sum and another expression
+ * -) two sums: (prod (sum c1 s1 ... sn) (sum c2 t1 ... tm)
+ *    Builds a sum representing the expansion, where all of its children are simplified, and then simplify the sum
+ *    - constant != 0 --> c1 ti or c2 * sj is simplified (ti, sj are not sums, because they are children of a simplified sum)
+ *    - sj * ti may be not be simplified, so put them in a product list and simplify them from there
+ * -) one sum: (prod factor (sum c s1 ... sn))
+ *    - c != 0 --> c * factor is simplified (i.e. factor is not sum!)
+ *    - factor * si may be not be simplified, so put them in a product list and simplify them from there
+ */
+static
+SCIP_RETCODE enforceSP12(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_Real                simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE*                finalchildren,   /**< factors of simplified product */
+   SCIP_CONSEXPR_EXPR**     simplifiedexpr   /**< buffer to store the simplified expression */
+   )
+{
+   /* we need only two children */
+   if( ! (finalchildren != NULL && finalchildren->next != NULL && finalchildren->next->next == NULL) )
+      return SCIP_OKAY;
+
+   /* handle both sums case */
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "sum") == 0 &&
+         strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "sum") == 0 )
+   {
+      SCIP_CONSEXPR_EXPR* expanded = NULL;
+      SCIP_Real c1 = SCIPgetConsExprExprSumConstant(finalchildren->expr);
+      SCIP_Real c2 = SCIPgetConsExprExprSumConstant(finalchildren->next->expr);
+      int nchildren1 = SCIPgetConsExprExprNChildren(finalchildren->expr);
+      int nchildren2 = SCIPgetConsExprExprNChildren(finalchildren->next->expr);
+      int j;
+      int k;
+
+#ifdef SIMPLIFY_DEBUG
+      debugSimplify("Multiplying sum1 * sum2\n");
+      debugSimplify("sum1: \n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), finalchildren->expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      debugSimplify("sum2: \n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), finalchildren->next->expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &expanded,
+               0, NULL, NULL, c1 * c2 * simplifiedcoef) );
+      /* multiply c1 * sum2 */
+      if( c1 != 0.0 )
+      {
+         int i;
+
+         for( i = 0; i < nchildren2; ++i )
+         {
+            SCIP_CONSEXPR_EXPR* term;
+
+            term = SCIPgetConsExprExprChildren(finalchildren->next->expr)[i];
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term,
+                     SCIPgetConsExprExprSumCoefs(finalchildren->next->expr)[i] * c1 * simplifiedcoef) );
+            /* we are just re-using a child here, so do not release term! */
+#ifdef SIMPLIFY_DEBUG
+            debugSimplify("Multiplying %f * summand2_i\n", c1);
+            debugSimplify("summand2_i: \n");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), term, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+         }
+      }
+      /* multiply c2 * sum1 */
+      if( c2 != 0.0 )
+      {
+         int i;
+
+         for( i = 0; i < nchildren1; ++i )
+         {
+            SCIP_CONSEXPR_EXPR* term;
+
+            term = SCIPgetConsExprExprChildren(finalchildren->expr)[i];
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term,
+                     SCIPgetConsExprExprSumCoefs(finalchildren->expr)[i] * c2 * simplifiedcoef) );
+            /* we are just re-using a child here, so do not release term! */
+#ifdef SIMPLIFY_DEBUG
+            debugSimplify("Multiplying summand1_i * %f\n", c2);
+            debugSimplify("summand1_i: \n");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), term, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+         }
+      }
+      /* multiply sum1 * sum2 without constants */
+      for( j = 0; j < nchildren1; ++j )
+      {
+         SCIP_CONSEXPR_EXPR* factors[2];
+         SCIP_Real coef1;
+
+         coef1 = SCIPgetConsExprExprSumCoefs(finalchildren->expr)[j];
+         factors[0] = SCIPgetConsExprExprChildren(finalchildren->expr)[j];
+         for( k = 0; k < nchildren2; ++k )
+         {
+            EXPRNODE* finalfactors;
+            SCIP_Real factorscoef;
+            SCIP_Real coef2;
+            SCIP_CONSEXPR_EXPR* term = NULL;
+            SCIP_Bool dummy;
+
+            coef2 = SCIPgetConsExprExprSumCoefs(finalchildren->next->expr)[k];
+            factors[1] = SCIPgetConsExprExprChildren(finalchildren->next->expr)[k];
+
+#ifdef SIMPLIFY_DEBUG
+            debugSimplify("multiplying %g expr1 * %g expr2\n", coef1, coef2);
+            debugSimplify("expr1:\n");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), factors[0], NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+            debugSimplify("expr2\n");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), factors[1], NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+            factorscoef = coef1 * coef2;
+            SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &factorscoef, &finalfactors, &dummy) );
+            assert(factorscoef != 0.0);
+
+#ifdef SIMPLIFY_DEBUG
+            {
+               EXPRNODE* node;
+               int i;
+
+               debugSimplify("Building product from simplified factors\n");
+               node = finalfactors;
+               i = 0;
+               while( node != NULL )
+               {
+                  debugSimplify("factor %d (nuses %d):\n", i, SCIPgetConsExprExprNUses(node->expr));
+                  SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), node->expr, NULL) );
+                  SCIPinfoMessage(scip, NULL, "\n");
+                  node = node->next;
+                  i++;
+               }
+            }
+#endif
+
+            SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term) );
+            assert(finalfactors == NULL);
+            assert(term != NULL);
+
+#ifdef SIMPLIFY_DEBUG
+            debugSimplify("%g expr1 * %g expr2 = %g * product\n", coef1, coef2, coef1 * coef2);
+            debugSimplify("product: (nused %d)\n", SCIPgetConsExprExprNUses(term));
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), term, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term, factorscoef * simplifiedcoef) );
+
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &term) );
+         }
+      }
+
+      /* simplify the sum */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expanded, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expanded) );
+ 
+      return SCIP_OKAY;
+   }
+
+   /* handle one sum case */
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "sum") == 0 ||
+         strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "sum") == 0 )
+   {
+      SCIP_CONSEXPR_EXPR* expanded = NULL;
+      SCIP_CONSEXPR_EXPR* factors[2];
+      SCIP_CONSEXPR_EXPR* sum = NULL;
+      SCIP_Real constant;
+      int nchildren;
+      int j;
+
+      if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "sum") == 0 )
+      {
+         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "sum") != 0);
+         sum = finalchildren->expr;
+         factors[0] = finalchildren->next->expr;
+      }
+      else
+      {
+         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "sum") != 0);
+         sum = finalchildren->next->expr;
+         factors[0] = finalchildren->expr;
+      }
+      constant = simplifiedcoef * SCIPgetConsExprExprSumConstant(sum);
+      nchildren = SCIPgetConsExprExprNChildren(sum);
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &expanded,
+               1, &factors[0], &constant,  0.0) );
+      /* we are just re-using a child here, so do not release factor! */
+
+      for( j = 0; j < nchildren; ++j )
+      {
+         SCIP_Real coef;
+         SCIP_Real termcoef;
+         SCIP_Bool dummy;
+         EXPRNODE* finalfactors;
+         SCIP_CONSEXPR_EXPR* term = NULL;
+
+         coef = SCIPgetConsExprExprSumCoefs(sum)[j];
+         factors[1] = SCIPgetConsExprExprChildren(sum)[j];
+
+         termcoef = coef;
+         SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &termcoef, &finalfactors, &dummy) );
+         assert(termcoef != 0.0);
+
+         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term) );
+         assert(finalfactors == NULL);
+         assert(term != NULL);
+
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expanded, term, termcoef * simplifiedcoef) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &term) );
+      }
+
+      /* simplify the sum */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expanded, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expanded) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** builds a simplified product from simplifiedfactors
+ * Note: this function also releases simplifiedfactors
+ */
+static
+SCIP_RETCODE buildSimplifiedProduct(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_Real                simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE**               simplifiedfactors, /**< factors of simplified product */
+   SCIP_Bool                changed,         /**< indicates whether some of the simplified factors was changed */
+   SCIP_CONSEXPR_EXPR**     simplifiedexpr   /**< buffer to store the simplified expression */
+   )
+{
+   EXPRNODE* finalchildren = *simplifiedfactors;
+
+   /* build product expression from finalchildren and post-simplify */
+   debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren)); /*lint !e506 !e681*/
+
+   *simplifiedexpr = NULL;
+
+   SCIP_CALL( enforceSP11(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr) );
+   if( *simplifiedexpr != NULL ) goto CLEANUP;
+
+   SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr) );
+   if( *simplifiedexpr != NULL ) goto CLEANUP;
+
+   SCIP_CALL( enforceSP10(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr) );
+   if( *simplifiedexpr != NULL ) goto CLEANUP;
+
+   /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
+   if( simplifiedcoef != 1.0 )
+   {
+      SCIP_CONSEXPR_EXPR* aux;
+
+      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
+               1, &aux, &simplifiedcoef, 0.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+      goto CLEANUP;
+   }
+
+   /* build product expression from list */
+   if( changed )
+   {
+      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
+      goto CLEANUP;
+   }
+
+CLEANUP:
+
+   SCIP_CALL( freeExprlist(scip, simplifiedfactors) );
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of expression handler
@@ -1020,7 +1484,6 @@ SCIP_RETCODE createData(
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
 {  /*lint --e{715}*/
-   EXPRNODE* unsimplifiedchildren;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
    SCIP_Bool changed;
@@ -1029,147 +1492,51 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    assert(simplifiedexpr != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
-   /* set up list of current children (when looking at each of them individually, they are simplified, but as
-    * children of a product expression they might be unsimplified) */
-   unsimplifiedchildren = NULL;
-   SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr), SCIPgetConsExprExprNChildren(expr),
-            &unsimplifiedchildren) );
-
-   changed = FALSE;
-
-   /* while there are still children to process */
-   finalchildren  = NULL;
    simplifiedcoef = SCIPgetConsExprExprProductCoef(expr);
-   while( unsimplifiedchildren != NULL )
+
+#ifdef SIMPLIFY_DEBUG
+   debugSimplify("Simplifying expr:\n");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+   debugSimplify("First multiplying children\n");
+#endif
+
+   /* simplify and multiply factors */
+   SCIP_CALL( simplifyMultiplyChildren(scip, SCIPgetConsExprExprChildren(expr), SCIPgetConsExprExprNChildren(expr),
+         &simplifiedcoef, &finalchildren, &changed) );
+
+#ifdef SIMPLIFY_DEBUG
    {
-      EXPRNODE* tomerge;
-      EXPRNODE* first;
+      EXPRNODE* node;
+      int i;
 
-      first = listPopFirst(&unsimplifiedchildren);
-      assert(first != NULL);
-
-      /* enforces SP2 and SP7 */
-      tomerge = NULL;
-      SCIP_CALL( simplifyFactor(scip, first->expr, &simplifiedcoef, &tomerge, &changed) );
-
-      /* enforces SP4 and SP5
-       * note: merge frees (or uses) the nodes of the tomerge list */
-      SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren, &changed) );
-
-      /* free first */
-      SCIP_CALL( freeExprlist(scip, &first) );
-
-      /* if the simplified coefficient is 0, we can return value 0 */
-      if( simplifiedcoef == 0.0 )
+      debugSimplify("Building product from simplified factors\n");
+      node = finalchildren;
+      i = 0;
+      while( node != NULL )
       {
-         changed = TRUE;
-         SCIP_CALL( freeExprlist(scip, &finalchildren) );
-         SCIP_CALL( freeExprlist(scip, &unsimplifiedchildren) );
-         assert(finalchildren == NULL);
-         break;
+         debugSimplify("factor %d:\n", i);
+         SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), node->expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         node = node->next;
+         i++;
       }
    }
+#endif
 
-   /* build product expression from finalchildren and post-simplify */
-   debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren)); /*lint !e506 !e681*/
+   /* get simplified product from simplified factors in finalchildren */
+   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr) );
+   assert(finalchildren == NULL);
 
-   /* enforce SP11: check if it is entropy expression (length of finalchildren should be 2) */
-   if( finalchildren != NULL && finalchildren->next != NULL && finalchildren->next->next == NULL )
-   {
-      SCIP_CONSEXPR_EXPR* entropicchild = NULL;
-
-      /* could be log(expr) * expr, e.g., log(sin(x)) * sin(x) (OR11) */
-      if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "log") == 0 )
-      {
-         assert(SCIPgetConsExprExprNChildren(finalchildren->expr) == 1);
-         if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->expr)[0], finalchildren->next->expr) )
-            entropicchild = finalchildren->next->expr;
-      }
-      /* could be expr * log(expr), e.g., (1 + abs(x)) log(1 + abs(x)) (OR11) */
-      else if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "log") == 0 )
-      {
-         assert(SCIPgetConsExprExprNChildren(finalchildren->next->expr) == 1);
-         if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->next->expr)[0], finalchildren->expr) )
-            entropicchild = finalchildren->expr;
-      }
-
-      /* success --> replace finalchildren by entropy expression */
-      if( entropicchild != NULL )
-      {
-         SCIP_CONSEXPR_EXPR* entropy;
-
-         simplifiedcoef *= -1.0;
-
-         SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, SCIPfindConshdlr(scip, "expr"), &entropy, entropicchild) );
-
-         /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) entropy as child */
-         if( simplifiedcoef != 1.0 )
-         {
-            SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
-                     1, &entropy, &simplifiedcoef, 0.0) );
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &entropy) );
-         }
-         else
-            *simplifiedexpr = entropy;
-
-         goto CLEANUP;
-      }
-   }
-
-   /* enforces SP10: if list is empty, return value */
-   if( finalchildren == NULL )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
-   }
-   /* enforces SP10: if finalchildren has only one expr with coef 1.0, return that expr */
-   else if( finalchildren->next == NULL && simplifiedcoef == 1.0 )
-   {
-      *simplifiedexpr = finalchildren->expr;
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
-   }
-   /* enforces SP10: if finalchildren has only one expr and coef != 1.0, return (sum 0 coef expr) */
-   else if( finalchildren->next == NULL )
-   {
-      SCIP_CONSEXPR_EXPR* aux;
-
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &aux,
-               1, &(finalchildren->expr), &simplifiedcoef, 0.0) );
-
-      /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
-       * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
-       */
-      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, aux, simplifiedexpr) ); /* calls simplifySum */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
-   }
-   /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
-   else if( simplifiedcoef != 1.0 )
-   {
-      SCIP_CONSEXPR_EXPR* aux;
-
-      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux) );
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
-               1, &aux, &simplifiedcoef, 0.0) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
-   }
-   /* build product expression from list */
-   else if( changed )
-   {
-      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
-   }
-   else
+   if( *simplifiedexpr == NULL )
    {
       *simplifiedexpr = expr;
 
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
-
-CLEANUP:
-   /* free memory */
-   SCIP_CALL( freeExprlist(scip, &finalchildren) );
-   assert(finalchildren == NULL);
-
    assert(*simplifiedexpr != NULL);
+
    return SCIP_OKAY;
 }
 

@@ -29,8 +29,8 @@
 
 struct expr_type
 {
-   const char* expr;
-   const char* type;
+   const char expr[1000];
+   const char type[1000];
 };
 
 /* specify parameters */
@@ -68,6 +68,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)^2", "sum"},
       {"(<x> + <y>)^2", "sum"},
       {"(<x> + <y> + 2)^2", "sum"},
+      {"(<x> + <y>)*(<x> + 1)^2 - <x>^3 - <x>^2*<y> - 2*<x>^2 - 2*<y>*<x> -<y> -<x>", "val"},
       {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "pow"},
       //{"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
       {"<x>^2 * (1.0 / (<x>^2 * <y>)) * <y>", "val"}, // order is important to test the internal algorithms
@@ -80,13 +81,35 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"exp(-3.0)", "val"},
       {"log(abs(-3.0))", "val"},
       {"log(3.0)", "val"},
+      {"((<x>^0.5)^0.5 + <y> + 1)*(<x> + (<x>^0.5)^0.5 + 2)", "sum"},
+      {"((<x>+<y>)^0.5 - <y>)*((<x> + <y>)^0.5 + 1)", "sum"},
+      {"(<x>*<y>^0.5 + 1)*(<y>^1.5/<x> - 1)", "sum"},
+      {"(2*<x>+1)*(<x>+1)", "sum"},
+      {"(2*<x>+1)*(<x> + 1)", "sum"},
+      {"((<x>+<y>)^0.5 - <y>)*((<x> + <y>)^0.5 + 1)", "sum"},
+      {"((-2*<x>)^0.5+1)*((-2*<x>)^0.5 + 1)", "sum"},
+      {"((2*<x>)^0.5+1)*((2*<x>)^0.5 + 1)", "sum"},
+      {"((2*<x>)^0.5+1)*((1*<x>)^0.5 + 1)", "sum"},
+      {"<x>*(<x>+1)", "sum"},
+      {"2*<x>*(<x>+1)", "sum"},
+      {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
       {"(25.0 * <x>^2)^0.5", "sum"}
+
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
    };
 
+   /* alloc memory */
+  struct expr_type* gexpr = (struct expr_type*)cr_malloc(sizeof(expressions));
+
+   for( unsigned int i = 0; i < sizeof(expressions)/sizeof(struct expr_type); ++i )
+   {
+      strcpy((char *)gexpr[i].type, (char *)expressions[i].type);
+      strcpy((char *)gexpr[i].expr, (char *)expressions[i].expr);
+   }
+
    /* type of the parameter; the parameter; number of parameters */
-   return cr_make_param_array(const struct expr_type, expressions, sizeof(expressions)/sizeof(struct expr_type));
+   return cr_make_param_array(const struct expr_type, gexpr, sizeof(expressions)/sizeof(struct expr_type));
 }
 
 static SCIP_SOL* sol1;
@@ -123,22 +146,41 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol2, 0) );
    values[1] = SCIPgetConsExprExprValue(expr);
 
+#if 0
+   SCIP_CALL( SCIPshowConsExprExpr(scip, expr) );
+   fprintf(stderr,"simplifying!\n");
+#endif
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+
+#if 0
+   fprintf(stderr,"done simplifying!\n");
+   printf("original\n");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, 0) );
+   SCIPinfoMessage(scip, 0, "\n");
+   printf("simplified\n");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, simplified, 0) );
+   SCIPinfoMessage(scip, 0, "\n");
+   //SCIP_CALL( SCIPshowConsExprExpr(scip, simplified) );
+   printf("\n");
+#endif
 
    /* check type of simplified expression */
    cr_expect_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(simplified)), type);
 
    /* test it evaluates to the same; expect because we want to release the expression even if this fails */
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, simplified, sol1, 0) );
-   cr_expect_float_eq(values[0], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip));
+   cr_expect_float_eq(values[0], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip), "expecting %f got %f",
+         values[0], SCIPgetConsExprExprValue(simplified));
 
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, simplified, sol2, 0) );
-   cr_expect_float_eq(values[1], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip));
+   cr_expect_float_eq(values[1], SCIPgetConsExprExprValue(simplified), SCIPfeastol(scip), "expecting %f got %f",
+         values[1], SCIPgetConsExprExprValue(simplified));
 
    /* test that the same expression is obtained when simplifying again */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again, &changed) );
    cr_expect_eq(SCIPcompareConsExprExprs(simplified, simplified_again), 0);
+   cr_expect_not(changed);
 
    /* release expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -313,7 +355,7 @@ TestSuite(simplify, .init = setup, .fini = teardown);
 /* actual test; we get one parameter as argument */
 ParameterizedTest(const struct expr_type* expression, simplify, simplify_test)
 {
-   //printf("received %s and %s\n", expression->expr, expression->type);
+   //fprintf(stderr,"received %s and %s\n", expression->expr, expression->type);
    parseSimplifyCheck(scip, expression->expr, expression->type);
 }
 
@@ -324,8 +366,9 @@ Test(simplify, remove_fix_variables)
    SCIP_CALL( SCIPfreeTransform(scip) ); /* why do I need to call this one before freeing the sols? */
 }
 
-///* parameterized test don't work with --single :/ */
+/* parameterized test don't work with --single :/ */
 //Test(simplify, debug)
 //{
-//   parseSimplifyCheck(scip, "(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val");
+//   fprintf(stderr,"blabla\n");
+//   parseSimplifyCheck(scip, "<x>*(<x>+1)", "sum");
 //}
