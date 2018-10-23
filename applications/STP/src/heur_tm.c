@@ -2652,7 +2652,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
          {
             for( int e = 0; e < nedges; e++ )
             {
-               if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
+               if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
                {
                   cost[e] = BLOCKED;
                }

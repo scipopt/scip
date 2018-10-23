@@ -1330,6 +1330,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    int maxcuts;
    int ncuts = 0;
    const SCIP_Bool atrootnode = (SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0);
+   SCIP_Bool chgterms;
 #ifndef NDEBUG
    int nterms;
 #endif
@@ -1353,10 +1354,12 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    nterms = g->terms;
 #endif
 
+   chgterms = (!atrootnode && (g->stp_type == STP_SPG || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG) );
+
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    /* change graph according to branch-and-bound terminal changes  */
-   if( !atrootnode && g->stp_type == STP_SPG )
+   if( chgterms )
    {
       const int nnodes = g->knots;
 
@@ -1378,7 +1381,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
       *result = SCIP_SEPARATED;
 
    /* restore graph */
-   if( !atrootnode && g->stp_type == STP_SPG )
+   if( chgterms )
    {
       for( int k = 0; k < g->knots; k++ )
          if( g->term[k] != termorg[k] )

@@ -77,9 +77,7 @@ SCIP_Bool isProbCompatible(
    int                   probtype            /**< the problem type */
 )
 {
-   int todo; // only STP_RPCSPG!
-   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT );
-      //  || probtype == STP_PCSPG || probtype == STP_RPCSPG);
+   return (probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_RPCSPG || probtype == STP_PCSPG);
 }
 
 /** select vertex to branch on by choosing vertex of highest degree */
@@ -94,6 +92,10 @@ SCIP_RETCODE selectBranchingVertexByDegree(
    int maxdegree = 0;
    const int nnodes = g->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   SCIP_Bool ptermselected;
+
+   assert(g != NULL && scip != NULL && vertex != NULL);
+   assert(!pcmw || g->extended);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
 
@@ -103,20 +105,31 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
 
+   ptermselected = FALSE;
    for( int k = 0; k < nnodes; k++ )
    {
-      if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM && (g->grad[k] > maxdegree
-            || (pcmw && Is_pterm(g->term[k]))) )
+      if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM )
       {
          assert(!Is_term(g->term[k]));
+         assert(!ptermselected || pcmw);
 
-         maxdegree = g->grad[k];
-         *vertex = k;
-
-         if( pcmw && Is_pterm(g->term[k]) )
-            maxdegree = nnodes;
+         /* first pterm? Then update */
+         if( !ptermselected && Is_pterm(g->term[k]) )
+         {
+            assert(pcmw);
+            maxdegree = g->grad[k];
+            *vertex = k;
+            ptermselected = TRUE;
+         }
+         else if( g->grad[k] > maxdegree && (!ptermselected || Is_pterm(g->term[k])) )
+         {
+            maxdegree = g->grad[k];
+            *vertex = k;
+         }
       }
    }
+
+   assert(maxdegree > 0);
 
    SCIPdebugMessage("vertex selected by degree branching rule: %d \n\n", *vertex);
 
@@ -135,11 +148,14 @@ SCIP_RETCODE selectBranchingVertexBySol(
 {
    GRAPH* graph;
    SCIP_Real* cost;
+   SCIP_Real* costorg;
    SCIP_Real* costrev;
+   SCIP_Real* prizeorg;
    int* soledges;
    int* nodestatenew;
    int* termorg;
-
+   SCIP_Bool pcmw;
+   SCIP_Bool ptermselected;
    SCIP_Bool success;
    int nedges;
    int nnodes;
@@ -154,7 +170,9 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    graph = SCIPprobdataGetGraph2(scip);
    assert(graph != NULL);
+   assert(!graph_pc_isPcMw(graph) || graph->extended);
 
+   pcmw = graph_pc_isPcMw(graph);
    nedges = graph->edges;
    nnodes = graph->knots;
 
@@ -162,11 +180,17 @@ SCIP_RETCODE selectBranchingVertexBySol(
     * compute locally feasible solution (SPH + local)
     */
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestatenew, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &termorg, nnodes) );
+
+   if( pcmw )
+      SCIP_CALL( SCIPallocBufferArray(scip, &prizeorg, nnodes) );
+   else
+      prizeorg = NULL;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -176,21 +200,70 @@ SCIP_RETCODE selectBranchingVertexBySol(
          nodestatenew[k] = BRANCH_STP_VERTEX_NONTERM;
    }
 
+   BMScopyMemoryArray(costorg, graph->cost, nedges);
    BMScopyMemoryArray(termorg, graph->term, nnodes);
+
+   if( prizeorg != NULL )
+   {
+      assert(graph->prize != NULL);
+      BMScopyMemoryArray(prizeorg, graph->prize, nnodes);
+   }
 
    /* get vertex changes from branch-and-bound */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
       SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
 
-   /* currently not supported because of next loop */
-   assert(!graph_pc_isPcMw(graph) || graph_pc_isRootedPcMw(graph));
-
    for( int k = 0; k < nnodes; k++ )
-      if( !Is_term(graph->term[k]) && nodestatenew[k] == BRANCH_STP_VERTEX_TERM )
+   {
+      if( Is_term(graph->term[k]) )
+         continue;
+
+      if( nodestatenew[k] == BRANCH_STP_VERTEX_TERM )
       {
          assert(graph->grad[k] > 0);
-         graph_knot_chg(graph, k, 0);
+
+         if( pcmw && Is_pterm(graph->term[k]) )
+         {
+            const int term = graph->head[graph->term2edge[k]];
+            const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
+
+            assert(graph->term2edge[k] >= 0 && Is_term(graph->term[term]));
+            assert(graph->cost[root2term] == graph->prize[k]);
+
+            graph->prize[k] += BLOCKED;
+            graph->cost[root2term] += BLOCKED;
+         }
+         else
+         {
+            if( graph_pc_isRootedPcMw(graph) )
+            {
+               assert(graph->term2edge[k] == -1);
+               graph->prize[k] = FARAWAY;
+            }
+            else if( pcmw )
+            {
+               continue;
+            }
+
+            graph_knot_chg(graph, k, 0);
+         }
       }
+      else if( nodestatenew[k] == BRANCH_STP_VERTEX_KILLED )
+      {
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            if( pcmw && graph->term2edge[k] == e ) /* do not change edge going to pseudo-terminal */
+            {
+               assert(Is_pterm(graph->term[k]));
+               assert(Is_term(graph->term[graph->head[e]]));
+               continue;
+            }
+
+            graph->cost[e] += BLOCKED;
+            graph->cost[flipedge(e)] += BLOCKED;
+         }
+      }
+   }
 
    SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
    assert(success);
@@ -201,6 +274,14 @@ SCIP_RETCODE selectBranchingVertexBySol(
    for( int k = 0; k < nnodes; k++ )
       if( graph->term[k] != termorg[k] )
          graph_knot_chg(graph, k, termorg[k]);
+
+   BMScopyMemoryArray(graph->cost, costorg, nedges);
+
+   if( prizeorg != NULL )
+   {
+      assert(graph->prize != NULL);
+      BMScopyMemoryArray(graph->prize, prizeorg, nnodes);
+   }
 
    assert(graph_sol_valid(scip, graph, soledges));
 
@@ -225,15 +306,28 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    /* get vertex with highest degree in solution */
    maxdeg = -1;
+   ptermselected = FALSE;
    for( int i = 0; i < nnodes; i++ )
    {
       if( nodestatenew[i] == BRANCH_STP_VERTEX_NONTERM && graph->grad[i] != 0 )
       {
          int soldeg = 0;
+         assert(!Is_term(graph->term[i]));
+         assert(!ptermselected || pcmw);
+
          for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
             if( soledges[e] == CONNECT || soledges[flipedge(e)] == CONNECT )
                soldeg++;
-         if( soldeg > maxdeg )
+
+         /* first pterm? Then update */
+         if( !ptermselected && Is_pterm(graph->term[i]) )
+         {
+            assert(pcmw);
+            maxdeg = soldeg;
+            *vertex = i;
+            ptermselected = TRUE;
+         }
+         else if( soldeg > maxdeg && (!ptermselected || Is_pterm(graph->term[i])) )
          {
             maxdeg = soldeg;
             *vertex = i;
@@ -241,11 +335,19 @@ SCIP_RETCODE selectBranchingVertexBySol(
       }
    }
 
+   printf("selected: \n");
+   graph_knot_printInfo(graph, *vertex);
+   printf("maxdeg %d \n", maxdeg);
+
+   assert(maxdeg >= 0);
+
+   SCIPfreeBufferArray(scip, &prizeorg);
    SCIPfreeBufferArray(scip, &termorg);
    SCIPfreeBufferArray(scip, &nodestatenew);
    SCIPfreeBufferArray(scip, &soledges);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &costorg);
 
    return SCIP_OKAY;
 }
@@ -521,12 +623,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    if( !isProbCompatible(g->stp_type) )
       return SCIP_OKAY;
-#if 0
-   if( graph_pc_isRootedPcMw(g) )
-      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
-#endif
+
    /* get vertex to branch on */
-   if( branchruledata->branchtype == BRANCH_STP_ON_LP )
+   if( graph_pc_isPcMw(g) )
+      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
+   else if( branchruledata->branchtype == BRANCH_STP_ON_LP )
       SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
    else if( branchruledata->branchtype == BRANCH_STP_ON_LP2 )
       SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
