@@ -2092,7 +2092,15 @@ int reduceSPG(
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
 
-   assert(!rpc || !graph->extended);
+#ifndef NDEBUG
+   if( rpc )
+   {
+      assert(!graph->extended);
+      for( int k = 0; k < nnodes; k++ )
+         if( Is_pterm(graph->term[k]) )
+            assert(!graph->mark[k] && graph->grad[k] == 2);
+   }
+#endif
 
    if( solgiven )
    {
@@ -2120,7 +2128,7 @@ int reduceSPG(
 
       redcost = pathdist[k] + vnoi[k].dist;
 
-      if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, redcost, minpathcost) && k != root )
+      if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, redcost, minpathcost) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
          (*offset) += graph->prize[k];
          nfixed += graph_pc_deleteTerm(scip, graph, k);
@@ -3041,7 +3049,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Real*            costrev,            /**< reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
-   SCIP_Real*            offset,             /**< pointer to store offset */
+   SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  vbase,              /**< array for Voronoi bases */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
@@ -3061,6 +3069,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Real* nodefixingbounds;
    SCIP_Real* nodereplacebounds;
    SCIP_Real lpobjval;
+   SCIP_Real offsetnew;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
    SCIP_Real damaxdeviation;
@@ -3188,6 +3197,7 @@ SCIP_RETCODE reduce_da(
       graph_pc_2transcheck(graph);
 
    assert(nruns > 0);
+   offsetnew = 0.0;
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
@@ -3347,23 +3357,23 @@ SCIP_RETCODE reduce_da(
 #endif
          }
 
-         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
-         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
+         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval + offsetnew, (run == 0));
+         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval + offsetnew, nedges, (run == 0), TRUE);
 
-         nfixed += reduceSPG(scip, graph, offset, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol);
+         nfixed += reduceSPG(scip, graph, &offsetnew, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol);
 
          if( !SCIPisZero(scip, minpathcost) )
          {
-            nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound);
+            nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound + offsetnew);
+            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound + offsetnew);
          }
 
          if( extended )
             nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked);
 
          if( !directed && !SCIPisZero(scip, minpathcost) )
-            SCIP_CALL(
-                  updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint, lpobjval, upperbound, daroot, (run == 0), extended));
+            SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
+                  lpobjval + offsetnew, upperbound + offsetnew, daroot, (run == 0), extended));
 
          if( nfixed > 0 )
             SCIP_CALL(level0(scip, graph));
@@ -3381,7 +3391,7 @@ SCIP_RETCODE reduce_da(
       } /* root loop */
 
       if( !directed && !SCIPisZero(scip, minpathcost) )
-           nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
+           nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval + offsetnew, upperbound + offsetnew);
 
       if( nfixed == 0 || !userec )
          break;
@@ -3409,6 +3419,7 @@ TERMINATE:
    SCIPfreeBufferArray(scip, &result);
 
    assert(graph_valid(graph));
+   *offsetp += offsetnew;
 
    return SCIP_OKAY;
 }
