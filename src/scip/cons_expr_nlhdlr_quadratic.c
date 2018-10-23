@@ -144,6 +144,47 @@ SCIP_RETCODE processQuadraticExpr(
    return SCIP_OKAY;
 }
 
+
+/** returns a quadvarexprterm that contains the expr
+ * it either finds one that already exists or creates a new one
+ */
+static
+SCIP_RETCODE getQuadvarexprterm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< the expression */
+   SCIP_HASHMAP*         expr2idx,           /**< map: expr to index in nlhdlrexprdata->quadexprterms */
+   SCIP_HASHMAP*         seenexpr,           /**< map: expr to number of times it was seen */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,/**< nlhdlr expression data */
+   SCIP_QUADEXPRTERM** quadexprterm          /**< buffer to store quadexprterm */
+   )
+{
+   assert(expr != NULL);
+   assert(expr2idx != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(quadexprterm != NULL);
+
+   if( SCIPhashmapExists(expr2idx, (void *)expr) )
+   {
+      *quadexprterm = &nlhdlrexprdata->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void *)expr)];
+      assert((*quadexprterm)->expr == expr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(expr2idx, expr, nlhdlrexprdata->nquadexprs) );
+      *quadexprterm = &nlhdlrexprdata->quadexprterms[nlhdlrexprdata->nquadexprs];
+      ++(nlhdlrexprdata->nquadexprs);
+
+      (*quadexprterm)->expr = expr;
+      (*quadexprterm)->sqrcoef = 0.0;
+      (*quadexprterm)->lincoef = 0.0;
+      (*quadexprterm)->nadjbilin = 0;
+      (*quadexprterm)->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void *)expr);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*quadexprterm)->adjbilin, (*quadexprterm)->adjbilinsize) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in nlhdlrexprdata; for this, it builds the
  * matrix Q and computes its eigenvalues using LAPACK; if Q is
  * - semidefinite positive -> provided is set to sepaunder
@@ -498,35 +539,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
          child = SCIPgetConsExprExprChildren(child)[0];
          assert(SCIPhashmapGetImageInt(seenexpr, (void *)child) > 0);
 
-         /* if expr appeared already, update info, otherwise create info */
-         if( SCIPhashmapExists(expr2idx, (void *)child) )
-         {
-            quadexprterm = &nlexprdata->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void *)child)];
-            assert(quadexprterm->expr == child);
-
-            quadexprterm->sqrcoef = coef;
-         }
-         else
-         {
-            SCIP_CALL( SCIPhashmapInsertInt(expr2idx, child, nlexprdata->nquadexprs) );
-
-            quadexprterm = &nlexprdata->quadexprterms[nlexprdata->nquadexprs];
-            quadexprterm->expr = child;
-            quadexprterm->sqrcoef = coef;
-            quadexprterm->lincoef = 0.0;
-            quadexprterm->nadjbilin = 0;
-            quadexprterm->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void *)child);
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &quadexprterm->adjbilin, quadexprterm->adjbilinsize) );
-            ++(nlexprdata->nquadexprs);
-         }
+         SCIP_CALL( getQuadvarexprterm(scip, child, expr2idx, seenexpr, nlexprdata, &quadexprterm) );
+         assert(quadexprterm->expr == child);
+         quadexprterm->sqrcoef = coef;
       }
       else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
             SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
       {
          SCIP_BILINEXPRTERM* bilinexprterm;
+         SCIP_QUADEXPRTERM* quadexprterm;
          SCIP_CONSEXPR_EXPR* expr1;
          SCIP_CONSEXPR_EXPR* expr2;
-         int i;
 
          assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
 
@@ -548,40 +571,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
             bilinexprterm->expr2 = expr1;
          }
 
-         for( i = 0; i < 2; ++i )
-         {
-            SCIP_CONSEXPR_EXPR* bilin;
-            SCIP_QUADEXPRTERM* quadexprterm;
+         SCIP_CALL( getQuadvarexprterm(scip, expr1, expr2idx, seenexpr, nlexprdata, &quadexprterm) );
+         assert(quadexprterm->expr == expr1);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = nlexprdata->nbilinexprterms;
+         ++(quadexprterm->nadjbilin);
 
-            bilin = SCIPgetConsExprExprChildren(child)[i];
+         SCIP_CALL( getQuadvarexprterm(scip, expr2, expr2idx, seenexpr, nlexprdata, &quadexprterm) );
+         assert(quadexprterm->expr == expr2);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = nlexprdata->nbilinexprterms;
+         ++(quadexprterm->nadjbilin);
 
-            /* if expr appeared already, update info, otherwise create info */
-            if( SCIPhashmapExists(expr2idx, (void *)bilin) )
-            {
-               quadexprterm = &nlexprdata->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void *)bilin)];
-               assert(quadexprterm->expr == bilin);
-
-               quadexprterm->adjbilin[quadexprterm->nadjbilin] = nlexprdata->nbilinexprterms;
-               ++(quadexprterm->nadjbilin);
-            }
-            else
-            {
-               SCIP_CALL( SCIPhashmapInsertInt(expr2idx, bilin, nlexprdata->nquadexprs) );
-
-               quadexprterm = &nlexprdata->quadexprterms[nlexprdata->nquadexprs];
-
-               quadexprterm->expr = bilin;
-               quadexprterm->sqrcoef = 0.0;
-               quadexprterm->lincoef = 0.0;
-               quadexprterm->nadjbilin = 0;
-               quadexprterm->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void *)bilin);
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &quadexprterm->adjbilin, quadexprterm->adjbilinsize) );
-               quadexprterm->adjbilin[quadexprterm->nadjbilin] = nlexprdata->nbilinexprterms;
-               ++(quadexprterm->nadjbilin);
-               ++(nlexprdata->nquadexprs);
-            }
-         }
-         nlexprdata->nbilinexprterms++;
+         ++(nlexprdata->nbilinexprterms);
 
          /* TODO: in future store position of second factor in quadexprterms */
          /*bilinexprterm->pos = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2) */
@@ -599,32 +599,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
          }
          else
          {
+            /* expression appears non-linearly: set lin coef */
             SCIP_QUADEXPRTERM* quadexprterm;
             assert(SCIPhashmapGetImageInt(seenexpr, (void *)child) > 0);
 
-            /* expression will appear non-linearly; if it appeared already, update info, otherwise create info */
-            if( SCIPhashmapExists(expr2idx, (void *)child) )
-            {
-               quadexprterm = &nlexprdata->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void *)child)];
-               assert(quadexprterm->expr == child);
-
-               quadexprterm->lincoef = coef;
-            }
-            else
-            {
-               SCIP_CALL( SCIPhashmapInsertInt(expr2idx, child, nlexprdata->nquadexprs) );
-
-               quadexprterm = &nlexprdata->quadexprterms[nlexprdata->nquadexprs];
-
-               quadexprterm->expr = child;
-               quadexprterm->sqrcoef = 0.0;
-               quadexprterm->lincoef = coef;
-               quadexprterm->nadjbilin = 0;
-               quadexprterm->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void *)child);
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &quadexprterm->adjbilin, quadexprterm->adjbilinsize) );
-
-               ++(nlexprdata->nquadexprs);
-            }
+            SCIP_CALL( getQuadvarexprterm(scip, child, expr2idx, seenexpr, nlexprdata, &quadexprterm) );
+            assert(quadexprterm->expr == child);
+            quadexprterm->lincoef = coef;
          }
       }
    }
