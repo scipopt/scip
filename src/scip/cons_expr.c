@@ -11036,11 +11036,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
    assert(nlhdlr != NULL);
    assert(nlhdlr->sepatime != NULL);
    assert(result != NULL);
+   assert(ncuts != NULL);
 
+   *ncuts = 0;
    if( nlhdlr->sepa == NULL )
    {
       *result = SCIP_DIDNOTRUN;
-      *ncuts = 0;
       return SCIP_OKAY;
    }
 
