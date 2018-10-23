@@ -103,7 +103,9 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    SCIPStpBranchruleInitNodeState(g, nodestate);
 
-   SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
+   /* get vertex changes from branch-and-bound */
+   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
 
    ptermselected = FALSE;
    for( int k = 0; k < nnodes; k++ )
