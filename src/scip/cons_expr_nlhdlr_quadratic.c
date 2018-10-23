@@ -117,10 +117,12 @@ SCIP_RETCODE processQuadraticExpr(
 {
    if( SCIPhashmapExists(seenexpr, (void *)expr) )
    {
-      if( SCIPhashmapGetImageInt(seenexpr, (void *)expr) < 0 )
+      int nseen = SCIPhashmapGetImageInt(seenexpr, (void *)expr);
+
+      if( nseen < 0 )
       {
          /* only seen linearly before */
-         assert(SCIPhashmapGetImageInt(seenexpr, (void *)expr) == -1);
+         assert(nseen == -1);
 
          --(*nlinterms);
          ++(*nquadterms);
@@ -128,9 +130,8 @@ SCIP_RETCODE processQuadraticExpr(
       }
       else
       {
-         assert(SCIPhashmapGetImageInt(seenexpr, (void *)expr) > 0);
-         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void *)expr,
-                  SCIPhashmapGetImageInt(seenexpr, (void *)expr) + 1) );
+         assert(nseen > 0);
+         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void *)expr, nseen + 1) );
       }
       *proper = TRUE;
    }
@@ -346,7 +347,9 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
  *
  * For propagation, we store the quadratic in our data structure in the following way:
  * We count how often a variable appears. Then, in a bilinear product, expr_i * expr_j,
- * we store it as expr_i * expr_j if and only if # expr_i appears >= # expr_j appears.
+ * we store it as expr_i * expr_j if # expr_i appears > # expr_j appears.
+ * When # expr_i appears == # expr_j appears, it then it will be stored as expr_i * expr_j
+ * if and only if expr_i < expr_j, where '<' is the expression order (see Ordering Rules in cons_expr.c documentation).
  *
  * @note:
  * - the expression needs to be simplified (in particular, it is assumed to be sorted)
