@@ -68,7 +68,7 @@
  * |-----------|------|-------------|
  * | `-h` | `--help` | Display usage information and exit |
  * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scip.zib.de/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
- * | `-W` | `--writeSolsPath &lt;path&gt;` | Path where the solution file should be written to if **-w** was set |
+ * | `-W` | `--writeSolsPath &lt;path&gt;` | Path where the solution file should be written to if `-w` was set |
  * | `-e` | `--Epsilon &lt;double&gt;` | Specify epsilon used in computation of unsupported points; the default value is 1e-3 |
  * | `-d` | `--Delta &lt;double&gt;` | Specify delta used in computation of feasible boxes; the default value is 0.01 |
  * | `-r` | `–round &lt;r&gt;` | Round the weighted objective coefficient used in the function ’setWeightedObjective’ at the ’r’-th decimal position; this might be helpful in case of numberical troubles with unbounded rays |
@@ -98,7 +98,7 @@
  * packages such that available `MPS` parsers could easily be adjusted to
  * parse an `.mop` file as well. Furthermore, no user is expected to write
  * `.mop` files by hand, but to use a modelling language that does the job.
- * See \[sec-model\] for a description of how to use the freely available
+ * See \ref sec-model for a description of how to use the freely available
  * [Zimpl](http://zimpl.zib.de) and the Python script
  * `mult_zimpl_to_mop.py` (comes with PolySCIP) to generate `.mop` files.
  *
@@ -106,13 +106,12 @@
  *
  * \f[
  * \begin{aligned}
- * {4}
- * &\mbox{maximize}~~~ &&\mbox{Obj1: } 3&&x_1 + 2 x_2 - 4 x_3 &&
+ * &\mbox{maximize}~~~ &&\mbox{Obj1: }&& 3x_1 + 2 x_2 - 4 x_3 &&
  * \nonumber \\
  * & &&\mbox{Obj2: } &&x_1 + x_2 + 2 x_3 && \nonumber \\
  * &\mbox{subject to} && && && \nonumber \\
- * & &&\mbox{Eqn: } &&x_1 + x_2 + x_3 &&= 2 \label{biCritExample}\\
- * & &&\mbox{Lower: } &&x_1 + 0.4 x_2 &&\leq 1.5 \nonumber \\
+ * & &&\mbox{eqn: } &&x_1 + x_2 + x_3 &&= 2 \\
+ * & &&\mbox{lower: } &&x_1 + 0.4 x_2 &&\leq 1.5 \nonumber \\
  * & && &&x_1,~ x_2,~ x_3 &&\geq 0 \nonumber \\
  * & && &&x_1,~ x_2,~ x_3 &&\in \mathbb{Z} \nonumber\end{aligned}
  * \f]
@@ -200,7 +199,7 @@
  * direction specification implying that all objectives are assumed to be
  * either minimized or maximized.
  *
- * The bi-criteria maximization problem (\[biCritExample\]) can be modelled
+ * The bi-criteria maximization problem can be modelled
  * as follows:
  *
  *     set I := {1..3};
