@@ -1781,10 +1781,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       {
          if( i != root )
          {
-            int e;
             SCIP_Bool connect = FALSE;
             SCIP_Real ecost = -1.0;
-            for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+            for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
             {
                if( root == graph->tail[e] )
                   ecost = graph->cost[e];
@@ -1824,7 +1823,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       }
    }
 
-   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS;  restartcount++ )
+   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS && !graph_pc_isRootedPcMw(graph);  restartcount++ )
    {
       int l = 0;
       SCIP_Bool extensionstmp = FALSE;
@@ -1953,16 +1952,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIPfreeBufferArray(scip, &orgpath);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-#ifdef SCIP_DEBUG
-   {
-      SCIP_Real t = 0.0;
-      for( int e = 0; e < nedges; e++ )
-         if( stedge[e] == CONNECT )
-            t += graph->cost[e];
-
-      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", t);
-   }
-#endif
+   SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", graph_sol_getObj(graph->cost, stedge, 0.0, nedges));
 
    return SCIP_OKAY;
 }
