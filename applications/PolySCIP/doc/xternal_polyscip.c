@@ -66,19 +66,19 @@
  *
  * | parameter | long | description |
  * |-----------|------|-------------|
- * | -h | --help | Display usage information and exit |
- * | -p | --params &lt;`param_file.set`&gt; | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scip.zib.de/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
- * | -W | --writeSolsPath &lt;path&gt; | Path where the solution file should be written to if **-w** was set |
- * | -e | --Epsilon &lt;double&gt; | Specify epsilon used in computation of unsupported points; the default value is 1e-3 |
- * | -d | --Delta &lt;double&gt; | Specify delta used in computation of feasible boxes; the default value is 0.01 |
- * | -r | –round &lt;r&gt; | Round the weighted objective coefficient used in the function ’setWeightedObjective’ at the ’r’-th decimal position; this might be helpful in case of numberical troubles with unbounded rays |
- * | -t | --timeLimit &lt;seconds&gt; | Set a time limit in seconds on the overall SCIP computation time |
- * | -o | --noOutcomes | Switch off the output of computed outcomes |
- * | -s | --noSolutions | Switch off the output of computed solutions |
- * | -w | --writeResults | Write results to a file; default path is ./ |
- * | -v | --verbose | Switch on verbose PolySCIP output |
- * | -x | --extremal | Compute only supported non-dominated extreme point results |
- * | | --version | Display PolySCIP version |
+ * | `-h` | `--help` | Display usage information and exit |
+ * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scip.zib.de/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
+ * | `-W` | `--writeSolsPath &lt;path&gt;` | Path where the solution file should be written to if **-w** was set |
+ * | `-e` | `--Epsilon &lt;double&gt;` | Specify epsilon used in computation of unsupported points; the default value is 1e-3 |
+ * | `-d` | `--Delta &lt;double&gt;` | Specify delta used in computation of feasible boxes; the default value is 0.01 |
+ * | `-r` | `–round &lt;r&gt;` | Round the weighted objective coefficient used in the function ’setWeightedObjective’ at the ’r’-th decimal position; this might be helpful in case of numberical troubles with unbounded rays |
+ * | `-t` | `--timeLimit &lt;seconds&gt;` | Set a time limit in seconds on the overall SCIP computation time |
+ * | `-o` | `--noOutcomes` | Switch off the output of computed outcomes |
+ * | `-s` | `--noSolutions` | Switch off the output of computed solutions |
+ * | `-w` | `--writeResults` | Write results to a file; default path is ./ |
+ * | `-v` | `--verbose` | Switch on verbose PolySCIP output |
+ * | `-x` | `--extremal` | Compute only supported non-dominated extreme point results |
+ * | | `--version` | Display PolySCIP version |
  *
  * File format {#sec-format}
  * ===========
@@ -184,10 +184,10 @@
  *
  * | parameter | long | description |
  * |-----------|------|-------------|
- * | -h | --help | Show the help message and exit |
- * | -o &lt;basename&gt; | | Basename used for the output file; the default is the basename of the input file |
- * | -p &lt;path&gt; | | Directory where the generated `.mop` file should be saved |
- * | --path\_to\_zimpl &lt;path&gt; | | Directory where your *zimpl* binary can be found |
+ * | `-h` | `--help` | Show the help message and exit |
+ * | `-o &lt;basename&gt;` | | Basename used for the output file; the default is the basename of the input file |
+ * | `-p &lt;path&gt;` | | Directory where the generated `.mop` file should be saved |
+ * | | `--path\_to\_zimpl &lt;path&gt;` | Directory where your *zimpl* binary can be found |
  *
  * -   E.g., if the Zimpl executable is not installed globally but in
  *     `/home/user/bin`, and, furthermore, you would like to save the
