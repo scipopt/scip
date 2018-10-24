@@ -36,6 +36,8 @@ static SCIP* scip;
 
 /** methods **/
 
+
+/**! [SnippetDialogFree] */
 static
 SCIP_DECL_DIALOGFREE(dialogFreeDrawgraph)
 {
@@ -50,20 +52,15 @@ SCIP_DECL_DIALOGFREE(dialogFreeDrawgraph)
 
    return SCIP_OKAY;
 }
+/**! [SnippetDialogFree] */
 
+/**! [SnippetDialogInclude] */
 SCIP_RETCODE SCIPincludeDialogDrawgraph(
-   SCIP*  scip
+   SCIP*        scip,
+   SCIP_DIALOG* root
    )
 {
    SCIP_DIALOG* dialog;
-   SCIP_DIALOG* root;
-
-   root = SCIPgetRootDialog(scip);
-   if( root == NULL )
-   {
-      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
-   }
-   assert( root != NULL );
 
    SCIP_DIALOGDATA* dialogdata;
    SCIP_CALL( SCIPallocMemory(scip, &dialogdata) );
@@ -75,6 +72,37 @@ SCIP_RETCODE SCIPincludeDialogDrawgraph(
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
+
+   return SCIP_OKAY;
+}
+/**! [SnippetDialogInclude] */
+
+static
+SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
+{
+   SCIP_DISPDATA* dispdata;
+
+   dispdata = SCIPdispGetData(disp);
+   assert(dispdata != NULL);
+
+   SCIPfreeMemory(scip, &dispdata);
+
+   SCIPdispSetData(disp, NULL);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
+{
+   SCIP_TABLEDATA* tabledata;
+
+   tabledata = SCIPtableGetData(table);
+   assert(tabledata != NULL);
+
+   SCIPfreeMemory(scip, &tabledata);
+
+   SCIPtableSetData(table, NULL);
 
    return SCIP_OKAY;
 }
@@ -102,7 +130,43 @@ void teardown(void)
 
 TestSuite(snippets, .init = setup, .fini = teardown);
 
-Test(snippets, dialog, .description = "tests Dialog code")
+Test(snippets, dialog, .description = "tests example Dialog code")
 {
-   SCIP_CALL( SCIPincludeDialogDrawgraph(scip) );
+   /**! [SnippetDialogCreate] */
+   SCIP_DIALOG* root;
+
+   root = SCIPgetRootDialog(scip);
+   if( root == NULL )
+   {
+      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
+   }
+   assert( root != NULL );
+   /**! [SnippetDialogCreate] */
+
+   SCIP_CALL( SCIPincludeDialogDrawgraph(scip, root) );
+}
+
+Test(snippets, memory, .description = "tests an example of memory allocation and freeing")
+{
+   /**! [SnippetArrayAllocAndFree] */
+   int nparams;
+   int* array;
+
+   nparams = SCIPgetNParams(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nparams) );
+
+   /* do something ... */
+
+   SCIPfreeBlockMemoryArray(scip, &array, nparams);
+   /**! [SnippetArrayAllocAndFree] */
+}
+
+Test(snippets, display, .description = "tests an example of display code")
+{
+   
+}
+
+Test(snippets, table, .description = "tests an example of table code")
+{
+
 }
