@@ -4804,8 +4804,8 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip constraints that are not enabled */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
+      /* skip constraints that are not enabled, deleted, or have separation disabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
