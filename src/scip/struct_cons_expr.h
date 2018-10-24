@@ -42,6 +42,7 @@ struct SCIP_ConsExpr_ExprHdlr
    unsigned int            precedence;    /**< precedence of expression operation relative to other expression (used for printing) */
 
    SCIP_Longint            nsepacalls;    /**< number of times, the separation or estimation callbacks were called */
+   SCIP_Longint            nintevalcalls; /**< number of times, the interval evaluation callback was called */
    SCIP_Longint            npropcalls;    /**< number of times, the propagation callback was called */
    SCIP_Longint            ncutsfound;    /**< number of cuts added by this expression handler */
    SCIP_Longint            ncutoffs;      /**< number of cutoffs found so far by this expression handler */
@@ -153,6 +154,7 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_Bool                     enabled;    /**< whether the nonlinear handler should be used */
 
    SCIP_Longint                  nsepacalls; /**< number of times, the separation or estimation callback was called */
+   SCIP_Longint                  nintevalcalls; /**< number of times, the interval evaluation callback was called */
    SCIP_Longint                  npropcalls; /**< number of times, the propagation callback was called */
    SCIP_Longint                  ncutsfound; /**< number of cuts added by this expression handler */
    SCIP_Longint                  ncutoffs;   /**< number of cutoffs found so far by this nonlinear handler */

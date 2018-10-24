@@ -5327,8 +5327,8 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "Simplified", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "Simplified", "SepaCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5339,6 +5339,7 @@ void printExprHdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplifycalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplified);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
@@ -5369,7 +5370,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "#IntEval", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5382,6 +5383,7 @@ void printNlhdlrStatistics(
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetections);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
@@ -5769,6 +5771,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       assert(exprhdlr != NULL);
 
       exprhdlr->nsepacalls = 0;
+      exprhdlr->nintevalcalls = 0;
       exprhdlr->npropcalls = 0;
       exprhdlr->ncutsfound = 0;
       exprhdlr->ncutoffs = 0;
@@ -5790,6 +5793,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       assert(nlhdlr != NULL);
 
       nlhdlr->nsepacalls = 0;
+      nlhdlr->nintevalcalls = 0;
       nlhdlr->npropcalls = 0;
       nlhdlr->ncutsfound = 0;
       nlhdlr->ncutoffs = 0;
@@ -7568,6 +7572,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr)
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
       SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
+
+      ++expr->exprhdlr->nintevalcalls;
    }
 
    return SCIP_OKAY;
@@ -10952,6 +10958,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(SCIPintevalConsExprNlhdlr)
       SCIP_CALL( SCIPstartClock(scip, nlhdlr->intevaltime) );
       SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, intevalvar, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, nlhdlr->intevaltime) );
+
+      ++nlhdlr->nintevalcalls;
    }
 
    return SCIP_OKAY;
