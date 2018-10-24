@@ -1287,8 +1287,8 @@ SCIP_RETCODE reversePropConss(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* propagate active and non-deleted constraints only */
-      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+      /* propagate active, non-deleted, propagation-enabled constraints only */
+      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
          continue;
 
       /* skip expressions that could not have been tightened, unless allexprs is set */
@@ -1480,37 +1480,42 @@ SCIP_RETCODE propConss(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
+         /* skip deleted, non-active, or propagation-disabled constraints */
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
+            continue;
+
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
+          * in other rounds, we skip already propagated constraints
           */
-         if( !SCIPconsIsDeleted(conss[i]) && SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
+         if( consdata->ispropagated && roundnr > 0 )
+            continue;
+
+         SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
+         SCIPdebugPrintCons(scip, conss[i], NULL);
+
+         cutoff = FALSE;
+         redundant = FALSE;
+         ntightenings = 0;
+
+         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
+            &redundant, &ntightenings) );
+         assert(ntightenings >= 0);
+         *nchgbds += ntightenings;
+
+         if( cutoff )
          {
-            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
-            SCIPdebugPrintCons(scip, conss[i], NULL);
-
-            cutoff = FALSE;
-            redundant = FALSE;
-            ntightenings = 0;
-
-            SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
-               &redundant, &ntightenings) );
-            assert(ntightenings >= 0);
-            *nchgbds += ntightenings;
-
-            if( cutoff )
-            {
-               SCIPdebugMsg(scip, " -> cutoff\n");
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            if( ntightenings > 0 )
-               *result = SCIP_REDUCEDDOM;
-            if( redundant )
-               *ndelconss += 1;
-
-            /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
-            consdata->ispropagated = TRUE;
+            SCIPdebugMsg(scip, " -> cutoff\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
          }
+         if( ntightenings > 0 )
+            *result = SCIP_REDUCEDDOM;
+         if( redundant )
+            *ndelconss += 1;
+
+         /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
+         consdata->ispropagated = TRUE;
       }
 
       /* apply backward propagation; mark constraint as propagated */
