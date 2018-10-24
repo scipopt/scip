@@ -2606,7 +2606,7 @@ SCIP_RETCODE lpCheckRealpar(
    SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value               /**< value parameter should have */
    )
-{/*lint --e{715}*/
+{
    SCIP_RETCODE retcode;
    SCIP_Real lpivalue;
 
@@ -2618,16 +2618,8 @@ SCIP_RETCODE lpCheckRealpar(
    if( retcode == SCIP_PARAMETERUNKNOWN )
       return SCIP_OKAY;
 
-   /* This assert is currently disabled because it can happen that the feasibility tolerance is changed to a
-    * value outside the interval allowed by the LP solver, in which case the lpi might project it to the bounds
-    * of the LP solver and this assert will fail the next time.
-    * It should be reenabled once this behaviour is unified among the lpis and handled explicitly in
-    * lpSetFeastol() etc. with dedicated code instead of calling lpCheckRealpar().
-    */
-#if SCIP_DISABLED_CODE/*lint !e553*/
    /* check value */
    assert(lpivalue == value); /*lint !e777*/
-#endif
 
    return retcode;
 }
@@ -2670,15 +2662,23 @@ SCIP_RETCODE lpSetObjlim(
       SCIP_Bool success;
 
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, objlim, &success) );
+
       if( success )
       {
-         /* mark the current solution invalid */
-         lp->solved = FALSE;
-         lp->primalfeasible = FALSE;
-         lp->primalchecked = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-         lp->lpiobjlim = objlim;
+         SCIP_Real actualobjlim;
+
+         /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_OBJLIM, &actualobjlim);
+         if( actualobjlim != lp->lpiobjlim )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->primalfeasible = FALSE;
+            lp->primalchecked = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpiobjlim = actualobjlim;
       }
    }
 
@@ -2704,7 +2704,11 @@ SCIP_RETCODE lpSetFeastol(
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol, success) );
       if( *success )
       {
-         if( lp->nrows > 0 && feastol < lp->lpifeastol )
+         SCIP_Real actualfeastol;
+
+         /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &actualfeastol);
+         if( lp->nrows > 0 && actualfeastol < lp->lpifeastol )
          {
             /* mark the current solution invalid */
             lp->solved = FALSE;
@@ -2713,7 +2717,7 @@ SCIP_RETCODE lpSetFeastol(
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
-         lp->lpifeastol = feastol;
+         lp->lpifeastol = actualfeastol;
       }
    }
    else
@@ -2741,7 +2745,11 @@ SCIP_RETCODE lpSetDualfeastol(
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol, success) );
       if( *success )
       {
-         if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
+         SCIP_Real actualdualfeastol;
+
+         /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, &actualdualfeastol);
+         if( lp->nrows > 0 && actualdualfeastol < lp->lpidualfeastol )
          {
             /* mark the current solution invalid */
             lp->solved = FALSE;
@@ -2750,7 +2758,7 @@ SCIP_RETCODE lpSetDualfeastol(
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
-         lp->lpidualfeastol = dualfeastol;
+         lp->lpidualfeastol = actualdualfeastol;
       }
    }
    else
@@ -2778,7 +2786,11 @@ SCIP_RETCODE lpSetBarrierconvtol(
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_BARRIERCONVTOL, barrierconvtol, success) );
       if( *success )
       {
-         if( lp->nrows > 0 && barrierconvtol < lp->lpibarrierconvtol
+         SCIP_Real actualbarrierconvtol;
+
+         /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_BARRIERCONVTOL, &actualbarrierconvtol);
+         if( lp->nrows > 0 && actualbarrierconvtol < lp->lpibarrierconvtol
             && (lp->lastlpalgo == SCIP_LPALGO_BARRIER || lp->lastlpalgo == SCIP_LPALGO_BARRIERCROSSOVER) )
          {
             /* mark the current solution invalid */
@@ -2788,7 +2800,7 @@ SCIP_RETCODE lpSetBarrierconvtol(
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
-         lp->lpibarrierconvtol = barrierconvtol;
+         lp->lpibarrierconvtol = actualbarrierconvtol;
       }
    }
    else
@@ -2840,7 +2852,10 @@ SCIP_RETCODE lpSetFastmip(
    {
       SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
       if( *success )
+      {
          lp->lpifastmip = fastmip;
+         lp->solved = FALSE;
+      }
    }
    else
       *success = FALSE;
@@ -11467,8 +11482,12 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
 
-   SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, FALSE, timelimit, lperror) );
-   resolve = FALSE; /* only the first solve should be counted as resolving call */
+   /* do not resolve if nothing changed since the last solve call */
+   if( !lp->solved )
+   {
+      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, FALSE, timelimit, lperror) );
+      resolve = FALSE; /* only the first solve should be counted as resolving call */
+   }
 
    /* check for stability; iteration limit exceeded is also treated like instability if the iteration limit is soft */
    if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
@@ -11498,6 +11517,7 @@ SCIP_RETCODE lpSolveStable(
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s without FASTMIP", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
@@ -11527,6 +11547,7 @@ SCIP_RETCODE lpSolveStable(
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling",
             lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
@@ -11559,6 +11580,7 @@ SCIP_RETCODE lpSolveStable(
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s presolving",
             lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
@@ -11604,11 +11626,13 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpSetBarrierconvtol(lp, FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set), &success3) );
       }
 
-      if( success || success2 || success3 )
+      /* only resolve if at least one of the parameters was actually changed in the LP solver */
+      if( (success || success2 || success3) && !lp->solved )
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s with tighter primal and dual feasibility tolerance",
             lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
@@ -11652,6 +11676,7 @@ SCIP_RETCODE lpSolveStable(
       {
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
@@ -11697,6 +11722,7 @@ SCIP_RETCODE lpSolveStable(
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s scaling",
             lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
@@ -11724,6 +11750,7 @@ SCIP_RETCODE lpSolveStable(
          lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s presolving",
             lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, TRUE, timelimit, lperror) );
+         resolve = FALSE; /* only the first solve should be counted as resolving call */
 
          /* check for stability */
          if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
@@ -11759,7 +11786,8 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( lpSetDualfeastol(lp, FEASTOLTIGHTFAC * SCIPsetDualfeastol(set), &success2) );
          }
 
-         if( success || success2 )
+         /* only resolve if at least one of the parameters was actually changed in the LP solver */
+         if( (success || success2) && !lp->solved )
          {
             lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s with tighter feasibility tolerance",
                lpalgoName(lpalgo));
