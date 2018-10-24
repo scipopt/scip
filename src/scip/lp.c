@@ -2662,7 +2662,6 @@ SCIP_RETCODE lpSetObjlim(
       SCIP_Bool success;
 
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, objlim, &success) );
-
       if( success )
       {
          SCIP_Real actualobjlim;
