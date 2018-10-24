@@ -2668,8 +2668,8 @@ SCIP_RETCODE lpSetObjlim(
          SCIP_Real actualobjlim;
 
          /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
-         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_OBJLIM, &actualobjlim);
-         if( actualobjlim != lp->lpiobjlim )
+         SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_OBJLIM, &actualobjlim) );
+         if( actualobjlim != lp->lpiobjlim ) /*lint !e777*/
          {
             /* mark the current solution invalid */
             lp->solved = FALSE;
@@ -2707,7 +2707,7 @@ SCIP_RETCODE lpSetFeastol(
          SCIP_Real actualfeastol;
 
          /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
-         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &actualfeastol);
+         SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &actualfeastol) );
          if( lp->nrows > 0 && actualfeastol < lp->lpifeastol )
          {
             /* mark the current solution invalid */
@@ -2748,7 +2748,7 @@ SCIP_RETCODE lpSetDualfeastol(
          SCIP_Real actualdualfeastol;
 
          /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
-         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, &actualdualfeastol);
+         SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_DUALFEASTOL, &actualdualfeastol) );
          if( lp->nrows > 0 && actualdualfeastol < lp->lpidualfeastol )
          {
             /* mark the current solution invalid */
@@ -2789,7 +2789,7 @@ SCIP_RETCODE lpSetBarrierconvtol(
          SCIP_Real actualbarrierconvtol;
 
          /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
-         SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_BARRIERCONVTOL, &actualbarrierconvtol);
+         SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_BARRIERCONVTOL, &actualbarrierconvtol) );
          if( lp->nrows > 0 && actualbarrierconvtol < lp->lpibarrierconvtol
             && (lp->lastlpalgo == SCIP_LPALGO_BARRIER || lp->lastlpalgo == SCIP_LPALGO_BARRIERCROSSOVER) )
          {
