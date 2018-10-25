@@ -372,25 +372,25 @@ SCIP_RETCODE SCIPqueueInsertUInt(
    unsigned int          elem                /**< element to be inserted */
    );
 
-/** removes and returns the first element of the queue */
+/** removes and returns the first element of the queue, or NULL of no element exists */
 EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** removes and returns the first unsigned integer element of the queue */
+/** removes and returns the first unsigned integer element of the queue, or UNIT_MAX of no element exists */
 EXTERN
 unsigned int SCIPqueueRemoveUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first element of the queue without removing it */
+/** returns the first element of the queue without removing it, or NULL of no element exists */
 EXTERN
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first unsigned integer element of the queue without removing it */
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX of no element exists */
 EXTERN
 unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
@@ -818,7 +818,7 @@ void* SCIPhashmapGetImage(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 EXTERN
 int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
