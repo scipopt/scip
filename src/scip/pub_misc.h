@@ -825,7 +825,7 @@ int SCIPhashmapGetImageInt(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 EXTERN
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
