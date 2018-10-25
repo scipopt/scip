@@ -974,19 +974,12 @@ void SCIPqueueClear(
    queue->firstused = -1;
 }
 
-/** inserts element at the end of the queue */
-SCIP_RETCODE SCIPqueueInsert(
-   SCIP_QUEUE*           queue,              /**< queue */
-   void*                 elem                /**< element to be inserted */
+/** reallocates slots if queue is necessary */
+static
+SCIP_RETCODE queueCheckSize(
+   SCIP_QUEUE*           queue               /**< queue */
    )
 {
-   assert(queue != NULL);
-   assert(queue->slots != NULL);
-   assert(queue->firstused >= -1 && queue->firstused < queue->size);
-   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
-   assert(queue->firstused > -1 || queue->firstfree == 0);
-   assert(elem != NULL);
-
    if( queue->firstfree == queue->firstused )
    {
       int sizediff;
@@ -1003,10 +996,15 @@ SCIP_RETCODE SCIPqueueInsert(
    }
    assert(queue->firstfree != queue->firstused);
 
-   /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
-   queue->slots[queue->firstfree] = elem;
-   ++(queue->firstfree);
+   return SCIP_OKAY;
+}
 
+/** checks and adjusts marker of first free and first used slot */
+static
+void queueCheckMarker(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
    /* if we saved the value at the last position we need to reset the firstfree position */
    if( queue->firstfree == queue->size )
       queue->firstfree = 0;
@@ -1014,11 +1012,60 @@ SCIP_RETCODE SCIPqueueInsert(
    /* if a first element was added, we need to update the firstused counter */
    if( queue->firstused == -1 )
       queue->firstused = 0;
+}
+
+/** inserts pointer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+   assert(elem != NULL);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].ptr = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
 
    return SCIP_OKAY;
 }
 
-/** removes and returns the first element of the queue */
+/** inserts unsigned integer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].uinteger = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
+
+   return SCIP_OKAY;
+}
+
+/** removes and returns the first pointer element of the queue, or NULL if no element exists */
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1049,10 +1096,44 @@ void* SCIPqueueRemove(
       queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
    }
 
-   return (queue->slots[pos]);
+   return (queue->slots[pos].ptr);
 }
 
-/** returns the first element of the queue without removing it */
+/** removes and returns the first unsigned integer element of the queue, or UINT_MAX if no element exists */
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   int pos;
+
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   pos = queue->firstused;
+   ++(queue->firstused);
+
+   /* if we removed the value at the last position we need to reset the firstused position */
+   if( queue->firstused == queue->size )
+      queue->firstused = 0;
+
+   /* if we reached the first free position we can reset both, firstused and firstused, positions */
+   if( queue->firstused == queue->firstfree )
+   {
+      queue->firstused = -1;
+      queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
+   }
+
+   return (queue->slots[pos].uinteger);
+}
+
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1067,7 +1148,25 @@ void* SCIPqueueFirst(
 
    assert(queue->slots != NULL);
 
-   return queue->slots[queue->firstused];
+   return queue->slots[queue->firstused].ptr;
+}
+
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
+unsigned int SCIPqueueFirstUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   return queue->slots[queue->firstused].uinteger;
 }
 
 /** returns whether the queue is empty */
@@ -2976,7 +3075,7 @@ void* SCIPhashmapGetImage(
    return NULL;
 }
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -2995,7 +3094,7 @@ int SCIPhashmapGetImageInt(
    return INT_MAX;
 }
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */

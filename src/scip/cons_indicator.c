@@ -2051,6 +2051,7 @@ SCIP_RETCODE addAltLPColumn(
    SCIP_CALL( SCIPallocBufferArray(scip, &newrowsslack, 2 * nvars) );
 
    /* store index of column in constraint */
+   /* coverity[var_deref_model] */
    SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &ncols) );
    *colindex = ncols;
 

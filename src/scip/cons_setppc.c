@@ -6008,6 +6008,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                else
                {
                   /* perform aggregation on variables resulting from a set-packing constraint */
+                  /* coverity[copy_paste_error] */
                   if( multaggridx == c )
                   {
                      SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
@@ -6352,6 +6353,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
          /* delete cons0 */

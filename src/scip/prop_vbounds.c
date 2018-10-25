@@ -1877,6 +1877,7 @@ SCIP_RETCODE propagateVbounds(
     */
    while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
+      /* coverity[pointer_conversion_loses_bits] */
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
@@ -3033,6 +3034,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    propdata = (SCIP_PROPDATA*)SCIPeventhdlrGetData(eventhdlr);
    assert(propdata != NULL);
 
+   /* coverity[pointer_conversion_loses_bits] */
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 
