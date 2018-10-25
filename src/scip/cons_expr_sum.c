@@ -1069,7 +1069,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
    SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, mincutviolation);
    if( SCIPisZero(scip, viol) )
+   {
+      SCIPfreeRowprep(scip, &rowprep);
       return SCIP_OKAY;
+   }
 
 #if 0
    for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
