@@ -2703,6 +2703,7 @@ SCIP_RETCODE readSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
@@ -2864,6 +2865,7 @@ SCIP_RETCODE readXmlSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {

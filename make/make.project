@@ -296,6 +296,8 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
+# skip config header
+FLAGS		+=  -DNO_CONFIG_HEADER
 
 #-----------------------------------------------------------------------------
 # Memory Management

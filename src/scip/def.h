@@ -37,6 +37,13 @@
 #include <assert.h>
 
 /*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
+/*
  * GNU COMPILER VERSION define
  */
 #ifdef __GNUC__
