@@ -13188,6 +13188,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    if( *success )
    {
+      /* coverity[secure_coding] */
       if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
