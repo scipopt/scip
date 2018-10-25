@@ -358,11 +358,18 @@ void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** inserts element at the end of the queue */
+/** inserts pointer element at the end of the queue */
 EXTERN
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
+   );
+
+/** inserts unsigned integer element at the end of the queue */
+EXTERN
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
    );
 
 /** removes and returns the first element of the queue */
@@ -371,9 +378,21 @@ void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
+/** removes and returns the first unsigned integer element of the queue */
+EXTERN
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
 /** returns the first element of the queue without removing it */
 EXTERN
 void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first unsigned integer element of the queue without removing it */
+EXTERN
+unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
