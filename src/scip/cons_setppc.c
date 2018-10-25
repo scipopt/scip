@@ -6353,6 +6353,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
          /* delete cons0 */
