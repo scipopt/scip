@@ -1538,8 +1538,9 @@ SCIP_RETCODE redLoopPc(
             da = dualascent;
             sd = TRUE;
             sdc = TRUE;
-            bd3 = TRUE;
-            nvsl = TRUE;
+            sdw = TRUE;
+            bd3 = nodereplacing;
+            nvsl = nodereplacing;
             if( extensive )
                advancedrun = TRUE;
          }
@@ -1565,6 +1566,14 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_CALL(level0RpcRmw(scip, g, &fix));
             rerun = TRUE;
+            da = dualascent;
+            sd = TRUE;
+            sdc = TRUE;
+            sdw = TRUE;
+            bd3 = nodereplacing;
+            nvsl = nodereplacing;
+            advancedrun = dualascent;
+            rounds = 0;
          }
 
          graph_pc_2org(g);

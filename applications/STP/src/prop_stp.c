@@ -525,7 +525,7 @@ SCIP_RETCODE redbasedVarfixing(
       const int erev = e + 1;
       const int tail = propgraph->tail[e];
       const int head = propgraph->head[e];
-#if 0
+#if 1
       /* e OR its anti-parallel edge fixed to 1? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
@@ -898,7 +898,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( callreduce )
    {
-      SCIP_Bool probisinfeas;
+      SCIP_Bool probisinfeas = FALSE;
 
       SCIPdebugMessage("use reduction techniques \n");
 
