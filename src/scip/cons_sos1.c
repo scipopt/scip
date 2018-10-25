@@ -554,7 +554,7 @@ int varGetNodeSOS1(
    if ( ! SCIPhashmapExists(conshdlrdata->varhash, var) )
       return -1;
 
-   return (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+   return SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
 }
 
 
@@ -1540,7 +1540,7 @@ SCIP_RETCODE getSOS1Implications(
    assert( implnodes != NULL );
    assert( node >= 0 );
    assert( vars[node] != NULL );
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, vars[node]) == node );
+   assert( SCIPhashmapGetImageInt(implhash, vars[node]) == node );
 
    /* get node of variable in the conflict graph (-1 if variable is no SOS1 variable) */
    sos1node = varGetNodeSOS1(conshdlrdata, vars[node]);
@@ -2174,7 +2174,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
    }
 
    /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
+   assert( nonznode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
    succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
@@ -2198,7 +2198,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasPositive(scip, data->lbimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2218,7 +2218,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasNegative(scip, data->ubimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2321,15 +2321,15 @@ SCIP_RETCODE updateArcData(
    }
 
    /* get successor information */
-   indv = (int) (size_t) SCIPhashmapGetImage(implhash, varv); /* get index of x_v in implication graph */
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indv]) == indv );
+   indv = SCIPhashmapGetImageInt(implhash, varv); /* get index of x_v in implication graph */
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indv]) == indv );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, indv);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, indv);
    succ = SCIPdigraphGetSuccessors(implgraph, indv);
 
    /* search for nodew in existing successors. If this is the case then check whether the lower implication bound may be updated ... */
-   indw = (int) (size_t) SCIPhashmapGetImage(implhash, varw);
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indw]) == indw );
+   indw = SCIPhashmapGetImageInt(implhash, varw);
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indw]) == indw );
    for (s = 0; s < nsucc; ++s)
    {
       if ( succ[s] == indw )
@@ -3028,7 +3028,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3228,7 +3228,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables (i.e., which SOS1 variables are nonzero if x_v is nonzero) */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3429,8 +3429,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-      assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+      assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
       totalvars[ntotalvars++] = var;
    }
 
@@ -3442,8 +3442,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-         assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+         assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
          totalvars[ntotalvars++] = var;
       }
    }
@@ -3872,8 +3872,8 @@ SCIP_RETCODE initImplGraphSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-      assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+      assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
       implvars[nimplnodes++] = var;
    }
 
@@ -3885,8 +3885,8 @@ SCIP_RETCODE initImplGraphSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-         assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+         assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
          implvars[nimplnodes++] = var;
       }
    }
@@ -6491,12 +6491,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    if ( rowlb != NULL )
    {
       SCIP_Bool useboundvar;
-      int cnt;
+      int cnt = 0;
       int j;
 
       /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
        * case then the bound constraint can be strengthened */
-      cnt = 0;
       locallbs = local;
       useboundvar = strengthen;
       for (j = 0; j < nnodes; ++j)
@@ -6525,7 +6524,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
                {
                   locallbs = TRUE;
-                  val = SCIPvarGetUbLocal(var);
+                  val = SCIPvarGetLbLocal(var);
                }
             }
          }
@@ -8813,8 +8812,8 @@ SCIP_RETCODE initConflictgraph(
 
                /* insert node number to hash map */
                assert( ! SCIPhashmapExists(conshdlrdata->varhash, var) );
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) cntsos) );/*lint !e571*/
-               assert( cntsos == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->varhash, var, cntsos) );
+               assert( cntsos == SCIPhashmapGetImageInt(conshdlrdata->varhash, var) );
                assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
                /* create node data */

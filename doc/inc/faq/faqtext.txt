@@ -128,7 +128,7 @@ SECTION: General Questions about SCIP
     LABEL:versionchange
     ANSWER:
     <p>
-        Maybe the parameters of a function in SCIP changed. Please have a look at the <li> <a href="PATHTODOC/CHG.LINKEXT">Changelog</a></li>
+        Maybe the parameters of a function in SCIP changed. Please have a look at the <a href="PATHTODOC/CHG.LINKEXT">Changelog</a>
     </p>
 
     QUESTION: How can I debug in SCIP?

@@ -23,6 +23,13 @@
 #ifndef __TCLIQUE_DEF_H__
 #define __TCLIQUE_DEF_H__
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
 #endif

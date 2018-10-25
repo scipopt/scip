@@ -50,7 +50,7 @@ MAINNAME	=	gamsscip
 MAINCOBJ	=	reader_gmo.o event_solvetrace.o GamsSolveTrace.o
 MAINCSRC	=	$(addprefix $(SRCDIR)/,$(MAINCOBJ:.o=.c))
 # C++ sources
-MAINCXXOBJ	=	GamsScip.o GamsSolver.o GamsOptions.o
+MAINCXXOBJ	=	GamsScip.o GamsSolver.o
 MAINCXXSRC	=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
 # C sources in GAMS I/O directory
 MAINGOBJ	=	gdxcc.o gevmcc.o gmomcc.o optcc.o

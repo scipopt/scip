@@ -957,11 +957,11 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a value */
       if( isValue(scip, opbinput, &coef) )
       {
-         /* all but the first coefficient need a sign */
+         /* coefficients without a sign are treated as "+" */
          if( (*nlincoefs > 0 || *ntermcoefs > 0 || ntmpcoefs > 0) && !havesign )
          {
-            syntaxError(scip, opbinput, "expected sign ('+' or '-') or sense ('<' or '>')");
-            goto TERMINATE;
+            coefsign = 1;
+            havesign = TRUE;
          }
 
          SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", opbinput->linenumber, coef, coefsign);
@@ -3172,6 +3172,7 @@ SCIP_RETCODE printPseudobooleanCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
+         /* coverity[var_deref_model] */
          retcode = printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars,
             ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
@@ -3890,6 +3891,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
       /* print fixed and-resultants */
       if( lb > 0.5 || ub < 0.5 )
       {
+         /* coverity[copy_paste_error] */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &var, &neg) );
 
          assert(SCIPisFeasIntegral(scip, lb));
@@ -4293,6 +4295,7 @@ SCIP_RETCODE SCIPwriteOpb(
       int v;
 
       /* computes all and-resultants and their corresponding constraint variables */
+      /* coverity[leaked_storage] */
       SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
       if( genericnames )
@@ -4356,6 +4359,7 @@ SCIP_RETCODE SCIPwriteOpb(
             for( v = nfixedvars - 1; v >= 0; --v )
                if( !existands || !SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                {
+                  /* coverity[secure_coding] */
                   if( sscanf(SCIPvarGetName(fixedvars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(fixedvars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(fixedvars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
                      SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");

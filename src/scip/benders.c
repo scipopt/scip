@@ -828,11 +828,9 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' decomposition structure
- *
- *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
- */
-SCIP_RETCODE SCIPbendersCreate(
+/** internal method for creating a Benders' decomposition structure */
+static
+SCIP_RETCODE doBendersCreate(
    SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -957,6 +955,52 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should the auxiliary variable bound be updated by solving the subproblem?", &(*benders)->updateauxvarbound,
          FALSE, SCIP_DEFAULT_UPDATEAUXVARBOUND, NULL, NULL) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
+/** creates a Benders' decomposition structure
+ *
+ *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
+ */
+SCIP_RETCODE SCIPbendersCreate(
+   SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of Benders' decomposition */
+   const char*           desc,               /**< description of Benders' decomposition */
+   int                   priority,           /**< priority of the Benders' decomposition */
+   SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
+   SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
+   SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
+   SCIP_Bool             shareauxvars,       /**< should this Benders' use the highest priority Benders aux vars */
+   SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of Benders' decomposition or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
+   SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit)),   /**< deinitialize Benders' decomposition */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre)),/**< presolving initialization method for Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre)),/**< presolving deinitialization method for Benders' decomposition */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of Benders' decomposition */
+   SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
+   SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
+   SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve)),/**< called prior to the subproblem solving loop */
+   SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex)),/**< the solving method for convex Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
+   SCIP_BENDERSDATA*     bendersdata         /**< Benders' decomposition data */
+   )
+{
+   assert(benders != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doBendersCreate(benders, set, messagehdlr, blkmem, name, desc, priority, cutlp, cutpseudo,
+         cutrelax, shareauxvars, benderscopy, bendersfree, bendersinit, bendersexit, bendersinitpre, bendersexitpre,
+         bendersinitsol, bendersexitsol, bendersgetvar, benderscreatesub, benderspresubsolve, benderssolvesubconvex,
+         benderssolvesub, benderspostsolve, bendersfreesub, bendersdata), (void) SCIPbendersFree(benders, set) );
 
    return SCIP_OKAY;
 }
