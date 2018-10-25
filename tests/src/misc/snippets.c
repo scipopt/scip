@@ -21,13 +21,25 @@
 #include<stdio.h>
 
 #include "scip/type_dialog.h"
+#include "scip/type_disp.h"
 #include "scip/pub_misc.h"
 #include "scip/dialog_default.h"
 #include "scip/scip.h"
 
 #include "include/scip_test.h"
 
+#define DISP_WIDTH              14      /**< the width of the display column */
+#define DISP_PRIORITY           110000  /**< the priority of the display column */
+#define DISP_POSITION           30100   /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated */
+
+/** dialog data */
 struct SCIP_DialogData
+{
+};
+
+/** display column data */
+struct SCIP_DispData
 {
 };
 
@@ -36,6 +48,8 @@ static SCIP* scip;
 
 /** methods **/
 
+
+/** Dialog methods **/
 
 /**! [SnippetDialogFree] */
 static
@@ -77,6 +91,19 @@ SCIP_RETCODE SCIPincludeDialogDrawgraph(
 }
 /**! [SnippetDialogInclude] */
 
+
+/** Display methods **/
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputMydisplaycolumn)
+{
+   SCIPinfoMessage(scip, file, "\nOutput method of mydisplaycolumn\n");
+
+   return SCIP_OKAY;
+}
+
+/**! [SnippetDispFree] */
 static
 SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
 {
@@ -91,7 +118,36 @@ SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
 
    return SCIP_OKAY;
 }
+/**! [SnippetDispFree] */
 
+/** creates the xyz display column and includes it in SCIP */
+SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_DISPDATA* dispdata;
+
+   /* create mydisplaycolumn display column data */
+   dispdata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
+
+   /* include display column */
+   SCIP_CALL( SCIPincludeDisp(scip, "my display column", "an example of display code", "mydisplaycolumn", SCIP_DISPSTATUS_AUTO,
+                              NULL,
+                              dispFreeMydisplaycolumn, NULL, NULL,
+                              NULL, NULL, dispOutputMydisplaycolumn,
+                              dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
+
+   /* add xyz display column parameters */
+   /* TODO: (optional) add display column specific parameters with SCIPaddTypeParam() here */
+
+   return SCIP_OKAY;
+}
+
+
+/** Table methods **/
+
+/**! [SnippetTableFree] */
 static
 SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
 {
@@ -106,6 +162,7 @@ SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
 
    return SCIP_OKAY;
 }
+/**! [SnippetTableFree] */
 
 /* TEST SUITE */
 static
@@ -163,7 +220,8 @@ Test(snippets, memory, .description = "tests an example of memory allocation and
 
 Test(snippets, display, .description = "tests an example of display code")
 {
-   
+   SCIPincludeDispMydisplaycolumn(scip);
+
 }
 
 Test(snippets, table, .description = "tests an example of table code")
