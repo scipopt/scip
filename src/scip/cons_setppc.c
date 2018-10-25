@@ -6008,6 +6008,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                else
                {
                   /* perform aggregation on variables resulting from a set-packing constraint */
+                  /* coverity[copy_paste_error] */
                   if( multaggridx == c )
                   {
                      SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
