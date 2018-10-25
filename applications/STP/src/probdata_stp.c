@@ -1986,7 +1986,6 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/veclendiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zirounding/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rounding/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/locks/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
@@ -3132,8 +3131,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       }
       SCIPfreeBufferArray(scip, &nodenumber);
    }
-   else if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP
-      || graph->stp_type == STP_RPCSPG )
+   else if( graph_pc_isPcMw(graph))
    {
       int* solnodequeue;
       int root;

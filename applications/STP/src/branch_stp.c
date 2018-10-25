@@ -58,18 +58,20 @@
  * Data structures
  */
 
+
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    int                   branchtype;         /**< type of branching */
+   SCIP_Bool             active;             /**< is branch-rule being used? */
 };
 
 
 /*
  * Local methods
  */
-
 
 /** check whether branching-rule is compatible with given problem type */
 static
@@ -91,11 +93,10 @@ SCIP_RETCODE selectBranchingVertexByDegree(
    int* nodestate;
    int maxdegree = 0;
    const int nnodes = g->knots;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
    SCIP_Bool ptermselected;
 
    assert(g != NULL && scip != NULL && vertex != NULL);
-   assert(!pcmw || g->extended);
+   assert(!graph_pc_isPcMw(g) || g->extended);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
 
@@ -113,12 +114,12 @@ SCIP_RETCODE selectBranchingVertexByDegree(
       if( nodestate[k] == BRANCH_STP_VERTEX_NONTERM )
       {
          assert(!Is_term(g->term[k]));
-         assert(!ptermselected || pcmw);
+         assert(!ptermselected || graph_pc_isPcMw(g));
 
          /* first pterm? Then update */
          if( !ptermselected && Is_pterm(g->term[k]) )
          {
-            assert(pcmw);
+            assert(graph_pc_isPcMw(g));
             maxdegree = g->grad[k];
             *vertex = k;
             ptermselected = TRUE;
@@ -226,14 +227,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
          if( pcmw && Is_pterm(graph->term[k]) )
          {
-            const int term = graph->head[graph->term2edge[k]];
-            const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
-
-            assert(graph->term2edge[k] >= 0 && Is_term(graph->term[term]));
-            assert(graph->cost[root2term] == graph->prize[k]);
-
-            graph->prize[k] += BLOCKED;
-            graph->cost[root2term] += BLOCKED;
+            enforcePterm(graph, k);
          }
          else
          {
@@ -652,6 +646,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
+   branchruledata->active = TRUE;
    SCIPdebugMessage("Branched on stp vertex %d \n", branchvertex);
 
    *result = SCIP_BRANCHED;
@@ -665,6 +660,7 @@ static
 SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
+   SCIP_BRANCHRULEDATA* branchruledata;
    GRAPH* g;
    int branchvertex;
 
@@ -672,6 +668,9 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
 
    SCIPdebugMsg(scip, "Execps method of STP branching\n");
    *result = SCIP_DIDNOTRUN;
@@ -694,6 +693,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
       return SCIP_OKAY;
    }
 
+   branchruledata->active = TRUE;
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
    *result = SCIP_BRANCHED;
@@ -711,10 +711,10 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
    GRAPH*                graph,              /**< graph to modify or NULL */
-   const char*           consname,           /**<  constraint name */
-   SCIP_Bool             deletehistory       /**< delete history of graph? */
+   const char*           consname            /**< constraint name */
 )
 {
+
    /* terminal inclusion constraint? */
    if( strncmp(consname, "consin", 6) == 0 )
    {
@@ -725,14 +725,17 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
 
       if( graph != NULL && !Is_term(graph->term[term]) )
       {
-         if( graph->stp_type == STP_PCSPG )
+         if( graph_pc_isPcMw(graph) )
          {
             if( Is_pterm(graph->term[term]) )
-               graph_pc_chgPrize(scip, graph, FARAWAY, term);
-         }
-         else if( graph->stp_type == STP_RPCSPG )
-         {
-            assert(0 && "not implemented");
+            {
+               enforcePterm(graph, term);
+            }
+            else if( graph_pc_isRootedPcMw(graph) )
+            {
+               graph->prize[term] = FARAWAY;
+               graph_knot_chg(graph, term, 0);
+            }
          }
          else
          {
@@ -755,22 +758,14 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
       {
          assert(!Is_term(graph->term[vert]));
 
-         if( graph->stp_type == STP_PCSPG )
+         if( Is_pterm(graph->term[vert]) )
          {
-            if( Is_pterm(graph->term[vert]) )
-            {
-               // todo fix arc vars
-               graph_pc_deleteTerm(scip, graph, vert);
-            }
-            graph_knot_del(scip, graph, vert, deletehistory);
-         }
-         else if( graph->stp_type == STP_RPCSPG )
-         {
-            assert(0 && "not implemented");
+            assert(graph_pc_isPcMw(graph));
+            graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert));
          }
          else
          {
-            graph_knot_del(scip, graph, vert, deletehistory);
+            graph_knot_del(scip, graph, vert, TRUE);
          }
       }
 
@@ -818,10 +813,25 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    )
 {
    SCIP_CONS* parentcons;
+   SCIP_BRANCHRULE* branchrule = NULL;
+   SCIP_BRANCHRULEDATA* branchruledata;
    int naddedconss;
 
    assert(scip != NULL);
    assert(graph != NULL || vertexchgs != NULL);
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   if( !(branchruledata->active) )
+   {
+      printf("STP branchrule not active! \n");
+      return SCIP_OKAY;
+   }
 
    assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
 
@@ -843,13 +853,13 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
       consname = (char*) SCIPconsGetName(parentcons);
 
-      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname, TRUE) );
+      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname) );
    }
 
    return SCIP_OKAY;
 }
 
-/** creates the multi-aggregated branching rule and includes it in SCIP */
+/** creates the stp branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -860,6 +870,7 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    /* create stp branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->active = FALSE;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,

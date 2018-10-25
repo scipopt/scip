@@ -974,6 +974,27 @@ SCIP_Bool graph_pc_termIsNonLeaf(
    return (e == EAT_LAST);
 }
 
+
+/** set high costs for not including given pseudo-terminal */
+void enforcePterm(
+   GRAPH*          graph,              /**< graph */
+   int             pterm               /**< the pseudo-terminal */
+)
+{
+   const int term = graph->head[graph->term2edge[pterm]];
+   const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
+
+   assert(graph != NULL && Is_pterm(graph->term[pterm]));
+   assert(graph->term2edge[pterm] >= 0 && Is_term(graph->term[term]));
+   assert(graph->cost[root2term] == graph->prize[pterm]);
+
+   if( graph->prize[pterm] < BLOCKED )
+   {
+      graph->prize[pterm] += BLOCKED;
+      graph->cost[root2term] += BLOCKED;
+   }
+}
+
 /** updates term2edge array for new graph */
 void graph_pc_updateTerm2edge(
    GRAPH*                newgraph,           /**< the new graph */
@@ -2061,6 +2082,9 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    {
       graph->source = newroot;
 
+      if( graph->rootedgeprevs != NULL )
+         graph_pc_presolExit(scip, graph);
+
       e = graph->outbeg[root];
       while( e != EAT_LAST )
       {
@@ -2451,6 +2475,37 @@ int graph_pc_getRoot2PtermEdge(
    assert(rootedge >= 0);
 
    return rootedge;
+}
+
+/** get number of fixed terminals */
+int graph_pc_nFixedTerms(
+   const GRAPH*          graph                /**< the graph */
+)
+{
+   int nfixterms = 0;
+   const int nnodes = graph->knots;
+   assert(graph != NULL);
+   assert(graph_pc_isRootedPcMw(graph));
+
+   for( int k = 0; k < nnodes; k++ )
+      if( graph_pc_knotIsFixedTerm(graph, k) )
+         nfixterms++;
+
+   return nfixterms;
+}
+
+/** get twin-terminal */
+int graph_pc_getTwinTerm(
+   const GRAPH*          g,                  /**< the graph */
+   int                   vertex              /**< the vertex  */
+)
+{
+   assert(g != NULL);
+   assert(graph_pc_isRootedPcMw(g));
+   assert(g->term2edge != NULL && g->term2edge[vertex] > 0);
+   assert(Is_gterm(g->term[vertex]));
+
+   return g->head[g->term2edge[vertex]];
 }
 
 /* is the vertex a leaf (for NWPTSPG) */
@@ -4050,6 +4105,9 @@ SCIP_RETCODE graph_resize(
       if( g->prize != NULL)
          SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->prize), ksize) );
 
+      if( g->term2edge != NULL)
+             SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term2edge), ksize) );
+
       g->ksize  = ksize;
    }
    if( (esize > 0) && (esize != g->esize) )
@@ -4088,11 +4146,10 @@ void graph_free(
       graph_free_historyDeep(scip, p);
 
    if( p->prize != NULL )
-   {
-      assert(p->term2edge != NULL);
-      SCIPfreeMemoryArray(scip, &(p->term2edge));
       SCIPfreeMemoryArray(scip, &(p->prize));
-   }
+
+   if( p->term2edge != NULL )
+      SCIPfreeMemoryArray(scip, &(p->term2edge));
 
    if( p->stp_type == STP_DCSTP )
    {

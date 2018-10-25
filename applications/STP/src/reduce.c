@@ -218,11 +218,12 @@ SCIP_RETCODE level0save(
    return SCIP_OKAY;
 }
 
-/* remove unconnected vertices, including pseudo terminals, adapts g->mark */
-SCIP_RETCODE level0RpcRmw(
+/* remove unconnected vertices, including pseudo terminals, and checks for feasibility (adapts g->mark) */
+SCIP_RETCODE level0RpcRmwInfeas(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            offsetp             /**< pointer to offset */
+   SCIP_Real*            offsetp,            /**< pointer to offset */
+   SCIP_Bool*            infeas              /**< is problem infeasible? */
 )
 {
    int* stackarr;
@@ -241,6 +242,7 @@ SCIP_RETCODE level0RpcRmw(
 
    BMSclearMemoryArray(gmark, nnodes);
 
+   *infeas = FALSE;
    stacksize = 0;
    stackarr[stacksize++] = g->source;
    assert(!gmark[g->source]);
@@ -276,9 +278,14 @@ SCIP_RETCODE level0RpcRmw(
    {
       if( !gmark[k] && (g->grad[k] > 0) && Is_term(g->term[k]) )
       {
-         const int pterm = g->head[g->term2edge[k]];
+         const int pterm = graph_pc_getTwinTerm(g, k);
 
-         assert(!graph_pc_knotIsFixedTerm(g, k));
+         if( graph_pc_knotIsFixedTerm(g, k) )
+         {
+            *infeas = TRUE;
+            SCIPfreeBufferArray(scip, &gmark);
+            return SCIP_OKAY;
+         }
          assert(g->term2edge[k] >= 0);
          assert(!gmark[pterm]);
 
@@ -303,6 +310,25 @@ SCIP_RETCODE level0RpcRmw(
    return SCIP_OKAY;
 }
 
+/* remove unconnected vertices, including pseudo terminals, adapts g->mark */
+SCIP_RETCODE level0RpcRmw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp             /**< pointer to offset */
+)
+{
+   SCIP_Bool infeas;
+
+   SCIP_CALL( level0RpcRmwInfeas(scip, g, offsetp, &infeas) );
+
+   if( infeas )
+   {
+      printf("level0RpcRmw detected infeasibility \n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
 
 /* remove unconnected vertices and checks whether problem is infeasible, overwrites g->mark */
 SCIP_RETCODE level0infeas(
@@ -460,14 +486,14 @@ SCIP_RETCODE reduceStp(
 }
 
 /** basic reduction package for the (R)PCSTP */
-static
 SCIP_RETCODE reducePc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   STP_Bool              advanced,           /**< perform advanced (e.g. dual ascent) reductions? */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             advanced,           /**< perform advanced (e.g. dual ascent) reductions? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
    )
 {
    PATH* vnoi;
@@ -554,7 +580,7 @@ SCIP_RETCODE reducePc(
 
    /* reduction loop */
    SCIP_CALL( redLoopPc(scip, g, vnoi, path, gnodearr, nodearrreal, exedgearrreal, exedgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, advanced, bred, userec && advanced, reductbound, userec) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, advanced, bred, userec && advanced, reductbound, userec, nodereplacing) );
 
    /* free memory */
 
@@ -1303,28 +1329,21 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool             bred,               /**< do bound-based reduction? */
    SCIP_Bool             tryrpc,             /**< try to transform to rpc? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
    )
 {
    SCIP_Real ub;
    SCIP_Real fix;
    SCIP_Real timelimit;
    SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
-   int nelims;
-   int danelims;
-   int sdnelims;
-   int sdcnelims;
-   int sdwnelims;
-   int bd3nelims;
    int degnelims;
-   int nvslnelims;
-   int brednelims;
    SCIP_Bool da = dualascent;
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdc = TRUE;
    SCIP_Bool sdw = TRUE;
-   SCIP_Bool bd3 = TRUE;
-   SCIP_Bool nvsl = TRUE;
+   SCIP_Bool bd3 = nodereplacing;
+   SCIP_Bool nvsl = nodereplacing;
    SCIP_Bool rerun = TRUE;
    SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
@@ -1358,18 +1377,18 @@ SCIP_RETCODE redLoopPc(
 
    for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
    {
+      int nelims = 0;
+      int danelims = 0;
+      int sdnelims = 0;
+      int sdcnelims = 0;
+      int bd3nelims = 0;
+      int nvslnelims = 0;
+      int sdwnelims = 0;
+      int brednelims = 0;
+      degnelims = 0;
+
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
-
-      nelims = 0;
-      danelims = 0;
-      sdnelims = 0;
-      sdcnelims = 0;
-      bd3nelims = 0;
-      nvslnelims = 0;
-      degnelims = 0;
-      sdwnelims = 0;
-      brednelims = 0;
 
       if( sd || extensive )
       {
@@ -1529,26 +1548,36 @@ SCIP_RETCODE redLoopPc(
             rerun = FALSE;
          }
       }
+
+      if( !rerun || rounds == (STP_RED_MAXNROUNDS - 1) )
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+
+      if( !rerun && !rpc && tryrpc && g->terms > 2 )
+      {
+         assert(graph_pc_term2edgeConsistent(g));
+         graph_pc_2trans(g);
+
+         SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum));
+
+         rpc = (g->stp_type == STP_RPCSPG);
+
+         if( rpc )
+         {
+            SCIP_CALL(level0RpcRmw(scip, g, &fix));
+            rerun = TRUE;
+         }
+
+         graph_pc_2org(g);
+      }
    }
-   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
    assert(graph_pc_term2edgeConsistent(g));
    graph_pc_2trans(g);
-
    graph_pc_presolExit(scip, g);
 
-   /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
-
-   if( !rpc && tryrpc && g->terms > 2 )
-      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
-
-   rpc = (g->stp_type == STP_RPCSPG);
-
-   if( rpc )
-      SCIP_CALL( level0RpcRmw(scip, g, &fix) );
 
    *fixed += fix;
 
@@ -1862,7 +1891,7 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE, FALSE) );
+         SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE, FALSE, TRUE) );
       }
       else if( stp_type == STP_MWCSP )
       {
@@ -1889,7 +1918,7 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE, userec) );
+         SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE, userec, TRUE) );
       }
       else if( stp_type == STP_MWCSP )
       {

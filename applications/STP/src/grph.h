@@ -182,6 +182,7 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
  */
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
+extern void   enforcePterm(GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_show(const GRAPH*);
@@ -246,6 +247,8 @@ extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
 extern int    graph_pc_realDegree(const GRAPH*, int, SCIP_Bool);
 extern int    graph_pc_getRoot2PtermEdge(const GRAPH*, int);
+extern int    graph_pc_nFixedTerms(const GRAPH*);
+extern int    graph_pc_getTwinTerm(const GRAPH*, int);
 extern SCIP_Bool graph_valid(const GRAPH*);
 extern SCIP_Bool graph_pc_knotIsFixedTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_termIsNonLeaf(const GRAPH*, int);
@@ -324,9 +327,11 @@ extern SCIP_RETCODE level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0infeas(SCIP*, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE level0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE level0RpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH**, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE reducePc(SCIP*, GRAPH**, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Real, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE redLoopPc(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool);
+extern SCIP_RETCODE redLoopPc(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int, SCIP_Bool);
 
