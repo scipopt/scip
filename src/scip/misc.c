@@ -1065,7 +1065,7 @@ SCIP_RETCODE SCIPqueueInsertUInt(
    return SCIP_OKAY;
 }
 
-/** removes and returns the first pointer element of the queue, or NULL of no element exists */
+/** removes and returns the first pointer element of the queue, or NULL if no element exists */
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1099,7 +1099,7 @@ void* SCIPqueueRemove(
    return (queue->slots[pos].ptr);
 }
 
-/** removes and returns the first unsigned integer element of the queue, or UINT_MAX of no element exists */
+/** removes and returns the first unsigned integer element of the queue, or UINT_MAX if no element exists */
 unsigned int SCIPqueueRemoveUInt(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1133,7 +1133,7 @@ unsigned int SCIPqueueRemoveUInt(
    return (queue->slots[pos].uinteger);
 }
 
-/** returns the first element of the queue without removing it, or NULL of no element exists */
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1151,7 +1151,7 @@ void* SCIPqueueFirst(
    return queue->slots[queue->firstused].ptr;
 }
 
-/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX of no element exists */
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
 unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
    )

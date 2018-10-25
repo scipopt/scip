@@ -372,25 +372,25 @@ SCIP_RETCODE SCIPqueueInsertUInt(
    unsigned int          elem                /**< element to be inserted */
    );
 
-/** removes and returns the first element of the queue, or NULL of no element exists */
+/** removes and returns the first element of the queue, or NULL if no element exists */
 EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** removes and returns the first unsigned integer element of the queue, or UNIT_MAX of no element exists */
+/** removes and returns the first unsigned integer element of the queue, or UNIT_MAX if no element exists */
 EXTERN
 unsigned int SCIPqueueRemoveUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first element of the queue without removing it, or NULL of no element exists */
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 EXTERN
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX of no element exists */
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
 EXTERN
 unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
