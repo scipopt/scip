@@ -1067,6 +1067,7 @@ int reduceWithEdgeFixingBounds(
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
    assert(!solgiven || graph_sol_valid(scip, graph, result));
+   assert(!solgiven || upperbound == graph_sol_getObj(graph->cost, result, 0.0, graph->edges));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1093,6 +1094,8 @@ int reduceWithEdgeFixingBounds(
 
             if( delete )
             {
+               assert(graph->cost[e] == graph->cost[erev]);
+
                SCIPdebugMessage("delete edge %d \n", e);
 
                graph_edge_del(scip, graph, e, TRUE);
@@ -1379,77 +1382,6 @@ SCIP_RETCODE findDaRoots(
 #endif
          }
       } /* for rounds < 3 */
-
-      {
-         int deleteme;
-
-         SCIP_Real maxprize = 0.0; // !!
-         int qstart = *rootscount;
-
-         for( int i = 0; i < nnodes; i++ )
-         {
-            state[i] = UNKNOWN;
-            vnoi[i].dist = FARAWAY;
-            vnoi[i].edge = UNKNOWN;
-
-            if( Is_term(graph->term[i]) && !isfixedterm[i] && graph->mark[i] && maxprize < graph->prize[i] && graph->prize[i] < prizesum )
-               maxprize = graph->prize[i];
-         }
-
-         for( int rounds = 0; rounds < 10 && qstart != nroots; rounds++ )
-         {
-            const int oldnroots = nroots;
-
-            SCIPdebugMessage("root-finding round %d \n", rounds);
-
-            for( int i = qstart; i < nroots; i++ )
-            {
-               int nlabeled;
-               const int term = roots[i];
-               assert(isfixedterm[term]);
-               assert(Is_term(graph->term[term]));
-               assert(SCIPisPositive(scip, graph->prize[term]));
-
-               /* look for terminals in neighborhood of term */
-               graph_sdPaths(scip, graph, vnoi, graph->cost, maxprize, pathedge, state, vbase, &nlabeled, term, term, 200);
-
-               /* check labelled nodes */
-               for( int k = 0; k < nlabeled; k++ )
-               {
-                  const int l = vbase[k];
-
-                  assert(graph->mark[l]);
-                  assert(state[l] != UNKNOWN);
-
-                  if( Is_term(graph->term[l]) && !isfixedterm[l] && vnoi[l].dist <= graph->prize[l] )
-                  {
-                     assert(nroots < graph->terms);
-
-                     roots[nroots++] = l;
-                     isfixedterm[l] = TRUE;
-                     return SCIP_ERROR;
-                     //printf("SP: added new root %d dist: %f, prize: %f  \n", l, vnoi[l].dist, graph->prize[l]);
-                  }
-
-                  /* restore data structures */
-                  state[l] = UNKNOWN;
-                  vnoi[l].dist = FARAWAY;
-                  vnoi[l].edge = UNKNOWN;
-               }
-            }
-#ifndef NDEBUG
-            for( int k = 0; k < nnodes; k++ )
-            {
-               assert(state[k] == UNKNOWN);
-               assert(vnoi[k].dist == FARAWAY);
-               assert(vnoi[k].edge == UNKNOWN);
-            }
-#endif
-
-            qstart = oldnroots;
-         }
-      } // deleteme
-
 
       SCIPdebugMessage("number of terminals found by DA: %d \n", nroots);
 
@@ -2074,7 +2006,6 @@ static
 int reduceSPG(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            offset,             /**< offset pointer */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
    STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    const PATH*           vnoi,               /**< Voronoi data structure */
@@ -2130,8 +2061,16 @@ int reduceSPG(
 
       if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, redcost, minpathcost) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
-         (*offset) += graph->prize[k];
-         nfixed += graph_pc_deleteTerm(scip, graph, k);
+         const int twinterm = graph_pc_getTwinTerm(graph, k);
+#ifndef NDEBUG
+         const int termedge = graph->term2edge[k];
+         assert(Is_pterm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
+         assert(vnoi[k].dist == 0.0);
+#endif
+         while( graph->outbeg[k] != EAT_LAST && graph->grad[k] > 1 )
+            if( graph->head[graph->outbeg[k]] != twinterm )
+               graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+
          continue;
       }
 
@@ -3069,7 +3008,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Real* nodefixingbounds;
    SCIP_Real* nodereplacebounds;
    SCIP_Real lpobjval;
-   SCIP_Real offsetnew;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
    SCIP_Real damaxdeviation;
@@ -3197,7 +3135,6 @@ SCIP_RETCODE reduce_da(
       graph_pc_2transcheck(graph);
 
    assert(nruns > 0);
-   offsetnew = 0.0;
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
@@ -3357,15 +3294,15 @@ SCIP_RETCODE reduce_da(
 #endif
          }
 
-         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval + offsetnew, (run == 0));
-         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval + offsetnew, nedges, (run == 0), TRUE);
+         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
+         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
 
-         nfixed += reduceSPG(scip, graph, &offsetnew, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol);
+         nfixed += reduceSPG(scip, graph, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol);
 
          if( !SCIPisZero(scip, minpathcost) )
          {
-            nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound + offsetnew);
-            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound + offsetnew);
+            nfixed += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+            nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound);
          }
 
          if( extended )
@@ -3373,7 +3310,7 @@ SCIP_RETCODE reduce_da(
 
          if( !directed && !SCIPisZero(scip, minpathcost) )
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
-                  lpobjval + offsetnew, upperbound + offsetnew, daroot, (run == 0), extended));
+                  lpobjval, upperbound, daroot, (run == 0), extended));
 
          if( nfixed > 0 )
             SCIP_CALL(level0(scip, graph));
@@ -3391,7 +3328,7 @@ SCIP_RETCODE reduce_da(
       } /* root loop */
 
       if( !directed && !SCIPisZero(scip, minpathcost) )
-           nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval + offsetnew, upperbound + offsetnew);
+           nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
 
       if( nfixed == 0 || !userec )
          break;
@@ -3419,7 +3356,6 @@ TERMINATE:
    SCIPfreeBufferArray(scip, &result);
 
    assert(graph_valid(graph));
-   *offsetp += offsetnew;
 
    return SCIP_OKAY;
 }

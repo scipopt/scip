@@ -50,6 +50,8 @@
 #include "prop_stp.h"
 
 
+SCIP_Bool show;
+
 /** print reduction information */
 static
 void reduceStatsPrint(
@@ -1367,6 +1369,8 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
+   if( show && dualascent ) printf("degnelims: %d \n", degnelims);
+
    assert(graph_pc_term2edgeConsistent(g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
@@ -1374,7 +1378,6 @@ SCIP_RETCODE redLoopPc(
 
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-
    for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
    {
       int nelims = 0;
@@ -1397,7 +1400,7 @@ SCIP_RETCODE redLoopPc(
          if( sdnelims <= reductbound )
             sd = FALSE;
 
-         SCIPdebugMessage("SDpc: %d \n", sdnelims);
+         if( show && dualascent ) printf("SDpc: %d \n", sdnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1410,7 +1413,7 @@ SCIP_RETCODE redLoopPc(
          if( sdcnelims <= reductbound )
             sdc = FALSE;
 
-         SCIPdebugMessage("SDsp: %d \n", sdcnelims);
+         if( show && dualascent ) printf("SDsp: %d \n", sdcnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1420,10 +1423,10 @@ SCIP_RETCODE redLoopPc(
          int sdwnelims2 = 0;
 
          SCIP_CALL( reduce_sdWalk(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
-         SCIPdebugMessage("SDw: %d \n", sdwnelims);
+         if( show && dualascent ) printf("SDw: %d \n", sdwnelims);
 
          SCIP_CALL(reduce_sdWalk2(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
-         SCIPdebugMessage("SDw2: %d \n", sdwnelims2);
+         if( show && dualascent ) printf("SDw2: %d \n", sdwnelims2);
          sdwnelims += sdwnelims2;
 
          if( sdwnelims <= reductbound )
@@ -1434,6 +1437,7 @@ SCIP_RETCODE redLoopPc(
       }
 
       SCIP_CALL( reduce_simple_pc(scip, g, &fix, &nelims, solnode, FALSE) );
+      if( show && dualascent ) printf("simple %d \n", nelims);
 
       degnelims += nelims;
 
@@ -1450,7 +1454,7 @@ SCIP_RETCODE redLoopPc(
             SCIP_CALL( reduce_sdWalk(scip, ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
          }
 
-         SCIPdebugMessage("bd3: %d \n", bd3nelims);
+         if( show && dualascent ) printf("bd3: %d \n", bd3nelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1462,7 +1466,7 @@ SCIP_RETCODE redLoopPc(
          if( nvslnelims <= 0.5 * reductbound )
             nvsl = FALSE;
 
-         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
+         if( show && dualascent ) printf("nvsl: %d \n", nvslnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1474,7 +1478,7 @@ SCIP_RETCODE redLoopPc(
          if( brednelims <= reductbound )
             bred = FALSE;
 
-         SCIPdebugMessage("bndelims %d \n", brednelims);
+         if( show && dualascent ) printf("bndelims %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1486,6 +1490,8 @@ SCIP_RETCODE redLoopPc(
       if( da || (dualascent && extensive) )
       {
          SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         if( show && dualascent ) printf("simple %d \n", degnelims);
+
 
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
@@ -1497,10 +1503,12 @@ SCIP_RETCODE redLoopPc(
          if( danelims <= reductbound )
             da = FALSE;
 
-         SCIPdebugMessage("da: %d \n", danelims);
+         if( show && dualascent ) printf("da: %d \n", danelims);
       }
 
       SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+      if( show && dualascent ) printf("simple %d \n", degnelims);
+
 
       if( ub >= 0 )
       {
@@ -1508,7 +1516,7 @@ SCIP_RETCODE redLoopPc(
          if( brednelims <= reductbound )
             bred = FALSE;
 
-         SCIPdebugMessage("bndelims %d \n", brednelims);
+         if( show && dualascent ) printf("bndelims %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1533,6 +1541,8 @@ SCIP_RETCODE redLoopPc(
                   state, nodearrchar, &danelims, TRUE, TRUE, TRUE, userec, FALSE, randnumgen, prizesum) );
          }
          SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         if( show && dualascent ) printf("simple %d \n", degnelims);
+
          if( danelims + degnelims > reductbound || (extensive && (danelims + degnelims > 0)) )
          {
             da = dualascent;
@@ -1552,6 +1562,9 @@ SCIP_RETCODE redLoopPc(
 
       if( !rerun || rounds == (STP_RED_MAXNROUNDS - 1) )
          SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+
+      if( show && dualascent ) printf("simple %d \n", degnelims);
+
 
       if( !rerun && !rpc && tryrpc && g->terms > 2 )
       {
@@ -1574,6 +1587,9 @@ SCIP_RETCODE redLoopPc(
             nvsl = nodereplacing;
             advancedrun = dualascent;
             rounds = 0;
+            show = TRUE;
+            printf("YEAHHH %d \n", 0);
+
          }
 
          graph_pc_2org(g);
@@ -1878,7 +1894,7 @@ SCIP_RETCODE reduce(
    assert((*graph)->layers == 1);
 
    *offset = 0.0;
-
+   show = FALSE;
    stp_type = (*graph)->stp_type;
 
    /* initialize ancestor list for each edge */

@@ -2201,7 +2201,7 @@ int graph_pc_deleteTerm(
 {
    int e;
    int t;
-   const int grad = g->grad[i];
+   int grad = g->grad[i];
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -2234,11 +2234,12 @@ int graph_pc_deleteTerm(
 
    graph_pc_knot2nonTerm(g, t);
    g->mark[t] = FALSE;
+   grad += g->grad[t] - 1;
 
    while( g->outbeg[t] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[t], TRUE);
 
-   return grad + 2;
+   return grad;
 }
 
 

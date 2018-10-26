@@ -55,6 +55,9 @@ typedef unsigned char STP_Bool;
 #include "scip/scip.h"
 #include "misc_stp.h"
 
+extern SCIP_Bool show;
+
+
 typedef struct
 {
    /* Nodes */
