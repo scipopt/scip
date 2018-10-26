@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.h
+/**@file   scip/src/scip/benders.h
  * @ingroup INTERNALAPI
  * @brief  internal methods for Benders' decomposition
  * @author Stephen J. Maher

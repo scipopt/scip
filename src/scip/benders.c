@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.c
+/**@file   scip/src/scip/benders.c
  * @brief  methods for Benders' decomposition
  * @author Stephen J. Maher
  */

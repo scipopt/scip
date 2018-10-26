@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_cycleclustering.c
  * @brief  main document page
  * @author Leon Eifler
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page CYCLECLUSTERING_MAIN CycleClustering
  * @version  0.1
  * @author   Leon Eifler
  *

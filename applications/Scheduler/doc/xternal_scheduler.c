@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_scheduler.c
  * @brief  main document page
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page SCHEDULER_MAIN Scheduler
  * @author Stefan Heinz
  * @author Jens Schulz
  *

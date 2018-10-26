@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.h
+/**@file   MinIISC/src/benders.h
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
  *

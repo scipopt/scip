@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   STP/src/cmain.c
  * @brief  Main file for SCIP-Jack
  * @author Gerald Gamrath
  * @author Daniel Rehfeldt
