@@ -525,7 +525,7 @@ SCIP_RETCODE redbasedVarfixing(
       const int erev = e + 1;
       const int tail = propgraph->tail[e];
       const int head = propgraph->head[e];
-#if 0
+#if 1
       /* e OR its anti-parallel edge fixed to 1? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
@@ -656,8 +656,9 @@ SCIP_RETCODE redbasedVarfixing(
    //SCIP_CALL( reduceRedcostExtended(scip, lpobjval, vars, propgraph) );
    //SCIP_CALL( level0(scip, propgraph) );
 #if 1
+   int tryg;
    if( pc )
-      SCIP_CALL( reducePc(scip, &g, &offset, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    else
       SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 #endif

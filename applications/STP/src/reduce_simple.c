@@ -1326,8 +1326,7 @@ SCIP_RETCODE reduce_simple_pc(
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
    int*                  count,              /**< pointer to number of reductions */
-   int*                  solnode,            /**< solution nodes */
-   SCIP_Bool             contractroot        /**< contract vertices into root (for rooted prize-collecting) */
+   int*                  solnode             /**< solution nodes */
    )
 {
    int edges2[2];
@@ -1539,7 +1538,7 @@ SCIP_RETCODE reduce_simple_pc(
             {
                const int i1 = g->head[e1];
 
-               if( !g->mark[i1] && (pc || i1 != root || !contractroot) )
+               if( !g->mark[i1] && (pc || i1 != root) )
                   continue;
 
                if( SCIPisLT(scip, g->cost[e1], mincost) )

@@ -128,7 +128,7 @@ SCIP_RETCODE nvreduce_sl(
       if( elims > 0 )
       {
          if( g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG )
-            SCIP_CALL( reduce_simple_pc(scip, g, fixed, &degelims, solnode, FALSE) );
+            SCIP_CALL( reduce_simple_pc(scip, g, fixed, &degelims, solnode) );
          else
             SCIP_CALL( reduce_simple(scip, g, fixed, solnode, &degelims, NULL) );
       }
@@ -1368,7 +1368,7 @@ SCIP_RETCODE redLoopPc(
 
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
-   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
+   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode) );
    if( show && dualascent ) printf("degnelims: %d \n", degnelims);
 
    assert(graph_pc_term2edgeConsistent(g));
@@ -1436,7 +1436,7 @@ SCIP_RETCODE redLoopPc(
             break;
       }
 
-      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &nelims, solnode, FALSE) );
+      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &nelims, solnode) );
       if( show && dualascent ) printf("simple %d \n", nelims);
 
       degnelims += nelims;
@@ -1489,7 +1489,7 @@ SCIP_RETCODE redLoopPc(
 
       if( da || (dualascent && extensive) )
       {
-         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode) );
          if( show && dualascent ) printf("simple %d \n", degnelims);
 
 
@@ -1506,7 +1506,7 @@ SCIP_RETCODE redLoopPc(
          if( show && dualascent ) printf("da: %d \n", danelims);
       }
 
-      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode) );
       if( show && dualascent ) printf("simple %d \n", degnelims);
 
 
@@ -1540,7 +1540,7 @@ SCIP_RETCODE redLoopPc(
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
                   state, nodearrchar, &danelims, TRUE, TRUE, TRUE, userec, FALSE, randnumgen, prizesum) );
          }
-         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode) );
          if( show && dualascent ) printf("simple %d \n", degnelims);
 
          if( danelims + degnelims > reductbound || (extensive && (danelims + degnelims > 0)) )
@@ -1561,7 +1561,7 @@ SCIP_RETCODE redLoopPc(
       }
 
       if( !rerun || rounds == (STP_RED_MAXNROUNDS - 1) )
-         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode) );
 
       if( show && dualascent ) printf("simple %d \n", degnelims);
 
