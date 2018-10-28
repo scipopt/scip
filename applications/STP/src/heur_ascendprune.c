@@ -587,6 +587,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          nodearrchar[g->head[eorg]] = TRUE;
       }
 
+   if( newgraph->knots == 1 )
+      nodearrchar[g->source] = TRUE;
+
    for( int e = 0; e < nedges; e++ )
       newedges[e] = UNKNOWN;
 

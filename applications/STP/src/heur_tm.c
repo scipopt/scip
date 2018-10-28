@@ -202,15 +202,8 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
       if( !g->mark[root] )
       {
+         printf("FAIL in SCIPStpHeurTMPrunePc, root not connected \n");
          return SCIP_ERROR;
-#if 0
-         const int nedges = g->edges;
-
-         for( i = 0; i < nedges; i++ )
-            result[i] = CONNECT;
-
-         return SCIP_OKAY;
-#endif
       }
    }
    else
