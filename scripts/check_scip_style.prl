@@ -314,7 +314,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	    # check whether we have a doxygen documentation within the code
 	    if ( $checkdocinbody == 1 && $str =~ /\/\*\*/ && ($depth - $foundexternc - $inenumstruct) > 0 )
 	    {
-	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ )
+	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ && $str !~ /\[Snippet/ )
 	       {
 		  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
 	       }
