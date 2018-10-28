@@ -663,7 +663,6 @@ SCIP_RETCODE redbasedVarfixing(
       SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 #endif
    show = FALSE;
-   exit(1);
    assert(graph_valid(propgraph));
 
    /* try to fix edges ... */
@@ -906,7 +905,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */
-    //  SCIP_CALL( redbasedVarfixing(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
+   //   SCIP_CALL( redbasedVarfixing(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
 
       propdata->postrednfixededges = 0;
 

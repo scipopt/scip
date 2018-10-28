@@ -2001,9 +2001,9 @@ void computeTransVoronoi(
 }
 
 
-/** reduce SPG graph based on information from dual ascent and given upper bound  */
+/** reduce graph with non-articial root (SPG, RPC ...) based on information from dual ascent and given upper bound  */
 static
-int reduceSPG(
+SCIP_RETCODE reduceRootedProb(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
@@ -2014,24 +2014,26 @@ int reduceSPG(
    const int*            result,             /**< sol int array */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int                   root,               /**< the root */
-   SCIP_Bool             solgiven            /**< is sol given? */
+   SCIP_Bool             solgiven,           /**< is sol given? */
+   int*                  nfixedp             /**< number of fixed edges pointer */
 )
 {
-   int nfixed = 0;
+   int* incidents = NULL;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
 
-#ifndef NDEBUG
    if( rpc )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &incidents, nnodes) );
+#ifndef NDEBUG
       assert(!graph->extended);
       for( int k = 0; k < nnodes; k++ )
          if( Is_pterm(graph->term[k]) )
             assert(!graph->mark[k] && graph->grad[k] == 2);
-   }
 #endif
+   }
 
    if( solgiven )
    {
@@ -2047,6 +2049,7 @@ int reduceSPG(
       }
    }
 
+   /* main loop: try to reduce */
    for( int k = 0; k < nnodes; k++ )
    {
       SCIP_Real redcost;
@@ -2062,22 +2065,38 @@ int reduceSPG(
       if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, redcost, minpathcost) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
          const int twinterm = graph_pc_getTwinTerm(graph, k);
+         int incidcount = 0;
 #ifndef NDEBUG
          const int termedge = graph->term2edge[k];
          assert(Is_pterm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
          assert(vnoi[k].dist == 0.0);
 #endif
-         while( graph->outbeg[k] != EAT_LAST && graph->grad[k] > 1 )
-            if( graph->head[graph->outbeg[k]] != twinterm )
-               graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+         for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            incidents[incidcount++] = e;
 
+         assert(incidcount == graph->grad[k]);
+         (*nfixedp) += graph->grad[k] - 1;
+
+         for( e = 0; e < incidcount; e++ )
+         {
+            const int edge = incidents[e];
+
+            assert(graph->tail[edge] == k);
+
+            if( graph->head[edge] == twinterm )
+               continue;
+
+            graph_edge_del(scip, graph, edge, TRUE);
+         }
+
+         assert(graph->grad[k] == 1 && graph->outbeg[k] == graph->term2edge[k] && twinterm == graph_pc_getTwinTerm(graph, k));
          continue;
       }
 
       if( !Is_term(graph->term[k]) && !keepsol &&
          (SCIPisGT(scip, redcost, minpathcost) || (solgiven && SCIPisEQ(scip, redcost, minpathcost) && !nodearrchar[k])) )
       {
-         nfixed += graph->grad[k];
+         (*nfixedp) += graph->grad[k];
          graph_knot_del(scip, graph, k, TRUE);
          continue;
       }
@@ -2104,7 +2123,7 @@ int reduceSPG(
             if( marked[flipedge(e)] )
             {
                graph_edge_del(scip, graph, e, TRUE);
-               nfixed++;
+               (*nfixedp)++;
             }
             else
             {
@@ -2119,7 +2138,9 @@ int reduceSPG(
       if( graph->grad[k] == 0 && k != root )
          graph->mark[k] = FALSE;
 
-   return nfixed;
+   SCIPfreeBufferArrayNull(scip, &incidents);
+
+   return SCIP_OKAY;;
 }
 
 /** reduce PCSTP or MWCS graph based on information from dual ascent and given upper bound  */
@@ -3297,7 +3318,7 @@ SCIP_RETCODE reduce_da(
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
 
-         nfixed += reduceSPG(scip, graph, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol);
+         SCIP_CALL( reduceRootedProb(scip, graph, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, apsol, &nfixed) );
 
          if( !SCIPisZero(scip, minpathcost) )
          {
