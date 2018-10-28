@@ -259,7 +259,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # handle strings (must be executed after the functions above that need strings)
 
       # remove everything within a string
-      if ( $str =~ /\".*\"/ )
+      if ( $str =~ /\".*\"/ && $str !~ /(extern \"C\" \{)/ )
       {
 	 # remove minimal occurence of string
 	 $str =~ s/\".*?\"//g;
