@@ -5540,7 +5540,6 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    return SCIP_OKAY;
 }
 
-#if 0
 /** the given facet might not be a valid under(over)estimator, because of numerics and bad fixings; we compute \f$
  * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ are the
  * vertices of the domain
@@ -5548,14 +5547,14 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 static
 SCIP_Real computeMaxFacetError(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners */
-   SCIP_VAR**            vars,               /**< variables \f$ x_i \f$ */
-   int                   nvars,              /**< number of variables */
    SCIP_Bool             overestimate,       /**< whether we check for an over or underestimator */
-   SCIP_Real             midval,             /**< coefficient representing \f$ mid(y) \f$ */
-   SCIP_INTERVAL         fixedinterval,      /**< interval evaluation of the fixed variables, \f$ \Pi_j y_j \f$ */
-   SCIP_Real*            facetcoefs,         /**< current facet candidate's coefficients */
-   SCIP_Real             facetconstant       /**< current facet candidate's constant */
+   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners, length: nvars */
+   SCIP_Real*            box,                /**< box for which facet was computed, length: 2*nallvars */
+   int                   nallvars,           /**< number of all variables */
+   int                   nvars,              /**< number of unfixed variables */
+   int*                  nonfixedpos,        /**< indices of unfixed variables, length: nvars */
+   SCIP_Real*            facetcoefs,         /**< current facet candidate's coefficients, length: nallvars */
+   SCIP_Real             facetconstant       /**< current facet candidate's constant, length: nallvars */
    )
 {
    SCIP_Real maxerror;
@@ -5568,28 +5567,24 @@ SCIP_Real computeMaxFacetError(
 
    assert(scip != NULL);
    assert(funvals != NULL);
+   assert(box != NULL);
+   assert(nonfixedpos != NULL);
    assert(facetcoefs != NULL);
 
-   ncorners = (unsigned int) poweroftwo[nvars];
+   ncorners = poweroftwo[nvars];
    maxerror = 0.0;
 
-   /* check the origin */
+   /* check the origin (all variables at lower bound) */
    facetval = facetconstant;
-   for( i = 0; i < (unsigned int) nvars; ++i )
-      facetval += facetcoefs[i] * SCIPvarGetLbLocal(vars[i]);
+   for( i = 0; i < (unsigned int) nallvars; ++i )
+      facetval += facetcoefs[i] * box[2*i];
 
    /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
-   funval = funvals[0] / midval;
+   funval = funvals[0];
    if( overestimate )
-   {
-      funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
       error = funval - facetval;
-   }
    else
-   {
-      funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
       error = facetval - funval;
-   }
 
    /* update maximum error */
    maxerror = MAX(error, maxerror);
@@ -5600,6 +5595,7 @@ SCIP_Real computeMaxFacetError(
       unsigned int gray;
       unsigned int diff;
       unsigned int pos;
+      unsigned int origpos;
 
       gray = i ^ (i >> 1);
       diff = gray ^ prev;
@@ -5608,25 +5604,21 @@ SCIP_Real computeMaxFacetError(
       pos = 0;
       while( (diff >>= 1) != 0 )
          ++pos;
+      assert(pos < (unsigned int)nvars);
+
+      origpos = nonfixedpos[pos];
 
       if( gray > prev )
-         facetval += facetcoefs[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
+         facetval += facetcoefs[origpos] * (box[2*origpos+1] - box[2*origpos]);
       else
-         facetval -= facetcoefs[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
-
+         facetval -= facetcoefs[origpos] * (box[2*origpos+1] - box[2*origpos]);
 
       /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
-      funval = funvals[gray] / midval;
+      funval = funvals[gray];
       if( overestimate )
-      {
-         funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
          error = funval - facetval;
-      }
       else
-      {
-         funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
          error = facetval - funval;
-      }
 
       /* update  maximum error */
       maxerror = MAX(error, maxerror);
@@ -5638,7 +5630,7 @@ SCIP_Real computeMaxFacetError(
 
    return maxerror;
 }
-#endif
+
 
 /** @} */
 
@@ -11353,6 +11345,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 #define MAXPERTURBATION            1e-3 /**< maximum perturbation */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 #define RANDNUMINITSEED        20181029 /**< seed for random number generator, which is used to move points away from the boundary */
+#define ADJUSTFACETFACTOR          1e1  /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
 
 SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11385,6 +11378,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    int nvars; /* number of nonfixed variables */
    SCIP_Real* corner;
    SCIP_Real facetvalue;
+   SCIP_Real maxfaceterror;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -11616,7 +11610,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
     /* if overestimate, then we want facetvalue < targetvalue
     * if underestimate, then we want facetvalue > targetvalue
     * if none holds, give up
-    * TODO: if it separates, |facetvalue - targetvalue| is the violation
     * so maybe here we should check against the minimal violation
     */
    if( overestimate == (facetvalue > targetvalue) )
@@ -11625,17 +11618,17 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       goto CLEANUP;
    }
 
-#if 0 /* TODO */
-   assert(!SCIPisZero(scip, midval));
 
    /*
     *  5. check and adjust facet with the algorithm of Rikun et al.
     */
 
-   maxfaceterror = computeMaxFacetError(scip, funvals, vars, nvars, overestimate, midval, fixedinterval, facetcoefs, *facetconstant);
+   maxfaceterror = computeMaxFacetError(scip, overestimate, funvals, box, nallvars, nvars, nonfixedpos, facetcoefs, *facetconstant);
+
+   /* TODO scale maxfaceterror, e.g., by |function(midpoint)| */
 
    /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
-   if( maxfaceterror > 0 )
+   if( maxfaceterror > 0.0 )
    {
       SCIPdebugMsgPrint(scip, "maximum facet error %g, adjust constant to make cut valid!\n", maxfaceterror);
 
@@ -11661,13 +11654,11 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       if( overestimate == (facetvalue > targetvalue) )
          goto CLEANUP;
    }
-#endif
 
    /* if we made it until here, then we have a nice facet */
    *success = TRUE;
 
 CLEANUP:
-
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &corner);
    SCIPfreeBufferArray(scip, &lbs);
