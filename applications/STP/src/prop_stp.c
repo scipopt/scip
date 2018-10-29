@@ -461,6 +461,7 @@ SCIP_RETCODE redbasedVarfixing(
    IDX* curr;
    SCIP_Real offset;
    int* remain;
+   int* edgestate;
    const int nedges = g->edges;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
@@ -478,6 +479,7 @@ SCIP_RETCODE redbasedVarfixing(
    offset = -1.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
 
    propgraph = propdata->propgraph;
    assert(propgraph != NULL);
@@ -520,6 +522,18 @@ SCIP_RETCODE redbasedVarfixing(
    for( int e = 0; e < nedges; e++ )
       remain[e] = PROP_STP_EDGE_UNSET;
 
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      const int erev = flipedge(e);
+
+      if( (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) > 0.5)
+       || (SCIPvarGetUbLocal(vars[e]) > 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5) )
+         edgestate[e] = EDGE_BLOCKED;
+      else
+         edgestate[e] = EDGE_MODIFIABLE;
+   }
+
    for( int e = 0; e < nedges; e += 2 )
    {
       const int erev = e + 1;
@@ -533,7 +547,10 @@ SCIP_RETCODE redbasedVarfixing(
          remain[erev] = PROP_STP_EDGE_FIXED;
 
          if( pcmw && (SCIPisGE(scip, propgraph->cost[e], FARAWAY) || SCIPisGE(scip, propgraph->cost[erev], FARAWAY)) )
+         {
+            assert(propgraph->cost[e] != propgraph->cost[erev]);
             continue;
+         }
 
          assert(!pcmw || !(Is_term(propgraph->term[tail]) && !graph_pc_knotIsFixedTerm(propgraph, tail)));
          assert(!pcmw || !(Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head)));
@@ -574,7 +591,6 @@ SCIP_RETCODE redbasedVarfixing(
          }
       }
 
-
       /* both e AND its anti-parallel edge fixed to 0? */
       if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
       {
@@ -598,10 +614,12 @@ SCIP_RETCODE redbasedVarfixing(
    {
       for( int e = propgraph->outbeg[propgraph->source]; e != EAT_LAST; e = propgraph->oeat[e] )
       {
-         const int head = g->head[e];
+         const int head = propgraph->head[e];
 
          if( Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head) )
          {
+            assert(!graph_pc_knotIsFixedTerm(g, head));
+
             /* fixed to 0? Then take terminal */
             if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
             {
@@ -729,34 +747,11 @@ SCIP_RETCODE redbasedVarfixing(
       }
    }
 
-
-#if 0
-   if( pcmw )
-   {
-      for( int k = 0; k < g->knots; k++ )
-      {
-         if( Is_pterm(g->term[k]) )
-         {
-            int ecount = 0;
-            for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               if( remain[e] == PROP_STP_EDGE_SET || remain[flipedge(e)] == PROP_STP_EDGE_SET )
-                  ecount++;
-            }
-            if( ecount == 1 )
-            {
-               const int term = graph_pc_getTwinTerm(g, k);
-               fixedgevarTo1(scip, vars[graph_pc_getRoot2PtermEdge(g, term)], nfixed);
-            }
-         }
-      }
-   }
-#endif
-
    printf("reduction based fixings: %d \n", *nfixed);
 
 TERMINATE:
    graph_path_exit(scip, propgraph);
+   SCIPfreeBufferArray(scip, &edgestate);
    SCIPfreeBufferArray(scip, &remain);
 
    return SCIP_OKAY;

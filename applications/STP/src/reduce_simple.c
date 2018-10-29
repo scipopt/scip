@@ -1668,7 +1668,6 @@ SCIP_RETCODE reduce_simple_aritculations(
 
    getArticulationPoints(g, root, 0, artpoints, &nartpoints, depth, lowpoint, parent, visited);
 
-   if( nartpoints > 0 )
       printf("aritculation points found %d \n", nartpoints);
 
    SCIPfreeBufferArray(scip, &visited);
