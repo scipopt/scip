@@ -1715,7 +1715,7 @@ SCIP_RETCODE detectNlhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
-   SCIP_Bool             isroot,             /**< expression is a root expression, that is, it defines a constraint */
+   SCIP_CONS*            cons,               /**< constraint for which expr == consdata->expr, otherwise NULL */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
    SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
@@ -1758,7 +1758,7 @@ SCIP_RETCODE detectNlhdlr(
    enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
 
    SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); start with below %d above %d\n",
-      isroot ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
+      cons != NULL ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
 
    for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
@@ -1778,7 +1778,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenforcemethods = enforcemethods;
       nlhdlrenforcedbelow = enforcedbelow;
       nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, isroot, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
       assert(nlhdlrenforcemethods >= enforcemethods);
@@ -1977,7 +1977,7 @@ SCIP_RETCODE detectNlhdlrs(
          {
             /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
              * then also the subtree has been investigated already and we can stop iterating further down
-             * HOWEVER: most likely we have been running DETECT with isroot=FALSE, which may interest less nlhdlrs
+             * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
              * thus, if expr is the root expression, then rerun DETECT
              */
             if( expr == consdata->expr )
@@ -1999,7 +1999,7 @@ SCIP_RETCODE detectNlhdlrs(
           */
          if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
 
             if( *infeasible )
                break;
@@ -10906,7 +10906,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    assert(success != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, isroot, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, cons, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
