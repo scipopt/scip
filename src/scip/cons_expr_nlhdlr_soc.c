@@ -22,6 +22,7 @@
 
 #include "scip/cons_expr_nlhdlr_soc.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_pow.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "soc"
@@ -45,6 +46,96 @@ struct SCIP_ConsExpr_NlhdlrData
 /*
  * Local methods
  */
+
+/** helper function to detect || sum_i (expr_i)^2 + const || <= auxvar */
+static
+SCIP_RETCODE detectSocNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
+   )
+{
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONSEXPR_EXPR* child;
+   int nchildren;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(auxvar != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* relation is not "<=" -> skip */
+   if( SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+      return SCIP_OKAY;
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check whether expression is a SQRT and has a sum as children with at least 2 children */
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrPow(conshdlr) || SCIPgetConsExprExprPowExponent(expr) != 0.5
+      || SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(child) < 2 )
+      return SCIP_OKAY;
+
+   /* get children of the sum */
+   children = SCIPgetConsExprExprChildren(child);
+   nchildren = SCIPgetConsExprExprNChildren(child);
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPow(conshdlr) || SCIPgetConsExprExprPowExponent(children[i]) != 2.0 )
+         return SCIP_OKAY;
+   }
+
+   /* found SOC structure -> create required auxiliary variables */
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
+   }
+
+   *success = TRUE;
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPinfoMessage(scip, NULL, " <= %g\n", SCIPvarGetUbLocal(auxvar));
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** helper method to detect SOC structures */
+static
+SCIP_RETCODE detectSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(expr != NULL);
+   assert(auxvar != NULL);
+   assert(success != NULL);
+
+   /* no expression constraint handler -> skip */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   if( conshdlr == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* check whether expression is given as */
+   SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, success) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of nonlinear handler
@@ -128,7 +219,25 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 { /*lint --e{715}*/
-   *success = FALSE;
+   SCIP_VAR* auxvar;
+
+   assert(expr != NULL);
+
+   /* TODO is it worth to detect during presolving and then try to apply some bound strengthening? */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      return SCIP_OKAY;
+
+   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   assert(auxvar != NULL);
+
+   if( isroot )
+   {
+      SCIP_CALL( detectSOC(scip, expr, auxvar, success) );
+   }
+   else
+   {
+      *success = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -176,18 +285,14 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 
 
 /** nonlinear handler separation callback */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrSepaSoc NULL
-#endif
 
 
 /** nonlinear handler under/overestimation callback */
@@ -268,7 +373,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulateSoc)
  * nonlinear handler specific interface methods
  */
 
-/** includes Soc nonlinear handler to consexpr */
+/** includes SOC nonlinear handler to consexpr */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
