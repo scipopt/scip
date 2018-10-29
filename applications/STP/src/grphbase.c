@@ -2506,7 +2506,7 @@ int graph_pc_getTwinTerm(
 )
 {
    assert(g != NULL);
-   assert(graph_pc_isRootedPcMw(g));
+   assert(graph_pc_isPcMw(g));
    assert(g->term2edge != NULL && g->term2edge[vertex] > 0);
    assert(Is_gterm(g->term[vertex]));
 
@@ -3371,7 +3371,10 @@ void graph_edge_printInfo(
 {
    const int t = g->tail[e];
    const int h = g->head[e];
-   printf("e: %d   %d->%d (%d->%d) \n", e, t, h, g->term[t], g->term[h]);
+   if( graph_pc_isPcMw(g) )
+      printf("e: %d   %d->%d (%d->%d) cost:=%f costrev=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e], g->cost[flipedge(e)]);
+   else
+      printf("e: %d   %d->%d (%d->%d) cost:=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e]);
 }
 
 /** print information on node */

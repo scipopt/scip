@@ -1565,9 +1565,11 @@ SCIP_RETCODE redLoopPc(
 
       if( show && dualascent ) printf("simple %d \n", degnelims);
 
-
+      //if( (!rerun || rounds == (STP_RED_MAXNROUNDS - 1)) && !rpc && tryrpc && g->terms > 2 )
       if( !rerun && !rpc && tryrpc && g->terms > 2 )
       {
+         int todo;
+
          assert(graph_pc_term2edgeConsistent(g));
          graph_pc_2trans(g);
 

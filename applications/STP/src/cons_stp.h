@@ -61,6 +61,15 @@ void SCIPStpConshdlrSetGraph(
    const GRAPH*          g                   /**< graph data structure */
    );
 
+/** add cut corresponding to contraction */
+extern
+SCIP_RETCODE SCIPStpAddContractionCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edge,               /**< edge */
+   SCIP_VAR*             revedge,            /**< reversed edge */
+   SCIP_Bool             localcut            /**< add local cut? */
+   );
+
 /** dual ascent heuristic */
 extern
 SCIP_RETCODE SCIPStpDualAscent(

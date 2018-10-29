@@ -1663,6 +1663,49 @@ SCIP_RETCODE SCIPcreateConsStp(
    return SCIP_OKAY;
 }
 
+/** add cut corresponding to contraction */
+SCIP_RETCODE SCIPStpAddContractionCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edge,               /**< edge */
+   SCIP_VAR*             revedge,            /**< reversed edge */
+   SCIP_Bool             localcut            /**< add local cut? */
+)
+{
+   SCIP_ROW* row = NULL;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_Bool infeasible;
+
+   if( SCIPvarGetLbLocal(edge) > 0.5 || SCIPvarGetUbLocal(edge) < 0.5 || SCIPvarGetLbLocal(revedge) > 0.5 || SCIPvarGetUbLocal(revedge) < 0.5 )
+   {
+      printf("cannot add contraction cut \n");
+      return SCIP_OKAY;
+   }
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   assert(conshdlr != NULL);
+   assert(SCIPconshdlrGetNConss(conshdlr) > 0);
+
+   SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "contraction", 1.0, SCIPinfinity(scip), localcut, FALSE, TRUE));
+   SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+   SCIP_CALL(SCIPaddVarToRow(scip, row, edge, 1.0));
+   SCIP_CALL(SCIPaddVarToRow(scip, row, revedge, 1.0));
+
+   SCIP_CALL(SCIPflushRowExtensions(scip, row));
+
+   SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+   /* add cut to pool */
+   if( !infeasible )
+   SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+   SCIP_CALL(SCIPreleaseRow(scip, &row));
+
+   return SCIP_OKAY;
+}
+
 /** sets graph */
 void SCIPStpConshdlrSetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
