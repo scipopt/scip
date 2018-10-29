@@ -193,6 +193,74 @@ void updateorgsol(
    (*nsoledges) += e;
 }
 
+static
+void writeCommentSection(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const char*           filename            /**< problem file name */
+)
+{
+   char probtype[16];
+
+   SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
+   SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
+
+   switch( graph->stp_type )
+   {
+   case STP_SPG:
+      strcpy(probtype, "SPG");
+      break;
+   case STP_SAP:
+      strcpy(probtype, "SAP");
+      break;
+
+   case STP_PCSPG:
+      strcpy(probtype, "PCSPG");
+      break;
+
+   case STP_RPCSPG:
+      strcpy(probtype, "RPCST");
+      break;
+
+   case STP_NWSPG:
+      strcpy(probtype, "NWSPG");
+      break;
+
+   case STP_DCSTP:
+      strcpy(probtype, "DCST");
+      break;
+
+   case STP_RSMT:
+      strcpy(probtype, "RSMT");
+      break;
+
+   case STP_OARSMT:
+      strcpy(probtype, "OARSMT");
+      break;
+
+   case STP_MWCSP:
+      strcpy(probtype, "MWCS");
+      break;
+
+   case STP_RMWCSP:
+      strcpy(probtype, "RMWCS");
+      break;
+
+   case STP_DHCSTP:
+      strcpy(probtype, "HCDST");
+      break;
+
+   default:
+      strcpy(probtype, "UNKNOWN");
+   }
+   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
+   SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
+   SCIPprobdataWriteLogLine(scip, "Version %s\n", VERSION_SCIPJACK);
+   SCIPprobdataWriteLogLine(scip, "End\n");
+   SCIPprobdataWriteLogLine(scip, "\n");
+   SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
+}
+
 /*
  * distinguishes a terminal as the root; with centertype
  *      = CENTER_OK  : Do nothing
@@ -2024,7 +2092,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    int realnterms;
    int compcentral;
    char mode;
-   char probtype[16];
    char* intlogfilename;
    char* logfilename;
    char tmpfilename[SCIP_MAXSTRLEN];
@@ -2130,74 +2197,18 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
    }
 
-   SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
-   SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
-
-   switch( graph->stp_type )
-   {
-   case STP_SPG:
-      strcpy(probtype, "SPG");
-      break;
-   case STP_SAP:
-      strcpy(probtype, "SAP");
-      break;
-
-   case STP_PCSPG:
-      strcpy(probtype, "PCSPG");
-      break;
-
-   case STP_RPCSPG:
-      strcpy(probtype, "RPCST");
-      break;
-
-   case STP_NWSPG:
-      strcpy(probtype, "NWSPG");
-      break;
-
-   case STP_DCSTP:
-      strcpy(probtype, "DCST");
-      break;
-
-   case STP_RSMT:
-      strcpy(probtype, "RSMT");
-      break;
-
-   case STP_OARSMT:
-      strcpy(probtype, "OARSMT");
-      break;
-
-   case STP_MWCSP:
-      strcpy(probtype, "MWCS");
-      break;
-
-   case STP_RMWCSP:
-      strcpy(probtype, "RMWCS");
-      break;
-
-   case STP_DHCSTP:
-      strcpy(probtype, "HCDST");
-      break;
-
-   default:
-      strcpy(probtype, "UNKNOWN");
-   }
-   SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
-   SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
-   SCIPprobdataWriteLogLine(scip, "Version %s\n", VERSION_SCIPJACK);
-   SCIPprobdataWriteLogLine(scip, "End\n");
-   SCIPprobdataWriteLogLine(scip, "\n");
-   SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
-
    /* set solving mode */
    if( !(graph->stp_type == STP_SPG) )
-   {
       probdata->mode = MODE_CUT;
-   }
+
+   assert(mode != 'p' && "pricing currently not supported\n");
+
+
    if( mode == 'f' )
    {
       probdata->mode = MODE_FLOW;
    }
-   else if( mode == 'p' )
+   else if(  )
    {
       assert(graph->stp_type == STP_SPG);
       probdata->mode = MODE_PRICE;
@@ -2212,20 +2223,17 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* print the graph */
    if( print )
-   {
       SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
-   }
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
 
    if( presoltimelimit > -0.5 )
-   {
       SCIP_CALL( SCIPsetRealParam(scip, "limits/time", presoltimelimit) );
-   }
 
    /* save original root */
-   graph->orgsource = graph->source;
+   if( !graph_pc_isPcMw(graph) )
+      graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
 
@@ -2240,6 +2248,8 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    graph = packedgraph;
    probdata->stp_type = graph->stp_type;
+
+   writeCommentSection(scip, graph, filename);
 
    mw = (graph->stp_type == STP_MWCSP);
    pc = (graph->stp_type == STP_PCSPG);
@@ -3134,11 +3144,17 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    else if( graph_pc_isPcMw(graph))
    {
       int* solnodequeue;
-      int root;
-      root = graph->source;
-      assert(root >= 0 && nsolnodes == 0);
+      assert(graph->source >= 0 && nsolnodes == 0);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &solnodequeue, norgnodes) );
+
+      /* cover RPCSPG/RMWCSP with single node solution */
+      if( graph_pc_isRootedPcMw(graph) && graph->orgsource != -1 )
+      {
+         SCIPdebugMessage("graph->orgsource %d \n", graph->orgsource);
+         solnodequeue[nsolnodes++] = graph->orgsource;
+         orgnodes[graph->orgsource] = TRUE;
+      }
 
       for( e = 0; e <= graph->edges; e++ )
       {
@@ -3190,14 +3206,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                curr = curr->parent;
             }
          }
-      }
-      /* cover RPCSPG/RMWCSP with single node solution */
-      if( (graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP) && !orgnodes[root] )
-      {
-         assert(nsolnodes == 0);
-
-         solnodequeue[0] = root;
-         nsolnodes = 1;
       }
 
       SCIP_CALL( graph_sol_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,

@@ -1715,6 +1715,7 @@ SCIP_RETCODE graph_pc_2pc(
    if( graph->stp_type != STP_MWCSP )
       graph->stp_type = STP_PCSPG;
 
+   assert(graph->orgsource == -1);
    SCIPdebugMessage("Transformed to PC \n");
 
    return SCIP_OKAY;
@@ -1828,6 +1829,7 @@ SCIP_RETCODE graph_pc_2rpc(
    assert(nterms == npotterms);
    assert(graph->prize[graph->source] == FARAWAY);
    graph->stp_type = STP_RPCSPG;
+   graph->orgsource = graph->source;
 
    SCIPdebugMessage("Transformed problem to (RPC) SAP \n");
 
@@ -1998,6 +2000,8 @@ SCIP_RETCODE graph_pc_2rmw(
    assert(i == npterms);
    graph->extended = TRUE;
    graph->stp_type = STP_RMWCSP;
+   graph->orgsource = graph->source;
+
 
    SCIPdebugMessage("Transformed to RMW \n");
 
