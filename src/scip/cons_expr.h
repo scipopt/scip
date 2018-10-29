@@ -233,6 +233,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
+/** returns expression handler for power expressions */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPow(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
 /** gives the name of an expression handler */
 EXTERN
 const char* SCIPgetConsExprExprHdlrName(

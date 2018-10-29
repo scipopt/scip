@@ -7238,6 +7238,16 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    return SCIPconshdlrGetData(conshdlr)->exprprodhdlr;
 }
 
+/** returns expression handler for power expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPow(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprpowhdlr;
+}
+
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
