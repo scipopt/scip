@@ -184,7 +184,6 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
  * */
 
 /* this test needs to create its own data, it doesn't use the fixtures! */
-static
 Test(separation, multilinearseparation)
 {
    /* char const* names[] = {"x", "y", "w", "z"}; */
@@ -239,5 +238,63 @@ Test(separation, multilinearseparation)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+}
+
+Test(separation, errorfacet)
+{
+   /* char const* names[] = {"x", "y", "w"}; */
+   SCIP_Real box[] = {-0.2, 0.7, -10.0, 8.0, 1.0, 1.3};
+   int nonfixedpos[] = { 0, 1, 2 };
+   SCIP_Real* facet;
+   SCIP_Real* funvals;
+   SCIP_Real maxfaceterror;
+
+   /* a facet of the convex envelope of -0.7*x*y*w is 7 x - 133/250 y - 7/5 w - 98/25 */
+   SCIP_Real facetunder[] = {7.0, -133.0/250, -7.0/5, -98.0/25};
+   /* values of -0.7*x*y*w at the vertices of the domain */
+   SCIP_Real funvalsunder[] = {-1.4, 4.9, 1.12, -3.92, -1.82, 6.37, 1.456, -5.096};
+   /* a facet of the concave envelope of 0.7*x*y*w is -7 x + 133/250 y + 7/5 w + 98/25 */
+   SCIP_Real facetover[] = {-7.0, 133.0/250, 7.0/5, 98.0/25};
+   /* values of 0.7*x*y*w at the vertices of the domain */
+   SCIP_Real funvalsover[] = {1.4, -4.9, -1.12, 3.92, 1.82, -6.37, -1.456, 5.096};
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   facet = facetunder;
+   funvals = funvalsunder;
+
+   /* compute the maximum error */
+   printf("computing maximum error\n");
+   maxfaceterror = computeMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   cr_expect_eq(maxfaceterror, 0.0);
+   printf("done\n");
+
+   /* perturb facet */
+   facet[3] += 1.0;
+   maxfaceterror = computeMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   cr_expect_eq(maxfaceterror, 1.0);
+   facet[3] -= 1.0;
+
+   /* now we do the same, but overestimating */
+   facet = facetover;
+   funvals = funvalsover;
+
+   /* compute the maximum error */
+   printf("computing maximum error over\n");
+   maxfaceterror = computeMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   cr_expect_eq(maxfaceterror, 0.0);
+   printf("done\n");
+
+   /* perturb facet */
+   facet[3] -= 1.0;
+   maxfaceterror = computeMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   cr_expect_eq(maxfaceterror, 1.0);
+   facet[3] += 1.0;
+
+   /* TODO add some tests where nonfixedpos is not the trivial identity */
+
+   /* free everything */
+   SCIP_CALL( SCIPfree(&scip) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
