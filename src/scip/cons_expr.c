@@ -11347,6 +11347,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 #define RANDNUMINITSEED        20181029 /**< seed for random number generator, which is used to move points away from the boundary */
 #define ADJUSTFACETFACTOR          1e1  /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
 
+/* computes a facet of the convex or concave envelope of a vertex polyhedral function
+ * see (doxygen-)comment of this function in cons_expr.h
+ * (this is by intention not a doxygen comment)
+ */
 SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -11412,6 +11416,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* TODO reuse a previously constructed LP */
    SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, nvars, &lp) );
    assert(lp != NULL);
 
@@ -11566,7 +11571,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIPdebugMsg(scip, "facet for the transformed problem: ");
    for( i = 0; i < nallvars; ++i )
    {
-      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facetcoefs[i], SCIPvarGetName(vars[i]));
+      SCIPdebugMsgPrint(scip, "%3.4e * x%d + ", facetcoefs[i], i);
    }
    SCIPdebugMsgPrint(scip, "%3.4e\n", *facetconstant);
 #endif
