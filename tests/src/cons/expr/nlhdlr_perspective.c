@@ -121,7 +121,7 @@ Test(nlhdlrperspective, detect, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, (char*)"nlin1", expr1, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPaddCons(scip, cons1)  );
 
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<y>^2 + exp(<y>) + <x>^3 + <x>*<w> + <y> + <x> + exp(<x>) + 2", NULL, &expr2) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<y>^2 + exp(<y>) + <x>^3 + <x>*<w> + <y> + <x> + exp(<x>) + (<x> + <x>^2 + exp(1/<x>))^3 + 2", NULL, &expr2) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, (char*)"nlin2", expr2, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPaddCons(scip, cons2)  );
 

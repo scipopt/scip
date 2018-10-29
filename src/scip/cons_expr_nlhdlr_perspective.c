@@ -28,6 +28,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_var.h"
 #include "cons_expr_sum.h"
+#include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "perspective"
@@ -58,6 +59,8 @@ struct SCIP_ConsExpr_NlhdlrData
 /** data of a semicontinuous variable */
 struct SCIP_SCVarData
 {
+   SCIP_Real             xmin0;            /**< lower bound in the 'off' state */
+   SCIP_Real             xmax0;            /**< lower bound in the 'off' state */
    SCIP_Real             xmin;             /**< lower bound in the 'on' state */
    SCIP_Real             xmax;             /**< upper bound in the 'on' state */
    SCIP_VAR*             bvar;             /**< associated binary variable */
@@ -79,13 +82,16 @@ SCIP_Bool varIsSemicontinuous(
    if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       return FALSE;
 
-   SCIP_SCVARDATA* data = (SCIP_SCVARDATA*) SCIPhashmapGetImage(nlhdlrdata->semiContVars, var);
-   if( data != NULL && data->xmin != -SCIPinfinity(scip) && data->xmax != SCIPinfinity(scip) )
+   SCIP_SCVARDATA* data = (SCIP_SCVARDATA*) SCIPhashmapGetImage(nlhdlrdata->oldSemiContVars, var);
+   if( data != NULL && (data->xmin != -SCIPinfinity(scip) || data->xmax != SCIPinfinity(scip)) && data->xmin0 == data->xmax0 )
    {
       *bvar = data->bvar;
       return TRUE;
    }
 
+   SCIPinfoMessage(scip, NULL, "\nVar %s is not SC", SCIPvarGetName(var));
+   if( data != NULL )
+      SCIPinfoMessage(scip, NULL, ": %f, %f, %f, %f, %f, %f", data->xmin, data->xmax, data->xmin0, data->xmax0, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    return FALSE;
 }
 
@@ -109,7 +115,7 @@ SCIP_Bool varIsSemicontinuous(
    for( c = 0; c < nlhdlrdata->nvbdconss; ++c )
    {
       SCIP_CONS* vbcons = nlhdlrdata->vbdconss[c];
-      if(vbcons->consdata == NULL) continue;
+      if( vbcons->consdata == NULL ) continue;
       int bpos, cpos;
       if( SCIPgetVarsLinear(scip, vbcons)[0] == var )
       {
@@ -180,6 +186,49 @@ SCIP_RETCODE addRefterm(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE univariateExprVar(
+   SCIP*                  scip,
+   SCIP_CONSHDLR*         conshdlr,
+   SCIP_CONSEXPR_EXPR*    expr,
+   SCIP_VAR**             uvar
+   )
+{
+   *uvar = NULL;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
+   for( child = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); child = SCIPexpriteratorGetNext(it) )
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+         {
+            if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+            {
+               if( *uvar == NULL )
+                  *uvar = SCIPgetConsExprExprVarVar(child);
+               if( *uvar != SCIPgetConsExprExprVarVar(child) )
+               {
+                  *uvar = NULL;
+                  SCIPexpriteratorFree(&it);
+                  return SCIP_OKAY;
+               }
+            }
+            break;
+         }
+         default:
+            break;
+      }
+   }
+   SCIPexpriteratorFree(&it);
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -241,10 +290,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    /* TODO free the memory that has been allocated in HDLRINIT */
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrdata)->vbdconss, nlhdlrdata->nvbdconss);
-   if(nlhdlrdata->semiContVars != NULL)
+   if( nlhdlrdata->semiContVars != NULL )
       SCIPhashmapFree(&(nlhdlrdata)->semiContVars);
 
-   if(nlhdlrdata->oldSemiContVars != NULL)
+   if( nlhdlrdata->oldSemiContVars != NULL )
    {
       for( int c = 0; c < SCIPhashmapGetNEntries(nlhdlrdata->oldSemiContVars); ++c )
       {
@@ -425,11 +474,21 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
       SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
       x = SCIPgetVarVarbound(scip, conss[c]);
+#if 0
       if( SCIPgetLhsVarbound(scip, conss[c]) != 0 && SCIPgetRhsVarbound(scip, conss[c]) != 0 )
          continue;
-      SCIP_Real xmin = SCIPgetLhsVarbound(scip, conss[c]) == 0 ? -SCIPgetVbdcoefVarbound(scip, conss[c]) : -SCIPinfinity(scip);
-      SCIP_Real xmax = SCIPgetRhsVarbound(scip, conss[c]) == 0 ? -SCIPgetVbdcoefVarbound(scip, conss[c]) : SCIPinfinity(scip);
+#endif
+      SCIP_Real xmin0 = SCIPgetLhsVarbound(scip, conss[c]);
+      SCIP_Real xmax0 = SCIPgetRhsVarbound(scip, conss[c]);
+      SCIP_Real xmin = -SCIPgetVbdcoefVarbound(scip, conss[c]);
+      SCIP_Real xmax = -SCIPgetVbdcoefVarbound(scip, conss[c]);
       SCIP_VAR* bvar = SCIPgetVbdvarVarbound(scip, conss[c]);
+
+      if( SCIPvarGetLbGlobal(x) >= xmin0 )
+         xmin0 = SCIPvarGetLbGlobal(x);
+
+      if( SCIPvarGetUbGlobal(x) <= xmax0 )
+         xmax0 = SCIPvarGetUbGlobal(x);
 
       SCIP_SCVARDATA* oldvardata;
       if( nlhdlrdata->oldSemiContVars == NULL )
@@ -438,11 +497,11 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
          oldvardata = (SCIP_SCVARDATA *) SCIPhashmapGetImage(nlhdlrdata->oldSemiContVars, x);
 
       /* the variable was already detected as semicontinuous at a previous round */
-      if( oldvardata != NULL && oldvardata->xmin != -SCIPinfinity(scip) && oldvardata->xmax != SCIPinfinity(scip) )
+      if( oldvardata != NULL && (oldvardata->xmin != -SCIPinfinity(scip) || oldvardata->xmax != SCIPinfinity(scip)) && oldvardata->xmin0 == oldvardata->xmax0 )
          continue;
 
       /* the constraint does not add anything to existing semicontinuous var data */
-      if(oldvardata != NULL && oldvardata->bvar == bvar && oldvardata->xmin == xmin && oldvardata->xmax == xmax)
+      if( oldvardata != NULL && oldvardata->bvar == bvar && oldvardata->xmin == xmin && oldvardata->xmax == xmax && oldvardata->xmin0 == xmin0 && oldvardata->xmax0 == xmax0 )
          continue;
 
       SCIP_SCVARDATA* newvardata;
@@ -455,6 +514,10 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
             oldvardata->xmin = xmin;
          if( xmax < oldvardata->xmax )
             oldvardata->xmax = xmax;
+         if( xmin0 > oldvardata->xmin0 )
+            oldvardata->xmin0 = xmin0;
+         if( xmax0 < oldvardata->xmax0 )
+            oldvardata->xmax0 = xmax0;
          SCIP_CALL( SCIPhashmapInsert(nlhdlrdata->semiContVars, x, oldvardata) );
          SCIP_CALL( SCIPhashmapRemove(nlhdlrdata->semiContVars, x) );
       }
@@ -464,6 +527,8 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
          newvardata->bvar = bvar;
          newvardata->xmin = xmin;
          newvardata->xmax = xmax;
+         newvardata->xmin0 = xmin0;
+         newvardata->xmax0 = xmax0;
          SCIP_CALL( SCIPhashmapInsert(nlhdlrdata->semiContVars, x, newvardata) );
          found = TRUE;
       }
@@ -476,6 +541,10 @@ SCIP_DECL_CONSEXPR_NLHDLRUPDATE(nlhdlrUpdatePerspective)
             newvardata->xmin = xmin;
          if( xmax < newvardata->xmax )
             newvardata->xmax = xmax;
+         if( xmin0 > newvardata->xmin0 )
+            newvardata->xmin0 = xmin0;
+         if( xmax0 < newvardata->xmax0 )
+            newvardata->xmax0 = xmax0;
       }
    }
 
@@ -562,7 +631,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   if(SCIPhashmapIsEmpty(nlhdlrdata->semiContVars) )
+   if( SCIPhashmapIsEmpty(nlhdlrdata->semiContVars) )
    {
       /* No new semicontinuous variables have been found by update */
       *refexpr = expr;
@@ -651,7 +720,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    {
       child = children[c];
 
-      if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0)
+      if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
       {
          if( varIsSemicontinuous(scip, nlhdlrdata, SCIPgetConsExprExprVarVar(child), &bvar) )
          {
@@ -663,17 +732,16 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          else
             addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
-      else if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+      else if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
+               strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(child)[0]))) == 0 )
       {
          SCIP_CONSEXPR_EXPR* powbase;
          powbase = SCIPgetConsExprExprChildren(child)[0];
-         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(powbase))) != 0  )
-            continue;
          SCIP_VAR* powvar;
          powvar = SCIPgetConsExprExprVarVar(powbase);
-         if(SCIPvarGetType(powvar) != SCIP_VARTYPE_CONTINUOUS)
+         if( SCIPvarGetType(powvar) != SCIP_VARTYPE_CONTINUOUS )
             continue;
-         if( SCIPgetConsExprExprPowExponent(child) == 2) /* quadratic univariate */
+         if( SCIPgetConsExprExprPowExponent(child) == 2 ) /* quadratic univariate */
          {
             if( qvar == powvar )
             {
@@ -691,8 +759,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
                   addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
                if( qvar != NULL )
                {
-                  addRefterm(scip, conshdlr, children[qvarpos],
-                             coefs[qvarpos], refexpr, FALSE);
+                  addRefterm(scip, conshdlr, children[qvarpos], coefs[qvarpos], refexpr, FALSE);
                   qvar = NULL;
                   qvarpos = -1;
                }
@@ -707,15 +774,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
          }
       }
-      else if( strcmp("exp", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 )
+      else if( strcmp("exp", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
+               strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(child)[0]))) == 0 )
       {
          SCIP_CONSEXPR_EXPR* exppow;
          exppow = SCIPgetConsExprExprChildren(child)[0];
-         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(exppow))) != 0  )
-            continue;
          SCIP_VAR* expvar;
          expvar = SCIPgetConsExprExprVarVar(exppow);
-         if(SCIPvarGetType(expvar) != SCIP_VARTYPE_CONTINUOUS)
+         if( SCIPvarGetType(expvar) != SCIP_VARTYPE_CONTINUOUS )
             continue;
          if( varIsSemicontinuous(scip, nlhdlrdata, expvar, &bvar) )
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
@@ -723,7 +789,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
       else
-         addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
+      {
+         SCIP_VAR* uvar;
+         univariateExprVar(scip, conshdlr, child, &uvar);
+         if( uvar != NULL && varIsSemicontinuous(scip, nlhdlrdata, uvar, &bvar) )
+            addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+         else
+            addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
+      }
    }
 
 
@@ -738,11 +811,11 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
       SCIPfreeBlockMemoryArrayNull(scip, &coefs, 1);
    }
 
-
+#if 0
    SCIPinfoMessage(scip, NULL, "\n\nrefexpr:\n");
    SCIPprintConsExprExpr(scip, conshdlr, *refexpr, NULL);
    SCIPinfoMessage(scip, NULL, "\n\n");
-
+#endif
 
    /* TODO create expression and store it in refexpr */
 
@@ -753,7 +826,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
    }
 
    /* set refexpr to expr and capture it if no reformulation is possible */
-   if(*refexpr == NULL)
+   if( *refexpr == NULL )
    {
       *refexpr = expr;
       SCIPcaptureConsExprExpr(*refexpr);
