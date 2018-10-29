@@ -23,11 +23,12 @@
 #include "scip/cons_expr_nlhdlr_soc.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "soc"
 #define NLHDLR_DESC         "soc nonlinear handler"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_PRIORITY     100
 
 /*
  * Data structures
@@ -36,6 +37,10 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
+   SCIP_CONSEXPR_EXPR**  exprs;             /**< expressions that appear in the SQRT */
+   SCIP_Real*            coefs;             /**< coefficients of each expression */
+   int                   nexprs;            /**< total number of expressions */
+   SCIP_Real             constant;          /**< constant term in the SQRT */
 };
 
 /** nonlinear handler data */
@@ -47,6 +52,70 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
+/** helper method to create nonlinear handler expression data */
+static
+SCIP_RETCODE createNlhdlrExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions */
+   SCIP_Real*            coefs,              /**< coefficients for each expression */
+   int                   nexprs,             /**< total number of expressions */
+   SCIP_Real             constant,           /**< constant */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
+   )
+{
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(exprs != NULL);
+   assert(coefs != NULL);
+   assert(nexprs > 1);
+   assert(nlhdlrexprdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprs, exprs, nexprs) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->coefs, coefs, nexprs) );
+   (*nlhdlrexprdata)->nexprs = nexprs;
+   (*nlhdlrexprdata)->constant = constant;
+
+   /* capture expressions */
+   for( i = 0; i < nexprs; ++i )
+   {
+      assert(exprs[i] != NULL);
+      SCIPcaptureConsExprExpr(exprs[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** helper method to free nonlinear handler expression data */
+static
+SCIP_RETCODE freeNlhdlrExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nonlinear handler expression data */
+   )
+{
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata != NULL);
+   assert((*nlhdlrexprdata)->nexprs > 1);
+
+   /* release expressions */
+   for( i = 0; i < (*nlhdlrexprdata)->nexprs; ++i )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*nlhdlrexprdata)->exprs[i]) );
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->coefs, (*nlhdlrexprdata)->nexprs);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprs, (*nlhdlrexprdata)->nexprs);
+   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
+
 /** helper function to detect || sum_i (expr_i)^2 + const || <= auxvar */
 static
 SCIP_RETCODE detectSocNorm(
@@ -54,6 +123,7 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -94,10 +164,15 @@ SCIP_RETCODE detectSocNorm(
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], NULL) );
    }
 
    *success = TRUE;
+
+   /* create and store nonlinear handler expression data */
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, children, SCIPgetConsExprExprSumCoefs(child),
+      nchildren, SCIPgetConsExprExprSumConstant(child), nlhdlrexprdata) );
+   assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
@@ -114,6 +189,7 @@ SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -121,6 +197,7 @@ SCIP_RETCODE detectSOC(
 
    assert(expr != NULL);
    assert(auxvar != NULL);
+   assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
 
    /* no expression constraint handler -> skip */
@@ -132,7 +209,7 @@ SCIP_RETCODE detectSOC(
    }
 
    /* check whether expression is given as */
-   SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, success) );
+   SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
 }
@@ -171,18 +248,15 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
 
 
 /** callback to free expression specific data */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(*nlhdlrexprdata != NULL);
+
+   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrFreeExprDataSoc NULL
-#endif
 
 
 /** callback to be called in initialization */
@@ -232,7 +306,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 
    if( isroot )
    {
-      SCIP_CALL( detectSOC(scip, expr, auxvar, success) );
+      SCIP_CALL( detectSOC(scip, expr, auxvar, nlhdlrexprdata, success) );
    }
    else
    {
@@ -247,41 +321,58 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->exprs != NULL);
+   assert(nlhdlrexprdata->coefs != NULL);
+   assert(nlhdlrexprdata->nexprs > 1);
+
+   /* compute sum_i coef_i expr_i^2 + constant */
+   *auxvalue = nlhdlrexprdata->constant;
+
+   for( i = 0; i < nlhdlrexprdata->nexprs; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_VAR* var;
+
+      child = nlhdlrexprdata->exprs[i];
+      assert(child != NULL);
+
+      var = SCIPgetConsExprExprAuxVar(child);
+      assert(var != NULL);
+
+      *auxvalue += nlhdlrexprdata->coefs[i] * SQR(SCIPgetSolVal(scip, sol, var));
+   }
+   assert(*auxvalue >= 0.0);
+
+   /* compute ||sum_i coef_i expr_i^2 + constant|| */
+   *auxvalue = SQRT(*auxvalue);
 
    return SCIP_OKAY;
 }
 
 
 /** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(nlhdlrexprdata != NULL);
+
+   /* create disaggregation variables */
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrInitSepaSoc NULL
-#endif
 
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(nlhdlrexprdata != NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrExitSepaSoc NULL
-#endif
 
 
 /** nonlinear handler separation callback */
