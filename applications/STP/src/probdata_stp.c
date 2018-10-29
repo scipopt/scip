@@ -2198,28 +2198,14 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    /* set solving mode */
-   if( !(graph->stp_type == STP_SPG) )
-      probdata->mode = MODE_CUT;
+   probdata->mode = MODE_CUT;
 
-   assert(mode != 'p' && "pricing currently not supported\n");
-
+   assert(mode != 'p' && "pricing mode currently not supported\n");
 
    if( mode == 'f' )
-   {
       probdata->mode = MODE_FLOW;
-   }
-   else if(  )
-   {
-      assert(graph->stp_type == STP_SPG);
-      probdata->mode = MODE_PRICE;
-   }
    else
-   {
       assert(mode == 'c');
-      probdata->mode = MODE_CUT;
-   }
-
-   assert(graph != NULL );
 
    /* print the graph */
    if( print )
