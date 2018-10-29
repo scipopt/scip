@@ -13,13 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   duplicate.c
- * @brief  tests duplication of expressions
+/**@file   presolve.c
+ * @brief  tests presolving methods of the expression constraint handler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.h"
+#include "scip/scip.h"
+#include "scip/cons_expr.c"
+
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -38,14 +40,14 @@ void setup(void)
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   cr_assert(conshdlr != NULL);
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -10.0, 10.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
@@ -54,30 +56,58 @@ void setup(void)
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-Test(duplicate, duplicate, .init = setup, .fini = teardown)
+/*
+ * define test suite
+ */
+
+TestSuite(presolve, .init = setup, .fini = teardown);
+
+/*
+ * define tests
+ */
+
+/* tests whether constraints of the form g(x) <= rhs and g(x) >= lhs are merged correctly */
+Test(presolve, mergeconss)
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* duplicate;
-   const char* input = "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3";
+   SCIP_CONS* conss[3];
+   SCIP_Real lhss[3] = {-SCIPinfinity(scip), 1.0, 0.0};
+   SCIP_Real rhss[3] = {5.0, SCIPinfinity(scip), 4.0};
+   SCIP_Bool success;
+   int c;
 
-   /* create expression from input string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
+   /* create expression for each constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>*<z>", NULL, &expr) );
 
-   /* duplicate expression */
-   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
+   /* create constraints */
+   for( c = 0; c < 3; ++c )
+   {
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[c], "cons", expr, lhss[c], rhss[c]) );
+   }
 
-   /* check that they are the same */
-   cr_assert_eq(SCIPcompareConsExprExprs(expr, duplicate), 0);
-
-   /* release expressions */
+   /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &duplicate) );
+
+   /* merge constraints */
+   SCIP_CALL( presolMergeConss(scip, conss, 3, &success) );
+   cr_expect(success);
+   cr_expect(SCIPgetLhsConsExpr(scip, conss[0]) == 1.0);
+   cr_expect(SCIPgetRhsConsExpr(scip, conss[0]) == 4.0);
+   cr_expect(!SCIPconsIsDeleted(conss[0]));
+   cr_expect(SCIPconsIsDeleted(conss[1]));
+   cr_expect(SCIPconsIsDeleted(conss[2]));
+
+   /* release constraints */
+   for( c = 0; c < 3; ++c )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
+   }
 }

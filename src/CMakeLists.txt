@@ -225,6 +225,7 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
+    scip/sepa_rlt.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/benders_default.c
@@ -493,13 +494,16 @@ set(scipheaders
     scip/cons_disjunction.h
     scip/cons_expr.h
     scip/cons_expr_abs.h
+    scip/cons_expr_cos.h
     scip/cons_expr_exp.h
     scip/cons_expr_log.h
     scip/cons_expr_pow.h
     scip/cons_expr_product.h
+    scip/cons_expr_sin.h
     scip/cons_expr_sum.h
     scip/cons_expr_value.h
     scip/cons_expr_var.h
+    scip/cons_expr_nlhdlr_bilinear.h
     scip/cons_expr_nlhdlr_convex.h
     scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
@@ -780,6 +784,7 @@ set(scipheaders
     scip/sepa_mcf.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
+    scip/sepa_rlt.h
     scip/sepastore.h
     scip/sepa_strongcg.h
     scip/sepa_zerohalf.h

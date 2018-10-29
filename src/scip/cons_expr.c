@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1288,8 +1288,8 @@ SCIP_RETCODE reversePropConss(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* propagate active and non-deleted constraints only */
-      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
+      /* propagate active, non-deleted, propagation-enabled constraints only */
+      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
          continue;
 
       /* skip expressions that could not have been tightened, unless allexprs is set */
@@ -1481,37 +1481,42 @@ SCIP_RETCODE propConss(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
+         /* skip deleted, non-active, or propagation-disabled constraints */
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
+            continue;
+
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
+          * in other rounds, we skip already propagated constraints
           */
-         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
+         if( consdata->ispropagated && roundnr > 0 )
+            continue;
+
+         SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
+         SCIPdebugPrintCons(scip, conss[i], NULL);
+
+         cutoff = FALSE;
+         redundant = FALSE;
+         ntightenings = 0;
+
+         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
+            &redundant, &ntightenings) );
+         assert(ntightenings >= 0);
+         *nchgbds += ntightenings;
+
+         if( cutoff )
          {
-            SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
-            SCIPdebugPrintCons(scip, conss[i], NULL);
-
-            cutoff = FALSE;
-            redundant = FALSE;
-            ntightenings = 0;
-
-            SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
-               &redundant, &ntightenings) );
-            assert(ntightenings >= 0);
-            *nchgbds += ntightenings;
-
-            if( cutoff )
-            {
-               SCIPdebugMsg(scip, " -> cutoff\n");
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            if( ntightenings > 0 )
-               *result = SCIP_REDUCEDDOM;
-            if( redundant )
-               *ndelconss += 1;
-
-            /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
-            consdata->ispropagated = TRUE;
+            SCIPdebugMsg(scip, " -> cutoff\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
          }
+         if( ntightenings > 0 )
+            *result = SCIP_REDUCEDDOM;
+         if( redundant )
+            *ndelconss += 1;
+
+         /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
+         consdata->ispropagated = TRUE;
       }
 
       /* apply backward propagation; mark constraint as propagated */
@@ -1711,6 +1716,7 @@ SCIP_RETCODE detectNlhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
+   SCIP_Bool             isroot,             /**< expression is a root expression, that is, it defines a constraint */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess,   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata, /**< buffer for exprdata of nlhdlrs */
    SCIP_Bool*            infeasible          /**< buffer to indicate whether infeasibility has been detected */
@@ -1752,8 +1758,8 @@ SCIP_RETCODE detectNlhdlr(
    enforcedbelow = (SCIPgetConsExprExprNLocksPos(expr) == 0); /* no need for underestimation */
    enforcedabove = (SCIPgetConsExprExprNLocksNeg(expr) == 0); /* no need for overestimation */
 
-   SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p (%s); start with below %d above %d\n",
-      (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
+   SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); start with below %d above %d\n",
+      isroot ? "root" : "non-root", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), enforcedbelow, enforcedabove);
 
    for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
@@ -1773,7 +1779,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrenforcemethods = enforcemethods;
       nlhdlrenforcedbelow = enforcedbelow;
       nlhdlrenforcedabove = enforcedabove;
-      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, isroot, &nlhdlrenforcemethods, &nlhdlrenforcedbelow, &nlhdlrenforcedabove, &success, &nlhdlrexprdata) );
 
       /* detection is only allowed to augment to the various parameters (enforce "more", add "more" methods) */
       assert(nlhdlrenforcemethods >= enforcemethods);
@@ -1942,49 +1948,10 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* create auxiliary variable for root expression */
+         /* ensure auxiliary variable for root expression exists (not always necessary, but it simplifies things) */
          SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
          assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
-      }
 
-      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
-      expr = SCIPexpriteratorGetCurrent(it);
-      while( !SCIPexpriteratorIsEnd(it) )
-      {
-         if( expr->nenfos > 0 )
-         {
-            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
-             * then also the subtree has been investigated already and we can stop iterating further down
-             */
-            expr = SCIPexpriteratorSkipDFS(it);
-            continue;
-         }
-
-         /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
-          *   an auxvar equals (or approximates) to value of this expression
-          *   thus, we need to find nlhdlrs
-          * during presolve: we do detect for all expressions for now, expecting the handler to only become
-          *   active if they want to contribute in propagation
-          */
-         if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-         {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
-
-            if( *infeasible )
-               break;
-         }
-
-         expr = SCIPexpriteratorGetNext(it);
-      }
-
-      if( *infeasible )
-      {
-         SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
-         break;
-      }
-
-      if( consdata->expr->auxvar != NULL )
-      {
          /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
          SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, FALSE, infeasible, NULL) );
          if( *infeasible )
@@ -2001,6 +1968,51 @@ SCIP_RETCODE detectNlhdlrs(
                consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
             break;
          }
+      }
+
+      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* TODO init once for all conss */
+      expr = SCIPexpriteratorGetCurrent(it);
+      while( !SCIPexpriteratorIsEnd(it) )
+      {
+         if( expr->nenfos > 0 )
+         {
+            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+             * then also the subtree has been investigated already and we can stop iterating further down
+             * HOWEVER: most likely we have been running DETECT with isroot=FALSE, which may interest less nlhdlrs
+             * thus, if expr is the root expression, then rerun DETECT
+             */
+            if( expr == consdata->expr )
+            {
+               SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+            }
+            else
+            {
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+         }
+
+         /* during solve: if there is an auxiliary variable here, then there is some-one requiring that
+          *   an auxvar equals (or approximates) to value of this expression or we are at the root expression (expr==consdata->expr)
+          *   thus, we need to find nlhdlrs
+          * during presolve: we do detect for all expressions for now, expecting the handler to only become
+          *   active if they want to contribute in propagation
+          */
+         if( expr->auxvar != NULL || SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+         {
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr, nlhdlrssuccess, nlhdlrssuccessexprdata, infeasible) );
+
+            if( *infeasible )
+               break;
+         }
+
+         expr = SCIPexpriteratorGetNext(it);
+      }
+
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
+         break;
       }
    }
 
@@ -2032,7 +2044,7 @@ SCIP_RETCODE storeVarExprs(
 {
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs != NULL )
       return SCIP_OKAY;
 
@@ -4793,8 +4805,8 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip constraints that are not enabled */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
+      /* skip constraints that are not enabled, deleted, or have separation disabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
@@ -4887,7 +4899,7 @@ SCIP_RETCODE enforceConstraints(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
       consdata = SCIPconsGetData(conss[c]);
 
       /* compute max violation */
@@ -5204,6 +5216,106 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** merges constraints that have the same root expression */
+static
+SCIP_RETCODE presolMergeConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            success             /**< pointer to store whether at least one constraint could be deleted */
+   )
+{
+   SCIP_HASHMAP* expr2cons;
+   SCIP_Bool* updatelocks;
+   int* nlockspos;
+   int* nlocksneg;
+   int c;
+
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* not enough constraints available */
+   if( nconss <= 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2cons, SCIPblkmem(scip), nconss) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &updatelocks, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlockspos, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksneg, nconss) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      /* ignore deleted constraints */
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* add expression to the hash map if not seen so far */
+      if( !SCIPhashmapExists(expr2cons, (void*)consdata->expr) )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(expr2cons, (void*)consdata->expr, c) );
+      }
+      else
+      {
+         SCIP_CONSDATA* imgconsdata;
+         int idx;
+
+         idx = SCIPhashmapGetImageInt(expr2cons, (void*)consdata->expr);
+         assert(idx >= 0 && idx < nconss);
+
+         imgconsdata = SCIPconsGetData(conss[idx]);
+         assert(imgconsdata != NULL);
+         assert(imgconsdata->expr == consdata->expr);
+
+         SCIPdebugMsg(scip, "merge constraint %g <= %s <= %g with %g <= %s <= %g\n", consdata->lhs,
+            SCIPconsGetName(conss[c]), consdata->rhs, imgconsdata->lhs, SCIPconsGetName(conss[idx]), imgconsdata->rhs);
+
+         /* check whether locks need to be updated */
+         if( !updatelocks[idx] && ((SCIPisInfinity(scip, -imgconsdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs))
+            || (SCIPisInfinity(scip, imgconsdata->rhs) && !SCIPisInfinity(scip, consdata->rhs))) )
+         {
+            nlockspos[idx] = imgconsdata->nlockspos;
+            nlocksneg[idx] = imgconsdata->nlocksneg;
+            SCIP_CALL( addLocks(scip, conss[idx], -imgconsdata->nlockspos, -imgconsdata->nlocksneg) );
+            updatelocks[idx] = TRUE;
+         }
+
+         /* update constraint sides */
+         imgconsdata->lhs = MAX(imgconsdata->lhs, consdata->lhs);
+         imgconsdata->rhs = MIN(imgconsdata->rhs, consdata->rhs);
+
+         /* delete constraint */
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         *success = TRUE;
+      }
+   }
+
+   /* restore locks of updated constraints */
+   if( *success )
+   {
+      for( c = 0; c < nconss; ++c )
+      {
+         if( updatelocks[c] )
+         {
+            SCIP_CALL( addLocks(scip, conss[c], nlockspos[c], nlocksneg[c]) );
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &nlocksneg);
+   SCIPfreeBufferArray(scip, &nlockspos);
+   SCIPfreeBufferArray(scip, &updatelocks);
+   SCIPhashmapFree(&expr2cons);
+
+   return SCIP_OKAY;
+}
+
 /** print statistics for expression handlers */
 static
 void printExprHdlrStatistics(
@@ -5221,8 +5333,8 @@ void printExprHdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "Simplified", "SepaCalls", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
+   SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "Simplified", "SepaCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -5233,6 +5345,7 @@ void printExprHdlrStatistics(
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplifycalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplified);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
@@ -5263,7 +5376,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "#IntEval", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -5276,6 +5389,7 @@ void printNlhdlrStatistics(
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetections);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
@@ -5663,6 +5777,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       assert(exprhdlr != NULL);
 
       exprhdlr->nsepacalls = 0;
+      exprhdlr->nintevalcalls = 0;
       exprhdlr->npropcalls = 0;
       exprhdlr->ncutsfound = 0;
       exprhdlr->ncutoffs = 0;
@@ -5684,6 +5799,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       assert(nlhdlr != NULL);
 
       nlhdlr->nsepacalls = 0;
+      nlhdlr->nintevalcalls = 0;
       nlhdlr->npropcalls = 0;
       nlhdlr->ncutsfound = 0;
       nlhdlr->ncutoffs = 0;
@@ -5913,6 +6029,9 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    /* constraint locks should have been removed */
    assert((*consdata)->nlockspos == 0);
    assert((*consdata)->nlocksneg == 0);
+
+   /* free variable expressions */
+   SCIP_CALL( freeVarExprs(scip, *consdata) );
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
 
@@ -6281,6 +6400,16 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    {
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
+   }
+
+   /* merge constraints with the same root expression */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      SCIP_Bool success;
+
+      SCIP_CALL( presolMergeConss(scip, conss, nconss, &success) );
+      if( success )
+         *result = SCIP_SUCCESS;
    }
 
    /* propagate constraints */
@@ -6657,32 +6786,55 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   /* check whether array is too small in order to store all variables */
+   if( varssize < consdata->nvarexprs )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      vars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      assert(vars[i] != NULL);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetVarsExpr NULL
-#endif
+
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 0 /* TODO */
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   *nvars = consdata->nvarexprs;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetNVarsExpr NULL
-#endif
+
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 #if 0 /* TODO? */
@@ -6697,6 +6849,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExpr)
 #else
 #define consGetDiveBdChgsExpr NULL
 #endif
+
 
 /** output method of statistics table to output file stream 'file' */
 static
@@ -7425,6 +7578,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr)
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->intevaltime) );
       SCIP_CALL( expr->exprhdlr->inteval(scip, expr, interval, intevalvar, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->intevaltime) );
+
+      ++expr->exprhdlr->nintevalcalls;
    }
 
    return SCIP_OKAY;
@@ -8558,7 +8713,7 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    assert(expr != NULL);
 
    /* call dot to generate postscript output and show it via ghostview */
-   f = popen("dot -Tps | gv -", "w");
+   f = popen("dot -Tps | gv --media=a3 -", "w");
    if( f == NULL )
    {
       SCIPerrorMessage("Calling popen() failed");
@@ -9364,6 +9519,8 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    SP11: no two children are expr*log(expr)
  *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
  *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
+ *    SP12: if it has two children, then neither of them is a sum (expand sums)
+ *    SP13: no child is a sum with a single term
  * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
@@ -10753,7 +10910,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
    assert(success != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
+   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, isroot, enforcemethods, enforcedbelow, enforcedabove, success, nlhdlrexprdata) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
 
    if( *success )
@@ -10810,6 +10967,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(SCIPintevalConsExprNlhdlr)
       SCIP_CALL( SCIPstartClock(scip, nlhdlr->intevaltime) );
       SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, intevalvar, intevalvardata) );
       SCIP_CALL( SCIPstopClock(scip, nlhdlr->intevaltime) );
+
+      ++nlhdlr->nintevalcalls;
    }
 
    return SCIP_OKAY;
@@ -10894,11 +11053,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
    assert(nlhdlr != NULL);
    assert(nlhdlr->sepatime != NULL);
    assert(result != NULL);
+   assert(ncuts != NULL);
 
+   *ncuts = 0;
    if( nlhdlr->sepa == NULL )
    {
       *result = SCIP_DIDNOTRUN;
-      *ncuts = 0;
       return SCIP_OKAY;
    }
 
