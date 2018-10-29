@@ -40,4 +40,4 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_DEFAULT_H__ */
+#endif /* __SCIP_CONS_EXPR_NLHDLR_XZY_H__ */
