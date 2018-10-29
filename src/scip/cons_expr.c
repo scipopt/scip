@@ -5438,11 +5438,112 @@ void printConshdlrStatistics(
  * vertex polyhdral separation
  */
 
-static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+#define MAXVERTEXPOLYHEDREALFACETDIM 14 /**< maximum dimension of vertex-polyhedral function for which to compute a facet */
+static const unsigned int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
+/** builds LP used to compute facets of the convex envelope of vertex-polyhedral functions */
+static
+SCIP_RETCODE buildVertexPolyhedralSeparationLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of (unfixed) variables in vertex-polyhedral functions */
+   SCIP_LPI**            lp                  /**< pointer to store created LP */
+   )
+{
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   SCIP_Real* val;
+   int* beg;
+   int* ind;
+   int nnonz;
+   int ncols;
+   int nrows;
+   int i;
+   int k;
+
+   assert(scip != NULL);
+   assert(lp != NULL);
+   assert(0 < nvars && nvars < MAXVERTEXPOLYHEDREALFACETDIM);
+
+   SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of vertex-polyhedral function\n");
+
+   /* create lpi to store the LP */
+   SCIP_CALL( SCIPlpiCreate(lp, SCIPgetMessagehdlr(scip), "facet finding LP", SCIP_OBJSEN_MINIMIZE) );
+
+   nrows = nvars + 1;
+   ncols = poweroftwo[nrows - 1];
+   nnonz = (ncols * (nrows + 1)) / 2;
+   k = 0;
+
+   /* allocate necessary memory; set obj, lb, and ub to zero */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &obj, ncols) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &lb, ncols) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &ub, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &beg, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &val, nnonz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
+
+   /* calculate nonzero entries in the LP */
+   for( i = 0; i < ncols; ++i )
+   {
+      int row;
+      unsigned int a;
+
+      SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
+      beg[i] = k;
+      row = 0;
+
+      /* iterate through the bit representation of i */
+      a = 1;
+      while( a <= (unsigned int)i )
+      {
+         if( (a & i) != 0 )
+         {
+            val[k] = 1.0;
+            ind[k] = row;
+
+            SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", row, i, k);
+
+            ++k;
+         }
+
+         a <<= 1;
+         ++row;
+         assert(0 <= row && row < MAXVERTEXPOLYHEDREALFACETDIM);
+         assert(poweroftwo[row] == a);
+      }
+
+      /* put 1 as a coefficient for sum_{i} \lambda_i = 1 row (last row) */
+      val[k] = 1.0;
+      ind[k] = nrows - 1;
+      ++k;
+      SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
+   }
+   assert(k == nnonz);
+
+   /* add all columns to the LP interface; CPLEX needs the row to exist before adding columns, so we create the rows with
+    * dummy sides; note that the assert is not needed once somebody fixes the LPI
+    * FIXME: was the LPI fixed???
+    */
+   assert(nrows <= ncols);
+   SCIP_CALL( SCIPlpiAddRows(*lp, nrows, obj, obj, NULL, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddCols(*lp, ncols, obj, lb, ub, NULL, nnonz, beg, ind, val) );
+
+   /* free allocated memory */
+   SCIPfreeBufferArray(scip, &ind);
+   SCIPfreeBufferArray(scip, &val);
+   SCIPfreeBufferArray(scip, &beg);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
+
+   return SCIP_OKAY;
+}
+
+#if 0
 /** the given facet might not be a valid under(over)estimator, because of numerics and bad fixings; we compute \f$
  * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ are the
- * vertices of the domain, see separatePointProduct
+ * vertices of the domain
  */
 static
 SCIP_Real computeMaxFacetError(
@@ -5537,7 +5638,7 @@ SCIP_Real computeMaxFacetError(
 
    return maxerror;
 }
-
+#endif
 
 /** @} */
 
@@ -11251,16 +11352,21 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
 
 #define MAXPERTURBATION            1e-3 /**< maximum perturbation */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
-static
+#define RANDNUMINITSEED        20181029 /**< seed for random number generator, which is used to move points away from the boundary */
+
 SCIP_Real SCIPcomputeFacetVertexPolyhedral(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
    SCIP_DECL_VERTEXPOLYFUN((*function)),     /**< pointer to vertex polyhedral function */
    void*                 fundata,            /**< data for function evaluation (can be NULL) */
    SCIP_Real*            xstar,              /**< point to be separated */
    SCIP_Real*            box,                /**< box where to compute facet: should be lb_1, ub_1, lb_2, ub_2... */
-   int                   nallvars            /**< half of the length of box */
+   int                   nallvars,           /**< half of the length of box */
+   SCIP_Real             targetvalue,        /**< target value: no need to compute facet if value in xstar would be worse than this value */
+   SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
+   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
+   SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
 )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -11278,6 +11384,18 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    int i;
    int nvars; /* number of nonfixed variables */
    SCIP_Real* corner;
+   SCIP_Real facetvalue;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(function != NULL);
+   assert(xstar != NULL);
+   assert(box != NULL);
+   assert(success != NULL);
+   assert(facetcoefs != NULL);
+   assert(facetconstant != NULL);
+
+   *success = FALSE;
 
    /* identify fixed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &nonfixedpos, nallvars) );
@@ -11286,16 +11404,21 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    {
       if( SCIPisFeasEQ(scip, box[2 * i], box[2 * i + 1]) )
          continue;
-      nonfixedpos[i] = nvars;
+      nonfixedpos[nvars] = i;
       nvars++;
    }
-   // check whether number of points too large
 
-   assert(conshdlr != NULL);
+   /* check whether number of variables is too large */
+   if( nvars > MAXVERTEXPOLYHEDREALFACETDIM )
+   {
+      SCIPfreeBufferArray(scip, &nonfixedpos);
+      return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   // get lp, get randnumgen
+   SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, nvars, &lp) );
    assert(lp != NULL);
 
    /* get number of cols and rows of separation lp */
@@ -11332,7 +11455,8 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       {
          int varpos = nonfixedpos[j];
          /* if j'th bit of row index i is set, then take upper bound on var j, otherwise lower bound var j
-          * we check this by shifting i for j positions to the right and checking whether the j'th bit is set */
+          * we check this by shifting i for j positions to the right and checking whether the last bit is set
+          */
          if( ((unsigned int)i >> j) & 0x1 )
             corner[varpos] = box[2 * varpos + 1]; /* ub of var */
          else
@@ -11344,18 +11468,21 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       funvals[i] = i < ncorners ? function(corner, nvars, fundata) : 0.0;
       inds[i] = i;
 
-      /* update bounds; variables that are not in the LP are get fixed to 0 */
+      /* update bounds; variables that are not in the LP get fixed to 0 */
       lbs[i] = 0.0;
       ubs[i] = i < ncorners ? 1.0 : 0.0;
 
       SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lbs[i], ubs[i], funvals[i]);
 
-      if( SCIPisInfinity(scip, REALABS(funvals[i])) )
+      if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )
       {
          SCIPdebugMsg(scip, "cannot compute underestimator; function value at corner is too large %g\n", funvals[i]);
          goto CLEANUP;
       }
    }
+
+   /* create random number generater */
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, RANDNUMINITSEED, TRUE) );
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
    for( i = 0; i < nrows; ++i )
@@ -11373,14 +11500,14 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
          solval = xstar[varpos];
 
          /* explicitly handle solution which violate bounds of variables (this can happen because of tolerances) */
-         if( solval < lb )
+         if( solval <= lb )
             aux[i] = 0.0;
-         else if( solval > ub )
+         else if( solval >= ub )
             aux[i] = 1.0;
          else
             aux[i] = (solval - lb) / (ub - lb);
 
-         /* perturb point to hopefuly obtain a facet of the convex envelope */
+         /* perturb point to hopefully obtain a facet of the convex envelope */
          if( aux[i] == 1.0 )
             aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
          else if( aux[i] == 0.0 )
@@ -11409,6 +11536,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lbs, ubs) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
+   /* TODO use targetvalue to set objective limit? */
    /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
    /*
@@ -11422,14 +11550,18 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    {
       SCIP_CALL( SCIPlpiSolvePrimal(lp) );
    }
-   assert(SCIPlpiIsOptimal(lp));
-   /* @todo: check solution status */
+   if( !SCIPlpiIsPrimalFeasible(lp) )
+   {
+      SCIPdebugMsg(scip, "LP not solved to primal feasibility, aborting.\n");
+      goto CLEANUP;
+   }
 
    /* get dual solution (facet of convex envelope); again, we have to be careful since the LP can have more rows and
     * columns than needed, in particular, \bar \beta is the last dual multiplier
     */
    SCIP_CALL( SCIPlpiGetSol(lp, NULL, NULL, aux, NULL, NULL) );
 
+   BMSclearMemoryArray(facetcoefs, nallvars);
    for( i = 0; i < nvars; ++i )
       facetcoefs[nonfixedpos[i]] = aux[i];
    /* last dual multiplier is the constant */
@@ -11472,7 +11604,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       /* evaluate */
       facetvalue += facetcoefs[varpos] * xstar[varpos];
 
-      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facetcoefs[varpos], SCIPvarGetName(vars[varpos]));
+      SCIPdebugMsgPrint(scip, "%3.4e * x%d + ", facetcoefs[varpos], varpos);
    }
    SCIPdebugMsgPrint(scip, "%3.4e ", *facetconstant);
 
@@ -11493,6 +11625,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       goto CLEANUP;
    }
 
+#if 0 /* TODO */
    assert(!SCIPisZero(scip, midval));
 
    /*
@@ -11528,6 +11661,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       if( overestimate == (facetvalue > targetvalue) )
          goto CLEANUP;
    }
+#endif
 
    /* if we made it until here, then we have a nice facet */
    *success = TRUE;
@@ -11536,12 +11670,15 @@ CLEANUP:
 
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &corner);
-   SCIPfreeBufferArray(scip, &ub);
-   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &lbs);
+   SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &inds);
-
    SCIPfreeBufferArray(scip, &aux);
    SCIPfreeBufferArray(scip, &funvals);
+   SCIPfreeBufferArray(scip, &nonfixedpos);
+
+   SCIPfreeRandom(scip, &randnumgen);
+   SCIP_CALL( SCIPlpiFree(&lp) );
 
    return SCIP_OKAY;
 }

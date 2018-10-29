@@ -1342,6 +1342,22 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 /** @} */
 
+EXTERN
+SCIP_Real SCIPcomputeFacetVertexPolyhedral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_DECL_VERTEXPOLYFUN((*function)),     /**< pointer to vertex polyhedral function */
+   void*                 fundata,            /**< data for function evaluation (can be NULL) */
+   SCIP_Real*            xstar,              /**< point to be separated */
+   SCIP_Real*            box,                /**< box where to compute facet: should be lb_1, ub_1, lb_2, ub_2... */
+   int                   nallvars,           /**< half of the length of box */
+   SCIP_Real             targetvalue,        /**< target value: no need to compute facet if value in xstar would be worse than this value */
+   SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
+   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
+   SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
+);
+
 #ifdef __cplusplus
 }
 #endif
