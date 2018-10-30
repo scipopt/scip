@@ -43,6 +43,10 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real             constant;          /**< constant term in the SQRT */
    SCIP_VAR*             rhsvar;            /**< right-hand side variable */
    SCIP_Real             rhscoef;           /**< coefficient of right-hand side variable */
+
+   /* variables for disaggregation; the entry (nexprs+1) corresponds to the constant */
+   SCIP_VAR**            disvars;       /**< disaggregation variables for each expression */
+   int                   ndisvars;      /**< total number of disaggregation variables */
 };
 
 /** nonlinear handler data */
@@ -126,6 +130,75 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->coefs, (*nlhdlrexprdata)->nexprs);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprs, (*nlhdlrexprdata)->nexprs);
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
+
+/** helper method to create variables for the cone disaggregation */
+static
+SCIP_RETCODE createDisaggrVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   )
+{
+   SCIP_VAR*  aggvars[2];
+   SCIP_Real  scalars[2];
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Bool success;
+   SCIP_Bool infeas;
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+
+   /* check whether constant has a separate entry */
+   nlhdlrexprdata->ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, nlhdlrexprdata->ndisvars) );
+
+   /* create and multi-aggregate variables */
+   aggvars[0] = nlhdlrexprdata->rhsvar;
+   scalars[0] = nlhdlrexprdata->rhscoef;
+   for( i = 0; i < nlhdlrexprdata->nexprs; ++i )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*)expr, i);
+      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
+   }
+
+   /* add constant <= rhscoef * rhvar * z_i */
+   if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*)expr);
+      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[nlhdlrexprdata->ndisvars - 1], name, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[nlhdlrexprdata->ndisvars - 1]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** helper method to free variables for the cone disaggregation */
+static
+SCIP_RETCODE freeDisaggrVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   )
+{
+   int i;
+
+   assert(nlhdlrexprdata != NULL);
+
+   /* release variables */
+   for( i = 0; i < nlhdlrexprdata->ndisvars; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
+   }
+
+   /* free memory */
+   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, nlhdlrexprdata->ndisvars);
 
    return SCIP_OKAY;
 }
@@ -378,7 +451,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
 
-   /* create disaggregation variables */
+   /* create variables for cone disaggregation */
+   SCIP_CALL( createDisaggrVars(scip, expr, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
@@ -389,6 +463,9 @@ static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
+
+   /* free variable for cone disaggregation */
+   SCIP_CALL( freeDisaggrVars(scip, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
