@@ -130,7 +130,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    return SCIP_OKAY;
 }
 
-/** helper function to detect || sum_i (expr_i)^2 + const || <= auxvar */
+/** helper method to detect SQRT(sum_i (expr_i)^2 + const) <= auxvar */
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
