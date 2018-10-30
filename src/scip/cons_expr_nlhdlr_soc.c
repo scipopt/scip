@@ -342,6 +342,11 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    assert(nlhdlrexprdata->coefs != NULL);
    assert(nlhdlrexprdata->nexprs > 1);
 
+   /*
+    * TODO the following code is valid if the detected expression is of the form || * || <= auxvar; however, it is not
+    *      clear to me what needs to be evaluated if the original expression was quadratic
+    */
+
    /* compute sum_i coef_i expr_i^2 + constant */
    *auxvalue = nlhdlrexprdata->constant;
 
@@ -360,7 +365,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    }
    assert(*auxvalue >= 0.0);
 
-   /* compute ||sum_i coef_i expr_i^2 + constant|| */
+   /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
    *auxvalue = SQRT(*auxvalue);
 
    return SCIP_OKAY;
