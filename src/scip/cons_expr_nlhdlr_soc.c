@@ -44,9 +44,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_VAR*             rhsvar;            /**< right-hand side variable */
    SCIP_Real             rhscoef;           /**< coefficient of right-hand side variable */
 
-   /* variables for disaggregation; the entry (nexprs+1) corresponds to the constant */
-   SCIP_VAR**            disvars;       /**< disaggregation variables for each expression */
-   int                   ndisvars;      /**< total number of disaggregation variables */
+   /* variables for cone disaggregation */
+   SCIP_VAR**            disvars;       /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
 };
 
 /** nonlinear handler data */
@@ -147,15 +146,16 @@ SCIP_RETCODE createDisaggrVars(
    char name[SCIP_MAXSTRLEN];
    SCIP_Bool success;
    SCIP_Bool infeas;
+   int size;
    int i;
 
    assert(nlhdlrexprdata != NULL);
 
    /* check whether constant has a separate entry */
-   nlhdlrexprdata->ndisvars = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, nlhdlrexprdata->ndisvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, size) );
 
    /* create and multi-aggregate variables */
    aggvars[0] = nlhdlrexprdata->rhsvar;
@@ -172,9 +172,9 @@ SCIP_RETCODE createDisaggrVars(
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*)expr);
-      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[nlhdlrexprdata->ndisvars - 1], name, 0.0, SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[nlhdlrexprdata->ndisvars - 1]) );
+      SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
    }
 
    return SCIP_OKAY;
@@ -188,17 +188,132 @@ SCIP_RETCODE freeDisaggrVars(
    )
 {
    int i;
+   int size;
 
    assert(nlhdlrexprdata != NULL);
 
+   /* check whether constant has a separate entry */
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+
    /* release variables */
-   for( i = 0; i < nlhdlrexprdata->ndisvars; ++i )
+   for( i = 0; i < size; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
    /* free memory */
-   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, nlhdlrexprdata->ndisvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, size);
+
+   return SCIP_OKAY;
+}
+
+/** helper method to evaluate a cone disaggregation term */
+static
+SCIP_RETCODE evalDisaggr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to evaluate (might be NULL) */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   int                   k,                  /**< k-th disaggregation term */
+   SCIP_Real*            value,              /**< pointer to store the result */
+   SCIP_Real*            gradient            /**< array to store the gradient */
+   )
+{
+   SCIP_Real disvarval;
+   SCIP_Real rhsval;
+   SCIP_Real tmp;
+
+   assert(nlhdlrexprdata != NULL);
+   assert(k >= 0 && k < nlhdlrexprdata->nexprs + 1);
+   assert(value != NULL);
+   assert(gradient != NULL);
+
+   disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
+   rhsval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->rhsvar);
+
+   if( k < nlhdlrexprdata->nexprs )
+   {
+      SCIP_Real exprauxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k]));
+
+      tmp = SQRT(4.0 * nlhdlrexprdata->coefs[k] * SQR(exprauxval) + SQR(nlhdlrexprdata->rhscoef * rhsval - disvarval));
+      *value = tmp - disvarval - nlhdlrexprdata->rhscoef * rhsval;
+
+      /* gradient w.r.t. auxiliary variable for the expression */
+      gradient[0] = (4.0 * nlhdlrexprdata->coefs[k] * exprauxval) / tmp;
+   }
+   else
+   {
+      assert(!SCIPisZero(scip, nlhdlrexprdata->constant));
+
+      tmp = SQRT(4.0 * nlhdlrexprdata->constant + SQR(nlhdlrexprdata->rhscoef * rhsval - disvarval));
+      *value = tmp - disvarval - nlhdlrexprdata->rhscoef * rhsval;
+
+      /* gradient w.r.t. auxiliary variable for the expression */
+      gradient[0] = 0.0;
+   }
+
+   /* gradient w.r.t. the disaggregation variable */
+   gradient[1] = -nlhdlrexprdata->rhscoef + (nlhdlrexprdata->rhscoef * (nlhdlrexprdata->rhscoef * rhsval - disvarval)) / tmp;
+
+   /* gradient w.r.t. the RHS variable */
+   gradient[2] = -1.0 - (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
+
+   return SCIP_OKAY;
+}
+
+/** helper method to compute and add a gradient cut for the k-th cone disaggregation */
+static
+SCIP_RETCODE generateCutSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   int                   k,                  /**< k-th disaggregation */
+   SCIP_Real             mincutviolation,    /**< minimal required cut violation */
+   SCIP_ROW**            row                 /**< pointer to store a cut */
+   )
+{
+   SCIP_Real gradient[3];
+   SCIP_Real value;
+
+   *row = NULL;
+
+   SCIP_CALL( evalDisaggr(scip, sol, nlhdlrexprdata, k, &value, gradient) );
+   SCIPdebugMsg(scip, "evaluate disaggregation: value=%g gradient=(%g,%g,%g)\n", value, gradient[0], gradient[1], gradient[2]);
+
+   if( value > mincutviolation )
+   {
+      SCIP_ROWPREP* rowprep;
+      SCIP_Real disvarval;
+      SCIP_Real exprauxval;
+      SCIP_Real rhsval;
+
+      disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
+      rhsval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->rhsvar);
+      exprauxval = k < nlhdlrexprdata->nexprs ? SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k])) : 0.0;
+
+      /* create cut */
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 3) );
+
+      /* add terms */
+      if( exprauxval != 0.0 )
+      {
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k]), gradient[0]) );
+      }
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->rhsvar, gradient[1]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->disvars[k], gradient[2]) );
+
+      /* add side */
+      SCIPaddRowprepSide(rowprep, exprauxval * gradient[0] + disvarval * gradient[1] + rhsval * gradient[2] - value);
+
+      if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
+      {
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, conshdlr) );
+      }
+
+      /* free memory */
+      SCIPfreeRowprep(scip, &rowprep);
+   }
 
    return SCIP_OKAY;
 }
@@ -475,8 +590,41 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
 { /*lint --e{715}*/
+   int naggrs;
+   int k;
 
    *result = SCIP_DIDNOTRUN;
+
+   naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+
+   for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
+   {
+      SCIP_ROW* row;
+      SCIP_Bool cutoff;
+
+      /* compute gradient cut */
+      SCIP_CALL( generateCutSol(scip, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
+
+      if( row != NULL )
+      {
+         /* check whether cut is applicable */
+         if( SCIPisCutApplicable(scip, row) )
+         {
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &cutoff) );
+            SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
+
+            *ncuts += 1;
+
+            if( cutoff )
+               *result = SCIP_CUTOFF;
+            else
+               *result = SCIP_SUCCESS;
+         }
+
+         /* release row */
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+   }
 
    return SCIP_OKAY;
 }
