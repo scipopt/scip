@@ -16,6 +16,8 @@
 /**@file   cons_expr_nlhdlr_soc.h
  * @brief  nonlinear handler for second order cones
  * @author Benjamin Mueller
+ *
+ * @todo Add row that is stored in the nonlinear handler expression data to the LP if not happened so far.
  */
 
 #include <string.h>
@@ -45,7 +47,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real             rhscoef;           /**< coefficient of right-hand side variable */
 
    /* variables for cone disaggregation */
-   SCIP_VAR**            disvars;       /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
+   SCIP_VAR**            disvars;           /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
+   SCIP_ROW*             row;               /**< disaggregation row */
 };
 
 /** nonlinear handler data */
@@ -137,15 +140,19 @@ SCIP_RETCODE freeNlhdlrExprData(
 static
 SCIP_RETCODE createDisaggrVars(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
-   SCIP_VAR*  aggvars[2];
-   SCIP_Real  scalars[2];
+   SCIP_VAR* aggvars[2];
+   SCIP_Real scalars[2];
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
    char name[SCIP_MAXSTRLEN];
    SCIP_Bool success;
    SCIP_Bool infeas;
+   int nvars;
    int size;
    int i;
 
@@ -153,9 +160,12 @@ SCIP_RETCODE createDisaggrVars(
 
    /* check whether constant has a separate entry */
    size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+   nvars = 0;
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, size) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + 1) );
 
    /* create and multi-aggregate variables */
    aggvars[0] = nlhdlrexprdata->rhsvar;
@@ -166,6 +176,10 @@ SCIP_RETCODE createDisaggrVars(
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
             NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
+
+      vars[nvars] = nlhdlrexprdata->disvars[i];
+      coefs[nvars] = 1.0;
+      ++nvars;
    }
 
    /* add constant <= rhscoef * rhvar * z_i */
@@ -175,7 +189,25 @@ SCIP_RETCODE createDisaggrVars(
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
+
+      vars[nvars] = nlhdlrexprdata->disvars[size - 1];
+      coefs[nvars] = 1.0;
+      ++nvars;
    }
+
+   /* consider RHS variable */
+   vars[nvars] = nlhdlrexprdata->rhsvar;
+   coefs[nvars] = -nlhdlrexprdata->rhscoef;
+   ++nvars;
+
+   /* create row */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%p", (void*)expr);
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -194,6 +226,11 @@ SCIP_RETCODE freeDisaggrVars(
 
    /* check whether constant has a separate entry */
    size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+
+   if( nlhdlrexprdata->row != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->row) );
+   }
 
    /* release variables */
    for( i = 0; i < size; ++i )
@@ -318,7 +355,7 @@ SCIP_RETCODE generateCutSol(
    return SCIP_OKAY;
 }
 
-/** helper method to detect SQRT(sum_i (expr_i)^2 + const) <= auxvar */
+/** helper method to detect SQRT(sum_i coef_i (expr_i)^2 + const) <= auxvar */
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -567,7 +604,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    assert(nlhdlrexprdata != NULL);
 
    /* create variables for cone disaggregation */
-   SCIP_CALL( createDisaggrVars(scip, expr, nlhdlrexprdata) );
+   SCIP_CALL( createDisaggrVars(scip, conshdlr, expr, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
