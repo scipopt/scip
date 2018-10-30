@@ -2224,7 +2224,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->norgedges = graph->edges;
 
    /* presolving */
-   SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims, TRUE) );
+   SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims, TRUE) );
 
 #ifdef WITH_UG
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, FALSE) );

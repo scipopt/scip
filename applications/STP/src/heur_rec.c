@@ -1179,9 +1179,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5, FALSE) );
+            SCIP_CALL( reduce(scip, solgraph, &pobj, 0, 5, FALSE) );
          else
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 2, 5, FALSE) );
+            SCIP_CALL( reduce(scip, solgraph, &pobj, 2, 5, FALSE) );
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, FALSE) );
 
@@ -1751,7 +1751,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    newgraph->norgmodelknots = nsolnodes;
 
    dummy = 0.0;
-   SCIP_CALL( reduce(scip, &newgraph, &dummy, 1, 5, FALSE) );
+   SCIP_CALL( reduce(scip, newgraph, &dummy, 1, 5, FALSE) );
 
 
    /*** step 3: compute solution on new graph ***/

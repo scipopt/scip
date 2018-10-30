@@ -612,8 +612,9 @@ SCIP_RETCODE redbasedVarfixing(
 #if 1
    if( pcmw )
    {
-      for( int e = propgraph->outbeg[propgraph->source]; e != EAT_LAST; e = propgraph->oeat[e] )
+      for( int e = propgraph->outbeg[propgraph->source]; e != EAT_LAST;  )
       {
+         const int enext = propgraph->oeat[e];
          const int head = propgraph->head[e];
 
          if( Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head) )
@@ -631,6 +632,7 @@ SCIP_RETCODE redbasedVarfixing(
                graph_pc_deleteTerm(scip, propgraph, head);
             }
          }
+         e = enext;
       }
    }
 #endif
@@ -675,9 +677,9 @@ SCIP_RETCODE redbasedVarfixing(
    //SCIP_CALL( level0(scip, propgraph) );
 #if 1
    if( pc )
-      SCIP_CALL( reducePc(scip, &propgraph, &offset, 2, TRUE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, propgraph, &offset, 2, TRUE, FALSE, FALSE) );
    else
-      SCIP_CALL( reduceStp(scip, &propgraph, &offset, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 #endif
    show = FALSE;
    assert(graph_valid(propgraph));

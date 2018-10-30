@@ -376,7 +376,7 @@ SCIP_RETCODE level0infeas(
 /** basic reduction package for the STP */
 SCIP_RETCODE reduceStp(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
@@ -386,7 +386,6 @@ SCIP_RETCODE reduceStp(
 {
    PATH* vnoi;
    PATH* path;
-   GRAPH* g;
    GNODE** gnodearr;
    SCIP_Real*  nodearrreal;
    SCIP_Real*  edgearrreal;
@@ -403,15 +402,11 @@ SCIP_RETCODE reduceStp(
    int     nterms;
    int     reductbound;
    STP_Bool* nodearrchar;
-
-   SCIP_Bool    bred = FALSE;
+   SCIP_Bool bred = FALSE;
 
    assert(scip != NULL);
-   assert(graph != NULL);
-   assert(*graph != NULL);
+   assert(g != NULL);
    assert(minelims >= 0);
-
-   g = *graph;
 
    nterms = g->terms;
    nnodes = g->knots;
@@ -490,7 +485,7 @@ SCIP_RETCODE reduceStp(
 /** basic reduction package for the (R)PCSTP */
 SCIP_RETCODE reducePc(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             advanced,           /**< perform advanced (e.g. dual ascent) reductions? */
@@ -500,7 +495,6 @@ SCIP_RETCODE reducePc(
 {
    PATH* vnoi;
    PATH* path;
-   GRAPH* g = *graph;
    GNODE** gnodearr;
    SCIP_Real* exedgearrreal;
    SCIP_Real* nodearrreal;
@@ -612,14 +606,13 @@ SCIP_RETCODE reducePc(
 static
 SCIP_RETCODE reduceMw(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    STP_Bool              advanced,           /**< perform advanced reductions? */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
-   GRAPH* g = *graph;
    PATH* vnoi;
    PATH* path;
    GNODE** gnodearr;
@@ -724,12 +717,11 @@ SCIP_RETCODE reduceMw(
 static
 SCIP_RETCODE reduceHc(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
-   GRAPH* g = *graph;
    PATH* vnoi;
    SCIP_Real*  cost;
    SCIP_Real*  radius;
@@ -844,7 +836,7 @@ SCIP_RETCODE reduceHc(
 static
 SCIP_RETCODE reduceSap(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
@@ -856,7 +848,6 @@ SCIP_RETCODE reduceSap(
    SCIP_Real*  nodearrreal;
    SCIP_Real*  edgearrreal;
    SCIP_Real*  edgearrreal2;
-   GRAPH*  g = *graph;
    GNODE** gnodearr;
    int*    heap;
    int*    state;
@@ -978,7 +969,7 @@ SCIP_RETCODE reduceSap(
 static
 SCIP_RETCODE reduceNw(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
@@ -989,7 +980,6 @@ SCIP_RETCODE reduceNw(
    SCIP_Real*  edgearrreal2;
    SCIP_Real   ub = FARAWAY;
    SCIP_Real   timelimit;
-   GRAPH*  g = *graph;
    GNODE** gnodearr;
    int*    heap;
    int*    state;
@@ -1880,7 +1870,7 @@ SCIP_RETCODE redLoopStp(
 /** reduces the graph */
 SCIP_RETCODE reduce(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               graph,              /**< graph structure */
+   GRAPH*                graph,              /**< graph structure */
    SCIP_Real*            offset,             /**< pointer to store offset generated by reductions */
    int                   level,              /**< reduction level 0: none, 1: basic, 2: advanced */
    int                   minelims,           /**< minimal amount of reductions to reiterate reduction methods */
@@ -1889,28 +1879,28 @@ SCIP_RETCODE reduce(
 {
    int stp_type;
 
-   assert((*graph)      != NULL);
-   assert((*graph)->fixedges == NULL);
+   assert(graph      != NULL);
+   assert(graph->fixedges == NULL);
    assert(level  >= 0 && level <= 2);
    assert(minelims >= 0);
-   assert((*graph)->layers == 1);
+   assert(graph->layers == 1);
 
    *offset = 0.0;
    show = FALSE;
-   stp_type = (*graph)->stp_type;
+   stp_type = graph->stp_type;
 
    /* initialize ancestor list for each edge */
-   SCIP_CALL( graph_init_history(scip, (*graph)) );
+   SCIP_CALL( graph_init_history(scip, graph) );
 
    /* initialize shortest path algorithms */
-   SCIP_CALL( graph_path_init(scip, (*graph)) );
+   SCIP_CALL( graph_path_init(scip, graph) );
 
-   SCIP_CALL( level0(scip, (*graph)) );
+   SCIP_CALL( level0(scip, graph) );
 
    /* if no reduction methods available, return */
-   if( (*graph)->stp_type == STP_DCSTP || (*graph)->stp_type == STP_RMWCSP || (*graph)->stp_type == STP_NWPTSPG )
+   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG )
    {
-      graph_path_exit(scip, (*graph));
+      graph_path_exit(scip, graph);
       return SCIP_OKAY;
    }
 
@@ -1918,63 +1908,63 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE, FALSE, TRUE) );
+         SCIP_CALL( reducePc(scip, graph, offset, minelims, FALSE, FALSE, TRUE) );
       }
       else if( stp_type == STP_MWCSP )
       {
-         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, FALSE, FALSE) );
+         SCIP_CALL( reduceMw(scip, graph, offset, minelims, FALSE, FALSE) );
       }
       else if( stp_type == STP_DHCSTP )
       {
-         SCIP_CALL( reduceHc(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_SAP )
       {
-         SCIP_CALL( reduceSap(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceSap(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {
-         SCIP_CALL( reduceNw(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, FALSE) );
+         SCIP_CALL( reduceStp(scip, graph, offset, minelims, FALSE, TRUE, FALSE) );
       }
    }
    else if( level == 2 )
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE, userec, TRUE) );
+         SCIP_CALL( reducePc(scip, graph, offset, minelims, TRUE, userec, TRUE) );
       }
       else if( stp_type == STP_MWCSP )
       {
-         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, TRUE, userec) );
+         SCIP_CALL( reduceMw(scip, graph, offset, minelims, TRUE, userec) );
       }
       else if( stp_type == STP_DHCSTP )
       {
-         SCIP_CALL( reduceHc(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_SAP )
       {
-         SCIP_CALL( reduceSap(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceSap(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {
-         SCIP_CALL( reduceNw(scip, (graph), offset, minelims) );
+         SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, userec) );
+         SCIP_CALL( reduceStp(scip, graph, offset, minelims, TRUE, TRUE, userec) );
       }
    }
    SCIPdebugMessage("offset : %f \n", *offset);
 
-   SCIP_CALL( level0(scip, (*graph)) );
+   SCIP_CALL( level0(scip, graph) );
 
-   assert(graph_valid(*graph));
+   assert(graph_valid(graph));
 
-   graph_path_exit(scip, (*graph));
+   graph_path_exit(scip, graph);
 
    return SCIP_OKAY;
 }
