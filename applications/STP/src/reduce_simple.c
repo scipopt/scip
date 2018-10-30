@@ -1371,7 +1371,8 @@ SCIP_RETCODE reduce_simple_pc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  count,              /**< pointer to number of reductions */
+   int*                  countnew,           /**< pointer to number of new reductions (will be initially set to 0) */
+   int*                  countall,           /**< pointer to number of all reductions */
    int*                  solnode             /**< solution nodes */
    )
 {
@@ -1385,11 +1386,11 @@ SCIP_RETCODE reduce_simple_pc(
 
    assert(g      != NULL);
    assert(fixed  != NULL);
-   assert(count  != NULL);
+   assert(countnew  != NULL);
    assert(g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
    assert(!g->extended);
 
-   *count = 0;
+   *countnew = 0;
 
    SCIPdebugMessage("Degree Test: ");
 
@@ -1431,7 +1432,7 @@ SCIP_RETCODE reduce_simple_pc(
 
                graph_edge_del(scip, g, e1, TRUE);
                SCIPdebugMessage("delete non-terminal of degree 1 %d\n ",  i);
-               (*count)++;
+               (*countnew)++;
 
                assert(g->grad[i] == 0);
 
@@ -1470,7 +1471,7 @@ SCIP_RETCODE reduce_simple_pc(
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
 
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
-               (*count)++;
+               (*countnew)++;
 
                if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
                   rerun = TRUE;
@@ -1489,7 +1490,7 @@ SCIP_RETCODE reduce_simple_pc(
          if( SCIPisLE(scip, g->prize[i], 0.0) )
          {
             adjust0term(scip, g, i);
-            (*count) += 2;
+            (*countnew) += 2;
             continue;
          }
 
@@ -1501,9 +1502,9 @@ SCIP_RETCODE reduce_simple_pc(
             /* if terminal node i is node the one with the highest prize, delete */
             if( !is_maxprize(scip, g, i, &maxprize) )
             {
-               SCIPdebugMessage("delete 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
+               SCIPdebugMessage("delete 0 term %d prize: %f countnew:%d\n ", i, g->prize[i], *countnew);
                (*fixed) += g->prize[i];
-               (*count) += graph_pc_deleteTerm(scip, g, i);
+               (*countnew) += graph_pc_deleteTerm(scip, g, i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1517,7 +1518,7 @@ SCIP_RETCODE reduce_simple_pc(
             assert(e != EAT_LAST);
             assert(g->head[e] != root || !pc);
 
-            SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, count, i, e, &rerun, &maxprize) );
+            SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 2 )
@@ -1566,7 +1567,7 @@ SCIP_RETCODE reduce_simple_pc(
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
                   }
-                  (*count) += graph_pc_deleteTerm(scip, g, i);
+                  (*countnew) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];
                   SCIPintListNodeFree(scip, &(ancestors));
                   SCIPintListNodeFree(scip, &(revancestors));
@@ -1608,7 +1609,7 @@ SCIP_RETCODE reduce_simple_pc(
                SCIPdebugMessage("contract tt %d->%d\n ", i, i1);
                assert(SCIPisLT(scip, mincost, FARAWAY));
                *fixed += g->cost[ett];
-               (*count)++;
+               (*countnew)++;
 
                if( (g->grad[i] >= g->grad[i1] || i == g->source) && i1 != g->source )
                   SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
@@ -1623,7 +1624,10 @@ SCIP_RETCODE reduce_simple_pc(
 
    if( !pc )
       g->mark[root] = TRUE;
-   SCIPdebugMessage("degree test pc: %d nodes deleted\n", *count);
+   SCIPdebugMessage("degree test pc: %d nodes deleted\n", *countnew);
+
+   if( countall != NULL )
+      (*countall) += (*countnew);
 
    assert(graph_valid(g));
 
