@@ -41,6 +41,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real*            coefs;             /**< coefficients of each expression */
    int                   nexprs;            /**< total number of expressions */
    SCIP_Real             constant;          /**< constant term in the SQRT */
+   SCIP_VAR*             rhsvar;            /**< right-hand side variable */
+   SCIP_Real             rhscoef;           /**< coefficient of right-hand side variable */
 };
 
 /** nonlinear handler data */
@@ -62,6 +64,8 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_Real*            coefs,              /**< coefficients for each expression */
    int                   nexprs,             /**< total number of expressions */
    SCIP_Real             constant,           /**< constant */
+   SCIP_VAR*             rhsvar,             /**< right-hand side variable */
+   SCIP_Real             rhscoef,            /**< coefficient of right-hand side variable */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
    )
 {
@@ -71,6 +75,8 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(expr != NULL);
    assert(exprs != NULL);
    assert(coefs != NULL);
+   assert(rhsvar != NULL);
+   assert(rhscoef != 0.0);
    assert(nexprs > 1);
    assert(nlhdlrexprdata != NULL);
 
@@ -79,6 +85,8 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->coefs, coefs, nexprs) );
    (*nlhdlrexprdata)->nexprs = nexprs;
    (*nlhdlrexprdata)->constant = constant;
+   (*nlhdlrexprdata)->rhsvar = rhsvar;
+   (*nlhdlrexprdata)->rhscoef = rhscoef;
 
    /* capture expressions */
    for( i = 0; i < nexprs; ++i )
@@ -86,6 +94,9 @@ SCIP_RETCODE createNlhdlrExprData(
       assert(exprs[i] != NULL);
       SCIPcaptureConsExprExpr(exprs[i]);
    }
+
+   /* capture RHS variable */
+   SCIP_CALL( SCIPcaptureVar(scip, rhsvar) );
 
    return SCIP_OKAY;
 }
@@ -102,6 +113,9 @@ SCIP_RETCODE freeNlhdlrExprData(
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
    assert((*nlhdlrexprdata)->nexprs > 1);
+
+   /* release RHS variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->rhsvar) );
 
    /* release expressions */
    for( i = 0; i < (*nlhdlrexprdata)->nexprs; ++i )
@@ -171,13 +185,13 @@ SCIP_RETCODE detectSocNorm(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, children, SCIPgetConsExprExprSumCoefs(child),
-      nchildren, SCIPgetConsExprExprSumConstant(child), nlhdlrexprdata) );
+      nchildren, SCIPgetConsExprExprSumConstant(child), auxvar, 1.0, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, " <= %g\n", SCIPvarGetUbLocal(auxvar));
+   SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
 #endif
 
    return SCIP_OKAY;
