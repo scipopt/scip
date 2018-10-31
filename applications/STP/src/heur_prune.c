@@ -741,7 +741,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    if( reducegraph )
    {
       if( pc )
-         SCIP_CALL( redLoopPc(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
+         SCIP_CALL( redLoopPc(scip, NULL, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
                vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
       else if( mw )
          SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,
@@ -839,7 +839,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* reduce graph */
          if( pc )
-            SCIP_CALL( redLoopPc(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
+            SCIP_CALL( redLoopPc(scip, NULL, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
                   vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
          else if( mw )
             SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,

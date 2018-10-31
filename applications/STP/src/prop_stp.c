@@ -522,13 +522,12 @@ SCIP_RETCODE redbasedVarfixing(
    for( int e = 0; e < nedges; e++ )
       remain[e] = PROP_STP_EDGE_UNSET;
 
-
    for( int e = 0; e < nedges; e++ )
    {
       const int erev = flipedge(e);
 
       if( (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) > 0.5)
-       || (SCIPvarGetUbLocal(vars[e]) > 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5) )
+            || (SCIPvarGetUbLocal(vars[e]) > 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5) )
          edgestate[e] = EDGE_BLOCKED;
       else
          edgestate[e] = EDGE_MODIFIABLE;
@@ -635,9 +634,7 @@ SCIP_RETCODE redbasedVarfixing(
          e = enext;
       }
    }
-#endif
 
-#if 1
    /* not at root? */
    if( SCIPgetDepth(scip) > 0 )
    {
@@ -677,7 +674,7 @@ SCIP_RETCODE redbasedVarfixing(
    //SCIP_CALL( level0(scip, propgraph) );
 #if 1
    if( pc )
-      SCIP_CALL( reducePc(scip, propgraph, &offset, 2, TRUE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, edgestate, propgraph, &offset, 2, TRUE, FALSE, FALSE) );
    else
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 #endif
@@ -715,11 +712,13 @@ SCIP_RETCODE redbasedVarfixing(
 
       curr = curr->parent;
    }
+   //printf("source %d \n", g->source);
 
    /* 1-fixed edge to be deleted? */
    for( int e = 0; e < nedges; e++ )
       if( (remain[e] == PROP_STP_EDGE_UNSET || remain[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
       {
+         graph_edge_printInfo(g, e);
          printf("1-fixed arc deleted by reduction methods ... can't propagate  \n \n \n");
          goto TERMINATE;
       }
@@ -728,6 +727,7 @@ SCIP_RETCODE redbasedVarfixing(
    for( int e = 0; e < nedges; e++ )
       if(  remain[e] == PROP_STP_EDGE_FIXED && SCIPvarGetUbLocal(vars[e]) < 0.5 )
       {
+         graph_edge_printInfo(g, e);
          printf("0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
          goto TERMINATE;
       }

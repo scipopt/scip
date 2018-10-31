@@ -988,7 +988,7 @@ int reduceWithNodeReplaceBounds(
       {
          if( rpc )
          {
-            int todo; // check for fixed term
+            int todo; // pseudo eliminate degree 3?
          }
 
          if( degree != graph->grad[k] || Is_gterm(graph->term[k]) )
@@ -3021,7 +3021,8 @@ SCIP_RETCODE reduce_da(
    int                   prevrounds,         /**< number of reduction rounds that have been performed already */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_Bool             extended            /**< use extended tests? */
+   SCIP_Bool             extended,           /**< use extended tests? */
+   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
 )
 {
    STPSOLPOOL* pool;
@@ -3329,7 +3330,7 @@ SCIP_RETCODE reduce_da(
          if( extended )
             nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked);
 
-         if( !directed && !SCIPisZero(scip, minpathcost) )
+         if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
                   lpobjval, upperbound, daroot, (run == 0), extended));
 
@@ -3348,7 +3349,7 @@ SCIP_RETCODE reduce_da(
          }
       } /* root loop */
 
-      if( !directed && !SCIPisZero(scip, minpathcost) )
+      if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
            nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
 
       if( nfixed == 0 || !userec )
@@ -3925,7 +3926,8 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool             userec,             /**< use recombination heuristic? */
    SCIP_Bool             fastmode,           /**< run heuristic in fast mode? */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   SCIP_Real             prizesum            /**< sum of positive prizes */
+   SCIP_Real             prizesum,           /**< sum of positive prizes */
+   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
 )
 {
    STPSOLPOOL* pool;

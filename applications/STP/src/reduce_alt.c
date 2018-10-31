@@ -3756,6 +3756,7 @@ SCIP_RETCODE reduce_nts(
 /* shortest link reduction */
 SCIP_RETCODE reduce_sl(
    SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    double*               fixed,              /**< offset pointer */
@@ -3895,7 +3896,7 @@ SCIP_RETCODE reduce_sl(
          cost = vnoi[tail].dist + g->cost[minedge] + vnoi[head].dist;
 
          /* check whether minedge can be removed */
-         if( SCIPisGE(scip, mincost2, cost) )
+         if( SCIPisGE(scip, mincost2, cost) && (edgestate == NULL || edgestate[minedge] != EDGE_BLOCKED) )
          {
             int j;
             int k;
@@ -4191,6 +4192,7 @@ SCIP_RETCODE reduce_nv(
 /* advanced NV reduction */
 SCIP_RETCODE reduce_nvAdv(
    SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            distance,           /**< nodes-sized distance array */
@@ -4386,7 +4388,11 @@ SCIP_RETCODE reduce_nvAdv(
 
       contract = FALSE;
 
-      if( SCIPisGE(scip, min2, ttdist) )
+      if( edgestate != NULL && edgestate[edge1] == EDGE_BLOCKED )
+      {
+         contract = FALSE;
+      }
+      else if( SCIPisGE(scip, min2, ttdist) )
       {
          contract = TRUE;
       }

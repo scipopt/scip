@@ -175,6 +175,7 @@ SCIP_Bool is_maxprize(
 static
 SCIP_RETCODE trydg1edgepc(
    SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            offset,             /**< pointer to store the offset */
    int*                  solnode,            /**< solution nodes or NULL */
@@ -210,7 +211,7 @@ SCIP_RETCODE trydg1edgepc(
       (*offset) += g->prize[i];
       (*count) += graph_pc_deleteTerm(scip, g, i);
    }
-   else
+   else if( edgestate == NULL || edgestate[iout] != EDGE_BLOCKED )
    {
       /* contract terminal */
 
@@ -516,8 +517,18 @@ SCIP_RETCODE reduce_contractZeroEdges(
          {
             if( savehistory )
             {
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+               if( graph_pc_isPcMw(g) )
+               {
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), g->ancestors[e], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), g->ancestors[e], NULL) );
+                  assert(0); // todo
+
+               }
+               else
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+
             }
+      // todo contract...
             SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
             count++;
          }
@@ -1232,7 +1243,7 @@ SCIP_RETCODE reduce_simple_mw(
 
             if( !Is_term(g->term[g->head[e]]) )
             {
-               SCIP_CALL( trydg1edgepc(scip, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
+               SCIP_CALL( trydg1edgepc(scip, NULL, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
                continue;
             }
          }
@@ -1369,6 +1380,7 @@ SCIP_RETCODE reduce_simple_hc(
 /** basic reductions for RPCSTP and PCSPG */
 SCIP_RETCODE reduce_simple_pc(
    SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
    int*                  countnew,           /**< pointer to number of new reductions (will be initially set to 0) */
@@ -1382,6 +1394,7 @@ SCIP_RETCODE reduce_simple_pc(
    const int root = g->source;
    const int nnodes = g->knots;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG);
+   const SCIP_Bool checkstate = (edgestate != NULL);
    SCIP_Bool rerun = TRUE;
 
    assert(g      != NULL);
@@ -1518,7 +1531,7 @@ SCIP_RETCODE reduce_simple_pc(
             assert(e != EAT_LAST);
             assert(g->head[e] != root || !pc);
 
-            SCIP_CALL( trydg1edgepc(scip, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
+            SCIP_CALL( trydg1edgepc(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 2 )
@@ -1606,6 +1619,9 @@ SCIP_RETCODE reduce_simple_pc(
                && SCIPisLE(scip, g->cost[ett], g->prize[g->head[ett]]) )
             {
                const int i1 = g->head[ett];
+               if( checkstate && edgestate[ett] == EDGE_BLOCKED )
+                  continue;
+
                SCIPdebugMessage("contract tt %d->%d\n ", i, i1);
                assert(SCIPisLT(scip, mincost, FARAWAY));
                *fixed += g->cost[ett];
