@@ -42,9 +42,8 @@ void SCIPwriteStp(
    SCIP_Real    offset
    )
 {
-   int i;
-   int e;
-   int root = g->source;
+   int nnodesorg;
+   int nedgesorg;
    int hopfactor;
 
    assert(g  != NULL);
@@ -54,7 +53,7 @@ void SCIPwriteStp(
       STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
 
    fprintf(fp, "Section Comment\n");
-   fprintf(fp, "Name ");
+   fprintf(fp, "Problem ");
    switch( g->stp_type )
    {
       case STP_SPG:
@@ -100,7 +99,6 @@ void SCIPwriteStp(
       default:
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
    }
-   fprintf(fp, "Remark \"Transformed\"\n");
    fprintf(fp, "End\n\n");
 
    if( !SCIPisEQ(scip, offset, 0.0) )
@@ -110,26 +108,45 @@ void SCIPwriteStp(
       fprintf(fp, "End\n\n");
    }
 
-   fprintf(fp, "Section Graph\n");
-   fprintf(fp, "Nodes %d\n", g->knots);
-   fprintf(fp, "Edges %d\n", g->edges / 2);
+   nnodesorg = g->knots;
+   nedgesorg = g->edges / 2;
 
-   for( i = 0; i < g->edges; i += 2 )
+   if( graph_pc_isRootedPcMw(g) )
+   {
+      const int ndummyterms = g->terms - graph_pc_nFixedTerms(g);
+      assert(ndummyterms >= 0);
+
+      nnodesorg -= ndummyterms;
+      nedgesorg -= ndummyterms * 2;
+   }
+
+   fprintf(fp, "Section Graph\n");
+   fprintf(fp, "Nodes %d\n", nnodesorg);
+   fprintf(fp, "Edges %d\n", nedgesorg);
+
+   for( int i = 0; i < g->edges; i += 2 )
    {
       if (g->ieat[i] != EAT_FREE)
       {
+         if( graph_pc_isPcMw(g) )
+         {
+            const int tail = g->tail[i];
+            const int head = g->head[i];
+
+            if( (Is_term(g->term[tail]) && !graph_pc_knotIsFixedTerm(g, tail)) || (Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head)) )
+               continue;
+         }
+
          assert(g->oeat[i] != EAT_FREE);
 
-         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT
-           || g->stp_type == STP_OARSMT )
+         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT || g->stp_type == STP_OARSMT || graph_pc_isPcMw(g) )
             fprintf(fp, "E ");
          else
             fprintf(fp, "AA ");
 
          fprintf(fp, "%d %d ", g->tail[i] + 1, g->head[i] + 1);
 
-         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT
-           || g->stp_type == STP_OARSMT )
+         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT || g->stp_type == STP_OARSMT || graph_pc_isPcMw(g) )
             fprintf(fp, "%f\n", g->cost[i]);
          else
             fprintf(fp, "%f %f\n", g->cost[i], g->cost[Edge_anti(i)]);
@@ -140,31 +157,39 @@ void SCIPwriteStp(
    fprintf(fp, "Terminals %d\n", g->terms);
 
    if( g->stp_type == STP_RPCSPG )
-      fprintf(fp, "Root %d\n", g->source + 1);
+      fprintf(fp, "RootP %d\n", g->source + 1);
 
-   for(i = 0; i < g->knots; i++)
+   for( int i = 0; i < g->knots; i++ )
    {
-      if (Is_term(g->term[i]) && (g->stp_type != STP_RPCSPG || i != g->source))
+      if( graph_pc_isPcMw(g) )
+      {
+         if( i == g->source )
+            continue;
+
+         if( Is_pterm(g->term[i]) )
+            fprintf(fp, "TP %d %f\n", i + 1, g->prize[i]);
+
+         if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
+            continue;
+
+         if( Is_term(g->term[i]) && g->stp_type == STP_RPCSPG )
+         {
+            fprintf(fp, "TF %d\n", i + 1);
+            continue;
+         }
+      }
+
+      if (Is_term(g->term[i]) )
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
-/*
-   if (g->flags & GRAPH_HAS_COORDINATES)
-   {
-      fprintf(fp, "Section Coordinates\n");
 
-      for(i = 0; i < g->knots; i++)
-         fprintf(fp, "DD %d %d %d\n", i + 1, g->xpos[i], g->ypos[i]);
-
-      fprintf(fp, "End\n\n");
-   }
-*/
    /* Hop-Constrained STP */
    if( g->stp_type == STP_DHCSTP )
    {
       fprintf(fp, "Section Hop Constraint\n");
       fprintf(fp, "limit %d\n", g->hoplimit);
-      for( e = 0; e < g->edges; e++ )
+      for( int e = 0; e < g->edges; e++ )
       {
          /* TODO: When presolving is used: MODIFY */
          hopfactor = 1;
@@ -178,20 +203,6 @@ void SCIPwriteStp(
    if( g->stp_type == STP_DCSTP )
    {
       fprintf(fp, "Section Degree Constraint\n");
-      fprintf(fp, "End\n\n");
-   }
-
-	 /* PRIZECOLLECTING STP */
-   if( g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP )
-   {
-      fprintf(fp, "Section Prize Collecting Constraint\n");
-
-      for( e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         if( !Is_term(g->term[g->head[e]]) )
-            fprintf(fp, "PC %d\n", e + 1);
-      }
-
       fprintf(fp, "End\n\n");
    }
 
