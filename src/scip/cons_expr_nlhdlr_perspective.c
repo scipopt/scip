@@ -229,6 +229,28 @@ SCIP_RETCODE univariateExprVar(
    return SCIP_OKAY;
 }
 
+static
+SCIP_Real findBvarCoef(
+        SCIP_CONSEXPR_EXPR* expr,
+        SCIP_VAR* bvar
+        )
+{
+   SCIP_CONSEXPR_EXPR* child;
+
+   /* only sums can have c != 0 */
+   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   {
+      for( int c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         child = SCIPgetConsExprExprChildren(expr)[c];
+         if( strcmp("var", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
+                 SCIPgetConsExprExprVarVar(child) == bvar )
+            return SCIPgetConsExprExprSumCoefs(expr)[c];
+      }
+   }
+   return 0.0;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -713,6 +735,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
       *coefs = 1.0;
    }
 
+   SCIP_HASHMAP* bvartoc;
+   SCIP_CALL( SCIPhashmapCreate(&bvartoc, SCIPblkmem(scip), nchildren) );
+   SCIP_Real bcoef;
 
    SCIP_VAR* qvar = NULL;
    int qvarpos = -1;
@@ -748,13 +773,25 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
                SCIP_CONSEXPR_EXPR* quadsum;
                SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &quadsum, 1, &children[qvarpos], &coefs[qvarpos], 0.0) );
                SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, quadsum, child, coefs[c]) ); /* todo: check the coefficients */
+               if( !SCIPhashmapExists(bvartoc, bvar) )
+               {
+                  bcoef = findBvarCoef(expr, bvar);
+                  SCIPinfoMessage(scip, NULL, "\nc = %f", bcoef);
+               }
                addRefterm(scip, conshdlr, quadsum, 1.0, refexpr, TRUE);
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &quadsum) );
             }
             else
             {
                if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
+               {
+                  if( !SCIPhashmapExists(bvartoc, bvar) )
+                  {
+                     bcoef = findBvarCoef(expr, bvar);
+                     SCIPinfoMessage(scip, NULL, "\nc = %f", bcoef);
+                  }
                   addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+               }
                else
                   addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
                if( qvar != NULL )
@@ -769,7 +806,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          else /* univariate rational power (non-quadratic) */
          {
             if( varIsSemicontinuous(scip, nlhdlrdata, powvar, &bvar) )
+            {
+               if( !SCIPhashmapExists(bvartoc, bvar) )
+               {
+                  bcoef = findBvarCoef(expr, bvar);
+                  SCIPinfoMessage(scip, NULL, "\nc = %f", bcoef);
+               }
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+            }
             else
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
          }
@@ -784,7 +828,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          if( SCIPvarGetType(expvar) != SCIP_VARTYPE_CONTINUOUS )
             continue;
          if( varIsSemicontinuous(scip, nlhdlrdata, expvar, &bvar) )
-               addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+         {
+            if( !SCIPhashmapExists(bvartoc, bvar) )
+            {
+               bcoef = findBvarCoef(expr, bvar);
+               SCIPinfoMessage(scip, NULL, "\nc = %f", bcoef);
+            }
+            addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+         }
          else
                addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
@@ -793,7 +844,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
          SCIP_VAR* uvar;
          univariateExprVar(scip, conshdlr, child, &uvar);
          if( uvar != NULL && varIsSemicontinuous(scip, nlhdlrdata, uvar, &bvar) )
+         {
+            if( !SCIPhashmapExists(bvartoc, bvar) )
+            {
+               bcoef = findBvarCoef(expr, bvar);
+               SCIPinfoMessage(scip, NULL, "\nc = %f", bcoef);
+            }
             addRefterm(scip, conshdlr, child, coefs[c], refexpr, TRUE);
+         }
          else
             addRefterm(scip, conshdlr, child, coefs[c], refexpr, FALSE);
       }
