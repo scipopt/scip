@@ -65,6 +65,7 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
+option(EXSOLVE "should the program be compiled for exact solving" ON)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -187,6 +188,11 @@ add_custom_target(scip_update_githash
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
 add_definitions(-DWITH_SCIPDEF)
+
+# EXACT_SOLVE
+if(EXSOLVE)
+    add_definitions(-DWITH_EXACTSOLVE)
+endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)

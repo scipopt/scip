@@ -147,6 +147,7 @@
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"

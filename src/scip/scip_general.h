@@ -250,17 +250,6 @@ SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
- *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
- */
-EXTERN
-SCIP_Bool SCIPisExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
  *  presolving round
  *

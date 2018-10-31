@@ -57,6 +57,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"

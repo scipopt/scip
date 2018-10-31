@@ -361,6 +361,11 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
+   SCIP_Bool             misc_usefprelax;    /**< should the fp-approximation of the exact problem also be a relaxation? */
+   char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
+                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
+                                              *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
+                                              *   e'x'act neumaier and shcherbina, 'a'utomatic) */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and

@@ -268,6 +268,10 @@
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< should the fp approximation of the exact problem be a relaxation? */
+#define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
+                                                 *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift,
+                                                 *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of Benders' decomposition this parameter should be set
@@ -1858,11 +1862,21 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-#if 0 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
+#if 1 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
          &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/usefprelax",
+         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
+         &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "misc/dbmethod",
+         "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;

@@ -617,22 +617,6 @@ SCIP_Bool SCIPisTransformed(
    return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
 }
 
-/** returns whether the solution process should be probably correct
- *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
- */
-SCIP_Bool SCIPisExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return (scip->set->misc_exactsolve);
-}
-
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
  *  presolving round
  *

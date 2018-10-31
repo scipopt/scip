@@ -25,6 +25,7 @@ set(scipsources
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
     scip/bandit_ucb.c
+    scip/bounding_exact.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -53,6 +54,7 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
+    scip/cons_exactlp.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -274,6 +276,7 @@ set(scipsources
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
+    scip/scip_exact.c
     scip/scip_expr.c
     scip/scip_general.c
     scip/scip_heur.c
@@ -439,6 +442,7 @@ set(scipheaders
     scip/bendersdefcuts.h
     scip/bitencode.h
     scip/boundstore.h
+    scip/bounding_exact.h
     scip/branch_allfullstrong.h
     scip/branch_cloud.h
     scip/branch_distribution.h
@@ -474,6 +478,7 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
+    scip/cons_exactlp.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
@@ -707,6 +712,7 @@ set(scipheaders
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
+    scip/scip_exact.h
     scip/scip_expr.h
     scip/scip_general.h
     scip/scip_heur.h
