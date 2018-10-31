@@ -674,7 +674,7 @@ SCIP_RETCODE redbasedVarfixing(
    //SCIP_CALL( level0(scip, propgraph) );
 #if 1
    if( pc )
-      SCIP_CALL( reducePc(scip, edgestate, propgraph, &offset, 2, TRUE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, edgestate, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    else
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
 #endif
@@ -723,14 +723,28 @@ SCIP_RETCODE redbasedVarfixing(
          goto TERMINATE;
       }
 
+
    /* 0-fixed edge been contracted? */
    for( int e = 0; e < nedges; e++ )
-      if(  remain[e] == PROP_STP_EDGE_FIXED && SCIPvarGetUbLocal(vars[e]) < 0.5 )
+      if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5) )
       {
          graph_edge_printInfo(g, e);
          printf("0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
          goto TERMINATE;
       }
+
+#if 0
+   /* potentially 0-fixed edge been contracted? */
+   for( int e = 0; e < nedges; e++ )
+      if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[flipedge(e)]) < 0.5) )
+      {
+         graph_edge_printInfo(g, e);
+         printf(" SCIPvarGetLbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetLbLocal(vars[flipedge(e)]));
+         printf(" SCIPvarGetUbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetUbLocal(vars[flipedge(e)]));
+         printf("potentially 0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
+         goto TERMINATE;
+      }
+#endif
 
    /* fix to zero */
    for( int e = 0; e < nedges; e += 2 )
