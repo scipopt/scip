@@ -8,6 +8,7 @@ Features
 --------
 
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
+- add the separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint)
 
 Performance improvements
 ------------------------

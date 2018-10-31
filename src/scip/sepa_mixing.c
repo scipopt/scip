@@ -14,8 +14,22 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_mixing.c
- * @brief  mixing inequality separator
+ * @brief  mixing/star inequality separator
  * @author Weikun Chen
+ *
+ * For an overview see:
+ * Atamturk, A., Nemhauser, G.L. and Savelsbergh, M.W., 2000@n
+ * The mixed vertex packing problem.@n
+ * Mathematical Programming, 89(1), 35-53.
+ *
+ * Some remarks:
+ * - Besides the mixing inequality, we also add the conflict inequality.
+ * - Currently, we found the performance is really bad on the neos-565672 instances.
+ *   The reason is that, with the mixing inequality, SCIP spends a lot of time on cutting planes generations.
+ * - Currently, we do not consider sparsity of the cuts as we only care about finding a most violated cut.
+ * - Besides the most violated cut we consider, we also add an additional variable to make the cut be the strongest one,
+ *   even the additional variable does not contribute any violation.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
