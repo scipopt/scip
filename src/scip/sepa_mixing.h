@@ -15,7 +15,7 @@
 
 /**@file   sepa_mixing.h
  * @ingroup SEPARATORS
- * @brief  mixing inequality separator
+ * @brief  mixing cuts separator
  * @author Weikun Chen
  */
 
@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/** creates the impliedbounds separator and includes it in SCIP
+/** creates the mixing separator and includes it in SCIP
  *
  * @ingroup SeparatorIncludes
  */
