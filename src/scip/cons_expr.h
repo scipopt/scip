@@ -1388,9 +1388,9 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
  * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
  * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a vertex-polyhedral constraint with only \f$ k \f$
- * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0. The \f$ n + 1 \f$-th row is the row representing the
- * constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the minimum between 10 and the maximum number of products
- * among all product expressions.
+ * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0 (though we don't use this at the moment).
+ * The \f$ n + 1 \f$-th row is the row representing the constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the
+ * minimum between 10 and the maximum number of products among all product expressions.
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible.
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$

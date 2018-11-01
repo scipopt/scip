@@ -5486,7 +5486,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    /* allocate necessary memory; set obj, lb, and ub to zero */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &obj, ncols) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &lb, ncols) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &ub, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &beg, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &val, nnonz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
@@ -5496,6 +5496,9 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    {
       int row;
       unsigned int a;
+
+      /* an upper bound of 1.0 is implied by the last row, but I presume that LP solvers prefer unbounded variables */
+      ub[i] = SCIPlpiInfinity(*lp);
 
       SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
       beg[i] = k;
@@ -11396,8 +11399,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    SCIP_Real* funvals;
-   SCIP_Real* lbs;
-   SCIP_Real* ubs;
    SCIP_Real* aux; /* used to transform x^* and then to store LP solution */
    int* inds;
    int* nonfixedpos;
@@ -11467,8 +11468,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aux, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lbs, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ubs, ncols) );
 
    /*
     * 1. compute f(v^i) for each corner v^i of [l,u]
@@ -11504,13 +11503,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       funvals[i] = i < ncorners ? function(corner, nvars, fundata) : 0.0;
       inds[i] = i;
 
-      /* update bounds; variables that are not in the LP get fixed to 0 */
-      lbs[i] = 0.0;
-      /* ubs[i] = i < ncorners ? 1.0 : 0.0; */
-      assert(i<ncorners);
-      ubs[i] = 1.0;
-
-      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lbs[i], ubs[i], funvals[i]);
+      SCIPdebugMsg(scip, "obj col %d = %e\n", i, funvals[i]);
 
       if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )
       {
@@ -11568,7 +11561,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
    /* update LP */
    SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
-   SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lbs, ubs) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
    /* TODO use targetvalue to set objective limit? */
@@ -11702,8 +11694,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 CLEANUP:
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &corner);
-   SCIPfreeBufferArray(scip, &lbs);
-   SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &aux);
    SCIPfreeBufferArray(scip, &funvals);
