@@ -124,6 +124,7 @@ Test(separation, quadrilinear,
    SCIP_Bool infeas;
    SCIP_Bool fixed;
    int i;
+   int round;
 
    SCIP_VAR* vars[4];
    SCIP_CONSEXPR_EXPR* varexprs[4];
@@ -131,73 +132,75 @@ Test(separation, quadrilinear,
    SCIP_Real lb[] = {-0.2, -10.0, 1.0, 0.09};
    SCIP_Real ub[] = { 0.7,   8.0, 1.3,  2.1};
    SCIP_Real solval[] = { 0.2, -4.0, 1.1, 0.18};
-   SCIP_Real exact_facet1[] = {63.0/100, 63.0/5000, 441.0/1000, 637.0/100, -8883.0/10000};
-   SCIP_Real exact_facet2[] = {7.0, -49.0/100, -98.0/25, 0.0, -49.0/50};
+   SCIP_Real exact_facet[2][5] = {{63.0/100, 63.0/5000, 441.0/1000, 637.0/100, -8883.0/10000},{7.0, -49.0/100, -98.0/25, 0.0, -49.0/50}};
 
-   SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
-
-   for( i = 0; i < 4; ++i )
-   {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &vars[i], names[i], lb[i], ub[i], 1.0, SCIP_VARTYPE_CONTINUOUS) );
-      SCIP_CALL( SCIPaddVar(scip, vars[i]) );
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[i], vars[i]) );
-   }
-
-   /* get SCIP into SOLVING stage */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVals(scip, sol, 4, vars, solval) );
-
-   /* compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
-    * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
-    * -> 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
+   /* first round: overestimation, expect exact_facet[1]
+    * second round: underestimation, expect exact_facet[2]
     */
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 4, varexprs, -0.7) );
-
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), facetcoefs, &facetconstant, &islocal, &success) );
-
-   cr_assert(success);
-   cr_assert(islocal);
-   for( i = 0; i < 4; ++i ) /* index 4 is the constant */
+   for( round = 0; round < 2 ; ++round )
    {
-      cr_expect_float_eq(facetcoefs[i], exact_facet1[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet1[i]);
+      SCIP_CALL( SCIPcreate(&scip) );
+      SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+      conshdlr = SCIPfindConshdlr(scip, "expr");
+      assert(conshdlr != NULL);
+
+      /* create problem */
+      SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+      for( i = 0; i < 4; ++i )
+      {
+         SCIP_CALL( SCIPcreateVarBasic(scip, &vars[i], names[i], lb[i], ub[i], 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, vars[i]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[i], vars[i]) );
+      }
+
+      /* get SCIP into SOLVING stage */
+      SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+
+      /* create solution */
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+      SCIP_CALL( SCIPsetSolVals(scip, sol, 4, vars, solval) );
+
+      /* round 0:
+       * compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
+       * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
+       * -> 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
+       *
+       * round 1:
+       * compute an underestimator for the same function, but now z is fixed to 1
+       * so, we underestimate
+       *   -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1
+       * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]
+       * -> -49/100 * (-100/7 x + y + 8w + 2)
+       */
+      if( round == 1 )
+      {
+         SCIP_CALL( SCIPfixVar(scip, vars[3], 1.0, &infeas, &fixed) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[3], 1.0) );
+      }
+
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 4, varexprs, -0.7) );
+
+      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success) );
+
+      cr_assert(success);
+      cr_assert(islocal);
+      for( i = 0; i < 4; ++i ) /* index 4 is the constant */
+      {
+         cr_expect_float_eq(facetcoefs[i], exact_facet[round][i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet[round][i]);
+      }
+      cr_expect_float_eq(facetconstant, exact_facet[round][i], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet[round][i]);
+
+      /* release and free everything */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+      for( i = 0; i < 4; ++i )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+      }
+      SCIP_CALL( SCIPfree(&scip) );
+
+      cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
    }
-   cr_expect_float_eq(facetconstant, exact_facet1[i], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
-
-   /* compute an underestimator for the same function as before, but now z is fixed to 1 and we underestimate
-    *   -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1
-    * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]
-    * -> -49/100 * (-100/7 x + y + 8w + 2)
-    */
-   SCIP_CALL( SCIPfixVar(scip, vars[3], 1.0, &infeas, &fixed) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, vars[3], 1.0) );
-
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), facetcoefs, &facetconstant, &islocal, &success) );
-
-   cr_assert(success);
-   for( i = 0; i < 4; ++i ) /* index 4 is the constant */
-   {
-      cr_expect_float_eq(facetcoefs[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet2[i]);
-   }
-   cr_expect_float_eq(facetconstant, exact_facet2[i], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
-
-   /* release and free everything */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   for( i = 0; i < 4; ++i )
-   {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
-   }
-   SCIP_CALL( SCIPfree(&scip) );
-
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }

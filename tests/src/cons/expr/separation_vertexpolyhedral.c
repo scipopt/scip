@@ -219,6 +219,13 @@ Test(separation, multilinearseparation)
    }
    cr_expect_float_eq(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
 
+   /* the code below assumes that we do the same permutations as before, so recreate scip to reset random number generator */
+   SCIP_CALL( SCIPfree(&scip) );
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
    /* compute an underestimator for the same function as before, but now z is fixed to 1 and we underestimate
     *   -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1
     * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]

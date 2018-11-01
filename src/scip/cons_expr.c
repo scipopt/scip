@@ -220,6 +220,9 @@ struct SCIP_ConshdlrData
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
    SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
+
+   /* facets of envelops of vertex-polyhedral functions */
+   SCIP_RANDNUMGEN*         vp_randnumgen;   /**< random number generator used to perturb reference point */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -6045,6 +6048,9 @@ SCIP_DECL_CONSEXIT(consExitExpr)
    conshdlrdata->subnlpheur = NULL;
    conshdlrdata->trysolheur = NULL;
 
+   if( conshdlrdata->vp_randnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
+
    return SCIP_OKAY;
 }
 
@@ -11366,7 +11372,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_RANDNUMGEN* randnumgen; /* random number generator for perturbation */
    SCIP_LPI* lp;
    SCIP_Real* funvals;
    SCIP_Real* lbs;
@@ -11414,6 +11419,11 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->vp_randnumgen == NULL )
+   {
+      SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->vp_randnumgen, VERTEXPOLY_RANDNUMINITSEED, TRUE) );
+   }
 
    /* TODO reuse a previously constructed LP */
    SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, nvars, &lp) );
@@ -11479,9 +11489,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       }
    }
 
-   /* create random number generater */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, VERTEXPOLY_RANDNUMINITSEED, TRUE) );
-
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
    for( i = 0; i < nrows; ++i )
    {
@@ -11507,16 +11514,16 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
          /* perturb point to hopefully obtain a facet of the convex envelope */
          if( aux[i] == 1.0 )
-            aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
+            aux[i] -= SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
          else if( aux[i] == 0.0 )
-            aux[i] += SCIPrandomGetReal(randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
+            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
          else
          {
             SCIP_Real perturbation;
 
             perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
             perturbation = MIN( perturbation, VERTEXPOLY_MAXPERTURBATION );
-            aux[i] += SCIPrandomGetReal(randnumgen, -perturbation, perturbation);
+            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, -perturbation, perturbation);
          }
          assert(0.0 < aux[i] && aux[i] < 1.0);
       }
@@ -11672,7 +11679,6 @@ CLEANUP:
    SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &nonfixedpos);
 
-   SCIPfreeRandom(scip, &randnumgen);
    SCIP_CALL( SCIPlpiFree(&lp) );
 
    return SCIP_OKAY;
