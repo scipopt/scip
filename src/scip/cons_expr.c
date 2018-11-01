@@ -11575,9 +11575,10 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    {
       SCIP_CALL( SCIPlpiSolvePrimal(lp) );
    }
-   if( !SCIPlpiIsPrimalFeasible(lp) )
+   /* any dual feasible solution should provide a valid estimator (and a dual optimal one a facet) */
+   if( !SCIPlpiIsDualFeasible(lp) )
    {
-      SCIPdebugMsg(scip, "LP not solved to primal feasibility, aborting.\n");
+      SCIPdebugMsg(scip, "LP not solved to dual feasibility, aborting.\n");
       goto CLEANUP;
    }
 
