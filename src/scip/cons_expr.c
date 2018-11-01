@@ -11561,8 +11561,10 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
-   /* TODO use targetvalue to set objective limit? */
    /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
+
+   /* we can stop the LP solve if will not meet the target value anyway */
+   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
 
    /*
     * 3. solve the LP and store the resulting facet for the transformed space
