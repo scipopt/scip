@@ -11656,19 +11656,26 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
    maxfaceterror = computeMaxFacetError(scip, overestimate, funvals, box, nallvars, nvars, nonfixedpos, facetcoefs, *facetconstant);
 
-   /* TODO scale maxfaceterror, e.g., by |function(midpoint)| */
-
    /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
    if( maxfaceterror > 0.0 )
    {
-      SCIPdebugMsgPrint(scip, "maximum facet error %g, adjust constant to make cut valid!\n", maxfaceterror);
+      SCIP_Real midval;
+
+      /* evaluate function in middle point to get some idea for a scaling */
+      for( i = 0; i < nvars; ++i )
+         corner[nonfixedpos[i]] = (box[2 * nonfixedpos[i]] + box[2 * nonfixedpos[i] + 1]) / 2.0;
+      midval = function(corner, nallvars, fundata);
+      if( midval == SCIP_INVALID )
+         midval = 1.0;
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > VERTEXPOLY_ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
+      if( maxfaceterror > VERTEXPOLY_ADJUSTFACETFACTOR * SCIPlpfeastol(scip) * fabs(midval) )
       {
-         SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g.\n", maxfaceterror);
+         SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g (midval=%g).\n", maxfaceterror, midval);
          goto CLEANUP;
       }
+
+      SCIPdebugMsgPrint(scip, "maximum facet error %g (midval=%g), adjust constant to make cut valid!\n", maxfaceterror, midval);
 
       if( overestimate )
       {
