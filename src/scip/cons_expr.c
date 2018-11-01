@@ -11498,7 +11498,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
          assert(!SCIPisInfinity(scip, REALABS(corner[varpos])));
       }
 
-      funvals[i] = function(corner, nvars, fundata);
+      funvals[i] = function(corner, nallvars, fundata);
       inds[i] = i;
 
       SCIPdebugMsg(scip, "obj col %d = %e\n", i, funvals[i]);
