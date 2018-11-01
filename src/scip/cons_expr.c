@@ -5542,6 +5542,11 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
       nrows, lb, lb, NULL,
       nnonz, beg, ind, val) );
 
+   /* for the last row, we can set the rhs to 1.0 already */
+   ind[0] = nrows-1;
+   val[0] = 1.0;
+   SCIP_CALL( SCIPlpiChgSides(*lp, 1, ind, val, val) );
+
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &ind);
    SCIPfreeBufferArray(scip, &val);
@@ -5719,57 +5724,49 @@ SCIP_Real computeVertexPolyhedralFacetLP(
       inds[i] = i;
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
-   for( i = 0; i < nrows; ++i )
+   for( i = 0; i < nrows-1; ++i )
    {
-      if( i < nvars )
-      {
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
-         int varpos;
+      SCIP_Real solval;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int varpos;
 
-         varpos = nonfixedpos[i];
-         lb = box[2 * varpos];
-         ub = box[2 * varpos + 1];
-         solval = xstar[varpos];
+      assert(i < nvars);
 
-         /* explicitly handle solution which violate bounds of variables (this can happen because of tolerances) */
-         if( solval <= lb )
-            aux[i] = 0.0;
-         else if( solval >= ub )
-            aux[i] = 1.0;
-         else
-            aux[i] = (solval - lb) / (ub - lb);
+      varpos = nonfixedpos[i];
+      lb = box[2 * varpos];
+      ub = box[2 * varpos + 1];
+      solval = xstar[varpos];
 
-         /* perturb point to hopefully obtain a facet of the convex envelope */
-         if( aux[i] == 1.0 )
-            aux[i] -= SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
-         else if( aux[i] == 0.0 )
-            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
-         else
-         {
-            SCIP_Real perturbation;
+      /* explicitly handle solution which violate bounds of variables (this can happen because of tolerances) */
+      if( solval <= lb )
+         aux[i] = 0.0;
+      else if( solval >= ub )
+         aux[i] = 1.0;
+      else
+         aux[i] = (solval - lb) / (ub - lb);
 
-            perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
-            perturbation = MIN( perturbation, VERTEXPOLY_MAXPERTURBATION );
-            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, -perturbation, perturbation);
-         }
-         assert(0.0 < aux[i] && aux[i] < 1.0);
-      }
+      /* perturb point to hopefully obtain a facet of the convex envelope */
+      if( aux[i] == 1.0 )
+         aux[i] -= SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
+      else if( aux[i] == 0.0 )
+         aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
       else
       {
-         /* last row corresponds to sum_{j} \lambda_j = 1
-          * TODO move into build..LP */
-         assert(i == nrows - 1);
-         aux[i] = 1.0;
+         SCIP_Real perturbation;
+
+         perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
+         perturbation = MIN( perturbation, VERTEXPOLY_MAXPERTURBATION );
+         aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, -perturbation, perturbation);
       }
+      assert(0.0 < aux[i] && aux[i] < 1.0);
 
       SCIPdebugMsg(scip, "LP row %d in [%e, %e]\n", i, aux[i], aux[i]);
    }
 
    /* update LP */
    SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
-   SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
+   SCIP_CALL( SCIPlpiChgSides(lp, nrows-1, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
    /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
