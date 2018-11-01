@@ -54,6 +54,7 @@ Build system
 
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
+- new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
 
 ### Makefile
 

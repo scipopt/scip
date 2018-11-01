@@ -10175,7 +10175,7 @@ char* SCIPstrtok(
    char**                ptrptr              /**< pointer to working char pointer - must stay the same while parsing */
    )
 {
-#ifdef NO_STRTOK_R
+#ifdef SCIP_NO_STRTOK_R
    return strtok(s, delim);
 #else
    return strtok_r(s, delim, ptrptr);
@@ -10462,7 +10462,7 @@ void SCIPsplitFilename(
       lastdot = NULL;
 
    /* detect known compression extensions */
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    if( lastdot != NULL )
    {
       char* compext;

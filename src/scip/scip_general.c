@@ -115,7 +115,7 @@
 
 #include "scip/pub_message.h"
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
 #endif
 
@@ -315,7 +315,7 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
 #endif
 
