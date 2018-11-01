@@ -11428,14 +11428,16 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    nvars = 0;
    for( i = 0; i < nallvars; ++i )
    {
-      if( SCIPisFeasEQ(scip, box[2 * i], box[2 * i + 1]) )
+      if( SCIPisRelEQ(scip, box[2 * i], box[2 * i + 1]) )
          continue;
       nonfixedpos[nvars] = i;
       nvars++;
    }
 
-   /* check whether number of variables is too large */
-   if( nvars > SCIP_MAXVERTEXPOLYDIM )
+   /* if all variables are fixed, then we could provide something trivial, but that wouldn't be the job of separation
+    * if too many variables are not fixed, then we do anything currently
+    */
+   if( nvars == 0 || nvars > SCIP_MAXVERTEXPOLYDIM )
    {
       SCIPfreeBufferArray(scip, &nonfixedpos);
       return SCIP_OKAY;
@@ -11479,7 +11481,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CALL( SCIPallocBufferArray(scip, &corner, nallvars) );
    for( i = 0; i < nallvars; ++i )
    {
-      if( SCIPisFeasEQ(scip, box[2 * i], box[2 * i + 1]) )
+      if( SCIPisRelEQ(scip, box[2 * i], box[2 * i + 1]) )
          corner[i] = (box[2 * i] + box[2 * i + 1]) / 2.0;
    }
    for( i = 0; i < ncols; ++i )
