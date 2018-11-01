@@ -74,12 +74,12 @@ void printMatrix(int size)
 static
 SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 {
-   /* params is a point to the double holding the coefficient */
-   SCIP_Real ret = *(SCIP_Real*)params;
+   /* funcdata is a pointer to the double holding the coefficient */
+   SCIP_Real ret = *(SCIP_Real*)funcdata;
    int i;
 
-   for( i = 0; i < npoint; ++i )
-      ret *= point[i];
+   for( i = 0; i < nargs; ++i )
+      ret *= args[i];
 
    return ret;
 }

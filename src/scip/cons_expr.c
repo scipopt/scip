@@ -5435,11 +5435,10 @@ void printConshdlrStatistics(
 
 
 /*
- * vertex polyhdral separation
+ * vertex polyhedral separation
  */
 
-#define MAXVERTEXPOLYHEDREALFACETDIM 14 /**< maximum dimension of vertex-polyhedral function for which to compute a facet */
-static const unsigned int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+#define POWEROFTWO(x) (0x1u << (x))
 
 /** builds LP used to compute facets of the convex envelope of vertex-polyhedral functions */
 static
@@ -5463,7 +5462,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 
    assert(scip != NULL);
    assert(lp != NULL);
-   assert(0 < nvars && nvars < MAXVERTEXPOLYHEDREALFACETDIM);
+   assert(0 < nvars && nvars < SCIP_MAXVERTEXPOLYDIM);
 
    SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of vertex-polyhedral function\n");
 
@@ -5471,7 +5470,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    SCIP_CALL( SCIPlpiCreate(lp, SCIPgetMessagehdlr(scip), "facet finding LP", SCIP_OBJSEN_MINIMIZE) );
 
    nrows = nvars + 1;
-   ncols = poweroftwo[nrows - 1];
+   ncols = POWEROFTWO(nrows - 1);
    nnonz = (ncols * (nrows + 1)) / 2;
    k = 0;
 
@@ -5509,8 +5508,8 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 
          a <<= 1;
          ++row;
-         assert(0 <= row && row < MAXVERTEXPOLYHEDREALFACETDIM);
-         assert(poweroftwo[row] == a);
+         assert(0 <= row && row < SCIP_MAXVERTEXPOLYDIM);
+         assert(POWEROFTWO(row) == a);
       }
 
       /* put 1 as a coefficient for sum_{i} \lambda_i = 1 row (last row) */
@@ -5571,7 +5570,7 @@ SCIP_Real computeMaxFacetError(
    assert(nonfixedpos != NULL);
    assert(facetcoefs != NULL);
 
-   ncorners = poweroftwo[nvars];
+   ncorners = POWEROFTWO(nvars);
    maxerror = 0.0;
 
    /* check the origin (all variables at lower bound) */
@@ -11407,7 +11406,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    }
 
    /* check whether number of variables is too large */
-   if( nvars > MAXVERTEXPOLYHEDREALFACETDIM )
+   if( nvars > SCIP_MAXVERTEXPOLYDIM )
    {
       SCIPfreeBufferArray(scip, &nonfixedpos);
       return SCIP_OKAY;
@@ -11437,7 +11436,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
     */
 
    /* get number of corners: 2^nvars */
-   ncorners = poweroftwo[nvars];
+   ncorners = POWEROFTWO(nvars);
 
    /* evaluate function at all corners of non-fixed variables; set value of fixed variables to midpoint */
    SCIP_CALL( SCIPallocBufferArray(scip, &corner, nallvars) );
