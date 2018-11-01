@@ -5471,7 +5471,8 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 
    assert(scip != NULL);
    assert(lp != NULL);
-   assert(0 < nvars && nvars < SCIP_MAXVERTEXPOLYDIM);
+   assert(nvars > 0);
+   assert(nvars < SCIP_MAXVERTEXPOLYDIM);
 
    SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of vertex-polyhedral function\n");
 
@@ -5532,13 +5533,14 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    }
    assert(k == nnonz);
 
-   /* add all columns to the LP interface; CPLEX needs the row to exist before adding columns, so we create the rows with
-    * dummy sides; note that the assert is not needed once somebody fixes the LPI
-    * FIXME: was the LPI fixed???
+   /* load all data into LP interface
+    * we can assume nrows (=nvars+1) <= ncols (=2^nvars), so we can pass lb as dummy lhs and rhs
     */
    assert(nrows <= ncols);
-   SCIP_CALL( SCIPlpiAddRows(*lp, nrows, obj, obj, NULL, 0, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPlpiAddCols(*lp, ncols, obj, lb, ub, NULL, nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiLoadColLP(*lp, SCIP_OBJSEN_MINIMIZE,
+      ncols, obj, lb, ub, NULL,
+      nrows, lb, lb, NULL,
+      nnonz, beg, ind, val) );
 
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &ind);
