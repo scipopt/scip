@@ -1349,12 +1349,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
  * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
  *
- * \f[
- *              \max \, \alpha^T x^* + \beta
- * \f]
- * \f[
- *     s.t. \; \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
- * \f]
+ * \f{align*}{
+ *              \max \, & \alpha^T x^* + \beta \\
+ *     s.t. \; & \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
+ * \f}
  *
  * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
  * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
@@ -1366,36 +1364,27 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
  * we find \f$ \bar g \f$ by solving the LP:
  *
- * \f[
- *              \max \, \bar \alpha^T T^{-1}(x^*) + \bar \beta
- * \f]
- * \f[
- *     s.t. \; \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
- * \f]
+ * \f{align*}{
+ *              \max \, & \bar \alpha^T T^{-1}(x^*) + \bar \beta \\
+ *     s.t. \; & \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
+ * \f}
  *
  * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
- * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables
+ * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables.
  *
  * Furthermore, the LP has more constraints than variables, so we solve its dual:
- *
- * \f[
- *              \min \, \sum_i \lambda_i f(v^i)
- * \f]
- * \f[
- *     s.t. \; \sum_i \lambda_i u^i = T^{-1}(x^*)
- * \f]
- * \f[
- *             \sum_i \lambda_i = 1
- * \f]
- * \f[
- *             \forall i, \, \lambda_i \geq 0
- * \f]
+ * \f{align*}{
+ *              \min \, & \sum_i \lambda_i f(v^i) \\
+ *     s.t. \; & \sum_i \lambda_i u^i = T^{-1}(x^*) \\
+ *             & \sum_i \lambda_i = 1 \\
+ *             & \forall i, \, \lambda_i \geq 0
+ * \f}
  *
  * In case we look for an overestimate, we do exactly the same, but have to maximize in the dual LP instead
  * of minimize.
  *
  * #### Technical and implementation details
- * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$
+ * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$.
  * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
  * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
  * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a vertex-polyhedral constraint with only \f$ k \f$
@@ -1403,27 +1392,27 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  * constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the minimum between 10 and the maximum number of products
  * among all product expressions.
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
- * otherwise the dual is infeasible
+ * otherwise the dual is infeasible.
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
  *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
  *  \beta \f$ by this amount, otherwise, we discard the cut.
  * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
  * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
  * -# In every call we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different functions
- * have different number of children, so we might need to fix/unfix more variables
+ * have different number of children, so we might need to fix/unfix more variables.
  * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
  * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
  * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
  * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
  * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
- * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution)
+ * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution).
  * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
  * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
  * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
- * -# to check that the computed cut is valid we do the following: we use a gray code to loop over the vertices
+ * -# To check that the computed cut is valid we do the following: we use a gray code to loop over the vertices
  * of the box domain w.r.t. unfixed variables in order to evaluate the underestimator. To ensure the validity of the
  * underestimator, we check whether \f$ \alpha v^i + \beta \le f(v^i) \f$ for every vertex \f$ v^i \f$ and adjust
- * \f$ beta \f$ if the maximal violation is small.
+ * \f$ \beta \f$ if the maximal violation is small.
  *
  * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
  * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
