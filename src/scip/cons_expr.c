@@ -5943,6 +5943,18 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
    SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->canonicalizetime) );
 
+   if( conshdlrdata->vp_randnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
+
+   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
+   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
+   {
+      if( conshdlrdata->vp_lp[i] != NULL )
+      {
+         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
+      }
+   }
+
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
