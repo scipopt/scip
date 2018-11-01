@@ -223,6 +223,7 @@ struct SCIP_ConshdlrData
 
    /* facets of envelops of vertex-polyhedral functions */
    SCIP_RANDNUMGEN*         vp_randnumgen;   /**< random number generator used to perturb reference point */
+   SCIP_LPI*                vp_lp[SCIP_MAXVERTEXPOLYDIM+1];  /**< LPs used to compute facets for functions of different dimension */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -6220,6 +6221,15 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
+   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
+   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
+   {
+      if( conshdlrdata->vp_lp[i] != NULL )
+      {
+         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -11425,13 +11435,21 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->vp_randnumgen, VERTEXPOLY_RANDNUMINITSEED, TRUE) );
    }
 
-   /* TODO reuse a previously constructed LP */
-   SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, nvars, &lp) );
+   /* construct an LP for this size, if not having one already */
+   if( conshdlrdata->vp_lp[nvars] == NULL )
+   {
+      SCIP_CALL( buildVertexPolyhedralSeparationLP(scip, nvars, &conshdlrdata->vp_lp[nvars]) );
+   }
+   lp = conshdlrdata->vp_lp[nvars];
    assert(lp != NULL);
 
    /* get number of cols and rows of separation lp */
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
+
+   /* get number of corners: 2^nvars */
+   assert(ncols == (int)POWEROFTWO(nvars));
+   ncorners = ncols;
 
    /* allocate necessary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncols) );
@@ -11445,8 +11463,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
     * 2. set up the described LP on the transformed space
     */
 
-   /* get number of corners: 2^nvars */
-   ncorners = POWEROFTWO(nvars);
 
    /* evaluate function at all corners of non-fixed variables; set value of fixed variables to midpoint */
    SCIP_CALL( SCIPallocBufferArray(scip, &corner, nallvars) );
@@ -11478,7 +11494,9 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
       /* update bounds; variables that are not in the LP get fixed to 0 */
       lbs[i] = 0.0;
-      ubs[i] = i < ncorners ? 1.0 : 0.0;
+      /* ubs[i] = i < ncorners ? 1.0 : 0.0; */
+      assert(i<ncorners);
+      ubs[i] = 1.0;
 
       SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lbs[i], ubs[i], funvals[i]);
 
@@ -11678,8 +11696,6 @@ CLEANUP:
    SCIPfreeBufferArray(scip, &aux);
    SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &nonfixedpos);
-
-   SCIP_CALL( SCIPlpiFree(&lp) );
 
    return SCIP_OKAY;
 }
