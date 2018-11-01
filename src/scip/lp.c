@@ -2662,7 +2662,7 @@ SCIP_RETCODE lpSetObjlim(
    if( objlim != lp->lpiobjlim ) /*lint !e777*/
    {
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, objlim, success) );
-      if( success )
+      if( *success )
       {
          SCIP_Real actualobjlim;
 
