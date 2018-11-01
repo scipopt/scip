@@ -11402,7 +11402,6 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_Real* aux; /* used to transform x^* and then to store LP solution */
    int* inds;
    int* nonfixedpos;
-   int ncorners;
    int ncols;
    int nrows;
    int i;
@@ -11460,9 +11459,8 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
 
-   /* get number of corners: 2^nvars */
+   /* number of columns should equal the number of corners = 2^nvars */
    assert(ncols == (int)POWEROFTWO(nvars));
-   ncorners = ncols;
 
    /* allocate necessary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncols) );
@@ -11500,7 +11498,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
          assert(!SCIPisInfinity(scip, REALABS(corner[varpos])));
       }
 
-      funvals[i] = i < ncorners ? function(corner, nvars, fundata) : 0.0;
+      funvals[i] = function(corner, nvars, fundata);
       inds[i] = i;
 
       SCIPdebugMsg(scip, "obj col %d = %e\n", i, funvals[i]);
