@@ -3361,8 +3361,6 @@ SCIP_RETCODE reduce_bd34(
 
                SCIPdebugMessage("BD3 Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], csum);
                (*nelims)++;
-
-
             }
          }
          /* vertex of degree 4? */

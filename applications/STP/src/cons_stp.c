@@ -45,6 +45,7 @@
 #include "heur_ascendprune.h"
 #include "portab.h"
 #include "branch_stp.h"
+#include "prop_stp.h"
 
 #include "scip/scip.h"
 #include "scip/misc.h"
@@ -69,7 +70,7 @@
 
 #define CONSHDLR_NAME          "stp"
 #define CONSHDLR_DESC          "steiner tree constraint handler"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY   9999999 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  9999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
@@ -80,14 +81,14 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS            20 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS     INT_MAX /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT INT_MAX /**< maximal number of cuts separated per separation round in the root node */
 
-
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
+#define DEFAULT_NPCIMPLICATIONS 10
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
 #define DEFAULT_CREEPFLOW      TRUE  /**< Use Creep-Flow */
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
@@ -134,6 +135,8 @@ struct SCIP_ConsData
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
+   int*                  pcimplstart;        /**< start for each terminal */
+   int*                  pcimplverts;        /**< all vertices */
    SCIP_Bool             backcut;            /**< should backcuts be applied? */
    SCIP_Bool             creepflow;          /**< should creepflow cuts be applied? */
    SCIP_Bool             disjunctcut;        /**< should disjunction cuts be applied? */
@@ -169,7 +172,45 @@ SCIP_Bool is_active(
    return (curr == 0);
 }
 
+/** initialize */
+static
+SCIP_RETCODE init_pcimplications(
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+)
+{
+   const int nnodes = g->knots;
+   const int nterms = g->terms;
 
+   /* not allocated yet? */
+   if( conshdlrdata->pcimplstart == NULL )
+   {
+      assert(conshdlrdata->pcimplverts == NULL);
+
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nterms));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), nterms * DEFAULT_NPCIMPLICATIONS));
+   }
+
+
+
+   return SCIP_OKAY;
+}
+
+/** returns inconing flow for given node */
+static
+SCIP_Real get_inflow(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      xval,               /**< edge values */
+   int                   vert                /**< the vertex */
+)
+{
+   double insum = 0.0;
+
+   for( int e = g->inpbeg[vert]; e != EAT_LAST; e = g->ieat[e] )
+      insum += xval[e];
+
+   return insum;
+}
 
 /** add a cut */
 static
@@ -386,7 +427,219 @@ void set_capacity(
    }
 }
 
-/** separate */
+/** separate PCSPG/MWCS implications */
+static
+SCIP_RETCODE sep_implicationsPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   maxcuts,            /**< maximal number of cuts */
+   int*                  ncuts               /**< pointer to store number of cuts */
+   )
+{
+   const GRAPH* g = SCIPprobdataGetGraph2(scip);
+   int* nodeinflow;
+   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   SCIP_ROW* row = NULL;
+   const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);;
+   int* verts;
+   int* start;
+   const int nnodes = g->knots;
+   const int nterms = g->terms;
+   int cutscount;
+   int ptermcount;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conshdlrdata != NULL);
+   assert(g != NULL);
+   assert(xval != NULL);
+
+   /* initialize? */
+   if( conshdlrdata->pcimplstart == NULL )
+   {
+      assert(conshdlrdata->pcimplverts == NULL);
+
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nterms));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), nterms * DEFAULT_NPCIMPLICATIONS));
+   }
+
+   verts = conshdlrdata->pcimplverts;
+   start = conshdlrdata->pcimplstart;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeinflow, nnodes) );
+
+   /* initialize node sums */
+   for( int i = 0; i < nnodes; i++ )
+      nodeinflow[i] = get_inflow(g, xval, i);
+
+   cutscount = 0;
+   ptermcount = 0;
+
+   /* main separation loop */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int maxnode;
+      SCIP_Real maxflow;
+      const SCIP_Real inflow = nodeinflow[i];
+
+      if( !Is_pterm(g->term[i]) )
+         continue;
+
+      if( SCIPisFeasGE(scip, inflow, 1.0) )
+         continue;
+
+      maxnode = -1;
+      maxflow = 0.0;
+      for( int j = start[ptermcount]; j < start[ptermcount + 1]; j++ )
+      {
+         const int vert = verts[j];
+         if( nodeinflow[vert] > inflow && nodeinflow[vert] > maxflow )
+         {
+            maxnode = vert;
+            maxflow = nodeinflow[vert];
+         }
+      }
+
+      /* separate? */
+      if( maxnode >= 0 )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
+
+         SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+         for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
+            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
+
+         for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], -1.0));
+
+         SCIP_CALL(SCIPflushRowExtensions(scip, row));
+
+         SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+         /* add cut to pool */
+         if( !infeasible )
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+         SCIP_CALL(SCIPreleaseRow(scip, &row));
+
+         if( *ncuts + cutscount++ >= maxcuts )
+            break;
+
+      }
+
+      ptermcount++;
+   }
+
+   SCIPfreeBufferArray(scip, &nodeinflow);
+
+   printf("PcImplication Separator: %d Inequalities added\n", cutscount);
+   *ncuts += cutscount;
+
+   return SCIP_OKAY;
+}
+
+
+#if 0
+/** separate degree-2 cuts */
+static
+SCIP_RETCODE sep_deg2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   maxcuts,            /**< maximal number of cuts */
+   int*                  ncuts               /**< pointer to store number of cuts */
+   )
+{
+   GRAPH* g;
+   SCIP_VAR** vars;
+   SCIP_ROW* row = NULL;
+   SCIP_Real* xval;
+   int cutscount = 0;
+   int nnodes;
+   const SCIP_Bool* deg2bounded = SCIPStpPropGet2BoundedArr(scip);
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conshdlrdata != NULL);
+   assert(deg2bounded != NULL);
+
+   vars = SCIPprobdataGetVars(scip);
+   g = consdata->graph;
+   assert(g != NULL);
+
+   xval = SCIPprobdataGetXval(scip, NULL);
+   assert(xval != NULL);
+
+   nnodes = g->knots;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      double inoutsum;
+
+      if( Is_term(g->term[i]) )
+         continue;
+
+      if( !deg2bounded[i] )
+         continue;
+
+      inoutsum = 0.0;
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         inoutsum += xval[e] + xval[flipedge_Uint(e)];
+         assert(flipedge_Uint(e) == (unsigned) flipedge(e));
+      }
+
+      if( SCIPisFeasGT(scip, inoutsum, 2.0) )
+      {
+         SCIP_Bool infeasible;
+
+         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "deg2", -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE));
+
+         SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
+            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[flipedge_Uint(e)], 1.0));
+            assert(flipedge_Uint(e) == (unsigned) flipedge(e));
+         }
+
+         SCIP_CALL(SCIPflushRowExtensions(scip, row));
+
+         SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+         /* add cut to pool */
+         if( !infeasible )
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+         cutscount++;
+
+         SCIP_CALL(SCIPreleaseRow(scip, &row));
+
+         if( *ncuts + cutscount >= maxcuts )
+            break;
+      }
+   }
+
+   printf("Deg2 Separator: %d Inequalities added\n", cutscount);
+   *ncuts += cutscount;
+
+   return SCIP_OKAY;
+}
+#endif
+
+/** separate flow-cuts */
 static
 SCIP_RETCODE sep_flow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1250,6 +1503,20 @@ SCIP_DECL_CONSINITSOL(consInitsolStp)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSINITSOL(consExitsolStp)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->pcimplstart));
+   SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->pcimplverts));
+
+   return SCIP_OKAY;
+}
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteStp)
@@ -1595,6 +1862,8 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteStp) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransStp) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolStp) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolStp) );
+
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpStp) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStp, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -1629,6 +1898,8 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
+   conshdlrdata->pcimplstart = NULL;
+   conshdlrdata->pcimplverts = NULL;
 
    return SCIP_OKAY;
 }

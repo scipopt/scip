@@ -2555,7 +2555,6 @@ void graph_get3nextTerms(
    int*                  state               /**< array to mark the state of each node during calculation */
    )
 {
-   int k;
    assert(g      != NULL);
    assert(path3   != NULL);
    assert(cost   != NULL);
@@ -2563,8 +2562,8 @@ void graph_get3nextTerms(
    assert(heap   != NULL);
    assert(state   != NULL);
 
-   if( g->stp_type != STP_PCSPG && g->stp_type != STP_RPCSPG )
-      for( k = 0; k < g->knots; k++ )
+   if( !graph_pc_isPcMw(g) )
+      for( int k = 0; k < g->knots; k++ )
          g->mark[k] = (g->grad[k] > 0);
 
    /* build voronoi diagram */
@@ -2598,7 +2597,7 @@ void graph_get4nextTerms(
    assert(state     != NULL);
    assert(costrev   != NULL);
 
-   if( g->stp_type != STP_PCSPG && g->stp_type != STP_RPCSPG )
+   if( !graph_pc_isPcMw(g) )
       for( int k = 0; k < g->knots; k++ )
          g->mark[k] = (g->grad[k] > 0);
 
@@ -2655,7 +2654,7 @@ SCIP_RETCODE graph_get4nextTTerms(
          g->mark[k] = (g->grad[k] > 0);
 
    nboundedges = 0;
-   for( k = 0; k < nnodes; k ++ )
+   for( k = 0; k < nnodes; k++ )
    {
       if( !g->mark[k] )
          continue;

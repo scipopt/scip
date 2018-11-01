@@ -71,6 +71,8 @@ struct SCIP_PropData
 {
    GRAPH*                propgraph;          /**< graph data */
    SCIP_Real*            fixingbounds;       /**< saves largest upper bound to each variable that would allow to fix it */
+   SCIP_Real*            deg2bounds;         /**< saves largest upper bound to each variable that would allow to set degree 2 constraint */
+   SCIP_Bool*            deg2bounded;        /**< maximum degree of vertex is 2? */
    SCIP_Longint          nfails;             /**< number of failures since last successful call */
    SCIP_Longint          ncalls;             /**< number of calls */
    SCIP_Longint          nlastcall;          /**< number of last call */
@@ -146,14 +148,21 @@ void updateFixedEdges(
 static
 SCIP_RETCODE globalfixing(
    SCIP*                 scip,               /**< SCIP structure */
-   SCIP_VAR**            vars,               /**< variables */
-   int*                  nfixededges,        /**< points to number of fixed edges */
-   const SCIP_Real*      fixingbounds,       /**< fixing bounds */
+   const SCIP_PROPDATA*  propdata,           /**< propagator data */
    const GRAPH*          graph,              /**< graph structure */
    SCIP_Real             cutoffbound,        /**> cutoff bound  */
-   int                   nedges              /**< number of edges */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  nfixededges         /**< points to number of fixed edges */
 )
 {
+   const SCIP_Real* fixingbounds = propdata->fixingbounds;
+   const SCIP_Real* deg2bounds = propdata->deg2bounds;
+   SCIP_Bool* deg2bounded = propdata->deg2bounded;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+
+   assert(fixingbounds != NULL && deg2bounds != NULL && deg2bounded != NULL);
+
    for( int e = 0; e < nedges; e++ )
    {
       if( SCIPisLT(scip, cutoffbound, fixingbounds[e]) )
@@ -169,6 +178,10 @@ SCIP_RETCODE globalfixing(
          }
       }
    }
+
+   for( int i = 0; i < nnodes; i++ )
+      if( SCIPisLT(scip, cutoffbound, deg2bounds[i]) && !Is_term(graph->term[i]) )
+         deg2bounded[i] = TRUE;
 
    return SCIP_OKAY;
 }
@@ -258,7 +271,8 @@ void setVnoiDistances(
    SCIP_Real*            costrev,            /**< reversed reduced costs */
    SCIP_Real*            pathdist,           /**< path distance */
    int*                  pathedge,           /**< path edge */
-   int*                  vbase               /**< Voronoi base */
+   int*                  vbase,              /**< Voronoi base */
+   int*                  state               /**< state  */
 )
 {
    const int nnodes = graph->knots;
@@ -277,19 +291,18 @@ void setVnoiDistances(
    for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
       costrev[e] = FARAWAY;
 
-   /* build voronoi diagram */
-   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+   graph_get3nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
 }
 
 /* updates fixing bounds for reduced cost fixings */
 static
 void updateFixingBounds(
-   SCIP_Real*            fixingbounds,       /**< fixing bounds */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**> shortest path distances  */
-   const PATH*           vnoi,               /**> Voronoi paths  */
-   SCIP_Real             lpobjal             /**> LP objective  */
+   const PATH*           vnoi,               /**< Voronoi paths  */
+   SCIP_Real             lpobjal,            /**< LP objective  */
+   SCIP_Real*            fixingbounds        /**< fixing bounds */
 )
 {
    const int nnodes = graph->knots;
@@ -305,6 +318,31 @@ void updateFixingBounds(
          if( fixbnd > fixingbounds[e] )
             fixingbounds[e] = fixbnd;
       }
+   }
+}
+
+/* updates fixing bounds for reduced cost based constraints */
+static
+void updateDeg2Bounds(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< reduced costs */
+   const SCIP_Real*      pathdist,           /**> shortest path distances  */
+   const PATH*           vnoi,               /**< Voronoi paths  */
+   SCIP_Real             lpobjal,            /**< LP objective  */
+   SCIP_Real*            deg2bounds          /**< bounds */
+)
+{
+   const int nnodes = graph->knots;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int todo;
+      if( Is_term(graph->term[k]) )
+         continue;
+
+      const SCIP_Real fixbnd = pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + lpobjal;
+      if( fixbnd > deg2bounds[k] )
+         deg2bounds[k] = fixbnd;
    }
 }
 
@@ -326,6 +364,7 @@ SCIP_RETCODE dualcostVarfixing(
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
    const SCIP_Real minpathcost = cutoffbound - lpobjval;
    int* vbase;
+   int* state;
    int* pathedge;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
@@ -334,23 +373,35 @@ SCIP_RETCODE dualcostVarfixing(
 
    if( propdata->fixingbounds == NULL )
    {
+      assert(propdata->deg2bounds == NULL && propdata->deg2bounded == NULL);
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->deg2bounds), nnodes) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->deg2bounded), nnodes) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
+
       for( int i = 0; i < nedges; i++ )
          propdata->fixingbounds[i] = -FARAWAY;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         propdata->deg2bounds[i] = -FARAWAY;
+         propdata->deg2bounded[i] = FALSE;
+      }
    }
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
    /* initialize reduced costs*/
    setRedcosts(scip, vars, nedges, cost);
 
    /* initialize Voronoi structures */
-   setVnoiDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase);
+   setVnoiDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase, state);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -373,16 +424,20 @@ SCIP_RETCODE dualcostVarfixing(
 
    /* at root? */
    if( SCIPgetDepth(scip) == 0 )
-      updateFixingBounds(propdata->fixingbounds, graph, cost, pathdist, vnoi, lpobjval);
+   {
+      updateFixingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->fixingbounds);
+      updateDeg2Bounds(graph, cost, pathdist, vnoi, lpobjval, propdata->deg2bounds);
+   }
 
-   SCIP_CALL( globalfixing(scip, vars, nfixed, propdata->fixingbounds, graph, cutoffbound, nedges) );
+   SCIP_CALL( globalfixing(scip, propdata, graph, cutoffbound, vars, nfixed) );
 
-   SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
-   SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &pathdist);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &vbase);
 
    return SCIP_OKAY;
 }
@@ -424,7 +479,9 @@ SCIP_RETCODE reduceRedcostExtended(
    setRedcosts(scip, vars, nedges, redcost);
 
    /* initialize Voronoi structures */
-   setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase);
+   assert(0 && "state");
+
+   setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, NULL);
 
    /* reduce graph */
    extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, NULL);
@@ -644,13 +701,6 @@ SCIP_RETCODE redbasedVarfixing(
    }
 #endif
    SCIP_CALL( graph_path_init(scip, propgraph) );
-
-   if( propdata->fixingbounds == NULL )
-   {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->fixingbounds), nedges) );
-      for( int i = 0; i < nedges; i++ )
-         propdata->fixingbounds[i] = -FARAWAY;
-   }
 
 #if 1
    *probisinfeas = FALSE;
@@ -986,6 +1036,8 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->nfixededges = 0;
    propdata->postrednfixededges = 0;
    propdata->fixingbounds = NULL;
+   propdata->deg2bounded = NULL;
+   propdata->deg2bounds = NULL;
    propdata->propgraph = NULL;
    propdata->propgraphnodenumber = -1;
 
@@ -1003,6 +1055,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolStp)
    assert(propdata != NULL);
 
    SCIPfreeMemoryArrayNull(scip, &(propdata->fixingbounds));
+   SCIPfreeMemoryArrayNull(scip, &(propdata->deg2bounded));
+   SCIPfreeMemoryArrayNull(scip, &(propdata->deg2bounds));
+
    if( propdata->propgraph != NULL )
       graph_free(scip, &(propdata->propgraph), TRUE);
 
@@ -1053,7 +1108,7 @@ int SCIPStpNfixedEdges(
    return (propdata->nfixededges);
 }
 
-/** gets propagator graph  */
+/** gives propagator graph  */
 void SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */
@@ -1071,6 +1126,22 @@ void SCIPStpPropGetGraph(
 
    *graph = (propdata->propgraph);
    *graphnodenumber = propdata->propgraphnodenumber;
+}
+
+/** gives array indicating which nodes are degree-2 bounded */
+const SCIP_Bool* SCIPStpPropGet2BoundedArr(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_PROPDATA* propdata;
+   assert(scip != NULL);
+
+   /* get propagator data */
+   assert(SCIPfindProp(scip, "stp") != NULL);
+   propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
+   assert(propdata != NULL);
+
+   return propdata->deg2bounded;
 }
 
 

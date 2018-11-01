@@ -65,6 +65,12 @@ void SCIPStpPropGetGraph(
    SCIP_Longint*         graphnodenumber     /**< pointer to b&b node for which graph is valid */
    );
 
+/** gives array indicating which nodes are degree-2 bounded */
+EXTERN
+const SCIP_Bool* SCIPStpPropGet2BoundedArr(
+   SCIP*                 scip                /**< SCIP data structure */
+);
+
 #ifdef __cplusplus
 }
 #endif
