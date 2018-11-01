@@ -273,13 +273,13 @@ Test(separation, errorfacet)
 
    /* compute the maximum error */
    printf("computing maximum error\n");
-   maxfaceterror = computeMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] += 1.0;
-   maxfaceterror = computeMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 1.0);
    facet[3] -= 1.0;
 
@@ -289,13 +289,13 @@ Test(separation, errorfacet)
 
    /* compute the maximum error */
    printf("computing maximum error over\n");
-   maxfaceterror = computeMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] -= 1.0;
-   maxfaceterror = computeMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
+   maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
    cr_expect_eq(maxfaceterror, 1.0);
    facet[3] += 1.0;
 
