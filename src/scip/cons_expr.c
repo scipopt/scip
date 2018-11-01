@@ -70,6 +70,11 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
+#define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
+#define VERTEXPOLY_USEDUALSIMPLEX       TRUE /**< use dual or primal simplex algorithm? */
+#define VERTEXPOLY_RANDNUMINITSEED  20181029 /**< seed for random number generator, which is used to move points away from the boundary */
+#define VERTEXPOLY_ADJUSTFACETFACTOR     1e1 /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
+
 /* properties of the expression constraint handler statistics table */
 #define TABLE_NAME_EXPR                          "expression"
 #define TABLE_DESC_EXPR                          "expression constraint handler statistics"
@@ -106,6 +111,8 @@
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
+/** translates x to 2^x for non-negative integer x */
+#define POWEROFTWO(x) (0x1u << (x))
 
 /*
  * Data structures
@@ -5437,8 +5444,6 @@ void printConshdlrStatistics(
 /*
  * vertex polyhedral separation
  */
-
-#define POWEROFTWO(x) (0x1u << (x))
 
 /** builds LP used to compute facets of the convex envelope of vertex-polyhedral functions */
 static
@@ -11341,11 +11346,6 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
    return SCIP_OKAY;
 }
 
-#define MAXPERTURBATION            1e-3 /**< maximum perturbation */
-#define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
-#define RANDNUMINITSEED        20181029 /**< seed for random number generator, which is used to move points away from the boundary */
-#define ADJUSTFACETFACTOR          1e1  /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
-
 /* computes a facet of the convex or concave envelope of a vertex polyhedral function
  * see (doxygen-)comment of this function in cons_expr.h
  * (this is by intention not a doxygen comment)
@@ -11480,7 +11480,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    }
 
    /* create random number generater */
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, RANDNUMINITSEED, TRUE) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, VERTEXPOLY_RANDNUMINITSEED, TRUE) );
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
    for( i = 0; i < nrows; ++i )
@@ -11507,15 +11507,15 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
 
          /* perturb point to hopefully obtain a facet of the convex envelope */
          if( aux[i] == 1.0 )
-            aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+            aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
          else if( aux[i] == 0.0 )
-            aux[i] += SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+            aux[i] += SCIPrandomGetReal(randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
          else
          {
             SCIP_Real perturbation;
 
             perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
-            perturbation = MIN( perturbation, MAXPERTURBATION );
+            perturbation = MIN( perturbation, VERTEXPOLY_MAXPERTURBATION );
             aux[i] += SCIPrandomGetReal(randnumgen, -perturbation, perturbation);
          }
          assert(0.0 < aux[i] && aux[i] < 1.0);
@@ -11540,7 +11540,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
    /*
     * 3. solve the LP and store the resulting facet for the transformed space
     */
-   if( USEDUALSIMPLEX ) /*lint !e774 !e506*/
+   if( VERTEXPOLY_USEDUALSIMPLEX ) /*lint !e774 !e506*/
    {
       SCIP_CALL( SCIPlpiSolveDual(lp) );
    }
@@ -11637,7 +11637,7 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       SCIPdebugMsgPrint(scip, "maximum facet error %g, adjust constant to make cut valid!\n", maxfaceterror);
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
+      if( maxfaceterror > VERTEXPOLY_ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g.\n", maxfaceterror);
          goto CLEANUP;
