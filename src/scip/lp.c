@@ -2862,8 +2862,8 @@ SCIP_RETCODE lpSetFastmip(
       {
          lp->lpifastmip = fastmip;
          lp->solved = FALSE;
-         /* We might only set lp->solved to false if fastmip is turned off, since this should be the more demanding
-          * setting; however, in the current code, this should have not effect. */
+         /* We might only set lp->solved to false if fastmip is turned off, since the latter should be the more
+          * demanding setting; however, in the current code, this should have not effect. */
       }
    }
    else
