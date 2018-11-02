@@ -134,7 +134,7 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    assert(maxdegree > 0);
 
-   SCIPdebugMessage("vertex selected by degree branching rule: %d \n\n", *vertex);
+   printf("vertex selected by degree branching rule: %d \n\n", *vertex);
 
    SCIPfreeBufferArray(scip, &nodestate);
 
@@ -331,9 +331,8 @@ SCIP_RETCODE selectBranchingVertexBySol(
       }
    }
 
-   printf("selected: \n");
+   printf("Solution branching selected:  ");
    graph_knot_printInfo(graph, *vertex);
-   printf("maxdeg %d \n", maxdeg);
 
    assert(maxdeg >= 0);
 
@@ -672,7 +671,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPdebugMsg(scip, "Execps method of STP branching\n");
+   SCIPdebugMessage("Execps method of STP branching\n");
    *result = SCIP_DIDNOTRUN;
 
    probdata = SCIPgetProbData(scip);
@@ -684,8 +683,17 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    if( !isProbCompatible(g->stp_type) )
       return SCIP_OKAY;
 
-   /* select vertex to branch on */
-   SCIP_CALL( selectBranchingVertexByDegree(scip, &branchvertex, g) );
+
+   /* get vertex to branch on */
+   if( graph_pc_isPcMw(g) || branchruledata->branchtype == BRANCH_STP_ON_SOL )
+   {
+      int todo; // check what is better degree or sol
+      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
+   }
+
+   /* fall-back strategy */
+   if( branchvertex == UNKNOWN )
+      SCIP_CALL( selectBranchingVertexByDegree(scip, &branchvertex, g) );
 
    if( branchvertex == UNKNOWN )
    {

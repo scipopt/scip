@@ -587,17 +587,31 @@ SCIP_RETCODE sep_implicationsPcMw(
       {
          SCIP_Bool infeasible;
 
+#if 1
          SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
          for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
             SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
-#if 1
+
          for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
             SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], -1.0));
 #else
-         assert(g->term2edge[i] >= 0);
-         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[g->term2edge[i]], -1.0));
+         {
+            const int twinterm = graph_pc_getTwinTerm(g, i);
+            const int rootedge = graph_pc_getRoot2PtermEdge(g, twinterm);
+            assert(rootedge >= 0);
+            assert(SCIPisEQ(scip, 1.0 - xval[rootedge], inflow));
+
+            SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
+            SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+            for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
+               SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
+
+            assert(g->term2edge[i] >= 0);
+            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[rootedge], 1.0));
+         }
 #endif
 
          SCIP_CALL(SCIPflushRowExtensions(scip, row));

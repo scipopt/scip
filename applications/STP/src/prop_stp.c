@@ -521,9 +521,6 @@ SCIP_RETCODE redbasedVarfixing(
    const int nedges = g->edges;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
-//#ifndef NDEBUG
-   SCIP_Bool infeas0 = FALSE;
-//#endif
 
    assert(g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP); // not implemented yet!
    assert(propdata != NULL);
@@ -555,26 +552,6 @@ SCIP_RETCODE redbasedVarfixing(
    assert(!graph_pc_isRootedPcMw(g) || graph_pc_nFixedTerms(g) == graph_pc_nFixedTerms(propgraph));
 
    SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
-
-//#ifndef NDEBUG
-   for( int k = 0; k < g->knots; k++ )
-   {
-      if( Is_term(g->term[k]) && k != g->source )
-      {
-         int nvalid = 0;
-         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-            if( SCIPvarGetUbLocal(vars[e]) > 0.5 )
-               nvalid++;
-
-         if( nvalid == 0 )
-         {
-          //  printf(" %d \n", 0);
-            infeas0 = TRUE;
-         }
-      }
-   }
-//#endif
-
 
    for( int e = 0; e < nedges; e++ )
       remain[e] = PROP_STP_EDGE_UNSET;
@@ -668,27 +645,24 @@ SCIP_RETCODE redbasedVarfixing(
 #if 1
    if( pcmw )
    {
-      for( int e = propgraph->outbeg[propgraph->source]; e != EAT_LAST;  )
+      for( int k = 0; k < propgraph->knots; k++ )
       {
-         const int enext = propgraph->oeat[e];
-         const int head = propgraph->head[e];
-
-         if( Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head) )
+         if( Is_term(propgraph->term[k]) && !graph_pc_knotIsFixedTerm(propgraph, k) )
          {
-            assert(!graph_pc_knotIsFixedTerm(g, head));
+            const int rootedge = graph_pc_getRoot2PtermEdge(g, k);
+            assert(rootedge >= 0);
 
             /* fixed to 0? Then take terminal */
-            if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+            if( SCIPvarGetUbLocal(vars[rootedge]) < 0.5 )
             {
-               enforcePterm(propgraph, graph_pc_getTwinTerm(propgraph, head));
+               enforcePterm(propgraph, graph_pc_getTwinTerm(propgraph, k));
             }
             /* fixed to 1? Then delete terminal */
-            else if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+            else if( SCIPvarGetLbLocal(vars[rootedge]) > 0.5 )
             {
-               graph_pc_deleteTerm(scip, propgraph, head);
+               graph_pc_deleteTerm(scip, propgraph, k);
             }
          }
-         e = enext;
       }
    }
 
@@ -708,12 +682,6 @@ SCIP_RETCODE redbasedVarfixing(
       SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, &offset, probisinfeas) );
    else
       SCIP_CALL( level0infeas(scip, propgraph, probisinfeas) );
-
-   if( infeas0 )
-   {
-      printf("*probisinfeas??? %d \n", *probisinfeas);
-      return SCIP_ERROR;
-   }
 
    if( *probisinfeas )
       goto TERMINATE;
