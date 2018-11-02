@@ -251,6 +251,7 @@ extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
 extern int    graph_pc_realDegree(const GRAPH*, int, SCIP_Bool);
 extern int    graph_pc_getRoot2PtermEdge(const GRAPH*, int);
 extern int    graph_pc_nFixedTerms(const GRAPH*);
+extern int    graph_pc_nPotentialTerms(const GRAPH*);
 extern int    graph_pc_getTwinTerm(const GRAPH*, int);
 extern SCIP_Bool graph_valid(const GRAPH*);
 extern SCIP_Bool graph_pc_knotIsFixedTerm(const GRAPH*, int);

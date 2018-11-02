@@ -1482,6 +1482,8 @@ SCIP_RETCODE reduce_simple_pc(
                SCIPdebugMessage("contract non-terminals %d %d \n ", i2, i);
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->pcancestors[i], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->pcancestors[i], NULL) );
 
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                (*countnew)++;

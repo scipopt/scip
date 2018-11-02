@@ -336,13 +336,12 @@ void updateDeg2Bounds(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      int todo;
-      if( Is_term(graph->term[k]) )
-         continue;
-
-      const SCIP_Real fixbnd = pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + lpobjal;
-      if( fixbnd > deg2bounds[k] )
-         deg2bounds[k] = fixbnd;
+      if( !Is_term(graph->term[k]) )
+      {
+         const SCIP_Real fixbnd = pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + lpobjal;
+         if( fixbnd > deg2bounds[k] )
+            deg2bounds[k] = fixbnd;
+      }
    }
 }
 
@@ -522,6 +521,9 @@ SCIP_RETCODE redbasedVarfixing(
    const int nedges = g->edges;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+//#ifndef NDEBUG
+   SCIP_Bool infeas0 = FALSE;
+//#endif
 
    assert(g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP); // not implemented yet!
    assert(propdata != NULL);
@@ -554,26 +556,24 @@ SCIP_RETCODE redbasedVarfixing(
 
    SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
 
+//#ifndef NDEBUG
    for( int k = 0; k < g->knots; k++ )
    {
-      int todo; // assert?
       if( Is_term(g->term[k]) && k != g->source )
       {
          int nvalid = 0;
          for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-         {
             if( SCIPvarGetUbLocal(vars[e]) > 0.5 )
                nvalid++;
-         }
 
          if( nvalid == 0 )
          {
-            printf("FAIL for ");
-            graph_knot_printInfo(g, k);
-            return SCIP_ERROR;
+          //  printf(" %d \n", 0);
+            infeas0 = TRUE;
          }
       }
    }
+//#endif
 
 
    for( int e = 0; e < nedges; e++ )
@@ -702,16 +702,22 @@ SCIP_RETCODE redbasedVarfixing(
 #endif
    SCIP_CALL( graph_path_init(scip, propgraph) );
 
-#if 1
+
    *probisinfeas = FALSE;
    if( propgraph->stp_type == STP_RPCSPG )
       SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, &offset, probisinfeas) );
    else
       SCIP_CALL( level0infeas(scip, propgraph, probisinfeas) );
 
+   if( infeas0 )
+   {
+      printf("*probisinfeas??? %d \n", *probisinfeas);
+      return SCIP_ERROR;
+   }
+
    if( *probisinfeas )
       goto TERMINATE;
-#endif
+
 
    if( !graph_valid(propgraph) )
    {

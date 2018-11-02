@@ -698,16 +698,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      assert(Is_pterm(graph->term[pterm]));
 
                      pinned[pterm] = TRUE;
-
-                     for( l = graph->outbeg[k]; l != EAT_LAST; l = graph->oeat[l] )
-                     {
-                        int deleteme;
-                        if( !Is_term(graph->term[graph->head[l]]) )
-                        {
-                           assert(graph->head[l] != root);
-                           assert(graph->head[l] == pterm);
-                        }
-                     }
                   }
                }
             }

@@ -951,7 +951,7 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
 /** check whether terminal is not a leaf in at least one optimal tree */
 SCIP_Bool graph_pc_termIsNonLeaf(
    const GRAPH*          g,                  /**< the graph */
-   int                   term                /**< terminl to be checked */
+   int                   term                /**< terminal to be checked */
    )
 {
    int e;
@@ -2494,13 +2494,30 @@ int graph_pc_nFixedTerms(
    int nfixterms = 0;
    const int nnodes = graph->knots;
    assert(graph != NULL);
-   assert(graph_pc_isRootedPcMw(graph));
+   assert(graph_pc_isPcMw(graph));
+
+   if( !graph_pc_isRootedPcMw(graph) )
+      return 0;
 
    for( int k = 0; k < nnodes; k++ )
       if( graph_pc_knotIsFixedTerm(graph, k) )
          nfixterms++;
 
    return nfixterms;
+}
+
+/** get number of potential terminals */
+int graph_pc_nPotentialTerms(
+   const GRAPH*          graph                /**< the graph */
+)
+{
+   assert(graph != NULL);
+   assert(graph_pc_isPcMw(graph));
+
+   if( !graph_pc_isRootedPcMw(graph) )
+      return (graph->terms - 1);
+
+   return (graph->terms - graph_pc_nFixedTerms(graph));
 }
 
 /** get twin-terminal */

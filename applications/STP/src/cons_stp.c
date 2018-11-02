@@ -88,7 +88,7 @@
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
-#define DEFAULT_NPCIMPLICATIONS 10
+#define PCIMPLICATIONS_ALLOC_FACTOR 3
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
 #define DEFAULT_CREEPFLOW      TRUE  /**< Use Creep-Flow */
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
@@ -172,26 +172,95 @@ SCIP_Bool is_active(
    return (curr == 0);
 }
 
-/** initialize */
+/** initialize (R)PC implications */
 static
-SCIP_RETCODE init_pcimplications(
+SCIP_RETCODE init_pcmwimplications(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
 )
 {
    const int nnodes = g->knots;
-   const int nterms = g->terms;
+   const int npterms = graph_pc_nPotentialTerms(g);
+   int* start;
+   int* verts;
+   int* visitlist;
+   SCIP_Real* dist;
+   STP_Bool* visited;
+   int nspares;
+   int termscount;
+   int nimplications;
+   const int maxnimplications = PCIMPLICATIONS_ALLOC_FACTOR * g->edges;
+   const int slotsize = ((npterms == 0) ? 0 : maxnimplications / npterms);
 
-   /* not allocated yet? */
-   if( conshdlrdata->pcimplstart == NULL )
+   assert(g != NULL && conshdlrdata != NULL);
+   assert(graph_pc_isPcMw(g) && !g->extended);
+   assert(conshdlrdata->pcimplstart == NULL );
+   assert(conshdlrdata->pcimplverts == NULL);
+   assert(slotsize >= 1 && slotsize * npterms <= maxnimplications);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &visitlist, nnodes));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), npterms + 1));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), maxnimplications));
+
+   start = conshdlrdata->pcimplstart;
+   verts = conshdlrdata->pcimplverts;
+
+   for( int i = 0; i < nnodes; i++ )
    {
-      assert(conshdlrdata->pcimplverts == NULL);
-
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nterms));
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), nterms * DEFAULT_NPCIMPLICATIONS));
+      visited[i] = FALSE;
+      g->path_state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
    }
 
+   start[0] = 0;
+   nspares = 0;
+   termscount = 0;
+   nimplications = 0;
 
+   /* main loop: initialize implication lists */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int nvisits;
+      if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) )
+         continue;
+
+      assert(i != g->source);
+      assert(g->path_heap != NULL);
+      assert(g->path_state != NULL);
+      (void) graph_sdWalksConnected(scip, g, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
+
+      assert(nvisits >= 1 && visitlist[0] == i);
+
+      if( nvisits > slotsize + nspares + 1 )
+      {
+         printf("more %d \n", nvisits);
+      }
+
+      assert(nspares >= 0);
+
+      for( int j = 1; j < MIN(nvisits, slotsize + nspares + 1); j++ )
+      {
+         const int vert = visitlist[j];
+         verts[nimplications++] = vert;
+      }
+
+      if( nvisits < slotsize + 1 )
+         nspares += (slotsize + 1) - nvisits;
+
+      assert(termscount < npterms);
+      start[++termscount] = nimplications;
+   }
+   assert(termscount == npterms);
+
+
+   printf("nimplications %d \n", nimplications);
+
+   SCIPfreeBufferArray(scip, &visitlist);
+   SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &dist);
 
    return SCIP_OKAY;
 }
@@ -438,15 +507,14 @@ SCIP_RETCODE sep_implicationsPcMw(
    int*                  ncuts               /**< pointer to store number of cuts */
    )
 {
-   const GRAPH* g = SCIPprobdataGetGraph2(scip);
+   GRAPH* g = SCIPprobdataGetGraph2(scip);
    int* nodeinflow;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
    SCIP_ROW* row = NULL;
-   const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);;
+   const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);
    int* verts;
    int* start;
    const int nnodes = g->knots;
-   const int nterms = g->terms;
    int cutscount;
    int ptermcount;
 
@@ -456,13 +524,17 @@ SCIP_RETCODE sep_implicationsPcMw(
    assert(g != NULL);
    assert(xval != NULL);
 
+   /* nothing to separate? */
+   if( graph_pc_nPotentialTerms(g) == 0 )
+      return SCIP_OKAY;
+
    /* initialize? */
    if( conshdlrdata->pcimplstart == NULL )
    {
       assert(conshdlrdata->pcimplverts == NULL);
-
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nterms));
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), nterms * DEFAULT_NPCIMPLICATIONS));
+      graph_pc_2org(g);
+      SCIP_CALL( init_pcmwimplications(scip, g, conshdlrdata) );
+      graph_pc_2trans(g);
    }
 
    verts = conshdlrdata->pcimplverts;
@@ -487,12 +559,14 @@ SCIP_RETCODE sep_implicationsPcMw(
       if( !Is_pterm(g->term[i]) )
          continue;
 
+      ptermcount++;
+
       if( SCIPisFeasGE(scip, inflow, 1.0) )
          continue;
 
       maxnode = -1;
       maxflow = 0.0;
-      for( int j = start[ptermcount]; j < start[ptermcount + 1]; j++ )
+      for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
       {
          const int vert = verts[j];
          if( nodeinflow[vert] > inflow && nodeinflow[vert] > maxflow )
@@ -508,14 +582,17 @@ SCIP_RETCODE sep_implicationsPcMw(
          SCIP_Bool infeasible;
 
          SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
-
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
          for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
             SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
-
+#if 1
          for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
             SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], -1.0));
+#else
+         assert(g->term2edge[i] >= 0);
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[g->term2edge[i]], -1.0));
+#endif
 
          SCIP_CALL(SCIPflushRowExtensions(scip, row));
 
@@ -533,9 +610,8 @@ SCIP_RETCODE sep_implicationsPcMw(
             break;
 
       }
-
-      ptermcount++;
    }
+   assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nPotentialTerms(g));
 
    SCIPfreeBufferArray(scip, &nodeinflow);
 
@@ -1504,7 +1580,7 @@ SCIP_DECL_CONSINITSOL(consInitsolStp)
 }
 
 static
-SCIP_DECL_CONSINITSOL(consExitsolStp)
+SCIP_DECL_CONSEXITSOL(consExitsolStp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -1562,7 +1638,6 @@ SCIP_DECL_CONSTRANS(consTransStp)
    return SCIP_OKAY;
 }
 
-#if 1
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpStp)
@@ -1584,7 +1659,7 @@ SCIP_DECL_CONSINITLP(consInitlpStp)
 
    return SCIP_OKAY;
 }
-#endif
+
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpStp)
@@ -1624,6 +1699,9 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    chgterms = (!atrootnode && (g->stp_type == STP_SPG || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG) );
 
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+
+   if( graph_pc_isPcMw(g) )
+      SCIP_CALL( sep_implicationsPcMw(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    /* change graph according to branch-and-bound terminal changes  */
    if( chgterms )
