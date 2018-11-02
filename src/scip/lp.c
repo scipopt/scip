@@ -2648,6 +2648,8 @@ SCIP_RETCODE lpSetObjlim(
    assert(set != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
     * solver's objective limit handling, so we return here and do not apply the objective limit. */
    if( lpCutoffDisabled(set) || set->misc_exactsolve )
@@ -2677,8 +2679,6 @@ SCIP_RETCODE lpSetObjlim(
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
-         else
-            *success = FALSE;
          lp->lpiobjlim = actualobjlim;
       }
    }
