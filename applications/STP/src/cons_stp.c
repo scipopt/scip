@@ -88,7 +88,7 @@
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
-#define PCIMPLICATIONS_ALLOC_FACTOR 3
+#define PCIMPLICATIONS_ALLOC_FACTOR 4
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
 #define DEFAULT_CREEPFLOW      TRUE  /**< Use Creep-Flow */
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
@@ -224,6 +224,7 @@ SCIP_RETCODE init_pcmwimplications(
    for( int i = 0; i < nnodes; i++ )
    {
       int nvisits;
+      int nadded;
       if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) )
          continue;
 
@@ -233,28 +234,33 @@ SCIP_RETCODE init_pcmwimplications(
       (void) graph_sdWalksConnected(scip, g, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
 
       assert(nvisits >= 1 && visitlist[0] == i);
-
-      if( nvisits > slotsize + nspares + 1 )
-      {
-         printf("more %d \n", nvisits);
-      }
-
       assert(nspares >= 0);
 
       for( int j = 1; j < MIN(nvisits, slotsize + nspares + 1); j++ )
       {
          const int vert = visitlist[j];
+         assert(nimplications < maxnimplications);
+         if( nimplications >= maxnimplications )
+         {
+            int deleteme;
+            printf("too many %d \n", nimplications);
+            return SCIP_ERROR;
+         }
          verts[nimplications++] = vert;
       }
 
-      if( nvisits < slotsize + 1 )
-         nspares += (slotsize + 1) - nvisits;
+      nadded = nimplications - start[termscount];
+      assert(nadded >= 0);
+
+      if( nadded > slotsize )
+         nspares -= nadded - slotsize;
+      else
+         nspares += slotsize - nadded;
 
       assert(termscount < npterms);
       start[++termscount] = nimplications;
    }
    assert(termscount == npterms);
-
 
    printf("nimplications %d \n", nimplications);
 
@@ -569,7 +575,7 @@ SCIP_RETCODE sep_implicationsPcMw(
       for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
       {
          const int vert = verts[j];
-         if( nodeinflow[vert] > inflow && nodeinflow[vert] > maxflow )
+         if( SCIPisFeasGT(scip, nodeinflow[vert], inflow) && nodeinflow[vert] > maxflow )
          {
             maxnode = vert;
             maxflow = nodeinflow[vert];

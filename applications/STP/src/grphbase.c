@@ -3951,6 +3951,24 @@ SCIP_RETCODE graph_get_edgeConflicts(
          childcount[curr->index / 2]++;
       }
 
+   if( graph_pc_isPcMw(g) )
+   {
+      const int nnodes = g->knots;
+      assert(g->extended);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( Is_term(g->term[k]) )
+            continue;
+
+         for( IDX* curr = g->pcancestors[k]; curr != NULL; curr = curr->parent )
+         {
+            assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
+            childcount[curr->index / 2]++;
+         }
+      }
+   }
+
    nconflicts = 0;
 
    for( int e = 0; e < nedgesorg / 2; e++ )
