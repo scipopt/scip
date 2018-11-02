@@ -11468,7 +11468,10 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
 
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, FALSE, timelimit, lperror) );
-   resolve = FALSE; /* only the first solve should be counted as resolving call */
+
+   /* after the first solve, do not use starting basis, since otherwise the solver will probably think the basis is
+    * optimal without preforming scaling/change tolerances/presolving */
+   resolve = FALSE;
 
    /* check for stability; iteration limit exceeded is also treated like instability if the iteration limit is soft */
    if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi) && (itlimishard || !SCIPlpiIsIterlimExc(lp->lpi))) )
