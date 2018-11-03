@@ -587,7 +587,7 @@ SCIP_RETCODE sep_implicationsPcMw(
       {
          SCIP_Bool infeasible;
 
-#if 1
+#if 0
          SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
