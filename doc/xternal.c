@@ -8010,7 +8010,7 @@
  *
  */
 
-/**@defgroup CONSHDLRS  Constraint Handler
+/**@defgroup CONSHDLRS  Constraint Handlers
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the default constraint handlers of \SCIP
  *
