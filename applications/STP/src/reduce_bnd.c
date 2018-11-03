@@ -119,27 +119,26 @@ void initializeDaDistances(
    /* no paths should go back to the root */
    for( int e = g->outbeg[daroot]; e != EAT_LAST; e = g->oeat[e] )
       costrev[e] = FARAWAY;
-#if 1
+
    if( rpc )
    {
       assert(!g->extended);
 
-      for( int i = 0; i < nnodes && 0; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
-         int todo;
-
          if( Is_term(g->term[i]) && graph_pc_termIsNonLeaf(g, i) )
          {
             const int twin = graph_pc_getTwinTerm(g, i);
             assert(!graph_pc_knotIsFixedTerm(g, i));
+            assert(g->grad[twin] == 2);
 
             for( int e = g->outbeg[twin]; e != EAT_LAST; e = g->oeat[e] )
                costrev[e] = FARAWAY;
          }
       }
+
       graph_pc_2trans(g);
    }
-#endif
 
    /* build Voronoi diagram */
    if( directed )
