@@ -40,6 +40,8 @@
 # - Check for spaces around operators; non-strict setting allows operators with numbers like "a+1"
 #   [checkoperspaces, default: false]
 #
+# - Check for the presence of "/**>", which is likely to be a typo.
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -267,6 +269,12 @@ for (my $i = 0; $i < $narg; ++$i)
 
       # ---------------------------------------------------------
       # handle comments
+
+      # check for the presence of "/**>"
+      if ( $str =~ /\/\*\*>/ )
+      {
+	 printf("%d: found \"/**>\", likely to be an error.\n%s\n", $line, $_);
+      }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
