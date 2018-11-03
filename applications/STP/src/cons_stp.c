@@ -514,7 +514,7 @@ SCIP_RETCODE sep_implicationsPcMw(
    )
 {
    GRAPH* g = SCIPprobdataGetGraph2(scip);
-   int* nodeinflow;
+   SCIP_Real* nodeinflow;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
    SCIP_ROW* row = NULL;
    const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);
@@ -601,7 +601,6 @@ SCIP_RETCODE sep_implicationsPcMw(
             const int twinterm = graph_pc_getTwinTerm(g, i);
             const int rootedge = graph_pc_getRoot2PtermEdge(g, twinterm);
             assert(rootedge >= 0);
-            assert(SCIPisEQ(scip, 1.0 - xval[rootedge], inflow));
 
             SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
             SCIP_CALL(SCIPcacheRowExtensions(scip, row));
@@ -2096,7 +2095,37 @@ void SCIPStpConshdlrSetGraph(
    assert(consdata->graph != NULL);
 }
 
-/* dual ascent heuristic */
+/** returns implications start array */
+int* SCIPStpGetPcImplStarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->pcimplstart;
+}
+
+/** returns implications vertices array */
+int* SCIPStpGetPcImplVerts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->pcimplverts;
+}
+
+/** dual ascent heuristic */
 SCIP_RETCODE SCIPStpDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */

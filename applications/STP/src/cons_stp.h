@@ -70,6 +70,19 @@ SCIP_RETCODE SCIPStpAddContractionCut(
    SCIP_Bool             localcut            /**< add local cut? */
    );
 
+/** returns implications start array */
+extern
+int* SCIPStpGetPcImplStarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** returns implications vertices array */
+extern
+int* SCIPStpGetPcImplVerts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** dual ascent heuristic */
 extern
 SCIP_RETCODE SCIPStpDualAscent(

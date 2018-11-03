@@ -90,6 +90,86 @@ SCIP_Bool markAncestorsConflict(
 }
 
 
+/* initialize dual-ascent distances */
+static
+void initializeDaDistances(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   daroot,             /**< root for DA */
+   const SCIP_Real*      cost,               /**< edge cost array */
+   PATH*                 vnoi,               /**< Voronoi paths  */
+   SCIP_Real*            pathdist,           /**< shortest path distances  */
+   SCIP_Real*            costrev,            /**< edge cost array */
+   int*                  vbase,              /**< bases */
+   int*                  pathedge,           /**< path edge */
+   int*                  state               /**< state */
+   )
+{
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
+   const SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_NWSPG);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, g, daroot, cost, pathdist, pathedge);
+
+   for( int e = 0; e < nedges; e++ )
+      costrev[e] = cost[flipedge(e)];
+
+   /* no paths should go back to the root */
+   for( int e = g->outbeg[daroot]; e != EAT_LAST; e = g->oeat[e] )
+      costrev[e] = FARAWAY;
+#if 1
+   if( rpc )
+   {
+      assert(!g->extended);
+
+      for( int i = 0; i < nnodes && 0; i++ )
+      {
+         int todo;
+
+         if( Is_term(g->term[i]) && graph_pc_termIsNonLeaf(g, i) )
+         {
+            const int twin = graph_pc_getTwinTerm(g, i);
+            assert(!graph_pc_knotIsFixedTerm(g, i));
+
+            for( int e = g->outbeg[twin]; e != EAT_LAST; e = g->oeat[e] )
+               costrev[e] = FARAWAY;
+         }
+      }
+      graph_pc_2trans(g);
+   }
+#endif
+
+   /* build Voronoi diagram */
+   if( directed )
+      graph_voronoiTerms(scip, g, costrev, vnoi, vbase, g->path_heap, state);
+   else
+   {
+      graph_get4nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
+
+#ifndef NDEBUG
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( !g->mark[i] )
+            continue;
+
+         if( !Is_term(g->term[i]) )
+         {
+            assert(vbase[i] != daroot || vnoi[i].dist >= FARAWAY);
+            assert(vbase[i + nnodes] != daroot || vnoi[i + nnodes].dist >= FARAWAY);
+         }
+         else
+            assert(vbase[i] == i);
+      }
+#endif
+      if( rpc )
+         graph_pc_2org(g);
+   }
+
+   assert(!rpc || !g->extended);
+}
+
 /** mark ancestors of given edge */
 static
 void markAncestors(
@@ -655,7 +735,7 @@ void updateNodeFixingBounds(
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
-   SCIP_Real             lpobjval,            /**< LP objective  */
+   SCIP_Real             lpobjval,           /**< LP objective  */
    SCIP_Bool             initialize          /**< initialize fixing bounds? */
 )
 {
@@ -3270,51 +3350,15 @@ SCIP_RETCODE reduce_da(
          SCIPdebugMessage("upper: %f lower: %f \n", upperbound, lpobjval);
 
          if( rpc )
-         {
             graph_pc_2org(graph);
-         }
          else
-         {
             for( k = 0; k < nnodes; k++ )
                graph->mark[k] = (graph->grad[k] > 0);
-         }
-
-         /* distance from root to all nodes */
-         graph_path_execX(scip, graph, daroot, cost, pathdist, pathedge);
 
          for( int e = 0; e < nedges; e++ )
-         {
-            marked[e] = FALSE;
-            costrev[e] = cost[flipedge(e)];
-         }
+              marked[e] = FALSE;
 
-         /* no paths should go back to the root */
-         for( int e = graph->outbeg[daroot]; e != EAT_LAST; e = graph->oeat[e] )
-            costrev[e] = FARAWAY;
-
-         /* build Voronoi diagram */
-         if( directed )
-            graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, state);
-         else
-         {
-            graph_get4nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
-
-#ifndef NDEBUG
-            for( int i = 0; i < nnodes; i++ )
-            {
-               if( !graph->mark[i] )
-                  continue;
-
-               if( !Is_term(graph->term[i]) )
-               {
-                  assert(vbase[i] != daroot || vnoi[i].dist >= FARAWAY);
-                  assert(vbase[i + nnodes] != daroot || vnoi[i + nnodes].dist >= FARAWAY);
-               }
-               else
-                  assert(vbase[i] == i);
-            }
-#endif
-         }
+         initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);

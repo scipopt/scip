@@ -1073,6 +1073,7 @@ void graph_pc_2org(
    assert(graph != NULL);
    assert(graph->term2edge != NULL);
    assert(graph->extended);
+   assert(graph_pc_isPcMw(graph));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1110,6 +1111,7 @@ void graph_pc_2trans(
 
    assert(graph != NULL);
    assert(!(graph->extended));
+   assert(graph_pc_isPcMw(graph));
 
    for( int k = 0; k < nnodes; k++ )
    {

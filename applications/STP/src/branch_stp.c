@@ -761,8 +761,9 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
       const int vert = (int) strtol(consname + 7, &tailptr, 10);
 
       SCIPdebugMessage("delete vertex %d \n", vert);
+      assert(graph == NULL || (vert >= 0 && vert < graph->knots));
 
-      if( graph != NULL )
+      if( graph != NULL && graph->grad[vert] > 0 )
       {
          assert(!Is_term(graph->term[vert]));
 
