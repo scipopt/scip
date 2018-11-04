@@ -69,11 +69,13 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define DEFAULT_USELOACLBOUNDS    TRUE  /**< should local bounds be used? */
+#define DEFAULT_ISCUTSONINTS      FALSE /**< should general integer variables be used to generate cuts? */
 
 /** separator-specific data for the implied bounds separator */
 struct SCIP_SepaData
 {
    SCIP_Bool             uselocalbounds;     /**< should local bounds be used? */
+   SCIP_Bool             iscutsonints;       /**< should general integer variables be used to generate cuts? */
    int                   maxrounds;          /**< maximal number of mixing separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
 };
@@ -175,7 +177,7 @@ SCIP_RETCODE separateCuts(
    int vlbmixsize;
    int vubmixsize;
    int cutnnz;
-   int firstnonbinvars;
+   int firstvars;
    int nvars;
    int i;
    int k;
@@ -188,8 +190,17 @@ SCIP_RETCODE separateCuts(
    assert(sepadata != NULL);
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   /* get the index of the first nonbinary variable */
-   firstnonbinvars = SCIPgetNBinVars(scip);
+   /* get the index of the first considered variable */
+   if( sepadata->iscutsonints )
+   {
+      /* generate cuts based on all nonbinary variabls */
+      firstvars = SCIPgetNBinVars(scip);
+   }
+   else
+   {
+      /* only generate cuts based on continuous variables */
+      firstvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
+   }
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsols, nvars) );
@@ -202,7 +213,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
 
-   for( i=firstnonbinvars; i<nvars; i++ )
+   for( i=firstvars; i<nvars; i++ )
    {
       if( SCIPvarGetProbindex(vars[i]) < 0 )
          continue;
@@ -673,6 +684,10 @@ SCIP_RETCODE SCIPincludeSepaMixing(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/mixing/uselocalbounds",
          "should local bounds be used?", &sepadata->uselocalbounds, TRUE,
          DEFAULT_USELOACLBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/mixing/iscutsonints",
+         "hould general integer variables be used to generate cuts?", &sepadata->iscutsonints, TRUE,
+         DEFAULT_ISCUTSONINTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/mixing/maxrounds",
