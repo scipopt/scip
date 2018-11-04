@@ -240,12 +240,7 @@ SCIP_RETCODE init_pcmwimplications(
       {
          const int vert = visitlist[j];
          assert(nimplications < maxnimplications);
-         if( nimplications >= maxnimplications )
-         {
-            int deleteme;
-            printf("too many %d \n", nimplications);
-            return SCIP_ERROR;
-         }
+
          verts[nimplications++] = vert;
       }
 

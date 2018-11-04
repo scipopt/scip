@@ -1977,16 +1977,6 @@ SCIP_RETCODE runPcMW(
          terminalperm[1] = bestincstart;
    }
 
-   if(graph_pc_isRootedPcMw(graph)&& 0 )
-   {
-      int todo;
-
-      printf("source %d \n", graph->source);
-      printf("maxruns %d \n", maxruns);
-      printf("terms %d \n", graph->terms);
-   }
-
-
    /* local main loop */
    for( int r = 0; r < maxruns; r++ )
    {
@@ -2007,13 +1997,6 @@ SCIP_RETCODE runPcMW(
          }
 
          continue;
-      }
-      if(graph_pc_isRootedPcMw(graph) && 0 )
-      {
-         int todo;
-
-         graph_knot_printInfo(graph, start);
-         printf("...prio %f at %d  \n", terminalprio[r], r);
       }
 
       if( pcmwfull )
