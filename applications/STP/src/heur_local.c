@@ -32,6 +32,7 @@
 #include "heur_local.h"
 #include "heur_tm.h"
 #include "probdata_stp.h"
+#include "cons_stp.h"
 
 
 /* @note if heuristic is running in root node timing is changed there to (SCIP_HEURTIMING_DURINGLPLOOP |
@@ -2046,8 +2047,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_Real pobj;
    SCIP_Real* nval;
    SCIP_Real* xval;
-   int i;
-   int e;
    int v;
    int min;
    int root;
@@ -2106,7 +2105,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       if( SCIPsolGetIndex(sols[v]) != lastsolindices[v] )
       {
          /* shift all solution indices right of the new solution index */
-         for( i = min - 1; i >= v + 1; i-- )
+         for( int i = min - 1; i >= v + 1; i-- )
             lastsolindices[i] = lastsolindices[i - 1];
          break;
       }
@@ -2142,6 +2141,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* for PC variants: test whether solution is trivial */
    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
    {
+      int e;
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && SCIPisEQ(scip, xval[e], 1.0) )
             break;
@@ -2154,7 +2154,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
    /* set solution array */
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
    {
       if( SCIPisEQ(scip, xval[e], 1.0) )
          results[e] = CONNECT;
@@ -2182,7 +2182,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       for( v = nnodes - 1; v >= 0; --v )
          steinertree[v] = FALSE;
 
-      for( e = nedges - 1; e >= 0; --e )
+      for( int e = nedges - 1; e >= 0; --e )
       {
          if( results[e] == CONNECT )
          {
@@ -2202,6 +2202,67 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    /* execute local heuristics */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, results) );
+
+
+#if 0
+   if( graph_pc_isPcMw(graph) )
+   {
+      int todo; // before and after local!
+      const int* starts = SCIPStpGetPcImplStarts(scip);
+      const int* verts = SCIPStpGetPcImplVerts(scip);
+
+      if( starts != NULL )
+      {
+         SCIP_Bool* stvertex;
+         int y = 0;
+         int ptermcount = 0;
+         SCIPallocBufferArray(scip, &stvertex, graph->knots);
+         assert(verts != NULL);
+
+         for( int i = 0; i < graph->knots; i++ )
+            stvertex[i] = FALSE;
+
+         for( int i = 0; i < graph->edges; i++ )
+            if( results[i] == CONNECT )
+            {
+               stvertex[graph->head[i]] = TRUE;
+               stvertex[graph->tail[i]] = TRUE;
+            }
+
+
+         for( int i = 0; i < graph->knots; i++ )
+         {
+            if( !Is_pterm(graph->term[i]) )
+               continue;
+
+            if( stvertex[i] )
+               continue;
+
+            ptermcount++;
+
+            for( int j = starts[ptermcount - 1]; j < starts[ptermcount]; j++ )
+            {
+               const int vert = verts[j];
+               if( stvertex[vert] )
+               {
+
+                  graph_knot_printInfo(graph, i);
+                  y++;
+                  break;
+               }
+            }
+         }
+         if( y > 0 )
+         {
+            printf("y %d \n\n\n", y);
+            assert(0);
+
+         }
+
+         SCIPfreeBufferArray(scip, &stvertex);
+      }
+   }
+#endif
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )

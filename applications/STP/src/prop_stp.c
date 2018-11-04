@@ -266,7 +266,7 @@ static
 void setVnoiDistances(
    SCIP*                 scip,               /**< SCIP structure */
    const SCIP_Real*      cost,               /**< reduced costs */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**> Voronoi paths  */
    SCIP_Real*            costrev,            /**< reversed reduced costs */
    SCIP_Real*            pathdist,           /**< path distance */
@@ -275,23 +275,44 @@ void setVnoiDistances(
    int*                  state               /**< state  */
 )
 {
-   const int nnodes = graph->knots;
-   const int nedges = graph->edges;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
 
    for( int k = 0; k < nnodes; k++ )
-      graph->mark[k] = (graph->grad[k] > 0);
+      g->mark[k] = (g->grad[k] > 0);
 
    /* distance from root to all nodes */
-   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
+   graph_path_execX(scip, g, g->source, cost, pathdist, pathedge);
 
    for( unsigned int e = 0; e < (unsigned) nedges; e++ )
       costrev[e] = cost[flipedge(e)];
 
    /* no paths should go back to the root */
-   for( int e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
+   for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
       costrev[e] = FARAWAY;
 
-   graph_get3nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+   if( graph_pc_isPcMw(g) )
+   {
+      assert(g->extended);
+      graph_pc_2org(g);
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) && graph_pc_termIsNonLeaf(g, i) && i != g->source )
+         {
+            const int twin = graph_pc_getTwinTerm(g, i);
+            assert(!graph_pc_knotIsFixedTerm(g, i));
+            assert(g->grad[twin] == 2);
+
+            for( int e = g->outbeg[twin]; e != EAT_LAST; e = g->oeat[e] )
+               costrev[e] = FARAWAY;
+         }
+      }
+
+      graph_pc_2trans(g);
+   }
+
+   graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
 }
 
 /* updates fixing bounds for reduced cost fixings */
@@ -353,7 +374,7 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
-   const GRAPH*          graph               /**< graph data structure */
+   GRAPH*                graph               /**< graph data structure */
       )
 {
    PATH* vnoi;

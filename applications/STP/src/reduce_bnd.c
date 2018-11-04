@@ -2148,7 +2148,7 @@ SCIP_RETCODE reduceRootedProb(
 #ifndef NDEBUG
          const int termedge = graph->term2edge[k];
          assert(Is_pterm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
-         assert(vnoi[k].dist == 0.0);
+         assert(vnoi[twinterm].dist == 0.0);
 #endif
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
             incidents[incidcount++] = e;
