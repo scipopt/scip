@@ -5904,6 +5904,140 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
    return SCIP_OKAY;
 }
 
+/** computes a facet of the convex or concave envelope of a bivariate vertex polyhedral function */
+static
+SCIP_Real computeVertexPolyhedralFacetBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_Real             p1[2],              /**< first vertex of box */
+   SCIP_Real             p2[2],              /**< second vertex of box */
+   SCIP_Real             p3[2],              /**< third vertex of box */
+   SCIP_Real             p4[2],              /**< forth vertex of box */
+   SCIP_Real             p1val,              /**< value in p1 */
+   SCIP_Real             p2val,              /**< value in p2 */
+   SCIP_Real             p3val,              /**< value in p3 */
+   SCIP_Real             p4val,              /**< value in p4 */
+   SCIP_Real             xstar[2],           /**< point to be separated */
+   SCIP_Real             targetvalue,        /**< target value: no need to compute facet if value in xstar would be worse than this value */
+   SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
+   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least 2 */
+   SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
+)
+{
+   SCIP_Real alpha, beta, gamma_, delta;
+   SCIP_Real xstarval, candxstarval;
+   int leaveout;
+
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(SCIPisFinite(p1val) && p1val != SCIP_INVALID);
+   assert(SCIPisFinite(p2val) && p2val != SCIP_INVALID);
+   assert(SCIPisFinite(p3val) && p3val != SCIP_INVALID);
+   assert(SCIPisFinite(p4val) && p4val != SCIP_INVALID);
+   assert(facetcoefs != NULL);
+   assert(facetconstant != NULL);
+
+   *success = FALSE;
+
+   /* if we want an underestimator, flip f(x,y), i.e., do as if we compute an overestimator for -f(x,y) */
+   if( !overestimate )
+   {
+      p1val = -p1val;
+      p2val = -p2val;
+      p3val = -p3val;
+      p4val = -p4val;
+      targetvalue = -targetvalue;
+   }
+
+   SCIPdebugMsg(scip, "p1 = (%g, %g), f(p1) = %g\n", p1[0], p1[1], p1val);
+   SCIPdebugMsg(scip, "p2 = (%g, %g), f(p2) = %g\n", p2[0], p2[1], p2val);
+   SCIPdebugMsg(scip, "p3 = (%g, %g), f(p3) = %g\n", p3[0], p3[1], p3val);
+   SCIPdebugMsg(scip, "p4 = (%g, %g), f(p4) = %g\n", p4[0], p4[1], p4val);
+
+   /* Compute coefficients alpha, beta, gamma (>0), delta such that
+    *   alpha*x + beta*y + gamma*z = delta
+    * is satisfied by at least three of the corner points (p1,f(p1)), ..., (p4,f(p4)) and
+    * the fourth corner point lies below this hyperplane.
+    * Since we assume that f is vertex-polyhedral, we then know that all points (x,y,f(x,y)) are below this hyperplane, i.e.,
+    *    alpha*x + beta*y - delta <= -gamma * f(x,y),
+    * or, equivalently,
+    *   -alpha/gamma*x - beta/gamma*y + delta/gamma >= f(x,y).
+    */
+   for( leaveout = 1; leaveout <= 4; ++leaveout )
+   {
+      switch( leaveout)
+      {
+         case 1 :
+            /* get hyperplane through p2, p3, p4 */
+            SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
+               &alpha, &beta, &gamma_, &delta) );
+            /* if not underestimating in p1, then go to next candidate */
+            if( alpha * p1[0] + beta * p1[1] + gamma_ * p1val - delta > 0 )
+               continue;
+            break;
+
+         case 2 :
+            /* get hyperplane through p1, p3, p4 */
+            SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
+               &alpha, &beta, &gamma_, &delta) );
+            /* if not underestimating in p2, then go to next candidate */
+            if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val - delta > 0 )
+               continue;
+            break;
+
+         case 3 :
+            /* get hyperplane through p1, p2, p4 */
+            SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
+               &alpha, &beta, &gamma_, &delta) );
+            /* if not underestimating in p3, then go to next candidate */
+            if( alpha * p3[0] + beta * p3[1] + gamma_ * p3val - delta > 0 )
+               continue;
+            break;
+
+         case 4 :
+            /* get hyperplane through p1, p2, p3 */
+            SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val,
+               &alpha, &beta, &gamma_, &delta) );
+            /* if not underestimating in p4, then stop */
+            if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val - delta > 0 )
+               continue;
+            break;
+      }
+
+      /* check if bad luck: should not happen if numerics are fine */
+      if( SCIPisZero(scip, gamma_) )
+         continue;
+      assert(!SCIPisNegative(scip, gamma_));
+
+      /* if coefficients become tiny because division by gamma makes them < SCIPepsilon(scip), then skip, too */
+      if( (!SCIPisZero(scip, alpha) && SCIPisZero(scip, alpha/gamma_)) ||
+         ( !SCIPisZero(scip, beta)  && SCIPisZero(scip, beta/gamma_)) )
+         continue;
+
+      SCIPdebugMsg(scip, "alpha = %g, beta = %g, gamma = %g, delta = %g\n", alpha, beta, gamma_, delta);
+
+      /* value of hyperplane candidate in xstar */
+      xstarval = -alpha/gamma_ * xstar[0] -beta/gamma_ * xstar[1] + delta/gamma_;
+
+      /* if reaching target and first or better than previous candidate, then update */
+      if( xstarval <= targetvalue && (!*success || xstarval < candxstarval) )
+      {
+         /* flip hyperplane */
+         if( !overestimate )
+            gamma_ = -gamma_;
+
+         facetcoefs[0] = -alpha/gamma_;
+         facetcoefs[1] = -beta/gamma_;
+         *facetconstant = delta/gamma_;
+
+         *success = TRUE;
+         candxstarval = xstarval;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** @} */
 
@@ -11742,6 +11876,17 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       /* check whether target has been missed */
       if( *success && overestimate == (*facetconstant + *facetcoefs * xstar[nonfixedpos[0]] > targetvalue) )
          *success = FALSE;
+   }
+   else if( nvars == 2 )
+   {
+      int idx1 = nonfixedpos[0];
+      int idx2 = nonfixedpos[1];
+      double p1[2] = { box[2*idx1],   box[2*idx2]   }; /* corner 0: 0>>0 & 0x1 = 0, 0>>1 & 0x1 = 0 */
+      double p2[2] = { box[2*idx1+1], box[2*idx2]   }; /* corner 1: 1>>0 & 0x1 = 1, 1>>1 & 0x1 = 0 */
+      double p3[2] = { box[2*idx1],   box[2*idx2+1] }; /* corner 2: 2>>0 & 0x1 = 0, 2>>1 & 0x1 = 1 */
+      double p4[2] = { box[2*idx1+1], box[2*idx2+1] }; /* corner 3: 3>>0 & 0x1 = 1, 3>>1 & 0x1 = 1 */
+      double xstar2[2] = { xstar[idx1], xstar[idx2] };
+      SCIP_CALL( computeVertexPolyhedralFacetBivariate(scip, overestimate, p1, p2, p3, p4, funvals[0], funvals[1], funvals[2], funvals[3], xstar2, targetvalue, success, facetcoefs, facetconstant) );
    }
    else
    {
