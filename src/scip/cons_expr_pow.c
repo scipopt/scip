@@ -296,7 +296,6 @@ void computeSecant(
       }
       else
       {
-         printf("skip x^%g xlb %g xub %g\n", exponent, xlb, xub);
          assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb)));
          return;
       }
