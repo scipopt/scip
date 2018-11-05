@@ -75,7 +75,7 @@ static
 SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 {
    /* funcdata is a pointer to the double holding the coefficient */
-   SCIP_Real ret = *(SCIP_Real*)funcdata;
+   SCIP_Real ret = funcdata != NULL ? *(SCIP_Real*)funcdata : 1.0;
    int i;
 
    for( i = 0; i < nargs; ++i )
@@ -304,4 +304,91 @@ Test(separation, errorfacet)
    /* free everything */
    SCIP_CALL( SCIPfree(&scip) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+}
+
+void test_vertexpolyhedral(
+   int       dim,
+   double*   box,
+   double*   xstar,
+   SCIP_DECL_VERTEXPOLYFUN((*function)),
+   void*     functiondata,
+   SCIP_Bool overestimate
+)
+{
+   SCIP_Bool success;
+   SCIP_Real* facetcoefs;
+   SCIP_Real facetconstant;
+   SCIP_Real funval;
+   SCIP_Real facetval;
+   int ncorners;
+   int ntight;
+   int i, j;
+
+   SCIP_ALLOC_ABORT( BMSallocMemoryArray(&facetcoefs, dim) );
+
+   SCIP_CALL_ABORT( SCIPcreate(&scip) );
+   SCIP_CALL_ABORT( SCIPincludeConshdlrExpr(scip) );
+
+   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), TRUE,
+      function, functiondata, xstar, box, dim, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+
+   ncorners = 1<<dim;
+   ntight = 0;
+   for( i = 0; i < ncorners; ++i )
+   {
+      for( j = 0; j < dim; ++j )
+      {
+         if( ((unsigned int)i >> j) & 0x1 )
+            xstar[j] = box[2 * j + 1]; /* ub of var */
+         else
+            xstar[j] = box[2 * j]; /* lb of var */
+      }
+
+      funval = function(xstar, dim, functiondata);
+      facetval = facetconstant;
+      for( j = 0; j < dim; ++j )
+         facetval += facetcoefs[j] * xstar[j];
+
+      if( overestimate )
+         cr_expect_geq(facetval, funval-SCIPepsilon(scip), "Facet value %g expected to be above function value %g", facetval, funval);
+      else
+         cr_expect_leq(facetval, funval+SCIPepsilon(scip), "Facet value %g expected to be below function value %g", facetval, funval);
+
+      if( SCIPisFeasEQ(scip, facetval, funval) )
+         ++ntight;
+   }
+
+   cr_assert(success);
+   cr_assert_geq(ntight, dim+1);  /* for a facet of the envelope, the hyperplane should touch the function in at least dim+1 corner points */
+
+   BMSfreeMemoryArray(&facetcoefs);
+
+   SCIP_CALL_ABORT( SCIPfree(&scip) );
+
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+}
+
+Test(separation, vertexpolyhedral,
+   .description = "test facets of convex and concave envelopes for general vertex-polyhedral functions"
+   )
+{
+   int dim = 3;
+   SCIP_Real* box;
+   SCIP_Real* xstar;
+   int i;
+
+   box = (SCIP_Real*) malloc(2*dim*sizeof(SCIP_Real));
+   xstar = (SCIP_Real*) malloc(dim*sizeof(SCIP_Real));
+
+   for( i = 0; i < dim; ++i )
+   {
+      box[2*i] = 0.0;
+      box[2*i+1] = 1.0;
+      xstar[i] = 0.5;
+   }
+
+   test_vertexpolyhedral(dim, box, xstar, prodfunction, NULL, TRUE);
+
+   free(box);
+   free(xstar);
 }
