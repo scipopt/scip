@@ -68,7 +68,7 @@
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define DEFAULT_USELOACLBOUNDS    TRUE  /**< should local bounds be used? */
+#define DEFAULT_USELOACLBOUNDS    FALSE /**< should local bounds be used? */
 #define DEFAULT_ISCUTSONINTS      FALSE /**< should general integer variables be used to generate cuts? */
 
 /** separator-specific data for the implied bounds separator */
