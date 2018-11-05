@@ -786,6 +786,7 @@ WARN_LOGFILE           =
 
 INPUT                  = . \
                          ../CHANGELOG \
+                         ../INSTALL_APPLICATIONS_EXAMPLES.md \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \

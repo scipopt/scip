@@ -71,10 +71,10 @@
  * problem data file (probdata_coloring.c). The file readers are described in reader_col.c and
  * reader_csol.c.
  *
- * Compiling the Coloring application
- * ----------------------------------
+ * Installation
+ * ------------
  *
- * See the @ref INSTALL "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  *
  *
  */

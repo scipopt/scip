@@ -23,18 +23,14 @@
 /**@page QUEENS_MAIN The n-Queens Problem
  * @author Cornelius Schwarz
  *
- *
- * Using SCIP as a MIP solver backend
- * ==================================
- *
- * In this section we show how to use SCIP as a backend for solving mixed
+ * We show how to use SCIP as a backend for solving mixed
  * integer programs by developing a solver for the \f$n\f$-queens problem. We
  * first give a brief introduction into the problem and then describe a C++
  * program for solving it. The model is based on the one described in the
  * Zimpl documentation.
  *
  * The \f$n\f$-queens problem
- * ----------------------
+ * ==========================
  *
  * The \f$n\f$-queens problem asks how to place \f$n\f$ queens on an \f$n \times n\f$
  * chess board in a way that no two queens interfere. In detail this means:
@@ -73,7 +69,7 @@
  * \f]
  *
  * Error handling in SCIP
- * ----------------------
+ * ======================
  *
  * Before we transform the \f$n\f$-queens IP program into a SCIP program, we
  * first consider a general point when working with SCIP functions: Most
@@ -133,7 +129,7 @@
  *     }
  *
  * Include files
- * -------------
+ * =============
  *
  * For a SCIP based project there are three main header files to consider.
  * The first and most important one is of course scip/scip.h. It declares
@@ -155,7 +151,7 @@
  *     #include <scip/scipdefplugins.h>
  *
  * Developing a queens solver
- * --------------------------
+ * ==========================
  *
  * When you use SCIP you have to do the following steps:
  *
@@ -379,4 +375,8 @@
  *
  *     SCIP_CALL_EXC(SCIPfree(& scip));
  *
+ * Installation
+ * ============
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

@@ -32,8 +32,8 @@
  *  - resource-constrained project scheduling problem with minimal and maximal time lags (RCPSP/max) (see reader_sch.h)
  *  - pack instances (see reader_rcp.h)
  *
- * Compiling the Scheduling application
- * ------------------------------------
+ * Installation
+ * ------------
  *
- * See the @ref INSTALL "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */
