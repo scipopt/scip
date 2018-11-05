@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page SCFLP_MAIN Stochastic capacitated facility location problem example
+/**@page SCFLP_MAIN Stochastic Capacitated Facility Location Problem
  * @version  0.9
  * @author   Stephen J. Maher
 
@@ -43,9 +43,14 @@
  *
  * -# @subpage SCFLP_PROBLEM "Problem description"
  * -# @subpage SCFLP_READER "Parsing the input format"
- * -# @subpage SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP
+ * -# @subpage SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP"
  *    - @subpage SCFLP_DETEQUIV "Directly as a monolithic MIP"
  *    - @subpage SCFLP_BENDERS "Applying Benders' decomposition"
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */
 
 /**@page SCFLP_PROBLEM Problem description

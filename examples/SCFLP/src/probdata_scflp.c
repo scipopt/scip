@@ -19,7 +19,7 @@
  *
  * This file handles the main problem data used in that project. For more details see \ref SCFLP_PROBLEMDATA page.
  *
- * @page SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP - with and without Benders' decomposition"
+ * @page SCFLP_SOLVEPROB Solving the deterministic equivalent
  *
  * The probdata_scflp.c is used to store the global problem data and build the monolithic MIP and decomposed problems.
  * First, the structure of the problem data is describe. This is followed by a description of how to solve the problem

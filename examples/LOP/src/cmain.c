@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   LOP/src/cmain.c
+/**@file   examples/LOP/src/cmain.c
  * @brief  main file for linear ordering example
  * @author Marc Pfetsch
  */

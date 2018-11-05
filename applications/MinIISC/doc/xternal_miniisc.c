@@ -75,8 +75,8 @@
  * The input to the code should be an infeasible linear program (the objective is ignored) in any format that SCIP can
  * handle. The basic benders algorithm is implemented in the file benders.c using a call back for the cut generation.
  *
- * Compiling the MinIISC application
- * ----------------------------------
+ * Installation
+ * ============
  *
- * See the @ref INSTALL "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

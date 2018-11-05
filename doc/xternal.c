@@ -179,6 +179,7 @@
  * - @subpage MAKE    "Installation information using Makefiles"
  * - @subpage LPI         "Available implementations of the LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
+ * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
  */
 
 /**@page PROGRAMMING Programming with SCIP
@@ -834,19 +835,22 @@
  *
  * The \SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
- * - <code>all (or no target)</code> Build \SCIP library and binary.
+ * - <code>all</code> (or no target) Build \SCIP library and binary.
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Creates dependencies files. This is only needed if you add files to \SCIP.
- * - <code>check or test</code> Runs the check script, see \ref TEST.
- *
+ * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
+ * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
+ *   which contains all the detected warnings.
+ * - <code>tags</code> Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
+
  * The \SCIP makefiles are structured as follows.
  *
  * - <code>Makefile</code> This is the basic makefile in the \SCIP root directory. It loads
  *   additional makefile information depending on the parameters set.
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
- *   that use \SCIP, for instance, the examples.
+ *   that use \SCIP, for instance, the example.
  * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
  *   definitions. If you have an unsupported compiler, you can copy one of these and modify it
  *   accordingly.
@@ -1153,7 +1157,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage VRP_MAIN Vehicle Routing
+ *  @subpage VRP_MAIN "Vehicle Routing"
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
