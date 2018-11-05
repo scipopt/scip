@@ -907,6 +907,42 @@ SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
    return scip->stat->nrootsblpiterations;
 }
 
+/** gets total number of cutoffs detected so far in strong branching
+ *
+ *  @return the total number of cutoffs detected so far in strong branching
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Longint SCIPgetNStrongbranchCutoffs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNStrongbranchCutoffs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->nsbcutoffs;
+}
+
+/** gets total number of strong branching LPs where the LP objective has not changed
+ *
+ *  @return the total number of strong branching LPs where the LP objective has not changed
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Longint SCIPgetNStrongbranchWithEQObjective(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNStrongbranchWithEQObjective", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->stat->nsbeqobjective;
+}
+
 /** gets number of pricing rounds performed so far at the current node
  *
  *  @return the number of pricing rounds performed so far at the current node

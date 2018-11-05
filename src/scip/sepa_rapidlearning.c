@@ -46,6 +46,14 @@
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP?                      */
 
+#define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
+#define DEFAULT_CHECKLOCALOBJ     FALSE /**< should the local objection function be checked? */
+#define DEFAULT_CHECKNSOLS        FALSE /**< should the number of solutions found so far be checked? */
+#define DEFAULT_CHECKSBLPS        FALSE
+#define DEFAULT_SBFRAC              1.0
+#define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before RL is
+                                         * executed locally based on the progress of the dualbound */
+
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
 
@@ -67,22 +75,30 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_Bool             applyconflicts;     /**< should the found conflicts be applied in the original SCIP?                 */
-   SCIP_Bool             applybdchgs;        /**< should the found global bound deductions be applied in the original SCIP?   */
-   SCIP_Bool             applyinfervals;     /**< should the inference values be used as initialization in the original SCIP? */
-   SCIP_Bool             reducedinfer;       /**< should the inference values only be used when rapid learning found other reductions? */
-   SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP?               */
-   SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
+   SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
+   SCIP_Real             sbfrac;             /**< fraction of strong branching LPs that were pruned or
+                                              *   the objetive value has not changed */
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called   */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
    int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
    int                   maxnodes;           /**< maximum number of nodes considered in rapid learning run */
+   SCIP_Longint          nwaitingnodes;      /**< number of nodes that should be processed before RL is executed locally
+                                              *   based on the progress of the dualbound */
+   SCIP_Bool             applybdchgs;        /**< should the found global bound deductions be applied in the original SCIP?   */
+   SCIP_Bool             applyconflicts;     /**< should the found conflicts be applied in the original SCIP?                 */
+   SCIP_Bool             applyinfervals;     /**< should the inference values be used as initialization in the original SCIP? */
+   SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP?               */
+   SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
+   SCIP_Bool             checkdualbound;     /**< should the progress on the dual bound be checked? */
+   SCIP_Bool             checklocalobj;      /**< should the local objective function be checked? */
+   SCIP_Bool             checknsols;         /**< should number if solutions found so far be checked? */
+   SCIP_Bool             checksblps;         /**< should strong branching results be considered? */
    SCIP_Bool             contvars;           /**< should rapid learning be applied when there are continuous variables? */
    SCIP_Real             contvarsquot;       /**< maximal portion of continuous variables to apply rapid learning       */
-   SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
+   SCIP_Bool             reducedinfer;       /**< should the inference values only be used when rapid learning found other reductions? */
 };
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
@@ -636,6 +652,86 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    return SCIP_OKAY;
 }
 
+/** returns whether rapid learning is allowed to run locally */
+static
+SCIP_Bool checkLocalExec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata            /**< separator's private data */
+   )
+{
+   SCIP_Bool runlocal;
+
+   assert(scip != NULL);
+   assert(sepadata != NULL);
+
+   runlocal = FALSE;
+
+   /* problem has zero objective function, i.e., it is a pure feasibility problem */
+   if( SCIPgetNObjVars(scip) == 0 )
+   {
+      runlocal = TRUE;
+   }
+
+   /* check whether all undecided integer variables have zero objective coefficient */
+   if( !runlocal && sepadata->checklocalobj )
+   {
+      SCIP_Bool allzero;
+      SCIP_VAR** vars;
+      int ndiscvars;
+      int i;
+
+      ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
+
+      for( i = 0; i < ndiscvars; i++ )
+      {
+         if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+         {
+            allzero = FALSE;
+            break;
+         }
+      }
+
+      if( !allzero )
+         runlocal = FALSE;
+   }
+
+   /* check whether a solution was found */
+   if( !runlocal && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
+      runlocal = TRUE;
+
+   /* check whether the dual bound has not changed since the root node */
+   if( !runlocal && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
+   {
+      SCIP_Real rootdualbound;
+      SCIP_Real locdualbound;
+
+      rootdualbound = SCIPgetLowerboundRoot(scip);
+      locdualbound = SCIPgetLocalLowerbound(scip);
+
+      if( SCIPisEQ(scip, rootdualbound, locdualbound) )
+         runlocal = TRUE;
+   }
+
+   /* check strong branching LPs */
+   if( !runlocal && sepadata->checksblps )
+   {
+      int nsblps;
+      int nsbcutoffs;
+      int nsbeqobj;
+
+      nsblps = SCIPgetNStrongbranchs(scip);
+      nsbcutoffs = SCIPgetNStrongbranchCutoffs(scip);
+      nsbeqobj = SCIPgetNStrongbranchWithEQObjective(scip);
+
+      assert(nsblps >= nsbcutoffs + nsbeqobj);
+
+      if( SCIPisLE(scip, sepadata->sbfrac * nsblps, nsbcutoffs + nsbeqobj) )
+         runlocal = TRUE;
+   }
+
+   return runlocal;
+}
+
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
@@ -680,6 +776,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    /* call separator at most once per node */
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
+      return SCIP_OKAY;
+
+   /* check if rapid learning should applied locally */
+   if( SCIPsepaGetFreq(sepa) > 0 && !checkLocalExec(scip, sepadata) )
       return SCIP_OKAY;
 
    /* do not call rapid learning, if the problem is too big */
@@ -759,6 +859,22 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "should a solved status be copied to the original SCIP?",
          &sepadata->applysolved, TRUE, DEFAULT_APPLYSOLVED, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkdualbound",
+         "should the progress on the dual bound be checked?",
+         &sepadata->checkdualbound, TRUE, DEFAULT_CHECKDUALBOUND, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalobj",
+         "should the local objective function be checked?",
+         &sepadata->checklocalobj, TRUE, DEFAULT_CHECKLOCALOBJ, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checknsols",
+         "should the number of solutions found so far be checked?",
+         &sepadata->checknsols, TRUE, DEFAULT_CHECKNSOLS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checksblps",
+         "should strong branching results be considered??",
+         &sepadata->checksblps, TRUE, DEFAULT_CHECKSBLPS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/contvars",
          "should rapid learning be applied when there are continuous variables?",
          &sepadata->contvars, TRUE, DEFAULT_CONTVARS, NULL, NULL) );
@@ -770,6 +886,10 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/lpiterquot",
          "maximal fraction of LP iterations compared to node LP iterations",
          &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/sbfrac",
+         "fraction of strong branching LPs that were pruned or the objetive value has not changed",
+         &sepadata->sbfrac, TRUE, DEFAULT_SBFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
@@ -786,6 +906,10 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/minnodes",
          "minimum number of nodes considered in rapid learning run",
          &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "separating/" SEPA_NAME "/nwaitingnodes",
+         "number of nodes that should be processed before RL is executed locally based on the progress of the dualbound",
+         &sepadata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, LONG_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
