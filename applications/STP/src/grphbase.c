@@ -4335,8 +4335,6 @@ SCIP_RETCODE graph_copy_data(
    g->stp_type = p->stp_type;
    g->hoplimit = p->hoplimit;
    g->extended = p->extended;
-   g->term2edge = NULL;
-   g->prize = NULL;
 
    BMScopyMemoryArray(g->term, p->term, ksize);
    BMScopyMemoryArray(g->mark, p->mark, ksize);
@@ -4352,6 +4350,12 @@ SCIP_RETCODE graph_copy_data(
    if( graph_pc_isPcMw(g) )
    {
       const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+
+      if( g->prize != NULL )
+         SCIPfreeMemoryArray(scip, &(g->prize));
+
+      if( g->term2edge != NULL )
+         SCIPfreeMemoryArray(scip, &(g->term2edge));
 
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
