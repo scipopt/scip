@@ -47,6 +47,8 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include "scip/cons_varbound.h"
 #include <string.h>
 
 #define PRESOL_NAME            "dualsparsify"
@@ -627,6 +629,25 @@ SCIP_RETCODE cancelRow(
    return SCIP_OKAY;
 }
 
+
+/** try to concel the nonzeros in two variables */
+static
+void cancelCol(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< the constraint matrix */
+   int                   rowidxi,            /**< one of the indexes of column to try non-zero cancellation for */
+   int                   rowidxj,            /**< one of the indexes of column to try non-zero cancellation for */
+   int                   success,            /**< does cancellation success? 0: failed, 1: cancel variable j, 2: cancel both variables i and j */
+   int*                  ratios,             /**< ratio of the vectors*/
+   int*                  nratios,            /**< number of different ratios*/
+   int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
+   int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
+   int*                  nfillin             /**< pointer to update the produced fill-in */
+      )
+{
+
+}
+
 /** updates failure counter after one execution */
 static
 void updateFailureStatistic(
@@ -728,26 +749,86 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
    if( initialized && complete )
    {
+      SCIP_Real *ratios;
+      int nratios;
+      nratios = 0;
       ncols = SCIPmatrixGetNColumns(matrix);
       SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsidx, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ratios, ncols) );
       for(i=0; i<ncols; i++)
       {
          int nnonz;
          nnonz = SCIPmatrixGetColNNonzs(matrix, i);
-         if(nnonz > 10)
+         if(nnonz > 10 && SCIPvarGetType(SCIPmatrixGetVar(matrix, i)) == SCIP_VARTYPE_CONTINUOUS
+               && !SCIPdoNotMultaggrVar(scip, SCIPmatrixGetVar(matrix, i)))
          {
             processedvarsidx[nprocessedvarsidx] = i;
             nprocessedvarsidx++;
          }
       }
+
       for(i=0; i<nprocessedvarsidx; i++)
       {
-         int* colpnt = SCIPmatrixGetRowIdxPtr(matrix, i);
-         SCIP_Real* valpnt = SCIPmatrixGetRowValPtr(matrix, i);
-         SCIPsortIntReal(rowpnt, valpnt, SCIPmatrixGetRowNNonzs(matrix, i));
-//         printf("%s\n", SCIPmatrixGetColName(matrix, processedvarsidx[i]));
+         int* colpnt = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[i]);
+         SCIP_Real* valpnt = SCIPmatrixGetColValPtr(matrix, processedvarsidx[i]);
+         SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
+         printf("%s, %d\n", SCIPmatrixGetColName(matrix, processedvarsidx[i]),
+               SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
       }
-      
+
+      for(i=0; i<nprocessedvarsidx; i++)
+      {
+         int* colpnti = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[i]);
+         SCIP_Real* valpnti = SCIPmatrixGetColValPtr(matrix, processedvarsidx[i]);
+         SCIP_VAR* vari;
+         SCIP_VAR* varj;
+         SCIP_VAR* newvar;
+         SCIP_CONS* newcons;
+         SCIP_VAR* vars[2];
+         SCIP_Real coefs[2];
+
+
+         vari = SCIPmatrixGetVar(matrix, processedvarsidx[i]);
+         SCIP_Real newlb;
+         SCIP_Real newub;
+
+         for(j=i+1; j<nprocessedvarsidx; j++)
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool aggregated;
+            varj = SCIPmatrixGetVar(matrix, processedvarsidx[j]);
+            int* colpntj = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[j]);
+            SCIP_Real* valpntj = SCIPmatrixGetColValPtr(matrix, processedvarsidx[j]);
+            char newvarname[SCIP_MAXSTRLEN];
+            (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_agg_%s",
+                  SCIPvarGetName(vari), SCIPvarGetName(varj));
+            newlb = SCIPmatrixGetColLb(matrix, processedvarsidx[i]) + SCIPmatrixGetColLb(matrix, processedvarsidx[j]);
+            newub = SCIPmatrixGetColUb(matrix, processedvarsidx[i]) + SCIPmatrixGetColUb(matrix, processedvarsidx[j]);   
+            SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, SCIP_VARTYPE_CONTINUOUS,
+                     SCIPvarIsInitial(varj), SCIPvarIsRemovable(varj), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPaddVar(scip, newvar) );
+            vars[0] = newvar;
+            vars[1] = vari;
+            coefs[0] = 1;
+            coefs[1] = -1;
+
+            SCIP_CALL( SCIPmultiaggregateVar(scip, varj, 2, vars, coefs, 0.0, &infeasible, &aggregated) );
+            assert(!infeasible);
+            assert(aggregated);
+//            printf("%8.4f\n", newvar)
+
+            char newconsname[SCIP_MAXSTRLEN];
+            (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "%s_dual_%s",
+                  SCIPvarGetName(vari), SCIPvarGetName(varj));
+            SCIP_CALL( SCIPcreateConsVarbound(scip, &newcons, newconsname, vars[0], vars[1], coefs[1],
+                     SCIPmatrixGetColLb(matrix, processedvarsidx[j]), SCIPmatrixGetColUb(matrix, processedvarsidx[j]),
+                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIPdebugPrintCons(scip, newcons, NULL);
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
+         }
+      }
 
       SCIPfreeBufferArray(scip, processedvarsidx);
    }
