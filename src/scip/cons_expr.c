@@ -11777,7 +11777,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
  * see (doxygen-)comment of this function in cons_expr.h
  * (this is by intention not a doxygen comment)
  */
-SCIP_Real SCIPcomputeFacetVertexPolyhedral(
+SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */

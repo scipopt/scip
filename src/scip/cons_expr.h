@@ -1423,7 +1423,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
  */
 EXTERN
-SCIP_Real SCIPcomputeFacetVertexPolyhedral(
+SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
