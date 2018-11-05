@@ -5870,6 +5870,41 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/** computes a facet of the convex or concave envelope of a univariant vertex polyhedral function
+ *
+ * In other words, compute the line that passes through two given points.
+ */
+static
+SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             left,               /**< left coordinate */
+   SCIP_Real             right,              /**< right coordinate */
+   SCIP_Real             funleft,            /**< value of function in left coordinate */
+   SCIP_Real             funright,           /**< value of function in right coordinate */
+   SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
+   SCIP_Real*            facetcoef,          /**< buffer to store coefficient of facet defining inequality */
+   SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
+)
+{
+   assert(scip != NULL);
+   assert(SCIPisLE(scip, left, right));
+   assert(!SCIPisInfinity(scip, -left));
+   assert(!SCIPisInfinity(scip, right));
+   assert(SCIPisFinite(funleft) && funleft != SCIP_INVALID);
+   assert(SCIPisFinite(funright) && funright != SCIP_INVALID);
+   assert(success != NULL);
+   assert(facetcoef != NULL);
+   assert(facetconstant != NULL);
+
+   *facetcoef = (funright - funleft) / (right - left);
+   *facetconstant = funleft - *facetcoef * left;
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** @} */
 
 /*
@@ -11700,7 +11735,18 @@ SCIP_Real SCIPcomputeFacetVertexPolyhedral(
       }
    }
 
-   SCIP_CALL( computeVertexPolyhedralFacetLP(scip, conshdlr, overestimate, xstar, box, nallvars, nonfixedpos, funvals, nvars, targetvalue, success, facetcoefs, facetconstant) );
+   if( nvars == 1 )
+   {
+      SCIP_CALL( computeVertexPolyhedralFacetUnivariate(scip, box[2 * nonfixedpos[0]], box[2 * nonfixedpos[0] + 1], funvals[0], funvals[1], success, facetcoefs, facetconstant) );
+
+      /* check whether target has been missed */
+      if( *success && overestimate == (*facetconstant + *facetcoefs * xstar[nonfixedpos[0]] > targetvalue) )
+         *success = FALSE;
+   }
+   else
+   {
+      SCIP_CALL( computeVertexPolyhedralFacetLP(scip, conshdlr, overestimate, xstar, box, nallvars, nonfixedpos, funvals, nvars, targetvalue, success, facetcoefs, facetconstant) );
+   }
    if( !*success )
       goto CLEANUP;
 
