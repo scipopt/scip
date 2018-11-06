@@ -46,13 +46,18 @@
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP?                      */
 
+#define DEFAULT_CHECKDEGANERAGY   FALSE /**< should local LP degeneracy be checked? */
 #define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
+#define DEFAULT_CHECKLEAVES       FALSE /**< should the ration of leaves proven to be infeasible and exceeding the
+                                         *   cutoff bound be checked? */
 #define DEFAULT_CHECKLOCALOBJ     FALSE /**< should the local objection function be checked? */
 #define DEFAULT_CHECKNSOLS        FALSE /**< should the number of solutions found so far be checked? */
-#define DEFAULT_CHECKSBLPS        FALSE
-#define DEFAULT_SBFRAC              1.0
+#define DEFAULT_CHECKSBLPS        FALSE /**< should strong branching results be considered? */
+#define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local RL */
 #define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before RL is
-                                         * executed locally based on the progress of the dualbound */
+                                         *   executed locally based on the progress of the dualbound */
+#define DEFAULT_SBFRAC              1.0 /**< maximal fraction of strong branching LPs that were pruned or the
+                                       *     objetive value has not changed to allow local RL */
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
@@ -78,6 +83,7 @@ struct SCIP_SepaData
    SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
    SCIP_Real             sbfrac;             /**< fraction of strong branching LPs that were pruned or
                                               *   the objetive value has not changed */
+   SCIP_Real             mininflpratio;
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called   */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
    int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
@@ -89,7 +95,9 @@ struct SCIP_SepaData
    SCIP_Bool             applyinfervals;     /**< should the inference values be used as initialization in the original SCIP? */
    SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP?               */
    SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
+   SCIP_Bool             checkdegeneracy;
    SCIP_Bool             checkdualbound;     /**< should the progress on the dual bound be checked? */
+   SCIP_Bool             checkleaves;
    SCIP_Bool             checklocalobj;      /**< should the local objective function be checked? */
    SCIP_Bool             checknsols;         /**< should number if solutions found so far be checked? */
    SCIP_Bool             checksblps;         /**< should strong branching results be considered? */
@@ -476,6 +484,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
        {
           SCIPdebugMsg(scip, "Try to create new solution by copying subscip solution.\n");
           SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
+
+          if( SCIPgetSubscipDepth(scip) == 0 )
+            printf(">> accepted RL solution\n");
        }
        if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
           disabledualreductions = TRUE;
@@ -669,35 +680,24 @@ SCIP_Bool checkLocalExec(
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
    if( SCIPgetNObjVars(scip) == 0 )
    {
-      runlocal = TRUE;
-   }
+         SCIPdebugMsg(scip, "-> allow local RL due to global zero objective\n");
 
-   /* check whether all undecided integer variables have zero objective coefficient */
-   if( !runlocal && sepadata->checklocalobj )
-   {
-      SCIP_Bool allzero;
-      SCIP_VAR** vars;
-      int ndiscvars;
-      int i;
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to global zero objective\n");
 
-      ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
-
-      for( i = 0; i < ndiscvars; i++ )
-      {
-         if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
-         {
-            allzero = FALSE;
-            break;
-         }
+         runlocal = TRUE;
       }
-
-      if( !allzero )
-         runlocal = FALSE;
-   }
 
    /* check whether a solution was found */
    if( !runlocal && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
+   {
+      SCIPdebugMsg(scip, "-> allow local RL due to no solution found so far\n");
+
+      if( SCIPgetSubscipDepth(scip) == 0 )
+         printf("-> allow local RL due to no solution found so far\n");
+
       runlocal = TRUE;
+   }
 
    /* check whether the dual bound has not changed since the root node */
    if( !runlocal && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
@@ -709,7 +709,30 @@ SCIP_Bool checkLocalExec(
       locdualbound = SCIPgetLocalLowerbound(scip);
 
       if( SCIPisEQ(scip, rootdualbound, locdualbound) )
+      {
+         SCIPdebugMsg(scip, "-> allow local RL due to equal dualbound\n");
+
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to equal dualbound\n");
+
          runlocal = TRUE;
+      }
+   }
+
+   /* check leave nodes */
+   if( !runlocal && sepadata->checkleaves )
+   {
+      SCIP_Real ratio = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
+
+      if( SCIPisLE(scip, sepadata->mininflpratio, ratio) )
+      {
+         SCIPdebugMsg(scip, "-> allow local RL due to inf/obj LP ratio\n");
+
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to inf/obj LP ratio\n");
+
+         runlocal = TRUE;
+      }
    }
 
    /* check strong branching LPs */
@@ -725,8 +748,78 @@ SCIP_Bool checkLocalExec(
 
       assert(nsblps >= nsbcutoffs + nsbeqobj);
 
-      if( SCIPisLE(scip, sepadata->sbfrac * nsblps, nsbcutoffs + nsbeqobj) )
+      if( nsblps > 0 && SCIPisLE(scip, sepadata->sbfrac * nsblps, nsbcutoffs + nsbeqobj) )
+      {
+         SCIPdebugMsg(scip, "-> allow local RL due to not enough progress in strong branching LPs\n");
+
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to not enough progress in strong branching LPs\n");
+
          runlocal = TRUE;
+      }
+   }
+
+   /* check whether all undecided integer variables have zero objective coefficient */
+   if( !runlocal && sepadata->checklocalobj )
+   {
+      SCIP_Bool allzero;
+      SCIP_VAR** vars;
+      int ndiscvars;
+      int i;
+
+      allzero = TRUE;
+      vars = SCIPgetVars(scip);
+      ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
+
+      for( i = 0; i < ndiscvars; i++ )
+      {
+         assert(SCIPvarIsIntegral(vars[i]));
+
+         /* skip locally fixed variables */
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+            continue;
+
+         if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+         {
+            allzero = FALSE;
+            break;
+         }
+      }
+
+      if( allzero )
+      {
+         SCIPdebugMsg(scip, "-> allow local RL due to local zero objective\n");
+
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to local zero objective\n");
+
+         runlocal = TRUE;
+      }
+   }
+
+   /* check degeneracy */
+   if( !runlocal && sepadata->checkdegeneracy )
+   {
+      SCIP_Real degeneracy;
+      SCIP_Real varconsratio;
+
+      SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+
+      SCIPdebugMsg(scip, "degeneracy: %.2f ratio: %.2f\n", degeneracy, varconsratio);
+
+      assert(degeneracy >= 0.0);
+      assert(degeneracy <= 1.0);
+      assert(varconsratio >= 1.0);
+
+      if( degeneracy >= 0.8 || varconsratio >= 2.0 )
+      {
+         SCIPdebugMsg(scip, "-> allow local RL due to degeneracy\n");
+
+         if( SCIPgetSubscipDepth(scip) == 0 )
+            printf("-> allow local RL due to degeneracy\n");
+
+         runlocal = TRUE;
+      }
    }
 
    return runlocal;
@@ -779,7 +872,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY;
 
    /* check if rapid learning should applied locally */
-   if( SCIPsepaGetFreq(sepa) > 0 && !checkLocalExec(scip, sepadata) )
+   if( SCIPgetDepth(scip) > 0 && !checkLocalExec(scip, sepadata) )
       return SCIP_OKAY;
 
    /* do not call rapid learning, if the problem is too big */
@@ -859,9 +952,17 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "should a solved status be copied to the original SCIP?",
          &sepadata->applysolved, TRUE, DEFAULT_APPLYSOLVED, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkdegeneracy",
+         "should local LP degeneracy be checked?",
+         &sepadata->checkdegeneracy, TRUE, DEFAULT_CHECKDEGANERAGY, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkdualbound",
          "should the progress on the dual bound be checked?",
          &sepadata->checkdualbound, TRUE, DEFAULT_CHECKDUALBOUND, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkleaves",
+         "should the ration of leaves proven to be infeasible and exceeding the cutoff bound be checked?",
+         &sepadata->checkleaves, TRUE, DEFAULT_CHECKLEAVES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalobj",
          "should the local objective function be checked?",
@@ -872,7 +973,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          &sepadata->checknsols, TRUE, DEFAULT_CHECKNSOLS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checksblps",
-         "should strong branching results be considered??",
+         "should strong branching results be considered?",
          &sepadata->checksblps, TRUE, DEFAULT_CHECKSBLPS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/contvars",
@@ -887,8 +988,12 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "maximal fraction of LP iterations compared to node LP iterations",
          &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/mininflpratio",
+         "minimal threshold of inf/obj leaves to allow local RL",
+         &sepadata->mininflpratio, TRUE, DEFAULT_MININFLPRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/sbfrac",
-         "fraction of strong branching LPs that were pruned or the objetive value has not changed",
+         "maximal fraction of strong branching LPs that were pruned or the objetive value has not changed to allow local RL",
          &sepadata->sbfrac, TRUE, DEFAULT_SBFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnvars",
