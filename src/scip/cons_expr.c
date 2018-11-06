@@ -5472,7 +5472,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    assert(scip != NULL);
    assert(lp != NULL);
    assert(nvars > 0);
-   assert(nvars < SCIP_MAXVERTEXPOLYDIM);
+   assert(nvars <= SCIP_MAXVERTEXPOLYDIM);
 
    SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of vertex-polyhedral function\n");
 
@@ -5521,7 +5521,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 
          a <<= 1;
          ++row;
-         assert(0 <= row && row < SCIP_MAXVERTEXPOLYDIM);
+         assert(0 <= row && row <= SCIP_MAXVERTEXPOLYDIM);
          assert(POWEROFTWO(row) == a);
       }
 
@@ -5682,7 +5682,7 @@ SCIP_Real computeVertexPolyhedralFacetLP(
    assert(box != NULL);
    assert(nonfixedpos != NULL);
    assert(funvals != NULL);
-   assert(nvars < SCIP_MAXVERTEXPOLYDIM);
+   assert(nvars <= SCIP_MAXVERTEXPOLYDIM);
    assert(success != NULL);
    assert(facetcoefs != NULL);
    assert(facetconstant != NULL);
