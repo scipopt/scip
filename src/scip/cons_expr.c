@@ -5463,11 +5463,11 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    SCIP_Real* val;
    int* beg;
    int* ind;
-   int nnonz;
-   int ncols;
-   int nrows;
-   int i;
-   int k;
+   unsigned int nnonz;
+   unsigned int ncols;
+   unsigned int nrows;
+   unsigned int i;
+   unsigned int k;
 
    assert(scip != NULL);
    assert(lp != NULL);
@@ -5479,10 +5479,9 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    /* create lpi to store the LP */
    SCIP_CALL( SCIPlpiCreate(lp, SCIPgetMessagehdlr(scip), "facet finding LP", SCIP_OBJSEN_MINIMIZE) );
 
-   nrows = nvars + 1;
+   nrows = (unsigned int)nvars + 1;
    ncols = POWEROFTWO(nrows - 1);
    nnonz = (ncols * (nrows + 1)) / 2;
-   k = 0;
 
    /* allocate necessary memory; set obj, lb, and ub to zero */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &obj, ncols) );
@@ -5493,7 +5492,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
 
    /* calculate nonzero entries in the LP */
-   for( i = 0; i < ncols; ++i )
+   for( i = 0, k = 0; i < ncols; ++i )
    {
       int row;
       unsigned int a;
@@ -5502,12 +5501,12 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
       ub[i] = SCIPlpiInfinity(*lp);
 
       SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
-      beg[i] = k;
+      beg[i] = (int)k;
       row = 0;
 
       /* iterate through the bit representation of i */
       a = 1;
-      while( a <= (unsigned int)i )
+      while( a <= i )
       {
          if( (a & i) != 0 )
          {
@@ -5527,7 +5526,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 
       /* put 1 as a coefficient for sum_{i} \lambda_i = 1 row (last row) */
       val[k] = 1.0;
-      ind[k] = nrows - 1;
+      ind[k] = (int)nrows - 1;
       ++k;
       SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
    }
@@ -5538,12 +5537,12 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
     */
    assert(nrows <= ncols);
    SCIP_CALL( SCIPlpiLoadColLP(*lp, SCIP_OBJSEN_MINIMIZE,
-      ncols, obj, lb, ub, NULL,
-      nrows, lb, lb, NULL,
-      nnonz, beg, ind, val) );
+      (int)ncols, obj, lb, ub, NULL,
+      (int)nrows, lb, lb, NULL,
+      (int)nnonz, beg, ind, val) );
 
    /* for the last row, we can set the rhs to 1.0 already */
-   ind[0] = nrows-1;
+   ind[0] = (int)nrows - 1;
    val[0] = 1.0;
    SCIP_CALL( SCIPlpiChgSides(*lp, 1, ind, val, val) );
 
@@ -5613,7 +5612,7 @@ SCIP_Real computeVertexPolyhedralMaxFacetError(
       unsigned int gray;
       unsigned int diff;
       unsigned int pos;
-      unsigned int origpos;
+      int origpos;
 
       gray = i ^ (i >> 1);
       diff = gray ^ prev;
@@ -5651,7 +5650,7 @@ SCIP_Real computeVertexPolyhedralMaxFacetError(
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function using by solving an LP */
 static
-SCIP_Real computeVertexPolyhedralFacetLP(
+SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
@@ -5666,7 +5665,7 @@ SCIP_Real computeVertexPolyhedralFacetLP(
    SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an zero'ed array of length at least nallvars */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
 )
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    SCIP_Real* aux; /* used to transform x^* and then to store LP solution */
@@ -5896,8 +5895,8 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
    assert(SCIPisLE(scip, left, right));
    assert(!SCIPisInfinity(scip, -left));
    assert(!SCIPisInfinity(scip, right));
-   assert(SCIPisFinite(funleft) && funleft != SCIP_INVALID);
-   assert(SCIPisFinite(funright) && funright != SCIP_INVALID);
+   assert(SCIPisFinite(funleft) && funleft != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(funright) && funright != SCIP_INVALID);  /*lint !e777*/
    assert(success != NULL);
    assert(facetcoef != NULL);
    assert(facetconstant != NULL);
@@ -5912,7 +5911,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
 
 /** computes a facet of the convex or concave envelope of a bivariate vertex polyhedral function */
 static
-SCIP_Real computeVertexPolyhedralFacetBivariate(
+SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
    SCIP_Real             p1[2],              /**< first vertex of box */
@@ -5931,15 +5930,15 @@ SCIP_Real computeVertexPolyhedralFacetBivariate(
 )
 {
    SCIP_Real alpha, beta, gamma_, delta;
-   SCIP_Real xstarval, candxstarval;
+   SCIP_Real xstarval, candxstarval = 0.0;
    int leaveout;
 
    assert(scip != NULL);
    assert(success != NULL);
-   assert(SCIPisFinite(p1val) && p1val != SCIP_INVALID);
-   assert(SCIPisFinite(p2val) && p2val != SCIP_INVALID);
-   assert(SCIPisFinite(p3val) && p3val != SCIP_INVALID);
-   assert(SCIPisFinite(p4val) && p4val != SCIP_INVALID);
+   assert(SCIPisFinite(p1val) && p1val != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(p2val) && p2val != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(p3val) && p3val != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(p4val) && p4val != SCIP_INVALID);  /*lint !e777*/
    assert(facetcoefs != NULL);
    assert(facetconstant != NULL);
 
@@ -5978,7 +5977,7 @@ SCIP_Real computeVertexPolyhedralFacetBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
             /* if not underestimating in p1, then go to next candidate */
-            if( alpha * p1[0] + beta * p1[1] + gamma_ * p1val - delta > 0 )
+            if( alpha * p1[0] + beta * p1[1] + gamma_ * p1val - delta > 0.0 )
                continue;
             break;
 
@@ -5987,7 +5986,7 @@ SCIP_Real computeVertexPolyhedralFacetBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
             /* if not underestimating in p2, then go to next candidate */
-            if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val - delta > 0 )
+            if( alpha * p2[0] + beta * p2[1] + gamma_ * p2val - delta > 0.0 )
                continue;
             break;
 
@@ -5996,7 +5995,7 @@ SCIP_Real computeVertexPolyhedralFacetBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
             /* if not underestimating in p3, then go to next candidate */
-            if( alpha * p3[0] + beta * p3[1] + gamma_ * p3val - delta > 0 )
+            if( alpha * p3[0] + beta * p3[1] + gamma_ * p3val - delta > 0.0 )
                continue;
             break;
 
@@ -6005,8 +6004,15 @@ SCIP_Real computeVertexPolyhedralFacetBivariate(
             SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val,
                &alpha, &beta, &gamma_, &delta) );
             /* if not underestimating in p4, then stop */
-            if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val - delta > 0 )
+            if( alpha * p4[0] + beta * p4[1] + gamma_ * p4val - delta > 0.0 )
                continue;
+            break;
+
+         default: /* only for lint */
+            alpha = SCIP_INVALID;
+            beta = SCIP_INVALID;
+            gamma_ =  SCIP_INVALID;
+            delta = SCIP_INVALID;
             break;
       }
 
@@ -11803,8 +11809,9 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    int* nonfixedpos;
    SCIP_Real maxfaceterror;
    int nvars; /* number of nonfixed variables */
-   int ncorners;
-   int i;
+   unsigned int ncorners;
+   unsigned int i;
+   int j;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -11820,11 +11827,11 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    /* identify fixed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &nonfixedpos, nallvars) );
    nvars = 0;
-   for( i = 0; i < nallvars; ++i )
+   for( j = 0; j < nallvars; ++j )
    {
-      if( SCIPisRelEQ(scip, box[2 * i], box[2 * i + 1]) )
+      if( SCIPisRelEQ(scip, box[2 * j], box[2 * j + 1]) )
          continue;
-      nonfixedpos[nvars] = i;
+      nonfixedpos[nvars] = j;
       nvars++;
    }
 
@@ -11842,15 +11849,13 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    ncorners = POWEROFTWO(nvars);
    SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncorners) );
    SCIP_CALL( SCIPallocBufferArray(scip, &corner, nallvars) );
-   for( i = 0; i < nallvars; ++i )
+   for( j = 0; j < nallvars; ++j )
    {
-      if( SCIPisRelEQ(scip, box[2 * i], box[2 * i + 1]) )
-         corner[i] = (box[2 * i] + box[2 * i + 1]) / 2.0;
+      if( SCIPisRelEQ(scip, box[2 * j], box[2 * j + 1]) )
+         corner[j] = (box[2 * j] + box[2 * j + 1]) / 2.0;
    }
    for( i = 0; i < ncorners; ++i )
    {
-      int j;
-
       SCIPdebugMsg(scip, "corner %d: ", i);
       for( j = 0; j < nvars; ++j )
       {
@@ -11858,7 +11863,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
          /* if j'th bit of row index i is set, then take upper bound on var j, otherwise lower bound var j
           * we check this by shifting i for j positions to the right and checking whether the last bit is set
           */
-         if( ((unsigned int)i >> j) & 0x1 )
+         if( (i >> j) & 0x1 )
             corner[varpos] = box[2 * varpos + 1]; /* ub of var */
          else
             corner[varpos] = box[2 * varpos ]; /* lb of var */
@@ -11870,7 +11875,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
 
       SCIPdebugMsgPrint(scip, "obj = %e\n", funvals[i]);
 
-      if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )
+      if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )  /*lint !e777*/
       {
          SCIPdebugMsg(scip, "cannot compute underestimator; function value at corner is too large %g\n", funvals[i]);
          goto CLEANUP;
@@ -11923,10 +11928,10 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       SCIP_Real midval;
 
       /* evaluate function in middle point to get some idea for a scaling */
-      for( i = 0; i < nvars; ++i )
-         corner[nonfixedpos[i]] = (box[2 * nonfixedpos[i]] + box[2 * nonfixedpos[i] + 1]) / 2.0;
+      for( j = 0; j < nvars; ++j )
+         corner[nonfixedpos[j]] = (box[2 * nonfixedpos[j]] + box[2 * nonfixedpos[j] + 1]) / 2.0;
       midval = function(corner, nallvars, fundata);
-      if( midval == SCIP_INVALID )
+      if( midval == SCIP_INVALID )  /*lint !e777*/
          midval = 1.0;
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
