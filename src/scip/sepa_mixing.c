@@ -155,7 +155,6 @@ static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to store the number of generated cuts */
    )
@@ -238,7 +237,6 @@ SCIP_RETCODE separateCuts(
       if( SCIPvarGetProbindex(vars[i]) < 0 )
          continue;
       cutnnz = 0;
-      cutrhs = 0;
       vlbmixsize = 0;
       var=vars[i];
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
@@ -248,11 +246,12 @@ SCIP_RETCODE separateCuts(
       vlbconsts = SCIPvarGetVlbConstants(var);
       nvlb = SCIPvarGetNVlbs(var);
       islocallb = FALSE;
+      lb = SCIPvarGetLbGlobal(var);
       if( nvlb == 0 )
          goto VUB;
       maxabscoef = 0.0;
       maxabsind = -1;
-      lb = SCIPvarGetLbGlobal(var);
+      maxabssign = 0;
       if( sepadata->uselocalbounds && lb < SCIPvarGetLbLocal(var) )
       {
          /* This is a lcoal cut */
@@ -292,7 +291,6 @@ SCIP_RETCODE separateCuts(
             SCIP_Real maxactivity;
             SCIP_Real coef;
             maxactivity = (vlbcoefs[j] > 0) ? (vlbconsts[j] + vlbcoefs[j]) : vlbconsts[j];
-            coef = 0.0;
             if( SCIPisFeasLE(scip, maxactivity, lb) )
             {
                /* this variable bound constraint is redundant */
@@ -301,7 +299,7 @@ SCIP_RETCODE separateCuts(
             if( vlbcoefs[j] > 0 )
             {
                coef = maxactivity - lb;
-               vlbmixsigns[vlbmixsize] = 0.0;
+               vlbmixsigns[vlbmixsize] = 0;
             }
             else
             {
@@ -375,7 +373,6 @@ SCIP_RETCODE separateCuts(
 
 VUB:
       cutnnz = 0;
-      cutrhs = 0;
       vubmixsize = 0;
 
       /* get variable upper bounds information */
@@ -383,12 +380,13 @@ VUB:
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
       nvub = SCIPvarGetNVubs(var);
+      ub = SCIPvarGetUbGlobal(var);
       islocalub = FALSE;
       if( nvub == 0 )
          goto CONFLICT;
       maxabscoef = 0.0;
       maxabsind = -1;
-      ub = SCIPvarGetUbGlobal(var);
+      maxabssign = 0;
       if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLPSol(var)) )
          goto CONFLICT;
       if( sepadata->uselocalbounds && ub > SCIPvarGetUbLocal(var) )
@@ -424,7 +422,6 @@ VUB:
             SCIP_Real minactivity;
             SCIP_Real coef;
             minactivity = (vubcoefs[j] < 0) ? (vubconsts[j] + vubcoefs[j]) : vubconsts[j];
-            coef = 0.0;
             if( SCIPisFeasLE(scip, ub, minactivity) )
             {
                /* this variable bound constraint is redundant */
@@ -630,7 +627,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
 
 
    /* call the cut separation */
-   SCIP_CALL( separateCuts(scip, sepa, NULL, &cutoff, &ncuts) );
+   SCIP_CALL( separateCuts(scip, sepa, &cutoff, &ncuts) );
 
    /* adjust result code */
    if ( cutoff )
