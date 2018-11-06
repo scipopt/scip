@@ -306,6 +306,7 @@ Test(separation, errorfacet)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
+static
 void test_vertexpolyhedral(
    int       dim,
    double*   box,
@@ -315,22 +316,30 @@ void test_vertexpolyhedral(
    SCIP_Bool overestimate
 )
 {
-   SCIP_Bool success;
+   SCIP_Bool success = FALSE;
+   SCIP_Real* corner;
    SCIP_Real* facetcoefs;
    SCIP_Real facetconstant;
    SCIP_Real funval;
    SCIP_Real facetval;
+   SCIP_Real targetval;
    int ncorners;
    int ntight;
    int i, j;
 
+   assert(scip != NULL);
+
    SCIP_ALLOC_ABORT( BMSallocMemoryArray(&facetcoefs, dim) );
+   SCIP_ALLOC_ABORT( BMSallocMemoryArray(&corner, dim) );
 
-   SCIP_CALL_ABORT( SCIPcreate(&scip) );
-   SCIP_CALL_ABORT( SCIPincludeConshdlrExpr(scip) );
+   targetval = overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip);
 
-   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), TRUE,
-      function, functiondata, xstar, box, dim, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), overestimate,
+      function, functiondata, xstar, box, dim, targetval, &success, facetcoefs, &facetconstant) );
+
+   cr_assert(success);
+   if( !success )
+      return;
 
    ncorners = 1<<dim;
    ntight = 0;
@@ -339,15 +348,15 @@ void test_vertexpolyhedral(
       for( j = 0; j < dim; ++j )
       {
          if( ((unsigned int)i >> j) & 0x1 )
-            xstar[j] = box[2 * j + 1]; /* ub of var */
+            corner[j] = box[2 * j + 1]; /* ub of var */
          else
-            xstar[j] = box[2 * j]; /* lb of var */
+            corner[j] = box[2 * j]; /* lb of var */
       }
 
-      funval = function(xstar, dim, functiondata);
+      funval = function(corner, dim, functiondata);
       facetval = facetconstant;
       for( j = 0; j < dim; ++j )
-         facetval += facetcoefs[j] * xstar[j];
+         facetval += facetcoefs[j] * corner[j];
 
       if( overestimate )
          cr_expect_geq(facetval, funval-SCIPepsilon(scip), "Facet value %g expected to be above function value %g", facetval, funval);
@@ -358,37 +367,79 @@ void test_vertexpolyhedral(
          ++ntight;
    }
 
-   cr_assert(success);
    cr_assert_geq(ntight, dim+1);  /* for a facet of the envelope, the hyperplane should touch the function in at least dim+1 corner points */
 
+
+   /* now set a target value */
+   targetval = function(xstar, dim, functiondata);
+   facetval = facetconstant;
+   for( j = 0; j < dim; ++j )
+      facetval += facetcoefs[j] * xstar[j];
+
+   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), overestimate,
+      function, functiondata, xstar, box, dim, targetval, &success, facetcoefs, &facetconstant) );
+
+   /* if target couldn't be reached before, it should not have been reached now, so method should not have succeeded
+    * (in principal it would also be allowed to succeed when missing the target, but current implementation doesn't) */
+   if( !SCIPisFeasEQ(scip, targetval, facetval) )
+      cr_assert(!success);
+
+   BMSfreeMemoryArray(&corner);
    BMSfreeMemoryArray(&facetcoefs);
-
-   SCIP_CALL_ABORT( SCIPfree(&scip) );
-
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 Test(separation, vertexpolyhedral,
    .description = "test facets of convex and concave envelopes for general vertex-polyhedral functions"
    )
 {
-   int dim = 3;
-   SCIP_Real* box;
-   SCIP_Real* xstar;
+   SCIP_Real box[2*SCIP_MAXVERTEXPOLYDIM];
+   SCIP_Real xstar[SCIP_MAXVERTEXPOLYDIM];
+   int dim;
+   int nfixed;
    int i;
 
-   box = (SCIP_Real*) malloc(2*dim*sizeof(SCIP_Real));
-   xstar = (SCIP_Real*) malloc(dim*sizeof(SCIP_Real));
+   SCIP_CALL_ABORT( SCIPcreate(&scip) );
+   SCIP_CALL_ABORT( SCIPincludeConshdlrExpr(scip) );
 
-   for( i = 0; i < dim; ++i )
+   SCIP_CALL_ABORT( SCIPcreateRandom(scip, &randnumgen, 20181106, FALSE) );
+
+   /* try every dimension */
+   for( dim = 1; dim <= SCIP_MAXVERTEXPOLYDIM; ++dim )
    {
-      box[2*i] = 0.0;
-      box[2*i+1] = 1.0;
-      xstar[i] = 0.5;
+      /* make up a box, not too symmetric, and a reference point, not just in the middle */
+      for( i = 0; i < dim; ++i )
+      {
+         box[2*i] = -i-1;
+         box[2*i+1] = (i+1)/2.0;
+         xstar[i] = sqrt(i) * (i%2 ? -1.0 : 1.0);
+      }
+
+      /* test that decent facets can be computed */
+      printf("Dim: %d overestimate\n", dim);
+      test_vertexpolyhedral(dim, box, xstar, prodfunction, NULL, TRUE);
+
+      printf("Dim: %d underestimate\n", dim);
+      test_vertexpolyhedral(dim, box, xstar, prodfunction, NULL, FALSE);
+
+      /* fix ~50% of the variables and try again */
+      nfixed = 0;
+      for( i = 0; i < dim; ++i )
+         if( SCIPrandomGetReal(randnumgen, 0.0, 1.0) < 0.5 )
+         {
+            box[2*i] = box[2*i+1];
+            xstar[i] = box[2*i];
+            ++nfixed;
+         }
+
+      if( nfixed == 0 || nfixed == dim )
+         continue;
+
+      printf("Dim: %d, Fixed: %d, overestimate\n", dim, nfixed);
+      test_vertexpolyhedral(dim, box, xstar, prodfunction, NULL, TRUE);
    }
 
-   test_vertexpolyhedral(dim, box, xstar, prodfunction, NULL, TRUE);
+   SCIPfreeRandom(scip, &randnumgen);
+   SCIP_CALL_ABORT( SCIPfree(&scip) );
 
-   free(box);
-   free(xstar);
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
