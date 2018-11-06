@@ -17,6 +17,32 @@
  * @brief  mixing/star inequality separator
  * @author Weikun Chen
  *
+ * This separator generates cuts based on the mixing set
+ * \f[
+ * X = \{ (x,y) \in \mathbb{B}^{n+m} \times \mathbb{R} \, : \,  y \geq a_i x_i, \, \textrm{for} \, i \in N, \,
+ *                           y \leq u -  a_i x_i, \, \textrm{for} \, i \in M, \, 0 \leq y \leq u  \},
+ * \f]
+ * where \f$0 \leq a_i \leq u\f$ for all \f$i\f$. This information could be obtained directly by the variable bounds data
+ * structure. The sparator will generate three classes of cuts.
+ *
+ * VLB: Let \f$T\f$ be a subset of \f$N\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \geq a_2 \ldots a_r\f$.
+ * Let \f$a_0 = 0\f$. The VLB cut is of the form \f$ y \geq \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
+ *
+ * VUB: Let \f$T\f$ be a subset of \f$M\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \geq a_2 \ldots a_r\f$.
+ * Let \f$a_0 = 0\f$. The VLB cut is of the form \f$ y \leq u - \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
+ *
+ * CONFLICT: Consider \f$i \in N\f$ and \f$j \in M\f$ with \f$a_i + a_j > u\f$. The conflict cut is
+ * \f$x_i + x_j \leq 1\f$.
+ *
+ * A small example is described below to see the generated cuts.
+ * \f[
+ * Y = \{ (x,y) \in \mathbb{B}^{4} \times \mathbb{R} \, : \, y \geq 3x_1, \, y \geq 2x_2, \, y \leq 4 - 2x_3, \,
+ *                           y \leq 4 - x_4, \, 0 \leq y \leq 4 \}
+ * \f]
+ * In this small example, the mixing/star cuts \f$y \geq x_1 + 2x_2\f$ (VLB) and \f$y \leq 4 - x_3 - x_4\f$ (VUB) will be
+ * considered to be generated. Besides the mixing cuts, we also consider the conflict cut \f$x_1 + x_3 \leq 1\f$ (CONFLICT).
+ *
+ *
  * For an overview see:
  * Atamturk, A., Nemhauser, G.L. and Savelsbergh, M.W., 2000@n
  * The mixed vertex packing problem.@n
