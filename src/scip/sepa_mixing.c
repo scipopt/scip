@@ -331,7 +331,7 @@ SCIP_RETCODE separateCuts(
       activity = -(SCIPvarGetLPSol(var) - lb);
       cutcoefs[cutnnz] = -1;
       cutinds[cutnnz] = SCIPvarGetProbindex(var);
-      cutrhs = cutrhs - lb;
+      cutrhs = -lb;
       cutnnz++;
       lastcoef = 0;
       for( j=0; j < vlbmixsize; j++  )
