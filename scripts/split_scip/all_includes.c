@@ -8,7 +8,7 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
 #endif
 
