@@ -215,13 +215,6 @@ SCIP_RETCODE separateCuts(
 
    for( i=firstvars; i<nvars; i++ )
    {
-      if( SCIPvarGetProbindex(vars[i]) < 0 )
-         continue;
-      cutnnz = 0;
-      cutrhs = 0;
-      vlbmixsize = 0;
-      var=vars[i];
-      assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
       SCIP_VAR** vlbvars;
       SCIP_Real* vlbcoefs;
       SCIP_Real* vlbconsts;
@@ -229,7 +222,6 @@ SCIP_RETCODE separateCuts(
       SCIP_Real* vubcoefs;
       SCIP_Real* vubconsts;
       SCIP_Real maxabscoef;
-      SCIP_Real curmaxabscoef;
       SCIP_Real activity;
       SCIP_Real lastcoef;
       SCIP_Real lb;
@@ -243,6 +235,13 @@ SCIP_RETCODE separateCuts(
       int nvub;
       int j;
 
+      if( SCIPvarGetProbindex(vars[i]) < 0 )
+         continue;
+      cutnnz = 0;
+      cutrhs = 0;
+      vlbmixsize = 0;
+      var=vars[i];
+      assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
       /* get variable lower bounds information */
       vlbvars = SCIPvarGetVlbVars(var);
       vlbcoefs = SCIPvarGetVlbCoefs(var);
@@ -281,19 +280,19 @@ SCIP_RETCODE separateCuts(
 
       if( SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), lb) )
       {
-         /*Never happen: Already done by propagation*/
+         /*Never happen: already done by propagation*/
       }
 
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j=0; j < nvlb; j++  )
       {
-         SCIP_Real maxactivity;
-         SCIP_Real coef;
-         SCIP_Real constant;
          /* consider only active and binary variable */
          if( SCIPvarIsBinary(vlbvars[j]) && (SCIPvarGetProbindex(vlbvars[j]) >= 0) )
          {
+            SCIP_Real maxactivity;
+            SCIP_Real coef;
             maxactivity = (vlbcoefs[j] > 0) ? (vlbconsts[j] + vlbcoefs[j]) : vlbconsts[j];
+            coef = 0.0;
             if( SCIPisFeasLE(scip, maxactivity, lb) )
             {
                /* this variable bound constraint is redundant */
@@ -302,13 +301,11 @@ SCIP_RETCODE separateCuts(
             if( vlbcoefs[j] > 0 )
             {
                coef = maxactivity - lb;
-               constant = 0;
-               vlbmixsigns[vlbmixsize] = 0;
+               vlbmixsigns[vlbmixsize] = 0.0;
             }
             else
             {
                coef = lb - maxactivity;
-               constant = maxactivity - lb;
                vlbmixsigns[vlbmixsize] = 1;
             }
 
@@ -329,9 +326,7 @@ SCIP_RETCODE separateCuts(
          goto VUB;
       /* stop if the current solution value is larger than the maxial coefficient */
       if( SCIPisFeasGT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
-      {
          goto VUB;
-      }
       /* sort the lp solutions decreasingly */
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds,  vlbmixsigns, vlbmixsize);
       /* add the continuous variable */
@@ -423,13 +418,13 @@ VUB:
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j=0; j < nvub; j++  )
       {
-         SCIP_Real minactivity;
-         SCIP_Real coef;
-         SCIP_Real constant;
          /* consider only active and binary variable */
          if( SCIPvarIsBinary(vubvars[j]) && (SCIPvarGetProbindex(vubvars[j]) >= 0) )
          {
+            SCIP_Real minactivity;
+            SCIP_Real coef;
             minactivity = (vubcoefs[j] < 0) ? (vubconsts[j] + vubcoefs[j]) : vubconsts[j];
+            coef = 0.0;
             if( SCIPisFeasLE(scip, ub, minactivity) )
             {
                /* this variable bound constraint is redundant */
@@ -438,13 +433,11 @@ VUB:
             if( vubcoefs[j] > 0 )
             {
                coef = ub - minactivity;
-               constant = minactivity;
                vubmixsigns[vubmixsize] = 1;
             }
             else
             {
                coef = minactivity - ub;
-               constant = ub;
                vubmixsigns[vubmixsize] = 0;
             }
 
@@ -612,7 +605,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
    SCIP_Bool cutoff;
    int nbinvars;
    int nvars;
-   int nfracs;
    int ncuts;
    int ncalls;
    int depth;
