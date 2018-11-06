@@ -5663,7 +5663,7 @@ SCIP_Real computeVertexPolyhedralFacetLP(
    int                   nvars,              /**< number of nonfixed variables */
    SCIP_Real             targetvalue,        /**< target value: no need to compute facet if value in xstar would be worse than this value */
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
-   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
+   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an zero'ed array of length at least nallvars */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
 )
 {
@@ -5803,7 +5803,6 @@ SCIP_Real computeVertexPolyhedralFacetLP(
     */
    SCIP_CALL( SCIPlpiGetSol(lp, NULL, NULL, aux, NULL, NULL) );
 
-   BMSclearMemoryArray(facetcoefs, nallvars);
    for( i = 0; i < nvars; ++i )
       facetcoefs[nonfixedpos[i]] = aux[i];
    /* last dual multiplier is the constant */
@@ -11878,9 +11877,12 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       }
    }
 
+   /* clear coefs array, as below we only fill in coefs for nonfixed variables */
+   BMSclearMemoryArray(facetcoefs, nallvars);
+
    if( nvars == 1 )
    {
-      SCIP_CALL( computeVertexPolyhedralFacetUnivariate(scip, box[2 * nonfixedpos[0]], box[2 * nonfixedpos[0] + 1], funvals[0], funvals[1], success, facetcoefs, facetconstant) );
+      SCIP_CALL( computeVertexPolyhedralFacetUnivariate(scip, box[2 * nonfixedpos[0]], box[2 * nonfixedpos[0] + 1], funvals[0], funvals[1], success, &facetcoefs[nonfixedpos[0]], facetconstant) );
 
       /* check whether target has been missed */
       if( *success && overestimate == (*facetconstant + *facetcoefs * xstar[nonfixedpos[0]] > targetvalue) )
@@ -11895,7 +11897,12 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       double p3[2] = { box[2*idx1],   box[2*idx2+1] }; /* corner 2: 2>>0 & 0x1 = 0, 2>>1 & 0x1 = 1 */
       double p4[2] = { box[2*idx1+1], box[2*idx2+1] }; /* corner 3: 3>>0 & 0x1 = 1, 3>>1 & 0x1 = 1 */
       double xstar2[2] = { xstar[idx1], xstar[idx2] };
-      SCIP_CALL( computeVertexPolyhedralFacetBivariate(scip, overestimate, p1, p2, p3, p4, funvals[0], funvals[1], funvals[2], funvals[3], xstar2, targetvalue, success, facetcoefs, facetconstant) );
+      double coefs[2];
+
+      SCIP_CALL( computeVertexPolyhedralFacetBivariate(scip, overestimate, p1, p2, p3, p4, funvals[0], funvals[1], funvals[2], funvals[3], xstar2, targetvalue, success, coefs, facetconstant) );
+
+      facetcoefs[idx1] = coefs[0];
+      facetcoefs[idx2] = coefs[1];
    }
    else
    {
