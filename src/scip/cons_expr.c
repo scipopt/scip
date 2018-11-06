@@ -5768,10 +5768,17 @@ SCIP_Real computeVertexPolyhedralFacetLP(
    SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows-1, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
-   /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
    /* we can stop the LP solve if will not meet the target value anyway */
-   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
+   if( !SCIPisInfinity(scip, REALABS(targetvalue)) )
+   {
+      SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
+   }
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_LPINFO, 1) );
+#endif
+   /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
    /*
     * solve the LP and store the resulting facet for the transformed space
@@ -11827,6 +11834,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
     */
    if( nvars == 0 || nvars > SCIP_MAXVERTEXPOLYDIM )
    {
+      SCIPwarningMessage(scip, "SCIPcomputeFacetVertexPolyhedral() called with %d nonfixed variables. Must be between [1,%d].\n", SCIP_MAXVERTEXPOLYDIM);
       SCIPfreeBufferArray(scip, &nonfixedpos);
       return SCIP_OKAY;
    }
@@ -11844,6 +11852,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    {
       int j;
 
+      SCIPdebugMsg(scip, "corner %d: ", i);
       for( j = 0; j < nvars; ++j )
       {
          int varpos = nonfixedpos[j];
@@ -11860,7 +11869,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
 
       funvals[i] = function(corner, nallvars, fundata);
 
-      SCIPdebugMsg(scip, "obj col %d = %e\n", i, funvals[i]);
+      SCIPdebugMsgPrint(scip, "obj = %e\n", funvals[i]);
 
       if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )
       {
