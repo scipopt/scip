@@ -215,6 +215,8 @@ struct SCIP_ConshdlrData
    SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
    SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
    SCIP_Real                vp_maxperturb;   /**< maximal relative perturbation of reference point */
+   SCIP_Real                vp_adjfacetthreshold; /**< adjust computed facet up to a violation of this value times lpfeastol */
+   SCIP_Bool                vp_dualsimplex;  /**< whether to use dual simplex instead of primal simplex for facet computing LP */
 
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
@@ -5788,7 +5790,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    /*
     * solve the LP and store the resulting facet for the transformed space
     */
-   if( VERTEXPOLY_USEDUALSIMPLEX ) /*lint !e774 !e506*/
+   if( conshdlrdata->vp_dualsimplex )
    {
       SCIP_CALL( SCIPlpiSolveDual(lp) );
    }
@@ -10788,6 +10790,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "maximal relative perturbation of reference point when computing facet of envelope of vertex-polyhedral function (dim>2)",
          &conshdlrdata->vp_maxperturb, TRUE, VERTEXPOLY_MAXPERTURBATION, 0.0, 1.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/vpadjfacetthresh",
+         "adjust computed facet of envelope of vertex-polyhedral function up to a violation of this value times LP feasibility tolerance",
+         &conshdlrdata->vp_adjfacetthreshold, TRUE, VERTEXPOLY_ADJUSTFACETFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/vpdualsimplex",
+         "whether to use dual simplex instead of primal simplex for LP that computes facet of vertex-polyhedral function",
+         &conshdlrdata->vp_dualsimplex, TRUE, VERTEXPOLY_USEDUALSIMPLEX, NULL, NULL) );
+
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
          "signals a bound change to an expression constraint", processVarEvent, NULL) );
@@ -11938,6 +11948,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
    if( maxfaceterror > 0.0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real midval;
 
       /* evaluate function in middle point to get some idea for a scaling */
@@ -11947,8 +11958,11 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       if( midval == SCIP_INVALID )  /*lint !e777*/
          midval = 1.0;
 
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > VERTEXPOLY_ADJUSTFACETFACTOR * SCIPlpfeastol(scip) * fabs(midval) )
+      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * SCIPlpfeastol(scip) * fabs(midval) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g (midval=%g).\n", maxfaceterror, midval);
          *success = FALSE;
