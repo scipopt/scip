@@ -1467,13 +1467,14 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       SCIP_Real* box;
       SCIP_Real* xstar;
       int i;
+      int nfixed;
 
       /* Since the product is componentwise linear, its convex and concave envelopes are piecewise linear.*/
 
       /* assemble box, check for unbounded variables, assemble xstar */
       SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nchildren) );
       SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nchildren) );
-      for( i = 0; i < nchildren; ++i )
+      for( i = 0, nfixed = 0; i < nchildren; ++i )
       {
          child = SCIPgetConsExprExprChildren(expr)[i];
          var = SCIPgetConsExprExprAuxVar(child);
@@ -1488,9 +1489,15 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
          box[2*i+1] = SCIPvarGetUbLocal(var);
 
          xstar[i] = SCIPgetSolVal(scip, sol, var);
+
+         if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
+            ++nfixed;
       }
 
-      SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, prodfunction, &exprdata->coefficient, xstar, box, nchildren, targetvalue, success, coefs, constant) );
+      if( nfixed < nchildren && nchildren - nfixed <= SCIP_MAXVERTEXPOLYDIM )
+      {
+         SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, overestimate, prodfunction, &exprdata->coefficient, xstar, box, nchildren, targetvalue, success, coefs, constant) );
+      }
 
 CLEANUP:
       SCIPfreeBufferArray(scip, &xstar);
