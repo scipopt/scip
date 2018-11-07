@@ -1236,7 +1236,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   {
                      i++;
                      avg += edgeweight[curr->index];
-                     if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
+                     if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5
+                           && SCIPvarGetUbGlobal(vars[flipedge(edgeancestor[curr->index])] ) < 0.5 )
                         fixed = TRUE;
 
                      curr = curr->parent;
@@ -1244,10 +1245,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   avg = avg / (double) i;
                   assert(avg >= 1);
                }
+
                /* is an ancestor edge fixed? */
                if( fixed )
                {
-                  cost[e] = BLOCKED;
+                  cost[e] = MAX(cost[e], BLOCKED);
 
                   nodepriority[solgraph->head[e]] /= 2.0;
                   nodepriority[solgraph->tail[e]] /= 2.0;

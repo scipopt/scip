@@ -1145,7 +1145,6 @@ int reduceWithEdgeFixingBounds(
    const SCIP_Bool solgiven = (result != NULL);
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
-   assert(!solgiven || graph_sol_valid(scip, graph, result));
    assert(!solgiven || upperbound == graph_sol_getObj(graph->cost, result, 0.0, graph->edges));
 
    for( int k = 0; k < nnodes; k++ )

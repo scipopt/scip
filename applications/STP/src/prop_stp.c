@@ -407,6 +407,11 @@ SCIP_RETCODE dualcostVarfixing(
          propdata->deg2bounds[i] = -FARAWAY;
          propdata->deg2bounded[i] = FALSE;
       }
+#if 1
+      /* first call, so we can also fix incoming arcs of root to zero */
+      for( int e = graph->inpbeg[graph->source]; e != EAT_LAST; e = graph->ieat[e] )
+         SCIP_CALL( fixedgevar(scip, vars[e], nfixed) );
+#endif
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
