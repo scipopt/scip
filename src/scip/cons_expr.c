@@ -5677,6 +5677,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    int nrows;
    int i;
    SCIP_Real facetvalue;
+   SCIP_Real mindomwidth;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5726,6 +5727,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       inds[i] = i;
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
+   mindomwidth = 2*SCIPinfinity(scip);
    for( i = 0; i < nrows-1; ++i )
    {
       SCIP_Real solval;
@@ -5739,6 +5741,9 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       lb = box[2 * varpos];
       ub = box[2 * varpos + 1];
       solval = xstar[varpos];
+
+      if( ub - lb < mindomwidth )
+         mindomwidth = ub - lb;
 
       /* explicitly handle solution which violate bounds of variables (this can happen because of tolerances) */
       if( solval <= lb )
@@ -5781,6 +5786,13 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    {
       SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
    }
+   /* since we work with the dual of the LP, primal feastol determines how much we want the computed facet to be the best possible one */
+   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_FEASTOL, SCIPfeastol(scip)) );
+   /* since we work with the dual of the LP, dual feastol determines validity of the facet
+    * if some ub-lb is small, we need higher accuracy, since below we divide coefs by ub-lb (we moved and scaled the box)
+    * thus, we set the dual feastol to be between SCIPepsilon and SCIPfeastol
+    */
+   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, MIN(SCIPfeastol(scip), MAX(SCIPepsilon(scip), mindomwidth * SCIPfeastol(scip)))) ); /*lint !e666*/
 
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_LPINFO, 1) );
