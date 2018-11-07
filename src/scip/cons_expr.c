@@ -214,6 +214,7 @@ struct SCIP_ConshdlrData
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
    SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
    SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
+   SCIP_Real                vp_maxperturb;   /**< maximal relative perturbation of reference point */
 
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
@@ -5691,7 +5692,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->vp_randnumgen == NULL )
+   if( conshdlrdata->vp_randnumgen == NULL && conshdlrdata->vp_maxperturb > 0.0 )
    {
       SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->vp_randnumgen, VERTEXPOLY_RANDNUMINITSEED, TRUE) );
    }
@@ -5746,19 +5747,24 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
          aux[i] = (solval - lb) / (ub - lb);
 
       /* perturb point to hopefully obtain a facet of the convex envelope */
-      if( aux[i] == 1.0 )
-         aux[i] -= SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
-      else if( aux[i] == 0.0 )
-         aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, VERTEXPOLY_MAXPERTURBATION);
-      else
+      if( conshdlrdata->vp_maxperturb > 0.0 )
       {
-         SCIP_Real perturbation;
+         assert(conshdlrdata->vp_randnumgen != NULL);
 
-         perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
-         perturbation = MIN( perturbation, VERTEXPOLY_MAXPERTURBATION );
-         aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, -perturbation, perturbation);
+         if( aux[i] == 1.0 )
+            aux[i] -= SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, conshdlrdata->vp_maxperturb);
+         else if( aux[i] == 0.0 )
+            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, 0.0, conshdlrdata->vp_maxperturb);
+         else
+         {
+            SCIP_Real perturbation;
+
+            perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
+            perturbation = MIN( perturbation, conshdlrdata->vp_maxperturb );
+            aux[i] += SCIPrandomGetReal(conshdlrdata->vp_randnumgen, -perturbation, perturbation);
+         }
+         assert(0.0 < aux[i] && aux[i] < 1.0);
       }
-      assert(0.0 < aux[i] && aux[i] < 1.0);
 
       SCIPdebugMsg(scip, "LP row %d in [%e, %e]\n", i, aux[i], aux[i]);
    }
@@ -5769,7 +5775,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
 
    /* we can stop the LP solve if will not meet the target value anyway, but only if xstar hasn't been perturbed */
-   if( VERTEXPOLY_MAXPERTURBATION == 0.0 && !SCIPisInfinity(scip, REALABS(targetvalue)) )
+   if( conshdlrdata->vp_maxperturb == 0.0 && !SCIPisInfinity(scip, REALABS(targetvalue)) )
    {
       SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
    }
@@ -10778,6 +10784,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
          "by how much to relax constraint sides during bound tightening",
          &conshdlrdata->conssiderelaxamount, TRUE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/vpmaxperturb",
+         "maximal relative perturbation of reference point when computing facet of envelope of vertex-polyhedral function (dim>2)",
+         &conshdlrdata->vp_maxperturb, TRUE, VERTEXPOLY_MAXPERTURBATION, 0.0, 1.0, NULL, NULL) );
+
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
          "signals a bound change to an expression constraint", processVarEvent, NULL) );
@@ -11945,7 +11955,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
          goto CLEANUP;
       }
 
-      SCIPdebugMsgPrint(scip, "maximum facet error %g (midval=%g), adjust constant to make cut valid!\n", maxfaceterror, midval);
+      SCIPdebugMsg(scip, "maximum facet error %g (midval=%g), adjust constant to make cut valid!\n", maxfaceterror, midval);
 
       if( overestimate )
          *facetconstant += maxfaceterror;
