@@ -5768,8 +5768,8 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP_CALL( SCIPlpiChgSides(lp, nrows-1, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
 
-   /* we can stop the LP solve if will not meet the target value anyway */
-   if( !SCIPisInfinity(scip, REALABS(targetvalue)) )
+   /* we can stop the LP solve if will not meet the target value anyway, but only if xstar hasn't been perturbed */
+   if( VERTEXPOLY_MAXPERTURBATION == 0.0 && !SCIPisInfinity(scip, REALABS(targetvalue)) )
    {
       SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
    }
@@ -5860,7 +5860,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
     */
    if( overestimate == (facetvalue > targetvalue) )
    {
-      SCIPdebugMsg(scip, "missed the target\n");
+      SCIPdebugMsg(scip, "missed the target, facetvalue %g targetvalue %g, overestimate=%d\n", facetvalue, targetvalue, overestimate);
       goto CLEANUP;
    }
 
@@ -11840,7 +11840,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
     */
    if( nvars == 0 || nvars > SCIP_MAXVERTEXPOLYDIM )
    {
-      SCIPwarningMessage(scip, "SCIPcomputeFacetVertexPolyhedral() called with %d nonfixed variables. Must be between [1,%d].\n", SCIP_MAXVERTEXPOLYDIM);
+      SCIPwarningMessage(scip, "SCIPcomputeFacetVertexPolyhedral() called with %d nonfixed variables. Must be between [1,%d].\n", nvars, SCIP_MAXVERTEXPOLYDIM);
       SCIPfreeBufferArray(scip, &nonfixedpos);
       return SCIP_OKAY;
    }
@@ -11914,7 +11914,10 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       SCIP_CALL( computeVertexPolyhedralFacetLP(scip, conshdlr, overestimate, xstar, box, nallvars, nonfixedpos, funvals, nvars, targetvalue, success, facetcoefs, facetconstant) );
    }
    if( !*success )
+   {
+      SCIPdebugMsg(scip, "no success computing facet, %d vars\n", nvars);
       goto CLEANUP;
+   }
 
    /*
     *  check and adjust facet with the algorithm of Rikun et al.
