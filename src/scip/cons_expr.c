@@ -5786,6 +5786,8 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    {
       SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_OBJLIM, targetvalue) );
    }
+   /* set an iteration limit so we do not run forever */
+   SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_LPITLIM, 100*ncols) );
    /* since we work with the dual of the LP, primal feastol determines how much we want the computed facet to be the best possible one */
    SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_FEASTOL, SCIPfeastol(scip)) );
    /* since we work with the dual of the LP, dual feastol determines validity of the facet
