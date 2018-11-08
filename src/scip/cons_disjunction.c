@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,11 +21,22 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_disjunction.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include <string.h>
 
 
 /* constraint handler properties */
@@ -79,7 +90,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to constraint data */
    SCIP_CONS**           conss,              /**< initial constraint in disjunction */
    int                   nconss,             /**< number of initial constraints in disjunction */
-   SCIP_CONS*            relaxcons           /**< a conjuction constraint containing the liner relaxation of the disjunction constraint, or NULL */
+   SCIP_CONS*            relaxcons           /**< a conjunction constraint containing the liner relaxation of the disjunction constraint, or NULL */
    )
 {
    assert(scip != NULL);
@@ -120,7 +131,7 @@ SCIP_RETCODE consdataCreate(
 
          if( (*consdata)->relaxcons != NULL )
          {
-            SCIP_CALL( SCIPcaptureCons(scip, relaxcons) );
+            SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->relaxcons) );
          }
       }
    }
@@ -659,13 +670,15 @@ SCIP_DECL_CONSLOCK(consLockDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      SCIP_CALL( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddConsLocksType(scip, consdata->conss[c], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -1144,6 +1157,5 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CALL( consdataAddCons(scip, consdata, addcons) );
 
    return SCIP_OKAY;
-
 }
 

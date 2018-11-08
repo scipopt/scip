@@ -20,14 +20,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-#include "scip/scip.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/type_nlpi.h"
+#include "scip/heuristics.h"
 #include "scip/heur_rens.h"
-#include "scip/scipdefplugins.h"       /* needed for the secondary SCIP instance */
-#include "scip/cons_linear.h"          /* needed if the LP relaxation gets copied into linear constraints */
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nodesel.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* default values for standard parameters that every primal heuristic has in SCIP */
 #define HEUR_NAME             "rens"
@@ -385,7 +407,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Bool success;
    int i;
-   int nvars;              /**< number of original problem's variables */
+   int nvars;              /* number of original problem's variables */
    SCIP_RETCODE retcode;
 
    assert(scip != NULL);
@@ -777,7 +799,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
 static
 SCIP_DECL_HEUREXEC(heurExecRens)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 

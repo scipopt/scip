@@ -1,24 +1,24 @@
 #!groovy
 
 node ('nightly'){
-    try{
+    catchError {
         timeout(1) {
             stage('Clean') {
                  cleanWs() // clean workspace
             }
         }
         stage('Clone') {
-			sh 'git clone git@git.zib.de:integer/scip.git master'
-			sh 'git clone git@git.zib.de:integer/scip.git bugfix'
-			sh 'cd bugfix; git checkout ${SCIP_BUGFIX}'
-		}
+            sh 'git clone git@git.zib.de:integer/scip.git master'
+            sh 'git clone git@git.zib.de:integer/scip.git bugfix'
+            sh 'cd bugfix; git checkout ${SCIP_BUGFIX}'
+        }
         stage('Test') {
             def paramjobs = [:]
 
             String[] buildtypes = ["Release", "Debug"]
             String[] branches = ["master", "bugfix"]
             String[] compilers = ["gnu", "clang", "intel"]
-            String[] lpsolvers = ["cpx", "spx", "xprs", "msk"] //, "grb"] //missing clp!
+            String[] lpsolvers = ["cpx", "spx", "xprs", "msk", "grb"] //missing clp!
 
             for(i = 0; i < buildtypes.size(); i += 1) {
                 def bt = buildtypes[i]
@@ -49,12 +49,6 @@ node ('nightly'){
             }
             parallel paramjobs
         }
-        currentBuild.result = 'SUCCESS'
-    } catch(error){
-        echo "ERROR: Problem running the pipeline: ${error}"
-        currentBuild.result = 'FAILURE'
-        throw any //rethrow exception to prevent the build from proceeding
-    } finally {
-        step([$class: 'Mailer', notifyEveryUnstableBuild: true, recipients: 'timo-admin@zib.de'])
     }
+    step([$class: 'Mailer', notifyEveryUnstableBuild: true, recipients: 'timo-admin@zib.de'])
 }

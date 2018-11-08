@@ -14,6 +14,7 @@ FLAGS	+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DROU
 OFLAGS	+=	
 CFLAGS	+=	-Zi -Od -fp:precise
 CXXFLAGS	+=	-Zi -Od -fp:precise -EHsc -GR
+DFLAGS =
 LINKRPATH =
 ZIMPL_FLAGS	=  -I$(LIBDIR)/include/zimplinc/zimpl/WIN
 ZLIB_FLAGS	=  -I$(LIBDIR)/include/zlib

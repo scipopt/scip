@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,16 +33,37 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/pub_misc.h"
-#include "scip/cons_xor.h"
-#include "scip/cons_setppc.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "scip/heur_trysol.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_xor.h"
 #include "scip/debug.h"
-
+#include "scip/heur_trysol.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "xor"
@@ -151,6 +172,8 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -165,6 +188,8 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
+   assert(!SCIPconsIsLockedType(cons, SCIP_LOCKTYPE_CONFLICT));
+
    /* rounding in both directions may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
@@ -2354,8 +2379,8 @@ SCIP_RETCODE checkSystemGF2(
             if ( SCIPvarIsActive(var) && ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvarsmat) );
-               assert( nvarsmat == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvarsmat) );
+               assert( nvarsmat == SCIPhashmapGetImageInt(varhash, var) );
                xorvals[nvarsmat] = SCIPvarGetObj(var) * (1.0 - SCIPgetSolVal(scip, currentsol, var));
                xorvars[nvarsmat++] = var;
             }
@@ -2460,7 +2485,6 @@ SCIP_RETCODE checkSystemGF2(
             b[nconssmat] = ! b[nconssmat];
          }
 
-
          /* replace aggregated variables */
          while( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
@@ -2513,7 +2537,7 @@ SCIP_RETCODE checkSystemGF2(
             if ( SCIPvarIsActive(var) && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
                assert( SCIPhashmapExists(varhash, var) );
-               idx = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+               idx = SCIPhashmapGetImageInt(varhash, var);
                assert( idx < nvarsmat );
                assert( 0 <= xorbackidx[idx] && xorbackidx[idx] < nvarsmat );
                A[nconssmat][xorbackidx[idx]] = 1;
@@ -2596,8 +2620,8 @@ SCIP_RETCODE checkSystemGF2(
             /* fix variables according to computed unique solution */
             for( j = 0; j < nvarsmat; ++j )
             {
-               assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
-               assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+               assert( SCIPhashmapGetImageInt(varhash, xorvars[j]) < nvars );
+               assert( xorbackidx[SCIPhashmapGetImageInt(varhash, xorvars[j])] == j );
                assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                if( x[j] == 0 )
                {
@@ -2651,8 +2675,8 @@ SCIP_RETCODE checkSystemGF2(
                {
                   if ( x[j] != 0 )
                   {
-                     assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
-                     assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                     assert( SCIPhashmapGetImageInt(varhash, xorvars[j]) < nvars );
+                     assert( xorbackidx[SCIPhashmapGetImageInt(varhash, xorvars[j])] == j );
                      assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
                      SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                   }
@@ -4243,7 +4267,6 @@ SCIP_RETCODE preprocessConstraintPairs(
       if( *cutoff )
          return SCIP_OKAY;
 #endif
-
       }
    }
 
@@ -4391,25 +4414,29 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
             assert(cnt == nvars - 1);
 
             /* check whether parity variable is present only in this constraint */
-            if ( SCIPvarGetNLocksDown(parityvar) <= 1 && SCIPvarGetNLocksUp(parityvar) <= 1 )
+            if ( SCIPvarGetNLocksDownType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1
+               && SCIPvarGetNLocksUpType(parityvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                SCIP_VAR* intvar;
                SCIP_Bool rhsparity;
                SCIP_Bool neednew;
                int intrhs;
 
-               SCIPdebugMsg(scip, "upgrading constraint <%s> to an XOR constraint\n", SCIPconsGetName(cons));
-
                /* adjust the side, since we negated all binary variables with -1.0 as a coefficient */
                rhs += ncoeffsnone;
 
                intrhs = (int) SCIPfloor(scip, rhs);
                rhsparity = ((SCIP_Bool) (intrhs % 2)); /*lint !e571*/
-               neednew = (intrhs != 1 && intrhs != 0);
+
+               /* we need a new variable if the rhs is not 0 or 1 or if the coefficient was +2, since in these cases, we
+                * need to aggregate the variables (flipping signs and/or shifting */
+               if ( (intrhs != 1 && intrhs != 0) || postwo )
+                  neednew = TRUE;
+               else
+                  neednew = FALSE;
 
                /* check if we can use the parity variable as integer variable of the XOR constraint or do we need to
-                * create a new variable
-                */
+                * create a new variable and aggregate */
                if( neednew )
                {
                   char varname[SCIP_MAXSTRLEN];
@@ -4443,7 +4470,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
 
                   isbinary = (SCIPisZero(scip, lb) && SCIPisEQ(scip, ub, 1.0));
 
-                  /* you must not create an artificial integer variable if parity variable is already binary */
+                  /* something is wrong if parity variable is already binary, but artificial variable is not */
                   if( SCIPvarIsBinary(parityvar) && !isbinary )
                   {
                      SCIPfreeBufferArray(scip, &xorvars);
@@ -4473,16 +4500,25 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
                   assert(redundant);
                   assert(SCIPvarIsActive(intvar));
 
-                  SCIPdebugMsg(scip, "aggregated: %s = %g * %s + %g\n", SCIPvarGetName(parityvar),
-                     SCIPvarGetAggrScalar(parityvar), SCIPvarGetName(SCIPvarGetAggrVar(parityvar)),
-                     SCIPvarGetAggrConstant(parityvar));
+#ifdef SCIP_DEBUG
+                  if( SCIPvarGetStatus(parityvar) == SCIP_VARSTATUS_AGGREGATED )
+                  {
+                     SCIPdebugMsg(scip, "aggregated: <%s> = %g * <%s> + %g\n", SCIPvarGetName(parityvar),
+                        SCIPvarGetAggrScalar(parityvar), SCIPvarGetName(SCIPvarGetAggrVar(parityvar)),
+                        SCIPvarGetAggrConstant(parityvar));
+                  }
+                  else
+                  {
+                     assert( SCIPvarGetStatus(parityvar) == SCIP_VARSTATUS_NEGATED );
+                     SCIPdebugMsg(scip, "negated: <%s> = 1 - <%s>\n", SCIPvarGetName(parityvar),
+                        SCIPvarGetName(SCIPvarGetNegatedVar(parityvar)));
+                  }
+#endif
                }
                else
                   intvar = parityvar;
 
                assert(intvar != NULL);
-
-               SCIPdebugMsg(scip, "upgrading constraint <%s> to XOR constraint\n", SCIPconsGetName(cons));
 
                SCIP_CALL( createConsXorIntvar(scip, upgdcons, SCIPconsGetName(cons), rhsparity, nvars - 1, xorvars, intvar,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
@@ -4490,6 +4526,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
                         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
+               SCIPdebugMsg(scip, "upgraded constraint <%s> to XOR constraint:\n", SCIPconsGetName(cons));
                SCIPdebugPrintCons(scip, *upgdcons, NULL);
 
                if( neednew )
@@ -5185,19 +5222,21 @@ SCIP_DECL_CONSLOCK(consLockXor)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* external variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    /* internal variable */
    if( consdata->intvar != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->intvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->intvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

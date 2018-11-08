@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,24 +20,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-
-#include "scip/def.h"
-#include "scip/set.h"
-#include "scip/stat.h"
 #include "scip/event.h"
-#include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/misc.h"
+#include "scip/pub_implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/debug.h"
-#include "scip/misc.h"
-
-#ifndef NDEBUG
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/set.h"
 #include "scip/struct_implics.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/var.h"
 
 
 
@@ -2075,7 +2070,6 @@ SCIP_RETCODE sortAndMergeClique(
       startidx = curr;
    }
 
-
    /* we might have found an infeasibility or reduced the clique to size 0 */
    if( *infeasible || *nclqvars == 0 )
       return SCIP_OKAY;
@@ -2262,14 +2256,13 @@ int cliquetableGetNodeIndexBinvar(
    else
       activevar = binvar;
 
-
    assert(SCIPvarIsBinary(activevar));
 
    /* if the map does not contain an index for this variable, return -1 and mark that the components must be
     * recomputed from scratch
     */
    if( SCIPhashmapExists(cliquetable->varidxtable, (void*)activevar) )
-      nodeindex = (int)(size_t)SCIPhashmapGetImage(cliquetable->varidxtable, (void *)activevar);
+      nodeindex = SCIPhashmapGetImageInt(cliquetable->varidxtable, (void *)activevar);
    else
    {
       nodeindex = -1;
@@ -2310,7 +2303,6 @@ void cliquetableUpdateConnectednessClique(
    /* loop over variables in the clique and connect the corresponding components */
    for( i = 0; i < nclqvars && !cliquetable->compsfromscratch; ++i )
    {
-
       /* this method may also detect that the clique table must entirely recompute connectedness */
       int currnode = cliquetableGetNodeIndexBinvar(cliquetable, clqvars[i]);
 
@@ -2442,7 +2434,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
                /* check if variable is fixed already and terminate with infeasible if this fixing contradicts the clique info */
                if( SCIPvarGetLbGlobal(clqvar) > SCIPvarGetUbGlobal(clqvar) - 0.5 )
                {
-
                   /* check if fixing contradicts clique constraint */
                   if( (clqval && SCIPvarGetLbGlobal(clqvar) > 0.5)
                      || (! clqval && SCIPvarGetUbGlobal(clqvar) < 0.5) )
@@ -2732,7 +2723,6 @@ SCIP_RETCODE cliqueCleanup(
             /* increase indexer of last active, i.e. unfixed, variable in clique */
             ++w;
          }
-
       }
       clique->nvars = w;
 
@@ -3173,14 +3163,14 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
          /* consider only active representatives */
          if( SCIPvarIsActive(var) )
          {
-            SCIP_CALL( SCIPhashmapInsert(cliquetable->varidxtable, (void*)var, (void*)(size_t)v) );
+            SCIP_CALL( SCIPhashmapInsertInt(cliquetable->varidxtable, (void*)var, v) );
          }
          else
          {
             var = SCIPvarGetProbvar(var);
             if( SCIPvarIsActive(var) )
             {
-               SCIP_CALL( SCIPhashmapInsert(cliquetable->varidxtable, (void*)var, (void*)(size_t)v) );
+               SCIP_CALL( SCIPhashmapInsertInt(cliquetable->varidxtable, (void*)var, v) );
             }
          }
       }

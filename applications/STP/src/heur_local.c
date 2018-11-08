@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -51,12 +51,13 @@
 
 #define DEFAULT_DURINGROOT    TRUE
 #define DEFAULT_MAXFREQLOC    FALSE
-#define DEFAULT_MAXNBESTSOLS  10
-#define DEFAULT_NBESTSOLS     4
-#define DEFAULT_MINNBESTSOLS  4
+#define DEFAULT_MAXNBESTSOLS  25
+#define DEFAULT_NBESTSOLS     10
+#define DEFAULT_MINNBESTSOLS  6
+#define LOCAL_MAXRESTARTS  5
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
-#define GREEDY_EXTENSIONS_MW 10   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS_MW 6   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
 #define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 
@@ -634,7 +635,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       /* initialize data structures */
       SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
 
-      for( nruns = 0; nruns < 3 && localmoves > 0; nruns++ )
+      for( nruns = 0; nruns < LOCAL_MAXRESTARTS && localmoves > 0; nruns++ )
       {
          localmoves = 0;
 
@@ -1236,7 +1237,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                /* free the supergraph and the MST data structure */
                graph_path_exit(scip, supergraph);
-               graph_free(scip, supergraph, TRUE);
+               graph_free(scip, &supergraph, TRUE);
                SCIPfreeBufferArray(scip, &mst);
 
                /* unmark the descendant supervertices */
@@ -1954,9 +1955,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
 
 
-
-
-
 /*
  * Callback methods of primal heuristic
  */
@@ -1988,12 +1986,57 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemoryArray(scip, &(heurdata->lastsolindices));
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolLocal)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+
+   heurdata->nfails = 1;
+   heurdata->nbestsols = DEFAULT_NBESTSOLS;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
+
+   for( int i = 0; i < heurdata->maxnsols; i++ )
+      heurdata->lastsolindices[i] = -1;
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolLocal)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(heurdata->lastsolindices != NULL);
+   SCIPfreeMemoryArray(scip, &(heurdata->lastsolindices));
+
+   return SCIP_OKAY;
+}
+
+
 
 /** execution method of primal heuristic */
 static
@@ -2078,49 +2121,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* no new solution available? */
    if( v == min )
       return SCIP_OKAY;
-
-#if 0
-      FILE *fptr;
-#if 0
-      fptr=fopen("redMW.txt","a");
-
-      fprintf(fptr," &   %d    &   %d   &   %d   &   %d   &    &    \n", graph->norgmodelknots, graph->norgmodeledges / 2, (graph->knots - graph->terms), ((graph->edges) / 2 - 3 * (graph->terms - 1)));
-      fclose(fptr);
-#endif
-
-#if 1
-      fptr=fopen("redStats.txt","a");
-
-      if( graph->stp_type == STP_RPCSPG )
-      {
-         fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms + 1), graph->norgmodelknots, ((graph->edges) / 2 - 2 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
-      }
-      else if(  graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
-      {
-           fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms), graph->norgmodelknots, ((graph->edges) / 2 - 3 * (graph->terms - 1)),
-             graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
-      }
-      else
-      {
-         fprintf(fptr,"%d  %d  %d  %d  %f\n", (graph->knots), graph->orgknots, ((graph->edges) / 2 ), graph->orgedges / 2, SCIPgetReadingTime(scip));
-      }
-      fclose(fptr);
-
-
-#endif
-      fclose(fptr);
-
-      return SCIP_ERROR;
-#if 0
-      FILE *fptr;
-      dummy = 1;
-      fptr=fopen("redtime.txt","a");
-
-      fprintf(fptr,"%f\n",(SCIPgetReadingTime(scip)));
-      fclose(fptr);
-#endif
-#endif
 
    newsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(newsol);
@@ -2276,13 +2276,9 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
-   int i;
 
    /* create Local primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-
-   heurdata->nfails = 1;
-   heurdata->nbestsols = DEFAULT_NBESTSOLS;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -2294,6 +2290,8 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocal) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocal) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolLocal) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolLocal) );
 
    /* add local primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "stp/duringroot",
@@ -2307,11 +2305,6 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnsols",
          "maximum number of best solutions to improve",
          &heurdata->maxnsols, FALSE, DEFAULT_MAXNBESTSOLS, 1, 50, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
-
-   for( i = 0; i < heurdata->maxnsols; i++ )
-      heurdata->lastsolindices[i] = -1;
 
    return SCIP_OKAY;
 }

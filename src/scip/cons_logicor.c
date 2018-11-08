@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,14 +22,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <limits.h>
-
-#include "scip/cons_logicor.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/presolve.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -129,7 +151,6 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
    unsigned int          validsignature:1;   /**< is the signature valid */
-
 };
 
 
@@ -145,7 +166,6 @@ SCIP_RETCODE lockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -159,7 +179,6 @@ SCIP_RETCODE unlockRounding(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   /* rounding down may violate the constraint */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
 
    return SCIP_OKAY;
@@ -681,7 +700,8 @@ SCIP_RETCODE dualPresolving(
       }
 
       /* remember best variable with no uplocks, this variable dominates all other with exactly one downlock */
-      if( SCIPvarGetNLocksDown(var) > 1 && SCIPvarGetNLocksUp(var) == 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
       {
          SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
 
@@ -696,7 +716,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       ++nfixables;
@@ -732,7 +753,8 @@ SCIP_RETCODE dualPresolving(
          assert(var != NULL);
 
          /* check if a variable only appearing in this constraint is dominated by another */
-         if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 0 )
+         if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
          {
             assert(idxnouplocks != v);
 
@@ -774,7 +796,8 @@ SCIP_RETCODE dualPresolving(
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+      if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 1
+         || SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > 0 )
          continue;
 
       if( v == idx )
@@ -2092,7 +2115,7 @@ void removeConsFromOccurList(
 
       assert(SCIPhashmapExists(varstopos, (void*) var));
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2154,7 +2177,7 @@ void findShortestOccurlist(
          return;
       }
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2359,8 +2382,8 @@ SCIP_RETCODE addConsToOccurList(
          assert(occurlistsizes[pos] == 0);
 
          /* allocate memory */
-         assert(SCIPvarGetNLocksDown(var) > 0 || !SCIPconsIsChecked(cons));
-         occurlistsizes[pos] = SCIPvarGetNLocksDown(var) + 1;
+         assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > 0 || !SCIPconsIsChecked(cons));
+         occurlistsizes[pos] = SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) + 1;
          SCIP_CALL( SCIPallocBufferArray(scip, &(occurlist[pos]), occurlistsizes[pos]) ); /*lint !e866*/
 
          /* put constraint in list of current variable */
@@ -2368,13 +2391,13 @@ SCIP_RETCODE addConsToOccurList(
          ++(noccurlistentries[pos]);
 
          /* add new variable to map */
-         SCIP_CALL( SCIPhashmapInsert(varstopos, var, (void*) (size_t) (pos + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(varstopos, var, pos + 1) );
 
          ++(*occurlistlength);
       }
       else
       {
-         pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+         pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
          assert(0 < pos && pos <= *occurlistlength);
 
          --pos;
@@ -2595,7 +2618,7 @@ SCIP_RETCODE removeRedundantNonZeros(
 
                   if( consdata1->nvars > nvars )
                   {
-                     pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)artvar);
+                     pos = SCIPhashmapGetImageInt(varstopos, (void*)artvar);
                      assert(0 < pos && pos <= occurlistlength);
 
                      --pos;
@@ -3637,7 +3660,6 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
 
-
          /* get correct variables */
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[0], &vars[0]) );
          SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[1], &vars[1]) );
@@ -4478,7 +4500,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
 
@@ -4650,7 +4672,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
    /* lock every single coefficient */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->vars[i], locktype, nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -4741,7 +4763,6 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
 {  /*lint --e{715}*/
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );

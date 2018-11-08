@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,7 +38,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-
 #include "probdata_stp.h"
 #include <stdio.h>
 #include "scip/scip.h"
@@ -48,6 +47,8 @@
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
+#include "branch_stp.h"
+
 
 #define STP_AGG_SYM
 #define CENTER_OK    0           /**< do nothing */
@@ -71,6 +72,19 @@
 
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
+#define CUT_MAXTOTNEDGES     50000
+
+
+
+#ifdef WITH_UG
+extern
+const char*
+getBranchLinearConsName(const char* names, int i);
+
+extern
+const char*
+getBranchSetppcConsName(const char* names, int i);
+#endif
 
 
 /** @brief Problem data which is accessible in all places
@@ -82,6 +96,9 @@ struct SCIP_ProbData
    int                   mode;               /**< solving mode selected by the user (Cut, Price, Flow) */
    SCIP_Bool             bigt;               /**< stores whether the 'T' model is being used (not relevant in Cut mode) */
    GRAPH*                graph;              /**< the graph */
+#ifdef WITH_UG
+   GRAPH*                orggraph;          /**< copy of presolved graph needed for UG */
+#endif
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of path constraints (needed only in the Price mode) */
@@ -439,7 +456,7 @@ SCIP_RETCODE probdataFree(
    {
       for( t = 0; t < (*probdata)->realnterms; ++t )
       {
-	 /* release constraints and variables */
+         /* release constraints and variables */
          for( e = 0; e < (*probdata)->nnodes - 1; ++e )
          {
             SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->pathcons[t * ((*probdata)->nnodes - 1 ) + e])) );
@@ -447,14 +464,14 @@ SCIP_RETCODE probdataFree(
          for( e = 0; e < (*probdata)->nedges; ++e )
          {
             SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->flowvars[t * (*probdata)->nedges + e]) );
-	 }
+         }
          if( (*probdata)->bigt )
-	    break;
+            break;
       }
       SCIPfreeMemoryArrayNull(scip, &(*probdata)->flowvars);
    }
    /* release edge constraints (Price or Flow) */
-   if( (*probdata)->mode != MODE_CUT)
+   if( (*probdata)->mode != MODE_CUT )
    {
       for( t = 0; t < (*probdata)->realnterms; ++t )
       {
@@ -462,8 +479,8 @@ SCIP_RETCODE probdataFree(
          {
             SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->edgecons[t * (*probdata)->nedges + e])) );
          }
-	 if( (*probdata)->bigt )
-	    break;
+         if( (*probdata)->bigt )
+            break;
 
       }
       SCIPfreeMemoryArrayNull(scip, &((*probdata)->edgecons));
@@ -689,20 +706,6 @@ SCIP_RETCODE createPrizeConstraints(
          SCIP_CALL( SCIPaddCons(scip, probdata->prizecyclecons[ro2++]) );
       }
    }
-
-#if 0
-   r = 0;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizecyclecons), realnterms) );
-   for( r = 0; r < realnterms; r++ )
-   {
-      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", r);
-      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecyclecons[r]), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, probdata->prizecyclecons[r]) );
-   }
-   assert(r == realnterms);
-#endif
-
 
    return SCIP_OKAY;
 }
@@ -1257,6 +1260,16 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       SCIP_CALL( graph_mincut_init(scip, graphcopy) );
 
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
+
+#ifdef WITH_UG
+   {
+      GRAPH* orggraphcopy;
+      SCIP_CALL( graph_copy(scip, sourcedata->orggraph, &orggraphcopy) );
+      SCIP_CALL( graph_path_init(scip, orggraphcopy) );
+      (*targetdata)->orggraph = orggraphcopy;
+   }
+#endif
+
    (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->norgedges = sourcedata->norgedges;
@@ -1626,10 +1639,16 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
          graph_mincut_exit(scip, (*probdata)->graph);
 
       graph_path_exit(scip, (*probdata)->graph);
-
-      graph_free(scip, (*probdata)->graph, TRUE);
+      graph_free(scip, &((*probdata)->graph), TRUE);
    }
 
+#ifdef WITH_UG
+   if( (*probdata)->orggraph != NULL )
+   {
+      graph_path_exit(scip, (*probdata)->orggraph);
+      graph_free(scip, &((*probdata)->orggraph), TRUE);
+   }
+#endif
    /* free the (original) probdata */
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -1659,7 +1678,9 @@ SCIP_DECL_PROBTRANS(probtransStp)
 
    /* create transform probdata */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->graph) );
-
+#ifdef WITH_UG
+   (*targetdata)->orggraph = sourcedata->orggraph;
+#endif
    (*targetdata)->nlayers = sourcedata->nlayers;
    (*targetdata)->nedges = sourcedata->nedges;
    (*targetdata)->nnodes = sourcedata->nnodes;
@@ -1739,40 +1760,40 @@ SCIP_DECL_PROBTRANS(probtransStp)
       else
       {
          /* transform edge constraints */
-	 if( sourcedata->bigt )
-	 {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->nedges) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons) );
-	 }
-	 else
-	 {
-            SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->realnterms * sourcedata->nedges) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms * sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons) );
-	 }
+         if( sourcedata->bigt )
+         {
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->nedges));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons));
+         }
+         else
+         {
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->edgecons, sourcedata->realnterms * sourcedata->nedges));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms * sourcedata->nedges, sourcedata->edgecons, (*targetdata)->edgecons));
+         }
 
-	 /* transform constraints */
+         /* transform constraints */
          if( sourcedata->mode == MODE_PRICE )
          {
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->pathcons, (*targetdata)->pathcons) );
+            SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms));
+            SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms, sourcedata->pathcons, (*targetdata)->pathcons));
          }
          /* transform constraints and variables*/
          else if( sourcedata->mode == MODE_FLOW )
          {
-	    if( sourcedata->bigt )
-	    {
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->nedges) );
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, (sourcedata->nnodes - 1)) );
-               SCIP_CALL( SCIPtransformConss(scip, (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons) );
-	       SCIP_CALL( SCIPtransformVars(scip, sourcedata->nedges, sourcedata->flowvars, (*targetdata)->flowvars) );
-	    }
-	    else
-	    {
-	       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->realnterms * sourcedata->nedges) );
-               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->pathcons,  sourcedata->realnterms * (sourcedata->nnodes - 1)) );
-               SCIP_CALL( SCIPtransformConss(scip, sourcedata->realnterms * (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons) );
-	       SCIP_CALL( SCIPtransformVars(scip, sourcedata->nedges * sourcedata->realnterms, sourcedata->flowvars, (*targetdata)->flowvars) );
-	    }
+            if( sourcedata->bigt )
+            {
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->nedges));
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, (sourcedata->nnodes - 1)));
+               SCIP_CALL(SCIPtransformConss(scip, (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons));
+               SCIP_CALL(SCIPtransformVars(scip, sourcedata->nedges, sourcedata->flowvars, (*targetdata)->flowvars));
+            }
+            else
+            {
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->flowvars, sourcedata->realnterms * sourcedata->nedges));
+               SCIP_CALL(SCIPallocMemoryArray(scip, &(*targetdata)->pathcons, sourcedata->realnterms * (sourcedata->nnodes - 1)));
+               SCIP_CALL(SCIPtransformConss(scip, sourcedata->realnterms * (sourcedata->nnodes - 1), sourcedata->pathcons, (*targetdata)->pathcons));
+               SCIP_CALL(SCIPtransformVars(scip, sourcedata->nedges * sourcedata->realnterms, sourcedata->flowvars, (*targetdata)->flowvars));
+            }
          }
       }
 
@@ -1796,7 +1817,14 @@ SCIP_DECL_PROBTRANS(probtransStp)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_PROBINITSOL(probinitsolStp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(probdata != NULL);
 
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_PROBEXITSOL(probexitsolStp)
@@ -1916,9 +1944,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    char* logfilename;
    char tmpfilename[SCIP_MAXSTRLEN];
    char* probname;
-#ifdef PRINT_PRESOL
-   char presolvefilename[SCIP_MAXSTRLEN];
-#endif
 
    assert(scip != NULL);
 
@@ -1950,40 +1975,54 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
    SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
 
+   /* copy filename */
+   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
+
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
-      probdata->logfile = fopen(logfilename, "w");
+      char finalfilename[SCIP_MAXSTRLEN];;
+
+      if( strcmp("use_probname", logfilename) == 0 )
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s.stplog", probname);
+      else
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s", logfilename);
+
+      probdata->logfile = fopen(finalfilename, "w");
 
       if( probdata->logfile == NULL )
       {
-         SCIPerrorMessage("cannot create file <%s> for writing\n", logfilename);
-         SCIPprintSysError(logfilename);
+         SCIPerrorMessage("cannot create file <%s> for writing\n", finalfilename);
+         SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
    }
 
    if( intlogfilename != NULL && intlogfilename[0] != '\0' )
    {
-      probdata->intlogfile = fopen(intlogfilename, "w");
+      char finalfilename[SCIP_MAXSTRLEN];
+
+      if( strcmp("use_probname", intlogfilename) == 0 )
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s_int.stplog", probname);
+      else
+         (void) SCIPsnprintf(finalfilename, SCIP_MAXSTRLEN, "%s", intlogfilename);
+
+      probdata->intlogfile = fopen(finalfilename, "w");
 
       if( probdata->intlogfile == NULL )
       {
-         SCIPerrorMessage("cannot create file <%s> for writing\n", intlogfilename);
-         SCIPprintSysError(intlogfilename);
+         SCIPerrorMessage("cannot create file <%s> for writing\n", finalfilename);
+         SCIPprintSysError(finalfilename);
          return SCIP_FILECREATEERROR;
       }
    }
-
-   /* copy filename */
-   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
-
-   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
    SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigStp) );
    SCIP_CALL( SCIPsetProbTrans(scip, probtransStp) );
    SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransStp) );
+   SCIP_CALL( SCIPsetProbInitsol(scip, probinitsolStp) );
    SCIP_CALL( SCIPsetProbExitsol(scip, probexitsolStp) );
    SCIP_CALL( SCIPsetProbCopy(scip, probcopyStp) );
 
@@ -1993,19 +2032,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
-   /* disable sub-SCIP heuristics */
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/gins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/mutation/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/clique/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/vbounds/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
-
-   /* TODO for SCIP stuff should be disabled for other variants */
    if( graph->stp_type == STP_DHCSTP )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", -1));
@@ -2124,86 +2150,62 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
 
    graph = packedgraph;
-   probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
-   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )
+#ifdef WITH_UG
+   {
+      GRAPH* newgraph;
+      graph_copy(scip, graph, &(newgraph));
+      probdata->orggraph = graph;
+      graph = newgraph;
+   }
+#endif
+
+   probdata->graph = graph;
+
+#ifndef WITH_UG
+   if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
    }
+#endif
+
+   SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
 
    if( mw )
    {
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/trivial/freq", -1));
    }
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+
+   if( pc )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/presoltiming", 4));
+   }
 
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);
 
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+   probdata->usesymcons = FALSE;
+   probdata->usecyclecons = FALSE;
 
-   if( cyclecons == CONS_ALWAYS )
-      probdata->usecyclecons = TRUE;
-   else if( cyclecons == CONS_SPECIFIC && graph->edges <= CYC_CONS_LIMIT )
-      probdata->usecyclecons = TRUE;
-   else
-      probdata->usecyclecons = FALSE;
-
-   if( symcons == CONS_ALWAYS )
-      probdata->usesymcons = TRUE;
-   else if( symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT )
-      probdata->usesymcons = TRUE;
-   else
-      probdata->usesymcons = FALSE;
-
-   probdata->usesymcons = probdata->usesymcons && (mw || pc);
-
-   if( probdata->usesymcons  )
-      SCIPdebugMessage("USE SYM CONS: %d \n", (int) (0.5 * (graph->terms - 1) * graph->terms));
-   else
-      SCIPdebugMessage("NO SYM CONS: \n");
-
-#if 0 //presolving info output (bad hack)
-   FILE *fptr;
-
-   unsigned int o = graph->norgmodelknots + graph->norgmodeledges;
-   int l = SCIPgetRandomInt(0, 10, &o);
-
-   sleep(l);
-
-   fptr = fopen("redStats.txt", "a");
-   //  fptr=fopen("singleReduction.txt","a");
-   assert(fptr!=NULL);
-
-   if( graph->stp_type == STP_RPCSPG )
+   if( pc || mw )
    {
-      fprintf(fptr, "%d       %d      %d      %d     %f         %s \n",
-            (graph->knots - graph->terms + 1), graph->norgmodelknots,
-            ((graph->edges) / 2 - 2 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetTotalTime(scip), probname);
-   }
-   else if( graph->stp_type == STP_PCSPG
-         || graph->stp_type == STP_MWCSP )
-   {
-      fprintf(fptr, "%d       %d      %d      %d     %f        %s\n",
-            (graph->knots - graph->terms), graph->norgmodelknots,
-            ((graph->edges) / 2 - 3 * (graph->terms - 1)),
-            graph->norgmodeledges / 2, SCIPgetTotalTime(scip), probname);
-   }
-   else
-   {
-      fprintf(fptr, "%d  %d  %d  %d  %f          %s\n", (graph->knots),
-            graph->orgknots, ((graph->edges) / 2), graph->orgedges / 2,
-            SCIPgetReadingTime(scip), probname);
-   }
-   fclose(fptr);
+      if( cyclecons == CONS_ALWAYS || (cyclecons == CONS_SPECIFIC && graph->edges <= CYC_CONS_LIMIT) )
+         probdata->usecyclecons = TRUE;
 
-   return SCIP_ERROR;
+      if( symcons == CONS_ALWAYS || (symcons == CONS_SPECIFIC && graph->terms <= SYM_CONS_LIMIT) )
+         probdata->usesymcons = TRUE;
 
-#endif
+      if( probdata->usesymcons  )
+         SCIPdebugMessage("USE SYM CONS: %d \n", graph->terms);
+      else
+         SCIPdebugMessage("NO SYM CONS: \n");
+   }
 
    /* create model */
    if( graph != NULL )
@@ -2213,6 +2215,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       /* init shortest path algorithm (needed for creating path variables) */
       SCIP_CALL( graph_path_init(scip, graph) );
+
+#ifdef WITH_UG
+      SCIP_CALL( graph_path_init(scip, probdata->orggraph) );
+#endif
 
       if( probdata->mode == MODE_CUT )
       {
@@ -2326,11 +2332,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, FALSE, -1.0, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, FALSE, -1.0, NULL) );
          }
       }
    }
@@ -2359,6 +2365,20 @@ GRAPH* SCIPprobdataGetGraph(
    return probdata->graph;
 }
 
+/** returns the graph */
+GRAPH* SCIPprobdataGetGraph2(
+   SCIP*                 scip            /**< problem data */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->graph;
+}
 
 /** sets the offset */
 void SCIPprobdataSetOffset(
@@ -2759,8 +2779,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    assert(probdata != NULL);
 
    edgevars = probdata->edgevars;
-
+#ifdef WITH_UG
+   graph = probdata->orggraph;
+#else
    graph = probdata->graph;
+#endif
 
    assert(graph != NULL);
 
@@ -2825,7 +2848,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       }
 
       assert(nsolnodes == solgraph->knots);
-      assert(nodechild[solgraph->orgsource] >= 0);
+      assert(nodechild[graph->orgsource] >= 0);
 
       /* set root of new graph */
       solgraph->source = nodechild[graph->orgsource];
@@ -2885,7 +2908,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       SCIPqueueFree(&queue);
 
-      graph_free(scip, solgraph, TRUE);
+      graph_free(scip, &solgraph, TRUE);
 
       for( e = 0; e < norgedges; e++ )
       {
@@ -3006,9 +3029,12 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    else if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP
       || graph->stp_type == STP_RPCSPG )
    {
+      int* solnodequeue;
       int root;
       root = graph->source;
-      assert(root >= 0);
+      assert(root >= 0 && nsolnodes == 0);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &solnodequeue, norgnodes) );
 
       for( e = 0; e <= graph->edges; e++ )
       {
@@ -3021,6 +3047,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                curr = graph->fixedges;
             while (curr != NULL)
             {
+               const int ancestoredge = curr->index;
                if( e < graph->edges && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP) )
                {
                   if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
@@ -3030,84 +3057,62 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                   }
                }
 
-               if( curr->index < graph->norgmodeledges )
+               if( ancestoredge < graph->norgmodeledges )
                {
-                  if( orgedges[curr->index] == FALSE )
+                  if( !orgedges[ancestoredge] )
                   {
-                     orgedges[curr->index] = TRUE;
+                     orgedges[ancestoredge] = TRUE;
                      nsoledges++;
                   }
-                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orgtail[ancestoredge]] )
                   {
-                     orgnodes[graph->orgtail[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orgtail[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orgtail[ancestoredge];
                   }
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orghead[ancestoredge]] )
                   {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
                   }
                }
-               else if( graph->orghead[curr->index] < graph->norgmodelknots )
+               else if( graph->orghead[ancestoredge] < graph->norgmodelknots )
                {
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  if( !orgnodes[graph->orghead[ancestoredge]])
                   {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
+                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
+                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
                   }
                }
                curr = curr->parent;
             }
          }
       }
-      /* cover RPCSPG with single node solution */
-      if( graph->stp_type == STP_RPCSPG && orgnodes[root] == FALSE )
+      /* cover RPCSPG/RMWCSP with single node solution */
+      if( (graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP) && !orgnodes[root] )
       {
-         orgnodes[root] = TRUE;
          assert(nsolnodes == 0);
+
+         solnodequeue[0] = root;
          nsolnodes = 1;
       }
 
-      if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
-      {
-         for( k = 0; k < graph->norgmodelknots; k++ )
-         {
-            if( orgnodes[k] == TRUE )
-            {
-               curr = graph->pcancestors[k];
-               while( curr != NULL )
-               {
-                  if( orgedges[curr->index] == FALSE )
-                  {
-                     orgedges[curr->index] = TRUE;
-                     nsoledges++;
-                  }
-                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
-                  {
-                     orgnodes[graph->orgtail[curr->index]] = TRUE;
-                     nsolnodes++;
-                  }
-                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                  {
-                     orgnodes[graph->orghead[curr->index]] = TRUE;
-                     nsolnodes++;
-                  }
-                  curr = curr->parent;
-               }
-            }
-         }
-      }
+      SCIP_CALL( graph_sol_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
+            orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( k = 0; k < norgnodes; k++ )
          if( orgnodes[k] == TRUE )
-	    SCIPinfoMessage(scip, file, "V %d\n", k + 1);
+
+	   SCIPinfoMessage(scip, file, "V %d\n", k + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
+
       for( e = 0; e < norgedges; e += 2 )
-	 if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
-	    SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+         if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
+            SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+
+      SCIPfreeBufferArray(scip, &solnodequeue);
    }
 
    SCIPfreeBufferArray(scip, &orgnodes);
@@ -3132,12 +3137,18 @@ void SCIPprobdataWriteLogLine(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   if( probdata->logfile == NULL )
-      return;
-
-   va_start(ap, formatstr); /*lint !e826*/
-   SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
-   va_end(ap);
+   if( probdata->logfile != NULL )
+   {
+      va_start(ap, formatstr); /*lint !e826*/
+      SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->logfile, formatstr, ap);
+      va_end(ap);
+   }
+   if( probdata->intlogfile != NULL )
+   {
+      va_start(ap, formatstr); /*lint !e826*/
+      SCIPmessageVFPrintInfo(SCIPgetMessagehdlr(scip), probdata->intlogfile, formatstr, ap);
+      va_end(ap);
+   }
 }
 
 /** add new solution */
@@ -3589,4 +3600,87 @@ void SCIPprobdataSetNSolvers(
 
    probdata = SCIPgetProbData(scip);
    probdata->nSolvers = nSolvers;
+}
+
+/** branching information from UG */
+void initReceivedSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int             lLinearConsNames,   /**< number of linear constraints */
+   const char*           linearConsNames,    /**< linear constraints string */
+   const int             lSetppcConsNames,   /**< number of setppc constraints */
+   const char*           setppcConsNames     /**< number of setppc constraints */
+   )
+{
+
+#ifdef WITH_UG
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+   int* nodestate;
+   int nnodes;
+
+   assert(scip != NULL);
+   probdata = SCIPgetProbData(scip);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+   assert(probdata->orggraph != NULL);
+
+   graph_mincut_exit(scip, graph);
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   graph_copy(scip, probdata->orggraph, &graph);
+
+   probdata->graph = graph;
+
+   assert(graph != NULL && probdata->mode == MODE_CUT);
+
+   nnodes = graph->knots;
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+   SCIPStpBranchruleInitNodeState(graph, nodestate);
+
+   for( int i = 0; i < lLinearConsNames; i++ )
+   {
+      const char* consname = getBranchLinearConsName(linearConsNames, i);
+      SCIPdebugMessage("add lin cons %s \n", consname);
+      if( consname != NULL)
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, nodestate, NULL, consname, FALSE) );
+   }
+
+   for( int i = 0; i < lSetppcConsNames; i++ )
+   {
+      const char* consname = getBranchSetppcConsName(setppcConsNames, i);
+      SCIPdebugMessage("add ppc cons %s \n", consname);
+      if( consname != NULL)
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(scip, nodestate, NULL, consname, FALSE) );
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( nodestate[k] == BRANCH_STP_VERTEX_TERM && !Is_term(graph->term[k]) )
+      {
+         SCIPdebugMessage("UG make term: %d \n", k);
+         graph_knot_chg(graph, k, 0);
+      }
+      else if( nodestate[k] == BRANCH_STP_VERTEX_KILLED )
+      {
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            if( graph->cost[e] < BLOCKED )
+               graph->cost[e] = BLOCKED;
+
+            if( graph->cost[flipedge(e)] < BLOCKED )
+               graph->cost[flipedge(e)] = BLOCKED;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodestate);
+
+   SCIP_CALL_ABORT( graph_init_history(scip, graph) );
+   SCIP_CALL_ABORT( graph_path_init(scip, graph) );
+   SCIP_CALL_ABORT( graph_mincut_init(scip, graph) );
+
+#else
+   assert(0 && "only call me when using UG");
+#endif
 }

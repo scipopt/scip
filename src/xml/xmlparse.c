@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,6 +31,7 @@
 
 #include "xml.h"
 #include "xmldef.h"
+#include "scip/misc.h"
 
 
 #include <sys/types.h>
@@ -1096,7 +1097,7 @@ XML_NODE* xmlProcess(
        * to get a better error message.
        */
       if ( access(myfilename, R_OK) != 0 )
-         strcpy(myfilename, filename);
+         (void)SCIPstrncpy(myfilename, filename, (int)filenamelen + 5);
    }
 #endif
    ppos.fp = FOPEN(myfilename, "r");

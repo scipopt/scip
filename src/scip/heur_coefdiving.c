@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,10 +23,18 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/heur_coefdiving.h"
+#include "scip/heuristics.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_sol.h"
+#include <string.h>
 
 #define HEUR_NAME             "coefdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the matrix coefficients"
@@ -142,7 +150,6 @@ SCIP_DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
@@ -199,8 +206,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
    else
    {
       /* the candidate may not be rounded */
-      int nlocksdown = SCIPvarGetNLocksDown(cand);
-      int nlocksup = SCIPvarGetNLocksUp(cand);
+      int nlocksdown = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
+      int nlocksup = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
       *roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && candsfrac > 0.5));
    }
 
@@ -220,15 +227,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand);
+      *score = SCIPvarGetNLocksUpType(cand, SCIP_LOCKTYPE_MODEL);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksDown(cand);
+      *score = SCIPvarGetNLocksDownType(cand, SCIP_LOCKTYPE_MODEL);
    }
-
 
    /* penalize too small fractions */
    if( SCIPisEQ(scip, candsfrac, 0.01) )
@@ -240,7 +246,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
          (*score) *= 0.01;
    }
    else if( candsfrac < 0.01 )
-      (*score) *= 0.1;
+      (*score) *= 0.01;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )

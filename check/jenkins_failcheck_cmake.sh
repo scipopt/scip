@@ -157,6 +157,11 @@ BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
 printLines > 0 && /^$/ {printLines+=1;}
+
+# UG does not have blank lines after the header.
+printLines > 0 && /^Default LC presolving/ {exit 0;}
+
+# the third blank line marks the end of the header
 printLines > 0 {print $0}
 {
     if ( printLines == 3 ){
@@ -168,13 +173,16 @@ EOF
 # End of AWK Scripts            #
 #################################
 
-SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1`
+# EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
+SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1`
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
-touch $RBDB
-OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
-NEWTIMESTAMP=`date '+%F-%H-%M'`
+if [ "${PERFORMANCE}" == "performance" ]; then
+  RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+  touch $RBDB
+  OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
+  NEWTIMESTAMP=`date '+%F-%H-%M'`
+fi
 
 PERM=0
 while [ $PERM -le $PERMUTE ]; do

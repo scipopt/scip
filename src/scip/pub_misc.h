@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,6 +48,7 @@
 #include "scip/type_var.h"
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_misc_linear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -357,22 +358,41 @@ void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** inserts element at the end of the queue */
+/** inserts pointer element at the end of the queue */
 EXTERN
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
    );
 
-/** removes and returns the first element of the queue */
+/** inserts unsigned integer element at the end of the queue */
+EXTERN
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
+   );
+
+/** removes and returns the first element of the queue, or NULL if no element exists */
 EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first element of the queue without removing it */
+/** removes and returns the first unsigned integer element of the queue, or UNIT_MAX if no element exists */
+EXTERN
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 EXTERN
 void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
+EXTERN
+unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
@@ -488,8 +508,8 @@ void** SCIPpqueueElems(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
-   int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
+   int theexp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
 }
 
 /** creates a hash table */
@@ -777,6 +797,14 @@ SCIP_RETCODE SCIPhashmapInsert(
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
 EXTERN
+SCIP_RETCODE SCIPhashmapInsertInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+EXTERN
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -790,7 +818,14 @@ void* SCIPhashmapGetImage(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
+EXTERN
+int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 EXTERN
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -805,6 +840,16 @@ SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
+   );
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+EXTERN
+SCIP_RETCODE SCIPhashmapSetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
    );
 
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
@@ -877,6 +922,12 @@ void* SCIPhashmapEntryGetImage(
 
 /** gives the image of the hashmap entry */
 EXTERN
+int SCIPhashmapEntryGetImageInt(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
+   );
+
+/** gives the image of the hashmap entry */
+EXTERN
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
@@ -886,6 +937,13 @@ EXTERN
 void SCIPhashmapEntrySetImage(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    void*                 image               /**< new image */
+   );
+
+/** sets integer image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImageInt(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   int                   image               /**< new image */
    );
 
 /** sets real image of a hashmap entry */
@@ -2077,6 +2135,20 @@ int SCIPsnprintf(
    int                   len,                /**< length of the string to copy */
    const char*           s,                  /**< source string */
    ...                                       /**< further parameters */
+   );
+
+/** safe version of strncpy
+ *
+ *  Copies string in s to t using at most @a size-1 nonzero characters (strncpy copies size characters). It always adds
+ *  a terminating zero char. Does not pad the remaining string with zero characters (unlike strncpy). Returns the number
+ *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
+ *  string was truncated if the return value is size.
+ */
+EXTERN
+int SCIPstrncpy(
+   char*                 t,                  /**< target string */
+   const char*           s,                  /**< source string */
+   int                   size                /**< maximal size of t */
    );
 
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str

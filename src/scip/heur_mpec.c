@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,12 +21,31 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "nlpi/nlpi.h"
+#include "nlpi/pub_expr.h"
 #include "scip/heur_mpec.h"
 #include "scip/heur_subnlp.h"
-#include "nlpi/nlpi.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include <string.h>
 
 
 #define HEUR_NAME             "mpec"
@@ -192,7 +211,7 @@ SCIP_RETCODE addRegularScholtes(
          assert(var != NULL);
          assert(heurdata->var2idx != NULL);
          assert(SCIPhashmapExists(heurdata->var2idx, (void*)var));
-         idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)var);
+         idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)var);
 
          lininds[0] = idx;
          linvals[0] = 1.0;
@@ -417,7 +436,7 @@ SCIP_RETCODE heurExec(
       regularfeasible = TRUE;
       for( j = 0; j < nbinvars; ++j )
       {
-         int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+         int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
          binaryfeasible = binaryfeasible && SCIPisFeasIntegral(scip, primal[idx]);
          regularfeasible = regularfeasible && SCIPisLE(scip, primal[idx] - SQR(primal[idx]), theta);
 
@@ -474,7 +493,7 @@ SCIP_RETCODE heurExec(
          for( j = 0; j < SCIPgetNVars(scip); ++j )
          {
             SCIP_VAR* var = SCIPgetVars(scip)[j];
-            assert(j == (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)var));
+            assert(j == SCIPhashmapGetImageInt(heurdata->var2idx, (void*)var));
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, primal[j]) );
          }
 
@@ -513,7 +532,7 @@ SCIP_RETCODE heurExec(
             {
                lbs[j] = 0.0;
                ubs[j] = 1.0;
-               indices[j] = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               indices[j] = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
             }
             SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
             fixed = FALSE;
@@ -549,7 +568,7 @@ SCIP_RETCODE heurExec(
             /* fix binary variables */
             for( j = 0; j < nbinvars; ++j )
             {
-               int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
                indices[j] = idx;
 
                if( SCIPisFeasLE(scip, primal[idx] - SQR(primal[idx]), theta) )
@@ -576,7 +595,7 @@ SCIP_RETCODE heurExec(
             /* set initial point */
             for( j = 0; j < nbinvars; ++j )
             {
-               int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
                initguess[idx] = primal[idx] >= 0.5 ? 0.0 : 1.0;
                /* SCIPdebugMsg(scip, "update init guess for %s to %g\n", SCIPvarGetName(binvars[j]), initguess[idx]); */
             }

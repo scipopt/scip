@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Scheduler STP)
+APPLICATIONS=(Coloring CycleClustering MinIISC PolySCIP Ringpacking Scheduler STP)
 LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)

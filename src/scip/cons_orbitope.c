@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -60,13 +60,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include <ctype.h>
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbitope"
@@ -996,7 +1013,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 
    *nfixedvars = 0;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1369,32 +1386,34 @@ SCIP_RETCODE propagateFullOrbitope(
 
       if ( SCIPvarGetLbLocal(vars[currow][j]) > 0.5 )
       {
-         /* fix all variables smaller than j to 1 */
-         for (l = lastone + 1; l < j; ++l)
+         /* fix all variables smaller than j to 1; we iterate backwards to guarantee correcteness of infeasibility detection */
+         for (l = j - 1; l > lastone; --l)
          {
             /* check again since fixing previous entries may have modified the current entry */
             if ( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 && SCIPvarGetUbLocal(vars[currow][l]) > 0.5 )
             {
                tightened = FALSE;
-               inferinfo = currow * ncols + j;
+               inferinfo = currow * ncols + l;
 
                SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
                if ( tightened )
                   ++(*nfixedvars);
             }
+            /* since we iterate backwards, we have (vars[currow][l], vars[currow][l + 1]) = (0, 1) -> infeasible */
             else if ( SCIPvarGetUbLocal(vars[currow][l]) < 0.5 )
             {
+               assert( l < lastcol -1 );
+
                if ( SCIPisConflictAnalysisApplicable(scip) )
                {
+                  int col2 = l + 1;
+
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   for (i = 0; i <= currow; ++i)
                   {
-                     int s;
-                     for (s = 0; s <= l; ++s)
-                     {
-                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][s]) );
-                     }
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][l]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][col2]) );
                   }
 
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1417,7 +1436,7 @@ SCIP_RETCODE propagateFullOrbitope(
             if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
             {
                tightened = FALSE;
-               inferinfo = currow * ncols + j;
+               inferinfo = currow * ncols + l;
 
                SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], FALSE, cons, inferinfo, infeasible, &tightened) );
 
@@ -1427,17 +1446,18 @@ SCIP_RETCODE propagateFullOrbitope(
             /* -> infeasible */
             else if ( SCIPvarGetLbLocal(vars[currow][l]) > 0.5 )
             {
+               assert( l > 0 );
+
                if ( SCIPisConflictAnalysisApplicable(scip) )
                {
+                  int col2 = l - 1;
+
                   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
                   for (i = 0; i <= currow; ++i)
                   {
-                     int s;
-                     for (s = 0; s <= l; ++s)
-                     {
-                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][s]) );
-                     }
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][col2]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][l]) );
                   }
 
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1489,7 +1509,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    *infeasible = FALSE;
 
    /* @todo Can the following be removed? */
-   if ( ! SCIPallowDualReds(scip) )
+   if ( ! SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1854,8 +1874,7 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    int inferrow;
    int infercol;
    int i;
-   int j;
-   int k;
+   int col2;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1881,18 +1900,19 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    /* reason for 1-fixing */
    if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 &&  SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
    {
-      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 1 was the fixing of the upperleft %dx%d-matrix and x[%d][%d] = 1.\n",
-         SCIPvarGetIndex(infervar), inferrow - 1, infercol, inferrow, infercol);
+      assert( infercol < ncols - 1 );
+
+      col2 = infercol + 1;
+
+      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 1 was the fixing of columns %d and %d as well as x[%d][%d] = 1.\n",
+         SCIPvarGetIndex(infervar), infercol, col2, inferrow, col2);
 
       for (i = 0; i < inferrow; ++i)
       {
-         for (j = 0; j <= infercol; ++j)
-         {
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[i][j], bdchgidx) );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[i][j], bdchgidx) );
-         }
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i][infercol], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i][col2], bdchgidx) );
       }
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[inferrow][infercol], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[inferrow][col2], bdchgidx) );
 
       *result = SCIP_SUCCESS;
 
@@ -1900,30 +1920,23 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    }
    else if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 &&  SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
    {
-      /* find position of infervar in vars matrix (it has to be contained in inferrow behind infercol)*/
-      for (k = infercol + 1; k < ncols; ++k)
+      assert( infercol > 0 );
+
+      col2 = infercol - 1;
+
+      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of columns %d and %d as well as x[%d][%d] = 0.\n",
+         SCIPvarGetIndex(infervar), col2, infercol, inferrow, col2);
+
+      for (i = 0; i < inferrow; ++i)
       {
-         if ( SCIPvarGetIndex(infervar) == SCIPvarGetIndex(vars[inferrow][k]) )
-         {
-            SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of the upper left %dx%d-matrix and x[%d][%d] = 0.\n",
-               SCIPvarGetIndex(infervar), inferrow - 1, k, inferrow, infercol);
-
-            for (i = 0; i < inferrow; ++i)
-            {
-               for (j = 0; j <= k; ++j)
-               {
-                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][j], bdchgidx) );
-                  SCIP_CALL( SCIPaddConflictUb(scip, vars[i][j], bdchgidx) );
-               }
-            }
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[inferrow][infercol], bdchgidx) );
-
-            *result = SCIP_SUCCESS;
-
-            return SCIP_OKAY;
-         }
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i][col2], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i][infercol], bdchgidx) );
       }
-      assert( *result == SCIP_SUCCESS );
+      SCIP_CALL( SCIPaddConflictUb(scip, vars[inferrow][col2], bdchgidx) );
+
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -2743,6 +2756,7 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
+   assert( locktype == SCIP_LOCKTYPE_MODEL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -2760,7 +2774,7 @@ SCIP_DECL_CONSLOCK(consLockOrbitope)
    for (i = 0; i < nspcons; ++i)
    {
       for (j = 0; j < nblocks; ++j)
-         SCIP_CALL( SCIPaddVarLocks(scip, vars[i][j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;

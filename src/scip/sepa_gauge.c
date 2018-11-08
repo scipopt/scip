@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,11 +27,32 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_gauge.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
-#include "nlpi/nlpioracle.h"
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpioracle.h"
+#include "nlpi/pub_expr.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sepa.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/sepa_gauge.h"
+#include <string.h>
 
 
 #define SEPA_NAME              "gauge"
@@ -308,7 +329,7 @@ SCIP_RETCODE computeInteriorPoint(
 
             /* @todo: filter zero? */
             SCIP_CALL( SCIPsetSolVal(scip, sepadata->intsol, var,
-                     nlpisol[(int)(size_t)SCIPhashmapGetImage(var2nlpiidx, (void *)var)]) );
+                     nlpisol[SCIPhashmapGetImageInt(var2nlpiidx, (void *)var)]) );
          }
 
          sepadata->isintsolavailable = TRUE;

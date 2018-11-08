@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,17 +22,42 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/heur_subnlp.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_varbound.h"
+#include "scip/heur_subnlp.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
@@ -305,10 +330,6 @@ SCIP_RETCODE createSubSCIP(
     * keep normal presolving, but disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
-   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   }
    if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
@@ -1005,7 +1026,7 @@ SCIP_RETCODE solveSubNLP(
    /* presolve sub-SCIP
     *  set scip timelimit in case presolve is unexpectedly expensive
     *  set node limit to 1 so that presolve can go
-    *  reset maxpresolverounds, in case user changed
+    *  reset maxpresolverounds, in case user changed or we reset presolving settings
     */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
@@ -1281,7 +1302,6 @@ SCIP_RETCODE solveSubNLP(
    /* set verbosity of NLP solver */
    SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
 
-
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
@@ -1378,7 +1398,7 @@ SCIP_RETCODE solveSubNLP(
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
 
-            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, resultsol) );
+            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, NULL) );
          }
          else
          {
@@ -1485,12 +1505,18 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_Real sumepsilon;
 
-         /* reset feasibility tolerance of sub-SCIP and reset to normal presolve */
+         /* reset feasibility tolerance of sub-SCIP */
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/feastol", SCIPfeastol(scip)) );
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/epsilon", SCIPepsilon(scip)) );
          SCIP_CALL( SCIPgetRealParam(scip, "numerics/sumepsilon", &sumepsilon) );
          SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "numerics/sumepsilon", sumepsilon) );
+
+         /* reset presolve to subnlp defaults (see createSubSCIP) */
          SCIP_CALL( SCIPsetPresolving(heurdata->subscip, SCIP_PARAMSETTING_DEFAULT, TRUE) );
+         if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
+         {
+            SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
+         }
          SCIP_CALL( SCIPresetParam(heurdata->subscip, "constraints/linear/aggregatevariables") );
       }
    }
@@ -2444,8 +2470,8 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* we do not have a sub-SCIP, so we also do not need a starting point */
-   if( heurdata->subscip == NULL )
+   /* if we do not have a sub-SCIP, but tried to set one up before or will never create a subSCIP, then do not need a starting point */
+   if( heurdata->subscip == NULL && (heurdata->triedsetupsubscip || !runHeuristic(scip) || SCIPheurGetFreq(heur) < 0) )
       return SCIP_OKAY;
 
    /* if the solution is the one we created (last), then it is useless to use it as starting point again

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -54,8 +54,8 @@ struct SCIP_Cons
    int                   enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int                   checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int                   propconsspos;       /**< position of constraint in the handler's propconss array */
-   int                   nlockspos;          /**< number of times, the constraint locked rounding of its variables */
-   int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
+   int                   nlockspos[NLOCKTYPES]; /**< array of times, the constraint locked rounding of its variables */
+   int                   nlocksneg[NLOCKTYPES]; /**< array of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
    int                   nuses;              /**< number of times, this constraint is referenced */
@@ -276,7 +276,7 @@ struct SCIP_Conshdlr
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the constraint handler's presolving method */
 };
 
-/**< linear constraint classification statistics used for MIPLIB */
+/** linear constraint classification statistics used for MIPLIB */
 struct SCIP_LinConsStats
 {
    int                   counter[SCIP_NLINCONSTYPES]; /**< count statistics per type of linear constraint */

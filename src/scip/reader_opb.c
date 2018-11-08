@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -77,15 +77,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
 #include "scip/cons_and.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
@@ -94,9 +87,30 @@
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
-#include "scip/pub_misc.h"
-#include "scip/reader_opb.h"
 #include "scip/debug.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_opb.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
+#endif
 
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
@@ -943,11 +957,11 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a value */
       if( isValue(scip, opbinput, &coef) )
       {
-         /* all but the first coefficient need a sign */
+         /* coefficients without a sign are treated as "+" */
          if( (*nlincoefs > 0 || *ntermcoefs > 0 || ntmpcoefs > 0) && !havesign )
          {
-            syntaxError(scip, opbinput, "expected sign ('+' or '-') or sense ('<' or '>')");
-            goto TERMINATE;
+            coefsign = 1;
+            havesign = TRUE;
          }
 
          SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", opbinput->linenumber, coef, coefsign);
@@ -1308,7 +1322,6 @@ SCIP_RETCODE setObjective(
             SCIP_CALL( SCIPdebugAddSolVal(scip, var, artval) );
          }
 #endif
-
 
          /* create artificial objection function constraint containing the artificial integer variable */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");
@@ -2114,7 +2127,7 @@ void appendBuffer(
       writeBuffer(scip, file, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -2139,7 +2152,7 @@ SCIP_RETCODE writeOpbObjective(
    )
 {
    SCIP_VAR* var;
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    SCIP_Longint mult;
    SCIP_Bool objective;
@@ -2701,7 +2714,6 @@ SCIP_RETCODE printNonLinearCons(
             nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
 
-
       if( !SCIPisInfinity(scip, rhs) )
       {
          mult *= -1;
@@ -3160,11 +3172,11 @@ SCIP_RETCODE printPseudobooleanCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
+         /* coverity[var_deref_model] */
          retcode = printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars,
             ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
    }
-
 
    /* free buffers for non-linear arrays */
    if( ntermvals > 0 )
@@ -3760,7 +3772,7 @@ SCIP_RETCODE writeOpbFixedVars(
    SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
    )
 {
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    int linecnt;
    int v;
@@ -3838,7 +3850,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
 {
    SCIP_VAR* resvar;
    SCIP_Longint rhslhs;
-   char linebuffer[OPB_MAX_LINELEN];
+   char linebuffer[OPB_MAX_LINELEN+1];
    char buffer[OPB_MAX_LINELEN];
    int linecnt;
    int r, v;
@@ -3879,6 +3891,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
       /* print fixed and-resultants */
       if( lb > 0.5 || ub < 0.5 )
       {
+         /* coverity[copy_paste_error] */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &var, &neg) );
 
          assert(SCIPisFeasIntegral(scip, lb));
@@ -3920,7 +3933,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
             /* add variable to the hashmap */
             SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
-
          }
       }
    }
@@ -3988,7 +4000,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          if( cont )
             continue;
       }
-
 
       /* print and with fixed or aggregated and-resultant */
       /* rhslhs equals to 0 means the and constraint is relevant due to it's not clear on which values the and variables are
@@ -4082,7 +4093,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          writeBuffer(scip, file, linebuffer, &linecnt);
-
       }
    }
 
@@ -4285,6 +4295,7 @@ SCIP_RETCODE SCIPwriteOpb(
       int v;
 
       /* computes all and-resultants and their corresponding constraint variables */
+      /* coverity[leaked_storage] */
       SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
       if( genericnames )
@@ -4348,6 +4359,7 @@ SCIP_RETCODE SCIPwriteOpb(
             for( v = nfixedvars - 1; v >= 0; --v )
                if( !existands || !SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                {
+                  /* coverity[secure_coding] */
                   if( sscanf(SCIPvarGetName(fixedvars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(fixedvars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(fixedvars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
                      SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");

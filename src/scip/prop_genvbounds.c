@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,12 +27,33 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
-#include "scip/prop_genvbounds.h"
-#include "scip/debug.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/debug.h"
+#include "scip/prop_genvbounds.h"
+#include "scip/pub_event.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_datastructures.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
@@ -672,7 +693,7 @@ SCIP_RETCODE freeGenVBounds(
       /* release the cutoffboundvar and undo the locks */
       if( propdata->cutoffboundvar != NULL )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
          SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
          propdata->cutoffboundvar = NULL;
          SCIPdebugMsg(scip, "release cutoffboundvar!\n");
@@ -1952,7 +1973,7 @@ SCIP_RETCODE createConstraints(
        * linear constraints as non-check constraints, the cutoffboundvar will not be locked by the linear constraint
        * handler
        */
-      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    assert(propdata->cutoffboundvar != NULL);
@@ -2298,7 +2319,7 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -2339,10 +2360,10 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
    if( propdata->cutoffboundvar != NULL )
    {
       SCIPdebugMsg(scip, "propinitpre in problem <%s>: locking cutoffboundvar (current downlocks=%d, uplocks=%d)\n",
-         SCIPgetProbName(scip), SCIPvarGetNLocksDown(propdata->cutoffboundvar),
-         SCIPvarGetNLocksUp(propdata->cutoffboundvar));
+         SCIPgetProbName(scip), SCIPvarGetNLocksDownType(propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL),
+         SCIPvarGetNLocksUpType(propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL));
 
-      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, 1, 1) );
+      SCIP_CALL( SCIPaddVarLocksType(scip, propdata->cutoffboundvar, SCIP_LOCKTYPE_MODEL, 1, 1) );
    }
 
    return SCIP_OKAY;
@@ -2496,7 +2517,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run if propagation w.r.t. current objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -2734,7 +2755,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          int componentidx;
 
          /* get its index */
-         componentidx = ((int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e776*/
+         componentidx = (SCIPhashmapGetImageInt(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e571 !e776*/
          assert(componentidx >= 0);
          assert(propdata->startcomponents[componentidx] == component);
 
@@ -2752,8 +2773,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          propdata->startindices[componentidx] = startidx;
 
          /* store component in hashmap */
-         SCIP_CALL( SCIPhashmapInsert(propdata->startmap, (void*)(size_t) (component + 1),
-               (void*)(size_t) (componentidx + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->startmap, (void*)(size_t) (component + 1), componentidx + 1) ); /*lint !e571 !e776*/
 
          /* increase number of starting indices */
          propdata->nindices++;

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,13 +28,23 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
-#include "scip/pub_matrix.h"
+#include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "presol_dualinfer.h"
+#include "scip/presol_dualinfer.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_matrix.h"
+#include "scip/pub_message.h"
+#include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_presol.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual informations for fixings and side changes"
@@ -1120,7 +1130,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -1161,8 +1171,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          var = SCIPmatrixGetVar(matrix, i);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, i) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, i) )
+            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
+               SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
             {
                locksconsistent = FALSE;
                break;
@@ -1193,8 +1203,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
                   var = SCIPmatrixGetVar(matrix, i);
 
-                  if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, i) ||
-                     SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, i) )
+                  if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
+                     SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
                   {
                      /* no fixing, locks for this variable not consistent */
                      continue;

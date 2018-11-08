@@ -96,7 +96,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
 		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
-		USRDFLAGS=$(USRDFLAGS)\\n\
 		USRFLAGS=$(USRFLAGS)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
@@ -141,9 +140,9 @@ FLAGS		+=	-I$(LIBDIR)/include/xprsinc
 LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
-SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/shared/libxprs.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"xprsinc\" is the path to the XPRESS \"include\" directory, e.g., \"<XPRESS-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libxpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxprs.so\""
+LPIINSTMSG	+=	" -> \"libxprs.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxprs.so\""
 endif
 
 # mosek only supports shared libraries
@@ -164,10 +163,6 @@ LPSOPTIONS	+=	spx1
 ifeq ($(LPS),spx1)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
-ifeq ($(SPX_LEGACY),true)
-CFLAGS		+= 	-DSOPLEX_LEGACY
-CXXFLAGS	+= 	-DSOPLEX_LEGACY
-endif
 LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -266,7 +261,6 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
@@ -306,7 +300,6 @@ TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
-TPILIBDEP	=	$(SRCDIR)/depend.tpilib.$(TPI).$(OPT)
 TPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIBSHORTNAME).$(BASE).$(LIBEXT)
 TPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(TPILIBSRC)
@@ -392,7 +385,6 @@ NLPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
 NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
-NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
 NLPILIBSHORTLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
@@ -498,12 +490,18 @@ endif
 
 SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
-SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
+SCIPPLUGINLIBOBJ=	scip/benders_default.o \
+			scip/benderscut_feas.o \
+			scip/benderscut_int.o \
+			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
+			scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
+			scip/branch_lookahead.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \
@@ -515,6 +513,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
+			scip/cons_benders.o \
+			scip/cons_benderslp.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \
@@ -555,10 +555,12 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_completesol.o \
+			scip/heur_conflictdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
+			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -617,7 +619,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_dualcomp.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
-			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
@@ -642,6 +643,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_cor.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -655,7 +657,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_pbm.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
+			scip/reader_smps.o \
 			scip/reader_sol.o \
+			scip/reader_sto.o \
+			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
 			scip/sepa_cgmip.o \
@@ -674,7 +679,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
-			scip/table_default.o \
+			scip/table_default.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
@@ -682,6 +687,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \
 			scip/bandit_ucb.o \
+			scip/benders.o \
+			scip/benderscut.o \
+			scip/bendersdefcuts.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -706,6 +714,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/misc_linear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -720,7 +729,48 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/relax.o \
 			scip/reopt.o \
 			scip/retcode.o \
-			scip/scip.o \
+			scip/scip_benders.o \
+			scip/scip_branch.o \
+			scip/scip_compr.o \
+			scip/scip_concurrent.o \
+			scip/scip_conflict.o \
+			scip/scip_cons.o \
+			scip/scip_copy.o \
+			scip/scip_cut.o \
+			scip/scip_datastructures.o\
+			scip/scip_debug.o \
+			scip/scip_dialog.o \
+			scip/scip_disp.o \
+			scip/scip_event.o \
+			scip/scip_expr.o \
+			scip/scip_general.o \
+			scip/scip_heur.o \
+			scip/scip_lp.o \
+			scip/scip_mem.o \
+			scip/scip_message.o \
+			scip/scip_nlp.o \
+			scip/scip_nodesel.o \
+			scip/scip_nonlinear.o \
+			scip/scip_numerics.o \
+			scip/scip_param.o \
+			scip/scip_presol.o \
+			scip/scip_pricer.o \
+			scip/scip_prob.o \
+			scip/scip_probing.o \
+			scip/scip_prop.o \
+			scip/scip_randnumgen.o \
+			scip/scip_reader.o \
+			scip/scip_relax.o \
+			scip/scip_reopt.o \
+			scip/scip_sepa.o \
+			scip/scip_sol.o \
+			scip/scip_solve.o \
+			scip/scip_solvingstats.o \
+			scip/scip_table.o \
+			scip/scip_timing.o \
+			scip/scip_tree.o \
+			scip/scip_validation.o \
+			scip/scip_var.o \
 			scip/scip_bandit.o \
 			scip/scipbuildflags.o \
 			scip/scipcoreplugins.o \
@@ -751,7 +801,6 @@ SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
-SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 
@@ -778,7 +827,9 @@ SCIPBUILDFLAGSFILE = 	$(SRCDIR)/scip/buildflags.c
 
 OBJSCIPLIBSHORTNAME=	objscip
 OBJSCIPLIBNAME	=	$(OBJSCIPLIBSHORTNAME)-$(VERSION)
-OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
+OBJSCIPLIBOBJ	=	objscip/objbenders.o \
+			objscip/objbenderscut.o \
+			objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
@@ -801,7 +852,6 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPINCSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.h))
-OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 OBJSCIPLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 OBJSCIPLIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(OBJSCIPLIBSRC)
@@ -816,7 +866,6 @@ MAINNAME	=	$(MAINSHORTNAME)-$(VERSION)
 
 MAINOBJ		=	main.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.main.$(OPT)
 
 MAINFILE	=	$(BINDIR)/$(MAINNAME).$(BASE).$(LPS).$(TPI)$(EXEEXTENSION)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
@@ -1061,12 +1110,12 @@ $(BINDIR):
 .PHONY: clean
 clean:          cleanlibs cleanbin | $(LIBOBJSUBDIRS) $(LIBOBJDIR) $(BINOBJDIR) $(OBJDIR)
 ifneq ($(LIBOBJDIR),)
-		@-(cd $(LIBOBJDIR) && rm -f */*.o)
+		@-(cd $(LIBOBJDIR) && rm -f */*.o */*.d)
 		@-rmdir $(LIBOBJSUBDIRS)
 		@-rmdir $(LIBOBJDIR)
 endif
 ifneq ($(BINOBJDIR),)
-		@-rm -f $(BINOBJDIR)/*.o && rmdir $(BINOBJDIR)
+		@-rm -f $(BINOBJDIR)/*.o $(BINOBJDIR)/*.d && rmdir $(BINOBJDIR)
 endif
 ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
@@ -1093,70 +1142,10 @@ cleanbin:       | $(BINDIR)
 		@echo "-> remove binary $(MAINFILE)"
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
-.PHONY: lpidepend
-lpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/include/cpxinc/cpxconst.h||g'\'' \
-		>$(LPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/clp[^ ]*||g'\'' \
-		| sed '\''s|$(LIBDIR)/include/cpxinc/cpxconst.h||g'\'' \
-		| sed '\''s|$(LIBDIR)/include/spxinc[^ ]*||g'\'' \
-		>$(LPILIBDEP)'
-endif
+depend:
 # We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
 # but contain all LPI's that use the WITH_LPSCHECK define.
 		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
-
-.PHONY: tpidepend
-tpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(TPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(TPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(TPILIBDEP)'
-endif
-
-.PHONY: nlpidepend
-nlpidepend:
-ifeq ($(LINKER),C)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(NLPILIBDEP)'
-endif
-ifeq ($(LINKER),CPP)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed -e '\''s|$(LIBDIR)/shared/ipopt[^ ]*||g'\'' -e '\''s|$(LIBDIR)/static/ipopt[^ ]*||g'\'' \
-		>$(NLPILIBDEP)'
-endif
-
-.PHONY: maindepend
-maindepend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(BINOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(MAINDEP)'
-
-.PHONY: objscipdepend
-objscipdepend:
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(OBJSCIPLIBDEP)'
-
-.PHONY: scipdepend
-scipdepend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) $(SYMSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(SCIPLIBDEP)'
 		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
@@ -1164,14 +1153,19 @@ scipdepend:
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
-depend:		scipdepend lpidepend tpidepend nlpidepend maindepend objscipdepend
-
--include	$(MAINDEP)
--include	$(SCIPLIBDEP)
--include	$(OBJSCIPLIBDEP)
--include	$(LPILIBDEP)
--include	$(TPILIBDEP)
--include	$(NLPILIBDEP)
+# do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
+ifneq ($(DFLAGS),)
+-include $(MAINOBJFILES:.o=.d)
+-include $(SCIPLIBOBJFILES:.o=.d)
+-include $(OBJSCIPOBJFILES:.o=.d)
+-include $(LPILIBOBJFILES:.o=.d)
+-include $(TPILIBOBJFILES:.o=.d)
+-include $(NLPILIBOBJFILES:.o=.d)
+else
+ifeq ($(VERBOSE),true)
+$(info No compilation dependencies. If changing header files, do a make clean before building.)
+endif
+endif
 
 # make binary
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
@@ -1264,19 +1258,19 @@ endif
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.c | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
 
 ifeq ($(GAMS),true)
 $(LIBOBJDIR)/scip/%.o:	$(GAMSDIR)/apifiles/C/api/%.c | $(LIBOBJDIR)
@@ -1410,7 +1404,6 @@ endif
 		@echo "LAST_USRCXXFLAGS=$(USRCXXFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRLDFLAGS=$(USRLDFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USRARFLAGS=$(USRARFLAGS)" >> $(LASTSETTINGS)
-		@echo "LAST_USRDFLAGS=$(USRDFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBLKMEM=$(NOBLKMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBUFMEM=$(NOBUFMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
@@ -1522,7 +1515,7 @@ endif
 endif
 ifneq ($(WORHP),true)
 ifneq ($(WORHP),false)
-		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+		$(error invalid WORHP flag selected: WORHP=$(WORHP). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)
@@ -1543,6 +1536,11 @@ endif
 ifeq ($(SHARED),true)
 ifeq ($(COMP),msvc)
 		$(error invalid flags selected: SHARED=$(SHARED) and COMP=$(COMP). Please use 'make dll' to generate a dynamic library with MSVC)
+endif
+endif
+ifneq ($(SYM),bliss)
+ifneq ($(SYM),none)
+		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
 endif
 endif
 
@@ -1616,7 +1614,7 @@ help:
 		@echo "  - splint: Run splint on all C SCIP files. (Need splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
-		@echo "  - depend: Creates dependencies files. This is only needed if you add files to SCIP."
+		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."
 		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."
 		@echo "  - check or test: Runs the check/test script, see the online documentation."
 

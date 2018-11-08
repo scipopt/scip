@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,11 +24,36 @@
 /*#define SCIP_MORE_DEBUG*/
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/cons_components.h"
 #include "scip/debug.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_datastructures.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define CONSHDLR_NAME          "components"
 #define CONSHDLR_DESC          "independent components constraint handler"
@@ -368,6 +393,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
    /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -1136,6 +1162,7 @@ SCIP_RETCODE solveComponent(
    case SCIP_STATUS_USERINTERRUPT:
       SCIP_CALL( SCIPinterruptSolve(scip) );
       break;
+   case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_NODELIMIT:
    case SCIP_STATUS_TOTALNODELIMIT:
@@ -1905,7 +1932,8 @@ SCIP_RETCODE findComponents(
          {
             assert(nunfixedvars <= v);
             sortedvars[nunfixedvars] = vars[v];
-            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDown(vars[v]) + SCIPvarGetNLocksUp(vars[v]));
+            varlocks[nunfixedvars] = 4 * (SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL)
+               + SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL));
             unfixedvarpos[v] = nunfixedvars;
             ++nunfixedvars;
          }
@@ -2083,7 +2111,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       return SCIP_OKAY;
 
    /* the components constraint handler does kind of dual reductions */
-   if( !SCIPallowDualReds(scip) || !SCIPallowObjProp(scip) )
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    problem = NULL;
@@ -2253,7 +2281,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       return SCIP_OKAY;
 
    /* the components constraint handler does kind of dual reductions */
-   if( !SCIPallowDualReds(scip) || !SCIPallowObjProp(scip) )
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check for a reached timelimit */
@@ -2375,6 +2403,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
             /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
             SCIP_Real val;
@@ -2550,7 +2579,6 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "constraints/" CONSHDLR_NAME "/feastolfactor",
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",
          &conshdlrdata->feastolfactor, TRUE, DEFAULT_FEASTOLFACTOR, 0.0, 1000000.0, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

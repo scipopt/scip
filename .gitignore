@@ -29,9 +29,16 @@ doc/inc/parameters.set
 doc/**/*.tmp
 .cproject
 .project
+.vscode/
 .settings/
 hooks/
 build/
+examples/*/check/results/
+examples/*/check/*.sh
+examples/*/check/*.awk
+applications/*/check/results/
+applications/*/check/*.sh
+applications/*/check/*.awk
 
 ###############################
 ## files created by `make lint`
@@ -46,6 +53,7 @@ localhooks/
 src/scip/githash.c
 src/scip/buildflags.c
 settings/
+!coverage/settings
 unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
@@ -59,3 +67,4 @@ interfaces/gams/gams
 interfaces/gams/test
 examples/*/doc/html
 applications/*/doc/html
+doc/inc/simpleinstance/output.log

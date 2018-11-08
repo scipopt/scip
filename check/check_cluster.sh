@@ -58,9 +58,10 @@ OPTCOMMAND=${25}
 SETCUTOFF=${26}
 VISUALIZE=${27}
 CLUSTERNODES=${28}
+SLURMACCOUNT=${29}
 
 # check if all variables defined (by checking the last one)
-if test -z $VISUALIZE
+if test -z $CLUSTERNODES
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -90,6 +91,7 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
+    echo "CLUSTERNODES  = $CLUSTERNODES"
     exit 1;
 fi
 
@@ -108,6 +110,8 @@ else
 fi
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
+# defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
+#                                              TIMELIMLIST, HARDTIMELIMLIST
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
 
@@ -155,9 +159,9 @@ do
 	    for SETNAME in ${SETTINGSLIST[@]}
 	    do
 		# infer the names of all involved files from the arguments
-		s=`expr $s + $GLBSEEDSHIFT`
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s
-		s=`expr $s - $GLBSEEDSHIFT`
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
@@ -172,7 +176,7 @@ do
 
 		# call tmp file configuration for the solver
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
+		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
@@ -204,11 +208,17 @@ do
 		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores -v -v "
-		    if test "$CLUSTERNODES" = "all"
+
+                    if test "$SLURMACCOUNT" == ""
+	            then
+                                  SLURMACCOUNT=$ACCOUNT
+                    fi
+
+                    if test "$CLUSTERNODES" = "all"
 		    then
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		    else
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
 		    # -V to copy all environment variables

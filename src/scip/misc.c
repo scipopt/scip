@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -329,7 +329,7 @@ void incrementalStatsUpdate(
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
 
    /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
-   assert(*sumvarptr >= -1e-6);
+   assert(*sumvarptr >= -1e-4);
    *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
@@ -974,19 +974,12 @@ void SCIPqueueClear(
    queue->firstused = -1;
 }
 
-/** inserts element at the end of the queue */
-SCIP_RETCODE SCIPqueueInsert(
-   SCIP_QUEUE*           queue,              /**< queue */
-   void*                 elem                /**< element to be inserted */
+/** reallocates slots if queue is necessary */
+static
+SCIP_RETCODE queueCheckSize(
+   SCIP_QUEUE*           queue               /**< queue */
    )
 {
-   assert(queue != NULL);
-   assert(queue->slots != NULL);
-   assert(queue->firstused >= -1 && queue->firstused < queue->size);
-   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
-   assert(queue->firstused > -1 || queue->firstfree == 0);
-   assert(elem != NULL);
-
    if( queue->firstfree == queue->firstused )
    {
       int sizediff;
@@ -1003,10 +996,15 @@ SCIP_RETCODE SCIPqueueInsert(
    }
    assert(queue->firstfree != queue->firstused);
 
-   /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
-   queue->slots[queue->firstfree] = elem;
-   ++(queue->firstfree);
+   return SCIP_OKAY;
+}
 
+/** checks and adjusts marker of first free and first used slot */
+static
+void queueCheckMarker(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
    /* if we saved the value at the last position we need to reset the firstfree position */
    if( queue->firstfree == queue->size )
       queue->firstfree = 0;
@@ -1014,11 +1012,60 @@ SCIP_RETCODE SCIPqueueInsert(
    /* if a first element was added, we need to update the firstused counter */
    if( queue->firstused == -1 )
       queue->firstused = 0;
+}
+
+/** inserts pointer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+   assert(elem != NULL);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].ptr = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
 
    return SCIP_OKAY;
 }
 
-/** removes and returns the first element of the queue */
+/** inserts unsigned integer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].uinteger = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
+
+   return SCIP_OKAY;
+}
+
+/** removes and returns the first pointer element of the queue, or NULL if no element exists */
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1049,10 +1096,44 @@ void* SCIPqueueRemove(
       queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
    }
 
-   return (queue->slots[pos]);
+   return (queue->slots[pos].ptr);
 }
 
-/** returns the first element of the queue without removing it */
+/** removes and returns the first unsigned integer element of the queue, or UINT_MAX if no element exists */
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   int pos;
+
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   pos = queue->firstused;
+   ++(queue->firstused);
+
+   /* if we removed the value at the last position we need to reset the firstused position */
+   if( queue->firstused == queue->size )
+      queue->firstused = 0;
+
+   /* if we reached the first free position we can reset both, firstused and firstused, positions */
+   if( queue->firstused == queue->firstfree )
+   {
+      queue->firstused = -1;
+      queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
+   }
+
+   return (queue->slots[pos].uinteger);
+}
+
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1067,7 +1148,25 @@ void* SCIPqueueFirst(
 
    assert(queue->slots != NULL);
 
-   return queue->slots[queue->firstused];
+   return queue->slots[queue->firstused].ptr;
+}
+
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
+unsigned int SCIPqueueFirstUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   return queue->slots[queue->firstused].uinteger;
 }
 
 /** returns whether the queue is empty */
@@ -2901,6 +3000,36 @@ SCIP_RETCODE SCIPhashmapInsert(
  *
  *  @note multiple insertion of same element is checked and results in an error
  */
+SCIP_RETCODE SCIPhashmapInsertInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.integer = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -2946,7 +3075,26 @@ void* SCIPhashmapGetImage(
    return NULL;
 }
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
+int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.integer;
+
+   return INT_MAX;
+}
+
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -2988,6 +3136,34 @@ SCIP_RETCODE SCIPhashmapSetImage(
 
    /* append origin->image pair to hash map */
    img.ptr = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
+ */
+SCIP_RETCODE SCIPhashmapSetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.integer = image;
    SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
 
    return SCIP_OKAY;
@@ -3179,6 +3355,16 @@ void* SCIPhashmapEntryGetImage(
 }
 
 /** gives the image of the hashmap entry */
+int SCIPhashmapEntryGetImageInt(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
+   )
+{
+   assert(entry != NULL);
+
+   return entry->image.integer;
+}
+
+/** gives the image of the hashmap entry */
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    )
@@ -3197,6 +3383,17 @@ void SCIPhashmapEntrySetImage(
    assert(entry != NULL);
 
    entry->image.ptr = image;
+}
+
+/** sets integer image of a hashmap entry */
+void SCIPhashmapEntrySetImageInt(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   int                   image               /**< new image */
+   )
+{
+   assert(entry != NULL);
+
+   entry->image.integer = image;
 }
 
 /** sets real image of a hashmap entry */
@@ -5815,6 +6012,13 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealIntLong
@@ -6722,7 +6926,6 @@ int SCIPprofileGetEarliestFeasibleStart(
 
       remainingduration = duration - (profile->timepoints[pos+1] - est);
       SCIPdebugMessage("remaining duration %d\n", remainingduration);
-
 
       if( remainingduration <= 0 )
          (*infeasible) = FALSE;
@@ -10044,6 +10247,36 @@ int SCIPsnprintf(
    return n;
 }
 
+/** safe version of strncpy
+ *
+ *  Copies string in s to t using at most @a size-1 nonzero characters (strncpy copies size characters). It always adds
+ *  a terminating zero char. Does not pad the remaining string with zero characters (unlike strncpy). Returns the number
+ *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
+ *  string was truncated if the return value is size.
+ */
+int SCIPstrncpy(
+   char*                 t,                  /**< target string */
+   const char*           s,                  /**< source string */
+   int                   size                /**< maximal size of t */
+   )
+{
+   int n;
+
+   if( size <= 0 )
+      return 0;
+
+   /* decrease size by 1 to create space for terminating zero char */
+   --size;
+   for( n = 0; n < size && *s != '\0'; n++ )
+      *(t++) = *(s++);
+   *t = '\0';
+
+   if( *s != '\0' )
+      ++n;
+
+   return n;
+}
+
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
@@ -10313,18 +10546,16 @@ SCIP_Real SCIPcomputeGap(
 {
    if( EPSEQ(primalbound, dualbound, eps) )
       return 0.0;
-   else if( EPSZ(dualbound, eps) ||
-            EPSZ(primalbound, eps) ||
-            REALABS(primalbound) >= inf ||
-            REALABS(dualbound) >= inf ||
-            primalbound * dualbound < 0.0 )
-      return inf;
    else
    {
       SCIP_Real absdual = REALABS(dualbound);
       SCIP_Real absprimal = REALABS(primalbound);
 
-      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+      if( EPSZ(dualbound, eps) || EPSZ(primalbound, eps) || absprimal >= inf || absdual >= inf ||
+         primalbound * dualbound < 0.0 )
+         return inf;
+      else
+         return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
 
@@ -10417,7 +10648,6 @@ void SCIPdisjointsetUnion(
    assert(0 <= q);
    assert(djset->size > p);
    assert(djset->size > q);
-
 
    idp = SCIPdisjointsetFind(djset, p);
    idq = SCIPdisjointsetFind(djset, q);

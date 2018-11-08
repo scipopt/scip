@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -26,10 +26,31 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_convexproj.h"
-#include "scip/nlp.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/pub_expr.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_sepa.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sepa.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/sepa_convexproj.h"
+#include <string.h>
 
 
 #define SEPA_NAME              "convexproj"
@@ -326,7 +347,7 @@ SCIP_RETCODE setQuadraticObj(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      quadelems[i].idx1 = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      quadelems[i].idx1 = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       quadelems[i].idx2 = quadelems[i].idx1;
       quadelems[i].coef = 1.0;
    }
@@ -395,7 +416,7 @@ SCIP_RETCODE separateCuts(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      lininds[i] = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      lininds[i] = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       linvals[i] = - 2.0 * SCIPgetSolVal(scip, sol, var);
 
       /* if coefficient is too large, don't separate */
@@ -464,7 +485,7 @@ SCIP_RETCODE separateCuts(
             assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
             SCIP_CALL( SCIPsetSolVal(scip, projection, var,
-                     nlpisol[(int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void *)var)]) );
+                     nlpisol[SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void *)var)]) );
          }
          SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 
@@ -576,7 +597,6 @@ SCIP_RETCODE separateCuts(
          SCIPABORT();
          nlpunstable = TRUE;
    }
-
 
    /* if nlp is detected to be unstable, don't try to separate again */
    if( nlpunstable )
@@ -759,7 +779,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolConvexproj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
 {  /*lint --e{715}*/
-
    SCIP_Real maxviolation;
    SCIP_SOL* lpsol;
    SCIP_SEPADATA* sepadata;

@@ -157,6 +157,11 @@ BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
 printLines > 0 && /^$/ {printLines+=1;}
+
+# UG does not have blank lines after the header.
+printLines > 0 && /^Default LC presolving/ {exit 0;}
+
+# the third blank line marks the end of the header
 printLines > 0 {print $0}
 {
     if ( printLines == 3 ){
@@ -168,6 +173,10 @@ EOF
 # End of AWK Scripts            #
 #################################
 
+if [ "$PSMESSAGE" != "" ]; then
+  PSMESSAGE="
+PS: $PSMESSAGE"
+fi
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rbdb.txt"
 touch $RBDB
@@ -333,7 +342,8 @@ $ERRFILE
 $OUTFILE
 $RESFILE
 
-Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+Please note that they might be deleted soon
+$PSMESSAGE" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     else
         echo "No new errors, sending no emails."
     fi

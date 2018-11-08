@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,24 +32,39 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
+#include "blockmemshell/memory.h"
 #include <ctype.h>
-
-#include "scip/reader_mps.h"
-#include "scip/cons_knapsack.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/cons_indicator.h"
+#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_and.h"
+#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_varbound.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/reader_mps.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_var.h"
+#include <stdlib.h>
+#include <string.h>
 
 #define READER_NAME             "mpsreader"
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
@@ -661,6 +676,50 @@ void mpsinputInsertName(
    }
 }
 
+/** Add variable name to storage */
+static
+SCIP_RETCODE addVarNameToStorage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         varnames,           /**< the variable name storage */
+   int*                  varnamessize,       /**< the size of the variable names storage */
+   int*                  nvars,              /**< the number of variables */
+   const char*           colname             /**< the name of the variable */
+   )
+{
+   assert(scip != NULL);
+
+   if( varnames != NULL )
+   {
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, varnames, varnamessize, (*nvars) + 1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*varnames)[(*nvars)], colname, strlen(colname) + 1) );     /*lint !e866*/
+      (*nvars)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Add constraint name to storage */
+static
+SCIP_RETCODE addConsNameToStorage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         consnames,          /**< the constraint name storage */
+   int*                  consnamessize,      /**< the size of the constraint names storage */
+   int*                  ncons,              /**< the number of constraint */
+   const char*           rowname             /**< the name of the constraint */
+   )
+{
+   assert(scip != NULL);
+
+   if( consnames != NULL )
+   {
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, consnames, consnamessize, (*ncons) + 1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consnames)[(*ncons)], rowname, strlen(rowname) + 1) );    /*lint !e866*/
+      (*ncons)++;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** Process NAME section. */
 static
 SCIP_RETCODE readName(
@@ -802,7 +861,10 @@ SCIP_RETCODE readObjname(
 static
 SCIP_RETCODE readRows(
    MPSINPUT*             mpsi,               /**< mps input structure */
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
    )
 {
    SCIPdebugMsg(scip, "read rows\n");
@@ -879,6 +941,9 @@ SCIP_RETCODE readRows(
          }
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* if the file is of type cor, then the constraint names must be stored */
+         SCIP_CALL( addConsNameToStorage(scip, consnames, consnamessize, nconsnames, mpsinputField2(mpsi)) );
       }
    }
    mpsinputSyntaxerror(mpsi);
@@ -890,17 +955,23 @@ SCIP_RETCODE readRows(
 static
 SCIP_RETCODE readCols(
    MPSINPUT*             mpsi,               /**< mps input structure */
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  nvarnames           /**< the number of stored variable names, or NULL */
    )
 {
    char          colname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+   SCIP_Bool     usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
    var = NULL;
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != 0 )
@@ -933,7 +1004,19 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+         /* check whether we have seen this variable before, this would not allowed */
+         if( usevartable && SCIPfindVar(scip, colname) != NULL )
+         {
+            SCIPerrorMessage("Coeffients of column <%s> don't appear consecutively (line: %d)\n",
+               colname, mpsi->lineno);
+
+            return SCIP_READERROR;
+         }
+
+         /* if the file type is a cor file, the the variable name must be stored */
+         SCIP_CALL( addVarNameToStorage(scip, varnames, varnamessize, nvarnames, colname) );
 
          if( mpsinputIsInteger(mpsi) )
          {
@@ -1589,7 +1672,6 @@ SCIP_RETCODE readBounds(
    }
    mpsinputSyntaxerror(mpsi);
 
-
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
@@ -1786,6 +1868,13 @@ SCIP_RETCODE readSOS(
          else
          {
             /* get weight */
+            if( NULL == mpsinputField2(mpsi)  )
+            {
+               SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
+               mpsinputSyntaxerror(mpsi);
+               return SCIP_OKAY;
+            }
+
             weight = strtod(mpsinputField2(mpsi), &endptr);
             if( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
             {
@@ -1804,6 +1893,7 @@ SCIP_RETCODE readSOS(
             case 2: 
                SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
                break;
+            /* coverity[dead_error_begin] */
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
@@ -1923,6 +2013,16 @@ SCIP_RETCODE readQMatrix(
 
                /* get coefficient */
                field = (k == 1 ? mpsinputField3(mpsi) :  mpsinputField5(mpsi));
+               if( NULL == field )
+               {
+                  SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
+                  mpsinputSyntaxerror(mpsi);
+                  SCIPfreeBufferArray(scip, &quadvars1);
+                  SCIPfreeBufferArray(scip, &quadvars2);
+                  SCIPfreeBufferArray(scip, &quadcoefs);
+                  return SCIP_OKAY;
+               }
+
                coef = strtod(field, &endptr);
                if( endptr == field || *endptr != '\0' )
                {
@@ -2135,6 +2235,14 @@ SCIP_RETCODE readQCMatrix(
          else
          {
             char* endptr;
+            if( mpsinputField3(mpsi) ==  NULL )
+            {
+               SCIPerrorMessage("coefficient of term <%s>*<%s> not specified.\n", mpsinputField1(mpsi), mpsinputField2(mpsi));
+               mpsinputSyntaxerror(mpsi);
+
+               goto TERMINATE;
+            }
+
             /* get coefficient */
             coef = strtod(mpsinputField3(mpsi), &endptr);
             if( endptr == mpsinputField3(mpsi) || *endptr != '\0' )
@@ -2437,6 +2545,7 @@ SCIP_RETCODE readIndicators(
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;
@@ -2461,7 +2570,13 @@ SCIP_RETCODE readIndicators(
 static
 SCIP_RETCODE readMps(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of the input file */
+   const char*           filename,           /**< name of the input file */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
    )
 {
    SCIP_FILE* fp;
@@ -2498,11 +2613,11 @@ SCIP_RETCODE readMps(
       || mpsinputSection(mpsi) == MPS_USERCUTS
       || mpsinputSection(mpsi) == MPS_LAZYCONS )
    {
-      SCIP_CALL_TERMINATE( retcode, readRows(mpsi, scip), TERMINATE );
+      SCIP_CALL_TERMINATE( retcode, readRows(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_COLUMNS )
    {
-      SCIP_CALL_TERMINATE( retcode, readCols(mpsi, scip), TERMINATE );
+      SCIP_CALL_TERMINATE( retcode, readCols(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_RHS )
    {
@@ -3642,14 +3757,88 @@ SCIP_DECL_READERFREE(readerFreeMps)
 static
 SCIP_DECL_READERREAD(readerReadMps)
 {  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_CALL( SCIPreadMps(scip, reader, filename, result, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteMps)
+{  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars,
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * mps file reader specific interface methods
+ */
+
+/** includes the mps file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderMps(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READERDATA* readerdata;
+   SCIP_READER* reader;
+
+   /* create reader data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
+
+   /* include reader */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMps) );
+   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadMps) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteMps) );
+
+   /* add lp-reader parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/linearize-and-constraints",
+         "should possible \"and\" constraint be linearized when writing the mps file?",
+         &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/aggrlinearization-ands",
+         "should an aggregated linearization for and constraints be used?",
+         &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/** reads problem from file */
+SCIP_RETCODE SCIPreadMps(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the file reading call */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   )
+{
    SCIP_RETCODE retcode;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   retcode = readMps(scip, filename);
+   retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
@@ -3665,10 +3854,30 @@ SCIP_DECL_READERREAD(readerReadMps)
 }
 
 
-/** problem writing method of reader */
-static
-SCIP_DECL_READERWRITE(readerWriteMps)
-{  /*lint --e{715}*/
+/** writes problem to file */
+SCIP_RETCODE SCIPwriteMps(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of active variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
+   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   )
+{
    SCIP_READERDATA* readerdata;
    int naddrows;
    int faulty = 0;
@@ -3870,7 +4079,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT || ((SCIPvarGetNLocksDown(var) == 0) && (SCIPvarGetNLocksUp(var) == 0)) )
+      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT
+         || ((SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0)
+            && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0)) )
       {
          assert( matrix->nentries < matrix->sentries );
 
@@ -4225,6 +4436,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                rowvals[1] = -1.0;
 
                /* compute maximal length for rowname */
+               /* coverity[negative_returns] */
                n = (int) log10((double)nrowvars) + 1 + l;
 
                /* assure maximal allowed value */
@@ -4707,6 +4919,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          lincons = SCIPgetLinearConsIndicator(cons);
          slackvar = SCIPgetSlackVarIndicator(cons);
 
+         /* linvars always contains slack variable, thus nlinvars >= 1 */
+         if( SCIPgetNVarsLinear(scip, lincons) <= 1 || SCIPconsIsDeleted(lincons) )
+            continue;
+
          /* create variable and value strings */
          if( SCIPvarIsNegated(binvar) )
          {
@@ -4774,44 +4990,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIPinfoMessage(scip, file, "ENDATA");
 
    *result = SCIP_SUCCESS;
-
-   return SCIP_OKAY;
-}
-
-
-/*
- * mps file reader specific interface methods
- */
-
-/** includes the mps file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderMps(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_READERDATA* readerdata;
-   SCIP_READER* reader;
-
-   /* create reader data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
-
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-
-   /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMps) );
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadMps) );
-   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteMps) );
-
-   /* add lp-reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/" READER_NAME "/linearize-and-constraints",
-         "should possible \"and\" constraint be linearized when writing the mps file?",
-         &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/" READER_NAME "/aggrlinearization-ands",
-         "should an aggregated linearization for and constraints be used?",
-         &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

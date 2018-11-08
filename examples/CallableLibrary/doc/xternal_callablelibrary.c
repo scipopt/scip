@@ -9,11 +9,11 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_callablelibrary.c
  * @brief  main document page
  * @author Stefan Vigerske
  */
@@ -29,5 +29,6 @@
  * - string.c shows how to setup general nonlinear and quadratic constraints
  * - gastrans.c shows how to setup absolute power constraints
  * - circle.c shows how to setup second-order-cone constraints
+ * - brachistochrone.c shows how to setup nonlinear constraints
+ * - circlepacking.c shows how to setup quadratic constraints
  */
-

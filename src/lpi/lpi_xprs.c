@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -39,6 +39,7 @@
 #include "xprs.h"
 #include "scip/bitencode.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 #include "lpi/lpi.h"
 
 #ifndef XPRS_LPQUICKPRESOLVE
@@ -81,7 +82,6 @@ struct SCIP_LPi
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    int                   notfromscratch;     /**< do we not want to solve the lp from scratch */
    int                   solstat;            /**< solution status of last optimization call */
-   int                   unbvec;             /**< primal or dual vector on which the problem is unbounded */
    char                  solmethod;          /**< method used to solve the LP */
 
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
@@ -690,6 +690,30 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
 /**@} */
 
 
@@ -729,7 +753,8 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemory(lpi) );
 
    /* copy the problem name */
-   strncpy((*lpi)->name, name, 200);
+   (void)strncpy((*lpi)->name, name, 199);
+   (*lpi)->name[199] = '\0';
 
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
@@ -1808,9 +1833,6 @@ static SCIP_RETCODE lpiSolve(
 
    invalidateSolution(lpi);
 
-   /* disable general presolving to ensure that we get dual or primal rays */
-   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
-
    /* check if the current basis should be ignored */
    if( lpi->clearstate )
    {
@@ -1818,6 +1840,7 @@ static SCIP_RETCODE lpiSolve(
       lpi->clearstate = FALSE;
    }
 
+   CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRESOLVE, 0) );
    CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, (lpi->par_presolve) ?  1 : 0) );
 
    if( lpi->par_fastlp )
@@ -1836,12 +1859,6 @@ static SCIP_RETCODE lpiSolve(
 
    /* evaluate the result */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
-   if( lpi->solstat == XPRS_LP_UNBOUNDED || lpi->solstat == XPRS_LP_INFEAS )
-   {
-      CHECK_ZERO( lpi->messagehdlr, XPRSgetunbvec(lpi->xprslp, &lpi->unbvec) );
-   }
-   else
-      lpi->unbvec = -1;
 
    /* Make sure the LP is postsolved in case it was interrupted. */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRESOLVESTATE, &state) );
@@ -1860,6 +1877,53 @@ static SCIP_RETCODE lpiSolve(
    SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
       lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
 
+   /* Make sure that always a primal / dual ray exists */
+   if( lpi->solstat == XPRS_LP_INFEAS  || lpi->solstat == XPRS_LP_UNBOUNDED )
+   {
+      int hasray;
+      int presolving;
+
+      /* check whether a dual ray exists, in that case we don't need to resolve the LP w/o presolving */
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, NULL, &hasray) );
+
+      if( hasray == 1 )
+         goto TERMINATE;
+
+      /* get the current presolving setting */
+      CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, &presolving) );
+
+      if( presolving != 0 )
+      {
+         int iterations;
+
+         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+         SCIPdebugMessage("presolver may have solved the problem -> calling Xpress %s again without presolve\n",
+               strcmp(method, "p") == 0 ? "primal simplex" : strcmp(method, "d") == 0 ? "dual simplex" : "barrier");
+
+         /* switch off preprocessing */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, 0) );
+
+         /* resolve w/o presolving */
+         CHECK_ZERO( lpi->messagehdlr, XPRSlpoptimize(lpi->xprslp, method) );
+
+         /* evaluate the result */
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_LPSTATUS, &lpi->solstat) );
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &iterations) );
+         lpi->iterations += iterations;
+         lpi->solisbasic = TRUE;
+
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &primalinfeasible) );
+         CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &dualinfeasible) );
+         SCIPdebugMessage(" -> Xpress returned solstat=%d, pinfeas=%d, dinfeas=%d (%d iterations)\n",
+            lpi->solstat, primalinfeasible, dualinfeasible, lpi->iterations);
+
+         /* reinstall the previous setting */
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPQUICKPRESOLVE, presolving) );
+      }
+   }
+
+  TERMINATE:
    if( (lpi->solstat == XPRS_LP_OPTIMAL) && (primalinfeasible || dualinfeasible) )
       lpi->solstat = XPRS_LP_OPTIMAL_SCALEDINFEAS;
 
@@ -2237,12 +2301,18 @@ SCIP_Bool SCIPlpiWasSolved(
 
 /** gets information about primal and dual feasibility of the current LP solution
  *
- *  here "true" should mean feasible, "false" should mean unknown
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
  */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
    assert(lpi != NULL);
@@ -2252,8 +2322,8 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 
    SCIPdebugMessage("getting solution feasibility\n");
 
-   *primalfeasible = (SCIP_Bool) (lpi->solstat==XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solmethod == 'p' && lpi->solstat==XPRS_LP_UNBOUNDED));
-   *dualfeasible = (SCIP_Bool) (lpi->solstat==XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solmethod == 'd' && lpi->solstat==XPRS_LP_INFEAS));
+   *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
+   *dualfeasible = SCIPlpiIsDualFeasible(lpi);
 
    return SCIP_OKAY;
 }
@@ -2472,7 +2542,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (lpi->solstat == XPRS_LP_OPTIMAL) || (lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -2482,6 +2558,11 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi->solstat >= 0);
 
    SCIPdebugMessage("checking for stability: Xpress solstat = %d\n", lpi->solstat);
+
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
 
    /* If the solution status of Xpress is XPRS_LP_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
@@ -2497,7 +2578,9 @@ SCIP_Bool SCIPlpiIsStable(
       if( retcode != 0 || pinfeas )
          return FALSE;
    }
-   else if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+#endif
+
+   if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
    {
       /* presolved problem was solved to optimality but infeasibilities were introduced by postsolve */
       return FALSE;
@@ -2515,7 +2598,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == XPRS_LP_CUTOFF_IN_DUAL);
+   return (lpi->solstat == XPRS_LP_CUTOFF || lpi->solstat == XPRS_LP_CUTOFF_IN_DUAL);
 }
 
 /** returns TRUE iff the iteration limit was reached */
@@ -2604,7 +2687,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -2696,7 +2783,6 @@ SCIP_RETCODE SCIPlpiGetIterations(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
    *iterations = lpi->iterations;
@@ -2992,8 +3078,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&binvrow, nrows) );
-
       SCIP_ALLOC( BMSallocMemoryArray(&buffer, nrows) );
       SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, buffer, inds, ninds) );
       binv = buffer;
@@ -3480,6 +3564,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
       ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
@@ -3525,7 +3611,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
-      *dval = (double) ictrlval;
+      /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
+      *dval = (double) -ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3557,31 +3644,51 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
+       * For consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* Xpress does not pose any restriction on dval,
+       * however for consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      assert( dval >= 0.0 );
+      /* Xpress poses no restriction on dval
+       * However for consistency we assert it to be nonnegative.
+       */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
-     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
-     if (dval >= INT_MAX)
-       ival = 0;
-     else
-       ival = (int) floor(dval);
+     /* From the Xpress documentation:
+      * dval>0   If an integer solution has been found, stop MIP search after dval seconds,
+      *   otherwise continue until an integer solution is finally found.
+      * dval<0   Stop in LP or MIP search after dval seconds.
+      * dval=0   No time limit
+      */
+      assert( dval > 0.0 );
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
-     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-     break;
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:

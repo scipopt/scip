@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,11 +21,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/prop_dualfix.h"
-
+#include "scip/pub_message.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/scip_general.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME                  "dualfix"
 #define PROP_DESC                  "roundable variables dual fixing"
@@ -132,7 +140,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than -infinity and do nothing
@@ -141,7 +149,7 @@ SCIP_RETCODE performDualfix(
                }
             }
             SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
-               SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksUp(var), bound);
+               SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL), bound);
          }
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
          {
@@ -155,7 +163,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than +infinity and do nothing
@@ -164,7 +172,7 @@ SCIP_RETCODE performDualfix(
                }
             }
             SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
-               SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksDown(var), bound);
+               SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL), bound);
          }
          else
             continue;
@@ -234,7 +242,7 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;
@@ -274,7 +282,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
     *
     *  do not run if propagation w.r.t. current objective is not allowed
     */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,10 +21,32 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#include "scip/pub_misc.h"
+#include "blockmemshell/memory.h"
 #include "scip/heur_shiftandpropagate.h"
+#include "scip/pub_event.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
@@ -602,7 +624,6 @@ SCIP_RETCODE initMatrix(
             matrix->rhs[i] /= maxval;
       }
 
-
       /* in case of empty rows with a 0 < lhs <= 0.0 or 0.0 <= rhs < 0 we deduce the infeasibility of the problem */
       if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
       {
@@ -645,7 +666,6 @@ SCIP_RETCODE initMatrix(
       SCIP_ROW** rows;
       SCIP_Real* colvals;
       int ncolnonz;
-
 
       assert(SCIPcolGetLPPos(lpcols[j]) >= 0);
 
@@ -1336,7 +1356,6 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
 static
 SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
@@ -1345,7 +1364,7 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -1490,7 +1509,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( nlprows == 0 || nlpcols == 0 )
       return SCIP_OKAY;
 
-
    *result = SCIP_DIDNOTFIND;
    initialized = FALSE;
 
@@ -1606,8 +1624,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    eventhdlrdata->violatedrowpos = violatedrowpos;
    eventhdlrdata->nviolatedrows = &nviolatedrows;
 
-
-
    /* initialize arrays. Before sorting, permutation is the identity permutation */
    for( i = 0; i < ndiscvars; ++i )
       permutation[i] = i;
@@ -1619,7 +1635,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          heurdata->rowweights[r] = DEFAULT_WEIGHT_EQUALITY;
       else
          heurdata->rowweights[r] = DEFAULT_WEIGHT_INEQUALITY;
-
    }
    colnorms = matrix->colnorms;
 
@@ -1743,7 +1758,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          for( c = 0; c < nbinvars; ++c )
          {
             var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
-            if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+               || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0 )
                ++nbinwithoutlocks;
          }
       }
@@ -1754,7 +1770,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
             if( SCIPvarIsBinary(var) )
             {
-               if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+               if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+                  || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0 )
                   ++nbinwithoutlocks;
             }
          }
@@ -1777,7 +1794,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
 
             /* search for next variable which is not a binary variable without locks */
-            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+               || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0) )
             {
                ++c;
                if( c >= nbinwithoutlocks )
@@ -1793,7 +1811,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
                b = c + 1;
                binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
             }
-            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUp(binvar) > 0 && SCIPvarGetNLocksDown(binvar) > 0) )
+            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) > 0
+               && SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) > 0) )
             {
                ++b;
                assert(b < ndiscvars);
@@ -1815,8 +1834,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       for( c = 0; c < ndiscvars; ++c )
       {
          assert((c < nbinwithoutlocks) == (SCIPvarIsBinary(SCIPcolGetVar(heurdata->lpcols[permutation[c]]))
-               && (SCIPvarGetNLocksUp(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0
-                  || SCIPvarGetNLocksDown(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0)));
+               && (SCIPvarGetNLocksUpType(SCIPcolGetVar(heurdata->lpcols[permutation[c]]), SCIP_LOCKTYPE_MODEL) == 0
+                  || SCIPvarGetNLocksDownType(SCIPcolGetVar(heurdata->lpcols[permutation[c]]), SCIP_LOCKTYPE_MODEL) == 0)));
       }
 #endif
    }
@@ -1924,13 +1943,15 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* check whether the variable is binary and has no locks in one direction, so that we want to fix it to the
        * respective bound (only enabled by parameter)
        */
-      if( heurdata->fixbinlocks && SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+      if( heurdata->fixbinlocks && SCIPvarIsBinary(var)
+         && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0
+            || SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0) )
       {
-         if( SCIPvarGetNLocksUp(var) == 0 )
+         if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 )
             origsolval = SCIPvarGetUbLocal(var);
          else
          {
-            assert(SCIPvarGetNLocksDown(var) == 0);
+            assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0);
             origsolval = SCIPvarGetLbLocal(var);
          }
       }
@@ -2024,9 +2045,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(SCIPgetProbingDepth(scip) >= 1);
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
 
-
-
-
          /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
           * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
           */
@@ -2067,8 +2085,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-
          }
+
          /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
           * can be stopped */
          if( cutoff )
@@ -2174,7 +2192,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             {
                if( SCIPvarIsInLP(vars[v]) )
                   assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])));
-
             }
          }
 #endif
@@ -2387,7 +2404,6 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeShiftandpropagate) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitShiftandpropagate) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitShiftandpropagate) );
-
 
    /* add shiftandpropagate primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nproprounds",

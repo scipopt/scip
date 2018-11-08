@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,18 +25,32 @@
 
 #ifdef WITH_ZIMPL
 
-#include <assert.h>
 #include <unistd.h>
-#include <string.h>
 #include <stdbool.h>
+#include <string.h>
 
+#include "nlpi/pub_expr.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_indicator.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_reader.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_reader.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_var.h"
+#include "scip/type_reader.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +58,6 @@ extern "C" {
 
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
-#include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 
@@ -531,11 +544,11 @@ SCIP_RETCODE addConsTerm(
                   polyvars[npolyvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++npolyvars;
                   varpos = npolyvars-1;
-                  SCIP_CALL( SCIPhashmapInsert(polyvarmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
+                  SCIP_CALL( SCIPhashmapInsertInt(polyvarmap, (void*)mono_get_var(monomial, j), varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(polyvarmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
+                  varpos = SCIPhashmapGetImageInt(polyvarmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
                assert(polyvars != NULL);
                assert(polyvars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
@@ -667,11 +680,11 @@ SCIP_RETCODE addConsTerm(
                   vars[nvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++nvars;
                   varpos = nvars-1;
-                  SCIP_CALL( SCIPhashmapInsert(varmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
+                  SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)mono_get_var(monomial, j), varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
+                  varpos = SCIPhashmapGetImageInt(varmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
                assert(vars != NULL);
                assert(vars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
@@ -736,11 +749,11 @@ SCIP_RETCODE addConsTerm(
                vars[nvars] = polyvars[i];  /*lint !e613*/
                ++nvars;
                varpos = nvars-1;
-               SCIP_CALL( SCIPhashmapInsert(varmap, (void*)polyvars[i], (void*)(size_t)varpos) );  /*lint !e613*/
+               SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)polyvars[i], varpos) );  /*lint !e613*/
             }
             else
             {
-               varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)polyvars[i]);  /*lint !e613*/
+               varpos = SCIPhashmapGetImageInt(varmap, (void*)polyvars[i]);  /*lint !e613*/
             }
             assert(vars[varpos] == polyvars[i]);  /*lint !e613*/
 
@@ -1356,8 +1369,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
        * the location of the ZIMPL file
        */
-      (void)strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
-      buffer[SCIP_MAXSTRLEN-1] = '\0';
+      (void)SCIPstrncpy(buffer, filename, SCIP_MAXSTRLEN);
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
          (void) SCIPsnprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);

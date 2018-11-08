@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -834,6 +834,15 @@ EXTERN
 void SCIPsortDownRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortDownRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be sorted */
    int                   len                 /**< length of arrays */
    );
 
@@ -3677,6 +3686,16 @@ void SCIPsortedvecDelPosDownRealInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of Reals/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecDelPosDownRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   int*                  intarray1,          /**< first int array where an element is to be deleted */
+   int*                  intarray2,          /**< second int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownRealIntLong(
@@ -3946,7 +3965,7 @@ void SCIPsortedvecDelPosDownLong(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from three two arrays of Long/pointer, sorted by the first array in non-increasing order */
+/** delete the element at the given position from two arrays of Long/pointer, sorted by the first array in non-increasing order */
 EXTERN
 void SCIPsortedvecDelPosDownLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array where an element is to be deleted */

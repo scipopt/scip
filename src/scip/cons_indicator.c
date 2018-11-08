@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -189,17 +189,47 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "lpi/lpi.h"
+#include "lpi/type_lpi.h"
+#include "nlpi/type_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
-#include "scip/heur_trysol.h"
+#include "scip/cons_varbound.h"
 #include "scip/heur_indicator.h"
+#include "scip/heur_trysol.h"
+#include "scip/pub_conflict.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_event.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_paramset.h"
+#include "scip/pub_var.h"
+#include "scip/scip_branch.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -995,8 +1025,8 @@ SCIP_RETCODE checkIIS(
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
-               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvars) );
+               assert( nvars == SCIPhashmapGetImageInt(varhash, var) );
                /* SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
                nvars++;
 
@@ -1056,7 +1086,7 @@ SCIP_RETCODE checkIIS(
                continue;
 
             assert( SCIPhashmapExists(varhash, var) );
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(varhash, var);
             matval[cnt] = sign * linvals[v];
             ++cnt;
          }
@@ -1143,8 +1173,8 @@ SCIP_RETCODE checkIIS(
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
-               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvars) );
+               assert( nvars == SCIPhashmapGetImageInt(varhash, var) );
                /* SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
                nvars++;
 
@@ -1199,7 +1229,7 @@ SCIP_RETCODE checkIIS(
             assert( var != NULL );
 
             assert( SCIPhashmapExists(varhash, var) );
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(varhash, var);
             matval[cnt] = linvals[v];
             ++cnt;
          }
@@ -1718,7 +1748,7 @@ SCIP_RETCODE updateFirstRow(
       {
          int col;
 
-         col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+         col = SCIPhashmapGetImageInt(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)) )
             ++cnt;
@@ -1727,7 +1757,7 @@ SCIP_RETCODE updateFirstRow(
       {
          int col;
 
-         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         col = SCIPhashmapGetImageInt(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)) )
             ++cnt;
@@ -1782,13 +1812,13 @@ SCIP_RETCODE updateFirstRowGlobal(
       var = vars[v];
       if ( SCIPhashmapExists(lbhash, var) )
       {
-         col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+         col = SCIPhashmapGetImageInt(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbGlobal(var)) );
          ++cnt;
       }
       if ( SCIPhashmapExists(ubhash, var) )
       {
-         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         col = SCIPhashmapGetImageInt(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbGlobal(var)) );
          ++cnt;
       }
@@ -1858,7 +1888,7 @@ SCIP_RETCODE checkIISlocal(
          {
             int col;
 
-            col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+            col = SCIPhashmapGetImageInt(lbhash, var);
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
@@ -1876,7 +1906,7 @@ SCIP_RETCODE checkIISlocal(
          {
             int col;
 
-            col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+            col = SCIPhashmapGetImageInt(ubhash, var);
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
@@ -1903,7 +1933,6 @@ SCIP_RETCODE scaleFirstRow(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 
@@ -2022,6 +2051,7 @@ SCIP_RETCODE addAltLPColumn(
    SCIP_CALL( SCIPallocBufferArray(scip, &newrowsslack, 2 * nvars) );
 
    /* store index of column in constraint */
+   /* coverity[var_deref_model] */
    SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &ncols) );
    *colindex = ncols;
 
@@ -2048,22 +2078,22 @@ SCIP_RETCODE addAltLPColumn(
          {
             int ind;
 
-            ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+            ind = SCIPhashmapGetImageInt(conshdlrdata->slackhash, var);
 
             if ( ind < INT_MAX )
                matind[cnt] = ind;
             else
             {
                /* correct number of variable already in map/array and remember to add a new row */
-               SCIP_CALL( SCIPhashmapSetImage(conshdlrdata->slackhash, var, (void*) (size_t) conshdlrdata->nrows) );
-               assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var) );
+               SCIP_CALL( SCIPhashmapSetImageInt(conshdlrdata->slackhash, var, conshdlrdata->nrows) );
+               assert( conshdlrdata->nrows == SCIPhashmapGetImageInt(conshdlrdata->slackhash, var) );
                SCIPdebugMsg(scip, "Inserted slack variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
                matind[cnt] = (conshdlrdata->nrows)++;
 
                /* store new variables */
                newrowsslack[nnewrows++] = TRUE;
             }
-            assert( conshdlrdata->nrows >= (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var) );
+            assert( conshdlrdata->nrows >= SCIPhashmapGetImageInt(conshdlrdata->slackhash, var) );
             matval[cnt++] = sign * vals[v];
          }
       }
@@ -2071,12 +2101,12 @@ SCIP_RETCODE addAltLPColumn(
       {
          /* if variable exists */
          if ( SCIPhashmapExists(conshdlrdata->varhash, var) )
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          else
          {
             /* add variable in map and array and remember to add a new row */
-            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) conshdlrdata->nrows) );
-            assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+            SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->varhash, var, conshdlrdata->nrows) );
+            assert( conshdlrdata->nrows == SCIPhashmapGetImageInt(conshdlrdata->varhash, var) );
             SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
             matind[cnt] = (conshdlrdata->nrows)++;
 
@@ -2147,14 +2177,14 @@ SCIP_RETCODE addAltLPColumn(
          }
          assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
-         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          matval[cnt++] = -1.0;
          obj[nnewcols] = 0.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
          ++conshdlrdata->nlbbounds;
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->lbhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->lbhash, var, ncols + 1 + nnewcols) );
          assert( SCIPhashmapExists(conshdlrdata->lbhash, var) );
          SCIPdebugMsg(scip, "Added column for lower bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
             val, SCIPvarGetName(var), ncols + 1 + nnewcols);
@@ -2173,14 +2203,14 @@ SCIP_RETCODE addAltLPColumn(
          }
          assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
-         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          matval[cnt++] = 1.0;
          obj[nnewcols] = 0.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
          ++conshdlrdata->nubbounds;
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->ubhash, var, ncols + 1 + nnewcols) );
          assert( SCIPhashmapExists(conshdlrdata->ubhash, var) );
          SCIPdebugMsg(scip, "Added column for upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
             val, SCIPvarGetName(var), ncols + 1 + nnewcols);
@@ -3164,10 +3194,6 @@ SCIP_RETCODE consdataCreate(
 #endif
    }
 
-   /* capture slack variable and linear constraint */
-   SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->slackvar) );
-   SCIP_CALL( SCIPcaptureCons(scip, (*consdata)->lincons) );
-
    return SCIP_OKAY;
 }
 
@@ -3392,7 +3418,7 @@ SCIP_RETCODE presolRoundIndicator(
                except by this indicator constraint. If more than one indicator constraint is
                effected, we have to hope that they are all fulfilled - in this case the last
                constraint will fix the binary variable to 1. */
-            if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+            if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
             {
                if ( SCIPvarGetUbGlobal(binvar) > 0.5 )
                {
@@ -3410,7 +3436,7 @@ SCIP_RETCODE presolRoundIndicator(
          {
             /* In this case we would like to fix the binary variable to 0, if it is not locked down
                (should also have been performed by other dual reductions). */
-            if ( SCIPvarGetNLocksDown(binvar) == 0 )
+            if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
             {
                if ( SCIPvarGetLbGlobal(binvar) < 0.5 )
                {
@@ -3462,8 +3488,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          /* change binvary variable */
          consdata->binvar = var;
@@ -3513,8 +3539,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocks(scip, var, 0, 1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
+         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -3802,7 +3828,7 @@ SCIP_RETCODE propIndicator(
                   except by this indicator constraint. If more than one indicator constraint is
                   affected, we have to hope that they are all fulfilled - in this case the last
                   constraint will fix the binary variable to 1. */
-               if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+               if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                {
                   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
                   {
@@ -3820,7 +3846,7 @@ SCIP_RETCODE propIndicator(
             {
                /* In this case we would like to fix the binary variable to 0, if it is not locked down
                   (should also have been performed by other dual reductions). */
-               if ( SCIPvarGetNLocksDown(binvar) == 0 )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) == 0 )
                {
                   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
                   {
@@ -4036,7 +4062,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -5167,7 +5193,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          assert( consdata->slackvar != NULL );
 
          /* insert slack variable into hash */
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackhash, consdata->slackvar, (void*) (size_t) (INT_MAX)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->slackhash, consdata->slackvar, INT_MAX) );
          assert( SCIPhashmapExists(conshdlrdata->slackhash, consdata->slackvar) );
          ++conshdlrdata->nslackvars;
       }
@@ -5626,6 +5652,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
    assert( consdata != NULL );
 
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
+
    /* create transformed constraint with the same flags */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
@@ -5857,7 +5887,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -6360,7 +6390,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip),
             conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
@@ -6425,7 +6455,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
-      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
    *result = SCIP_SUCCESS;
@@ -6457,12 +6487,13 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    SCIPdebugMsg(scip, "%socking constraint <%s>.\n", (nlocksneg < 0) || (nlockspos < 0) ? "Unl" : "L", SCIPconsGetName(cons));
 #endif
 
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->binvar, nlocksneg, nlockspos) );
+   SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, locktype, nlocksneg, nlockspos) );
 
    if ( consdata->linconsactive )
    {
       assert( consdata->slackvar != NULL );
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->slackvar, nlocksneg, nlockspos) );
+
+      SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, locktype, nlocksneg, nlockspos) );
    }
    else
    {
@@ -6489,22 +6520,22 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
          }
          else
          {
             if ( haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlocksneg, nlockspos) );
             }
             if ( hasrhs )
             {
-               SCIP_CALL( SCIPaddVarLocks(scip, linvars[j], nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, linvars[j], locktype, nlockspos, nlocksneg) );
             }
          }
       }
@@ -7440,6 +7471,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
             binvar, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
+      /* do not need to capture slack variable and linear constraint here */
 
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -7464,10 +7496,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
          }
       }
    }
-
-   /* release slack variable and linear constraint */
-   SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
-   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
 
    return SCIP_OKAY;
 }
@@ -7627,6 +7655,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
+
+   /* capture slack variable and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    return SCIP_OKAY;
 }
@@ -7902,9 +7934,9 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_RETCODE SCIPsetSlackVarUb(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_CONS*            cons,                /**< indicator constraint */
-   SCIP_Real             ub                   /**< upper bound for slack variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< indicator constraint */
+   SCIP_Real             ub                  /**< upper bound for slack variable */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8123,7 +8155,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
                if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 1.0) )
                {
                   /* check whether variable only occurs in the current constraint */
-                  if ( SCIPvarGetNLocksUp(binvar) <= 1 )
+                  if ( SCIPvarGetNLocksUpType(binvar, SCIP_LOCKTYPE_MODEL) <= 1 )
                   {
                      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
                      *changed = TRUE;
@@ -8141,7 +8173,8 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             {
                /* setting variable to 0 does not increase objective -> check whether variable only occurs in the current constraint
                 * note: binary variables are only locked up */
-               if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+               if ( SCIPvarGetNLocksDownType(binvar, SCIP_LOCKTYPE_MODEL) <= 0
+                  && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
                {
                   SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
                   *changed = TRUE;

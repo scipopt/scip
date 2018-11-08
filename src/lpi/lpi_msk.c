@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,6 +18,15 @@
  * @brief  LP interface for MOSEK
  * @author Bo Jensen
  * @author Tristan Gally
+ * @author Marc Pfetsch
+ *
+ * @todo Check whether MSK_IPAR_{SIM_DUAL|PRIMAL}_RESTRICT_SELECTION should be used if problem is solved from scratch or
+ *       if no basis is available.
+ * @todo Revise handling of the MSK_RES_TRM_MAX_NUM_SETBACKS return value: Remove it form the check of MOSEK_CALL and
+ *       include it in filterTRMrescode().
+ * @todo Check whether SCIPlpiGetSolFeasibility() should also return primal/dual feasible if the status is
+ *       MSK_SOL_STA_NEAR_PRIM_FEAS, MSK_SOL_STA_NEAR_DUAL_FEAS.
+ * @todo Check why it can happen that the termination code is MSK_RES_OK, but the solution status is MSK_SOL_STA_UNKNOWN.
  */
 
 #include <assert.h>
@@ -27,6 +36,7 @@
 
 #include "lpi/lpi.h"
 #include "scip/bitencode.h"
+#include "scip/pub_message.h"
 #include <string.h>
 
 /* do defines for windows directly here to make the lpi more independent */
@@ -41,7 +51,9 @@
 #define scipmskobjsen MSKobjsensee
 #define SENSE2MOSEK(objsen) (((objsen)==SCIP_OBJSEN_MINIMIZE)?(MSK_OBJECTIVE_SENSE_MINIMIZE):(MSK_OBJECTIVE_SENSE_MAXIMIZE))
 
-#define MOSEK_CALL(x)  do                                                                                     \
+typedef enum MSKoptimizertype_enum MSKoptimizertype;
+
+#define MOSEK_CALL(x)  do                                               \
                        {  /*lint --e{641}*/                                                                   \
                           MSKrescodee _restat_;                                                               \
                           _restat_ = (x);                                                                     \
@@ -76,32 +88,30 @@ static int numlp         =           0;
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
-#define DEBUG_PARAM_SETTING          0
 #define DEBUG_PRINT_STAT             0
+#define DEBUG_PARAM_SETTING          0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
 #define DEBUG_DO_INTPNT_FEAS_CHECK   0
 #define DEBUG_CHECK_STATE_TOL        1e-5
 #define SHOW_ERRORS                  0
+#define SHOW_RELATIVE_OPTIMAL_GAP    0
 #define ASSERT_ON_NUMERICAL_TROUBLES 0
 #define ASSERT_ON_WARNING            0
 #define FORCE_MOSEK_LOG              0       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define FORCE_MOSEK_SUMMARY          0
 #define FORCE_NO_MAXITER             0
-#define FORCE_SILENCE                1       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define SETBACK_LIMIT                250
-#define SCIP_CONTROLS_PRICING        1
-#define SCIP_CONTROLS_TOLERANCES     1
 #define STRONGBRANCH_PRICING         MSK_SIM_SELECTION_SE
 #define SUPRESS_NAME_ERROR           1
 #define WRITE_DUAL                   0
 #define WRITE_PRIMAL                 0
 #define WRITE_INTPNT                 0
-#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0
+#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0 || FORCE_MOSEK_LOG > 0 || FORCE_MOSEK_SUMMARY > 0
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
-#define ALWAYS_SOLVE_PRIMAL          1
+#define ALWAYS_SOLVE_PRIMAL_FORM     1
 #if DEBUG_PRINT_STAT > 0
 static int numstrongbranchmaxiterup =  0;
 static int numstrongbranchmaxiterdo =  0;
@@ -123,6 +133,56 @@ static int numstrongbranchobjdo     =  0;
 static int numprimalobj             =  0;
 static int numdualobj               =  0;
 #endif
+
+
+/** internal data for Mosek LPI */
+struct SCIP_LPi
+{
+   MSKtask_t             task;               /**< Mosek task */
+   MSKrescodee           termcode;           /**< termination code of last optimization run */
+   int                   itercount;          /**< iteration count of last optimization run */
+   SCIP_PRICING          pricing;            /**< SCIP pricing setting */
+   int                   lpid;               /**< id for LP within same task */
+   MSKoptimizertype      lastalgo;           /**< algorithm type of last solving call */
+   MSKstakeye*           skx;                /**< basis status for columns */
+   MSKstakeye*           skc;                /**< basis status for rows */
+   MSKboundkeye*         bkx;                /**< bound keys for columns */
+   MSKboundkeye*         bkc;                /**< bound keys for rows */
+   MSKint32t*            aptre;              /**< row or column end pointers */
+   int                   skxsize;            /**< size of skx array */
+   int                   skcsize;            /**< size of skc array */
+   int                   bkxsize;            /**< size of bkx */
+   int                   bkcsize;            /**< size of bkx */
+   int                   aptresize;          /**< size of aptre */
+   MSKsoltypee           lastsolvetype;      /**< Which solver was called last and which solution should be returned? */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
+   SCIP_Bool             fromscratch;        /**< Shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
+   SCIP_Bool             clearstate;         /**< Shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
+   SCIP_Bool             lpinfo;             /**< Should LP solver output information to the screen? */
+   int                   restrictselectdef;  /**< default value for MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION */
+   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
+};
+
+typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
+#define COLS_PER_PACKET SCIP_DUALPACKETSIZE
+typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
+#define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
+
+/** basis status */
+struct SCIP_LPiState
+{
+   int                   num;
+   MSKsolstae            solsta;             /**< solution status */
+   int                   ncols;              /**< number of columns */
+   int                   nrows;              /**< number of rows */
+   COLPACKET*            skx;                /**< basis status for columns */
+   ROWPACKET*            skc;                /**< basis status for rows */
+};
+
+
+/*
+ * Local functions
+ */
 
 /** gives problem and solution status for a Mosek Task
  *
@@ -154,42 +214,6 @@ MSKrescodee MSK_getsolutionstatus(
    return MSK_RES_OK;
 }
 
-/** internal data for Mosek LPI */
-struct SCIP_LPi
-{
-   MSKtask_t             task;               /**< Mosek task */
-   MSKrescodee           termcode;           /**< termination code of last optimization run */
-   int                   itercount;          /**< iteration count of last optimization run */
-   SCIP_PRICING          pricing;            /**< SCIP pricing setting */
-   int                   lpid;               /**< id for LP within same task */
-   MSKstakeye*           skx;                /**< basis status for columns */
-   MSKstakeye*           skc;                /**< basis status for rows */
-   int                   skxsize;            /**< size of skx array */
-   int                   skcsize;            /**< size of skc array */
-   MSKsoltypee           lastsolvetype;      /**< Which solver was called last and which solution should be returned? */
-   SCIP_Bool             solved;             /**< was the current LP solved? */
-   SCIP_Bool             fromscratch;        /**< Shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
-   SCIP_Bool             clearstate;         /**< Shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
-   SCIP_Bool             lpinfo;             /**< Should LP solver output information to the screen? */
-   SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
-};
-
-typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
-#define COLS_PER_PACKET SCIP_DUALPACKETSIZE
-typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
-#define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
-
-/** basis status */
-struct SCIP_LPiState
-{
-   int                   num;
-   MSKsolstae            solsta;             /**< solution status */
-   int                   ncols;              /**< number of columns */
-   int                   nrows;              /**< number of rows */
-   COLPACKET*            skx;                /**< basis status for columns */
-   ROWPACKET*            skc;                /**< basis status for rows */
-};
-
 /** returns the number of packets needed to store column packet information */
 static
 int colpacketNum(
@@ -208,14 +232,14 @@ int rowpacketNum(
    return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
-/** create error string */
+/** print string using message handler of SCIP */
 static
 void MSKAPI printstr(
    MSKuserhandle_t       handle,             /**< error handle */
    const char*           str                 /**< string that contains string on output */
    )
 {  /*lint --e{715}*/
-#if SUPRESS_NAME_ERROR && !FORCE_SILENCE
+#if SUPRESS_NAME_ERROR
    char errstr[32];
    snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
    if (0 == strncmp(errstr, str, strlen(errstr)))
@@ -345,10 +369,62 @@ SCIP_RETCODE scip_checkdata(
 }
 #endif
 
+/** resizes bound keys array bkx to have at least ncols entries */
+static
+SCIP_RETCODE ensureBkxMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols               /**< number of columns */
+   )
+{
+   if ( lpi->bkxsize < ncols )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->bkxsize, ncols);
 
-/*
- * Local functions
- */
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->bkx), newsize) );
+      lpi->bkxsize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resizes bound keys array bkc to have at least nrows entries */
+static
+SCIP_RETCODE ensureBkcMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   nrows               /**< number of rows */
+   )
+{
+   if ( lpi->bkcsize < nrows )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->bkcsize, nrows);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->bkc), newsize) );
+      lpi->bkcsize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resizes aptre array to have at least n entries */
+static
+SCIP_RETCODE ensureAptreMem(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   n                   /**< number of entries */
+   )
+{
+   if ( lpi->aptresize < n )
+   {
+      int newsize;
+      newsize = MAX(2*lpi->aptresize, n);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->aptre), newsize) );
+      lpi->aptresize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** marks the current LP to be unsolved */
 static
@@ -418,31 +494,29 @@ SCIP_RETCODE getEndptrs(
    int                   n,                  /**< array size */
    const int*            beg,                /**< array of beginning indices */
    int                   nnonz,              /**< number of nonzeros */
-   int**                 aptre               /**< pointer to store the result */
+   MSKint32t*            aptre               /**< array to store the result */
    )
 {
    int i;
 
    assert(beg != NULL || nnonz == 0);
 
-   SCIP_ALLOC( BMSallocMemoryArray(aptre, n) );
-
    if (nnonz > 0)
    {
       assert(beg != NULL);
       for(i = 0; i < n-1; i++)
       {
-         (*aptre)[i] = beg[i+1];
-         assert((*aptre)[i] >= beg[i]);
+         aptre[i] = beg[i+1];
+         assert(aptre[i] >= beg[i]);
       }
 
-      (*aptre)[n-1] = nnonz;
-      assert((*aptre)[n-1] >= beg[n-1]);
+      aptre[n-1] = nnonz;
+      assert(aptre[n-1] >= beg[n-1]);
    }
    else
    {
       for( i = 0; i < n; i++ )
-         (*aptre)[i] = 0;
+         aptre[i] = 0;
    }
 
    return SCIP_OKAY;
@@ -513,11 +587,12 @@ SCIP_RETCODE getIndicesFromDense(
    return SCIP_OKAY;
 }
 
+/** scale a vector */
 static
 void scale_vec(
-   int                   len,
-   double*               vec,
-   double                s
+   int                   len,                /**< length of vector */
+   double*               vec,                /**< vector to be scaled */
+   double                s                   /**< scaling factor */
    )
 {
    int i;
@@ -527,23 +602,26 @@ void scale_vec(
    }
 }
 
+/** scale lower and upper bound */
 static
 void scale_bound(
-   MSKboundkeye*         bk,
-   double*               bl,
-   double*               bu,
-   double                s
+   MSKboundkeye*         bk,                 /**< pointer to store boundkeys to inform MOSEK about status of var/row */
+   double*               bl,                 /**< lower bound */
+   double*               bu,                 /**< upper bound */
+   double                s                   /**< scaling factor */
    )
 {
-   switch(*bk)
+   switch( *bk )
    {
    case MSK_BK_LO:
       *bl *= s;
-      if (s < 0) *bk = MSK_BK_UP;
+      if ( s < 0.0 )
+         *bk = MSK_BK_UP;
       break;
    case MSK_BK_UP:
       *bu *= s;
-      if (s < 0) *bk = MSK_BK_LO;
+      if ( s < 0.0 )
+         *bk = MSK_BK_LO;
       break;
    case MSK_BK_FX:
    case MSK_BK_RA:
@@ -557,7 +635,8 @@ void scale_bound(
       break;
    }  /*lint !e788*/
 
-   if (s < 0)
+   /* switch bounds if scaling is negative */
+   if ( s < 0.0 )
    {
       double tmp;
       tmp = *bl;
@@ -566,14 +645,15 @@ void scale_bound(
    }
 }
 
+/** resizes state arrays to have at least ncols/nrows entries */
 static
 SCIP_RETCODE ensureStateMem(
-   SCIP_LPI*             lpi,
-   int                   ncols,
-   int                   nrows
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< number of columns */
+   int                   nrows               /**< number of rows */
    )
 {
-   if (lpi->skxsize < ncols)
+   if ( lpi->skxsize < ncols )
    {
       int newsize;
       newsize = MAX(2*lpi->skxsize, ncols);
@@ -582,7 +662,7 @@ SCIP_RETCODE ensureStateMem(
       lpi->skxsize = newsize;
    }
 
-   if (lpi->skcsize < nrows)
+   if ( lpi->skcsize < nrows )
    {
       int newsize;
       newsize = MAX(2*lpi->skcsize, nrows);
@@ -594,11 +674,12 @@ SCIP_RETCODE ensureStateMem(
    return SCIP_OKAY;
 }
 
+/** get base and store in skc/skx arrays */
 static
 SCIP_RETCODE getbase(
-   SCIP_LPI*             lpi,
-   int                   ncols,
-   int                   nrows
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< number of columns */
+   int                   nrows               /**< number of rows */
    )
 {
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
@@ -612,6 +693,7 @@ SCIP_RETCODE getbase(
    return SCIP_OKAY;
 }
 
+/** set base to the values given in skc/skx arrays */
 static
 SCIP_RETCODE setbase(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
@@ -664,6 +746,7 @@ void* SCIPlpiGetSolverPointer(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
    return (void*) lpi->task;
 }
 
@@ -678,6 +761,31 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    return SCIP_LPERROR;
 }
 
+/** informs about availability of a primal simplex solving method */
+SCIP_Bool SCIPlpiHasPrimalSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a dual simplex solving method */
+SCIP_Bool SCIPlpiHasDualSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/** informs about availability of a barrier solving method */
+SCIP_Bool SCIPlpiHasBarrierSolve(
+   void
+   )
+{
+   return TRUE;
+}
+
+/**@} */
 
 
 /*
@@ -740,17 +848,28 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lpid = nextlpid++;
-   (*lpi)->skxsize = 0;
-   (*lpi)->skcsize = 0;
+   (*lpi)->lastalgo = MSK_OPTIMIZER_FREE;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
+   (*lpi)->bkx = NULL;
+   (*lpi)->bkc = NULL;
+   (*lpi)->aptre = NULL;
+   (*lpi)->skxsize = 0;
+   (*lpi)->skcsize = 0;
+   (*lpi)->bkxsize = 0;
+   (*lpi)->bkcsize = 0;
+   (*lpi)->aptresize = 0;
    (*lpi)->lastsolvetype = (MSKsoltypee) -1;
    (*lpi)->lpinfo = FALSE;
+   (*lpi)->restrictselectdef = 50;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    invalidateSolution(*lpi);
+
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG, MSK_OFF) );
+   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_LOG_SIM, MSK_OFF) );
 
    return SCIP_OKAY;
 }
@@ -768,6 +887,9 @@ SCIP_RETCODE SCIPlpiFree(
 
    MOSEK_CALL( MSK_deletetask(&(*lpi)->task) );
 
+   BMSfreeMemoryArrayNull(&(*lpi)->aptre);
+   BMSfreeMemoryArrayNull(&(*lpi)->bkx);
+   BMSfreeMemoryArrayNull(&(*lpi)->bkc);
    BMSfreeMemoryArrayNull(&(*lpi)->skx);
    BMSfreeMemoryArrayNull(&(*lpi)->skc);
    BMSfreeMemory(lpi);
@@ -805,16 +927,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const int*            ind,                /**< row indices of constraint matrix entries */
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
-{  /*lint --e{715}*/
-   int* aptre;
-   MSKboundkeye* bkc;
-   MSKboundkeye* bkx;
-
+{
 #ifndef NDEBUG
    {
       int j;
       for( j = 0; j < nnonz; j++ )
-         assert( val[j] != 0 );
+         assert( val[j] != 0.0 );
    }
 #endif
 
@@ -834,47 +952,29 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    invalidateSolution(lpi);
 
-   /* initialize all array with NULL */
-   aptre = NULL;
-   bkc = NULL;
-   bkx = NULL;
-
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiLoadColLP") );
 #endif
 
    if (nrows > 0)
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
-
-      generateMskBoundkeys(nrows, lhs, rhs, bkc);
+      SCIP_CALL( ensureBkcMem(lpi, nrows) );
+      generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
    }
 
    if (ncols > 0)
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
+      SCIP_CALL( ensureBkxMem(lpi, ncols) );
+      generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
 
-      generateMskBoundkeys(ncols, lb, ub, bkx);
-
-      SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
+      SCIP_CALL( ensureAptreMem(lpi, ncols) );
+      SCIP_CALL( getEndptrs(ncols, beg, nnonz, lpi->aptre) );
    }
 
-   MOSEK_CALL( MSK_inputdata(lpi->task, nrows, ncols, nrows, ncols, obj, 0.0, beg, aptre, ind, val,
-         bkc, lhs, rhs, bkx, lb, ub) );
+   MOSEK_CALL( MSK_inputdata(lpi->task, nrows, ncols, nrows, ncols, obj, 0.0, beg, lpi->aptre, ind, val,
+         lpi->bkc, lhs, rhs, lpi->bkx, lb, ub) );
 
    MOSEK_CALL( MSK_putobjsense(lpi->task, SENSE2MOSEK(objsen)) );
-
-
-   if( ncols > 0 )
-   {
-      BMSfreeMemoryArray(&aptre);
-      BMSfreeMemoryArray(&bkx);
-   }
-
-   if( nrows > 0 )
-   {
-      BMSfreeMemoryArray(&bkc);
-   }
 
    if( colnames != NULL )
    {
@@ -916,13 +1016,11 @@ SCIP_RETCODE SCIPlpiAddCols(
    const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{  /*lint --e{715}*/
+{
 #if MSK_VERSION_MAJOR < 7
    const int* aptrb;
 #endif
 
-   int* aptre;
-   MSKboundkeye* bkx;
    int oldcols;
 
    assert(MosekEnv != NULL);
@@ -948,14 +1046,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    if (ncols == 0)
       return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
-   generateMskBoundkeys(ncols, lb, ub, bkx);
+   SCIP_CALL( ensureBkxMem(lpi, ncols) );
+   generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &oldcols) );
 
    MOSEK_CALL( MSK_appendvars(lpi->task, ncols) );
    MOSEK_CALL( MSK_putcslice(lpi->task, oldcols, oldcols+ncols, obj) );
-   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, bkx, lb, ub) );
+   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, lpi->bkx, lb, ub) );
 
    if( nnonz > 0 )
    {
@@ -972,12 +1070,10 @@ SCIP_RETCODE SCIPlpiAddCols(
       }
 #endif
 
-      SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
-      MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
-      BMSfreeMemoryArray(&aptre);
+      SCIP_CALL( ensureAptreMem(lpi, ncols) );
+      SCIP_CALL( getEndptrs(ncols, beg, nnonz, lpi->aptre) );
+      MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, lpi->aptre, ind, val) );
    }
-
-   BMSfreeMemoryArray(&bkx);
 
    if( colnames != NULL )
    {
@@ -1019,7 +1115,6 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    SCIP_CALL( getIndicesRange(firstcol, lastcol, &sub) );
 
-   /*printf("Deleting vars %d to %d\n", firstcol, lastcol);*/
    MOSEK_CALL( MSK_removevars(lpi->task, lastcol-firstcol+1, sub) );
 
    BMSfreeMemoryArray(&sub);
@@ -1039,7 +1134,7 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {
-   int* sub;
+   int* sub = NULL;
    int count;
    int ncols;
    int col;
@@ -1060,7 +1155,6 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
 
-   sub = NULL;
    SCIP_CALL( getIndicesFromDense(dstat, ncols, &count, &sub) );
 
    col = 0;
@@ -1079,7 +1173,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    if (count > 0)
    {
-      SCIPdebugMessage("Deleting %d vars %d,...\n", count, sub[0]);
+      SCIPdebugMessage("Deleting %d vars %d, ...\n", count, sub[0]);
       MOSEK_CALL( MSK_removevars(lpi->task, count, sub) );
       BMSfreeMemoryArray(&sub);
    }
@@ -1103,9 +1197,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{  /*lint --e{715}*/
-   int* aptre;
-   MSKboundkeye* bkc;
+{
    int oldrows;
 
    assert(MosekEnv != NULL);
@@ -1126,14 +1218,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    if (nrows == 0)
       return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
+   SCIP_CALL( ensureBkcMem(lpi, nrows) );
 
-   generateMskBoundkeys(nrows, lhs, rhs, bkc);
+   generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &oldrows) );
 
    MOSEK_CALL( MSK_appendcons(lpi->task, nrows) );
-   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, lhs, rhs) );
+   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, lpi->bkc, lhs, rhs) );
 
    if( nnonz > 0 )
    {
@@ -1150,12 +1242,10 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 #endif
 
-      SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
-      MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
-      BMSfreeMemoryArray(&aptre);
+      SCIP_CALL( ensureAptreMem(lpi, nrows) );
+      SCIP_CALL( getEndptrs(nrows, beg, nnonz, lpi->aptre) );
+      MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, lpi->aptre, ind, val) );
    }
-
-   BMSfreeMemoryArray(&bkc);
 
    if( rownames != NULL )
    {
@@ -1257,7 +1347,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    if (count > 0)
    {
-      SCIPdebugMessage("Deleting %d cons %d,...\n", count, sub[0]);
+      SCIPdebugMessage("Deleting %d cons %d, ...\n", count, sub[0]);
       MOSEK_CALL( MSK_removecons(lpi->task, count, sub) );
       BMSfreeMemoryArray(&sub);
    }
@@ -1303,7 +1393,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
-   MSKboundkeye* bkx;
    int i;
 
    assert(MosekEnv != NULL);
@@ -1337,12 +1426,10 @@ SCIP_RETCODE SCIPlpiChgBounds(
       }
    }
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
+   SCIP_CALL( ensureBkxMem(lpi, ncols) );
 
-   generateMskBoundkeys(ncols, lb, ub, bkx);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, bkx, lb, ub) );
-
-   BMSfreeMemoryArray(&bkx);
+   generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, lpi->bkx, lb, ub) );
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
@@ -1360,12 +1447,11 @@ SCIP_RETCODE SCIPlpiChgSides(
    const SCIP_Real*      rhs                 /**< new values for right hand sides */
    )
 {
-   MSKboundkeye* bkc;
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(ind != NULL);
+
    if( nrows <= 0 )
       return SCIP_OKAY;
 
@@ -1377,12 +1463,10 @@ SCIP_RETCODE SCIPlpiChgSides(
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
 #endif
 
-   SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
+   SCIP_CALL( ensureBkcMem(lpi, nrows) );
 
-   generateMskBoundkeys(nrows, lhs, rhs, bkc);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, bkc, lhs, rhs) );
-
-   BMSfreeMemoryArray(&bkc);
+   generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, lpi->bkc, lhs, rhs) );
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
@@ -1641,20 +1725,19 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    return SCIP_OKAY;
 }
 
+/** get a slice of a row or column */
 static
 SCIP_RETCODE getASlice(
-   SCIP_LPI*             lpi,
-   MSKaccmodee           iscon,
-   int                   first,
-   int                   last,
-   int*                  nnonz,
-   int*                  beg,
-   int*                  ind,
-   double*               val
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   MSKaccmodee           iscon,              /**< whether we are requesting a slice of a constraint or column */
+   int                   first,              /**< first index */
+   int                   last,               /**< last index */
+   int*                  nnonz,              /**< pointer to store the number of nonzeros */
+   int*                  beg,                /**< array for begins of indices/values */
+   int*                  ind,                /**< array of row/column indices */
+   double*               val                 /**< array of values */
    )
 {
-   int* aptre;
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -1674,15 +1757,13 @@ SCIP_RETCODE getASlice(
       assert(ind != NULL);
       assert(val != NULL);
 
-      SCIP_ALLOC( BMSallocMemoryArray(&aptre, last - first + 1) );
+      SCIP_CALL( ensureAptreMem(lpi, last - first + 1) );
 
       MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon, first, last+1, nnonz) );
       surplus = *nnonz;
-      MOSEK_CALL( MSK_getaslice(lpi->task, iscon, first, last+1, *nnonz, &surplus, beg, aptre, ind, val) );
+      MOSEK_CALL( MSK_getaslice(lpi->task, iscon, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
 
       assert(surplus == 0);
-
-      BMSfreeMemoryArray(&aptre);
    }
 
 #if DEBUG_CHECK_DATA > 0
@@ -1794,7 +1875,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1816,7 +1899,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1966,41 +2051,39 @@ SCIP_RETCODE getSolutionStatus(
    return SCIP_OKAY;
 }
 
-
+/** helper method to filter out numerical problems */
 static
 MSKrescodee filterTRMrescode(
-   SCIP_MESSAGEHDLR*     messagehdlr,
-   MSKrescodee*          termcode,
-   MSKrescodee           res
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   MSKrescodee*          termcode,           /**< pointer to store output termination code */
+   MSKrescodee           res                 /**< input result of call to Mosek function */
    )
-{
-   if (   res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
-      || res == MSK_RES_TRM_OBJECTIVE_RANGE || res == MSK_RES_TRM_STALL
+{  /*lint --e{715}*/
+   assert( termcode != NULL );
+
 #if ASSERT_ON_NUMERICAL_TROUBLES > 0
-      || res == MSK_RES_TRM_MAX_NUM_SETBACKS
-      || res == MSK_RES_TRM_NUMERICAL_PROBLEM
-#endif
-          )
+   if ( res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM )
    {
+      SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
+      assert(0);
       *termcode = res;
-      if (res == MSK_RES_TRM_MAX_NUM_SETBACKS || res == MSK_RES_TRM_NUMERICAL_PROBLEM)
-      {
-         SCIPmessagePrintWarning(messagehdlr, "Return code %d in [%d]\n", res, optimizecount);
-
-#if ASSERT_ON_WARNING
-         assert(0);
-#endif
-      }
-
       return MSK_RES_OK;
    }
-   else
+#endif
+
+   if (  res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
+      || res == MSK_RES_TRM_OBJECTIVE_RANGE || res == MSK_RES_TRM_STALL )
    {
-      *termcode = MSK_RES_OK;
-      return res;
+      *termcode = res;
+      res = MSK_RES_OK;
    }
+   else
+      *termcode = MSK_RES_OK;
+
+   return res;
 }
 
+/** solve problem with the simplex algorithm */
 static
 SCIP_RETCODE SolveWSimplex(
    SCIP_LPI*             lpi                 /**< LP interface structure */
@@ -2015,12 +2098,18 @@ SCIP_RETCODE SolveWSimplex(
    MSKsolstae solsta;
    double pobj, dobj;
 
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
    invalidateSolution(lpi);
    lpi->lastsolvetype = MSK_SOL_BAS;
 
+   /* store original settings */
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, &presolve) );
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, &maxiter) );
 
+   /* set some paramters */
 #if DEBUG_EASY_REPRODUCE
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_AUTO_SORT_A_BEFORE_OPT, MSK_ON) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_OFF) );
@@ -2031,15 +2120,14 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_AUTO_UPDATE_SOL_INFO, MSK_OFF) );
 
 #if FORCE_MOSEK_LOG
-
    if( optimizecount > WRITE_ABOVE )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 4) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 1) );
    }
    else
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 4) );
    }
 #endif
 
@@ -2054,7 +2142,8 @@ SCIP_RETCODE SolveWSimplex(
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, MSK_PRESOLVE_MODE_ON) );
    }
 
-#if ALWAYS_SOLVE_PRIMAL > 0
+#if ALWAYS_SOLVE_PRIMAL_FORM > 0
+   /* always solve the primal formulation */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SOLVE_FORM, MSK_SOLVE_PRIMAL) );
 #endif
 
@@ -2062,17 +2151,20 @@ SCIP_RETCODE SolveWSimplex(
    SCIP_CALL( scip_checkdata(lpi, "SolveWSimplex") );
 #endif
 
-   assert(MosekEnv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->task != NULL);
-
    if( gotbasicsol && maxiter < 20000 )
    {
       /* Since max iter often is set, we switch off restricted pricing */
-      MOSEK_CALL( MSK_putintparam(lpi->task,  MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, 0) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
+   }
+   else
+   {
+      /* otherwise use default value */
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, lpi->restrictselectdef) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, lpi->restrictselectdef) );
    }
 
-#if FORCE_NO_MAXITER >  0
+#if FORCE_NO_MAXITER > 0
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
 #endif
 
@@ -2088,19 +2180,18 @@ SCIP_RETCODE SolveWSimplex(
    }
 #endif
 
-#if !FORCE_SILENCE
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 100) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 100) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, 100) );
-#endif
-
+   /* perform actual optimization */
    MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
+   /* resolve with aggresive scaling if the maximal number of setbacks has been reached */
    if( lpi->termcode == MSK_RES_TRM_MAX_NUM_SETBACKS )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
+      int scaling;
 
+      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, &scaling) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
       MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
    }
 
 #if FORCE_MOSEK_SUMMARY
@@ -2119,27 +2210,25 @@ SCIP_RETCODE SolveWSimplex(
    SCIP_CALL( scip_checkdata(lpi, "End optimize with simplex") );
 #endif
 
+   /* set paramaters to their original values */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, presolve) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, maxiter) );
 
+   /* obtain iteration count */
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_SIM_PRIMAL_ITER, &itercount_primal) );
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_SIM_DUAL_ITER, &itercount_dual) );
 
    lpi->itercount = itercount_primal + itercount_dual;
 
+   /* get solution information */
    MOSEK_CALL( MSK_getprimalobj(lpi->task, MSK_SOL_BAS, &pobj) );
    MOSEK_CALL( MSK_getdualobj(lpi->task, MSK_SOL_BAS, &dobj) );
+
    MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 
-#if DEBUG_PRINT_STAT
-   SCIPdebugMessage("maxiter = %d, termcode = %d, prosta = %d, solsta = %d, objval = %g : %g, iter = %d+%d\n",
-      maxiter, lpi->termcode, prosta, solsta, pobj, dobj, itercount_primal, itercount_dual);
-#endif
-
    SCIPdebugMessage("maxiter = %d, termcode = %d, prosta = %d, solsta = %d, objval = %g : %g, iter = %d+%d\n",
       maxiter, lpi->termcode, prosta, solsta, pobj, dobj, itercount_primal, itercount_dual);
 
-   /*  SCIPdebugMessage("Iter dual %d primal %d\n", itercount_dual, itercount_primal); */
    switch (solsta)
    {
    case MSK_SOL_STA_OPTIMAL:
@@ -2151,26 +2240,44 @@ SCIP_RETCODE SolveWSimplex(
       if (lpi->termcode == MSK_RES_OK)
          lpi->solved = TRUE;
       break;
+
    case MSK_SOL_STA_UNKNOWN:
+      /* Mosek seems to have status unknown on the following termination codes */
+      assert( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS || lpi->termcode == MSK_RES_TRM_MAX_TIME ||
+         lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE || lpi->termcode == MSK_RES_TRM_STALL ||
+         lpi->termcode == MSK_RES_OK );
+
+      if ( lpi->termcode != MSK_RES_TRM_MAX_ITERATIONS && lpi->termcode != MSK_RES_TRM_MAX_TIME &&
+           lpi->termcode != MSK_RES_TRM_OBJECTIVE_RANGE )
+      {
+         SCIPmessagePrintWarning(lpi->messagehdlr, "Numerical problem: simplex[%d] returned solsta = %d.\n", optimizecount, solsta);
+         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+#if ASSERT_ON_WARNING
+         assert(0);
+#endif
+      }
+      break;
+
    case MSK_SOL_STA_NEAR_OPTIMAL:
    case MSK_SOL_STA_NEAR_PRIM_FEAS:
    case MSK_SOL_STA_NEAR_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
 
-      if (lpi->termcode == MSK_RES_OK)
-         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
+      assert(lpi->termcode == MSK_RES_OK);
 
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned solsta = %d (numerical problem).\n", optimizecount, solsta);
+      lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
 #if ASSERT_ON_WARNING
       assert(0);
 #endif
       break;
+
    case MSK_SOL_STA_INTEGER_OPTIMAL:
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
 #endif
 
@@ -2183,32 +2290,33 @@ SCIP_RETCODE SolveWSimplex(
 
    switch (prosta)
    {
+   /* already handled above */
    case MSK_PRO_STA_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_PRIM_FEAS:
    case MSK_PRO_STA_DUAL_FEAS:
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_PRIM_INFEAS:
    case MSK_PRO_STA_DUAL_INFEAS:
-      break;
    case MSK_PRO_STA_UNKNOWN:
+      break;
+
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
+      assert(lpi->termcode == MSK_RES_OK);
+
       SCIPmessagePrintWarning(lpi->messagehdlr, "Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
-
-      if (lpi->termcode == MSK_RES_OK)
-         lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
-
+      lpi->termcode = MSK_RES_TRM_NUMERICAL_PROBLEM;
       invalidateSolution(lpi);
-
 #if ASSERT_ON_WARNING
       assert(0);
 #endif
       break;
+
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
 
@@ -2220,18 +2328,22 @@ SCIP_RETCODE SolveWSimplex(
    }  /*lint !e788*/
 
    /* todo: replace numbers by constants, e.g., tolerances */
-   if( solsta == MSK_SOL_STA_OPTIMAL && fabs(dobj) + fabs(dobj) > 1.0e-6 && fabs(pobj-dobj) > 0.0001*(fabs(pobj) + fabs(dobj)))
+#if SHOW_RELATIVE_OPTIMAL_GAP
+   if ( solsta == MSK_SOL_STA_OPTIMAL && fabs(pobj) + fabs(dobj) > 1.0e-6 && fabs(pobj-dobj) > 0.0001*(fabs(pobj) + fabs(dobj)))
    {
       SCIPerrorMessage("Simplex[%d] returned optimal solution with different objvals %g != %g reldiff %.2g%%\n",
-         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
+         optimizecount, pobj, dobj, 100.0 * fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
    }
+#endif
 
+   /* The optimizer terminated with an objective value outside the objective range. */
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
    {
-      if(solsta != MSK_SOL_STA_DUAL_FEAS && solsta != MSK_SOL_STA_OPTIMAL && solsta != MSK_SOL_STA_PRIM_AND_DUAL_FEAS)
+      if (solsta != MSK_SOL_STA_DUAL_FEAS && solsta != MSK_SOL_STA_OPTIMAL && solsta != MSK_SOL_STA_PRIM_AND_DUAL_FEAS)
       {
          SCIPerrorMessage("[%d] Terminated on objective range without dual feasible solsta.\n", optimizecount);
 
+         /* solve again with barrier */
          SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
       }
       else
@@ -2247,8 +2359,7 @@ SCIP_RETCODE SolveWSimplex(
 
             if (1.0e-6*(fabs(bound) + fabs(dobj)) < bound-dobj)
             {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n",
-                  optimizecount, dobj, bound);
+               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", optimizecount, dobj, bound);
 
                SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
             }
@@ -2259,8 +2370,7 @@ SCIP_RETCODE SolveWSimplex(
 
             if (1.0e-6*(fabs(bound) + fabs(dobj)) < dobj-bound)
             {
-               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n",
-                  optimizecount, dobj, bound);
+               SCIPerrorMessage("[%d] Terminated on obj range, dobj = %g, bound = %g\n", optimizecount, dobj, bound);
 
                SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
             }
@@ -2268,6 +2378,7 @@ SCIP_RETCODE SolveWSimplex(
       }
    }
 
+   /* if the simplex took too many iterations, solve again with barrier */
    if (maxiter >= 2000000000)
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, maxiter) );
@@ -2288,7 +2399,7 @@ SCIP_RETCODE SolveWSimplex(
 
       SCIP_CALL( SCIPlpiSolveBarrier(lpi, true) );
 
-      MOSEK_CALL(MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, &prosta, &solsta));
+      MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 
       if (solsta == MSK_SOL_STA_PRIM_INFEAS_CER || solsta == MSK_SOL_STA_DUAL_INFEAS_CER)
       {
@@ -2341,6 +2452,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 #endif
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_PRIMAL_SIMPLEX) );
+   lpi->lastalgo = MSK_OPTIMIZER_PRIMAL_SIMPLEX;
 
 #if WRITE_PRIMAL > 0
    if( optimizecount > WRITE_ABOVE )
@@ -2355,18 +2467,20 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIP_CALL( SolveWSimplex(lpi) );
 
+#ifdef SCIP_DISABLED_CODE
+   /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
       MSKsolstae solsta;
 
-      MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, NULL, &solsta) );
-
+      MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
 
       if( solsta != MSK_SOL_STA_PRIM_FEAS )
       {
          SCIP_CALL( SolveWSimplex(lpi) );
       }
    }
+#endif
 
 #if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -2410,6 +2524,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->clearstate = FALSE;
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_DUAL_SIMPLEX) );
+   lpi->lastalgo = MSK_OPTIMIZER_DUAL_SIMPLEX;
 
 #if WRITE_DUAL > 0
    if( optimizecount > WRITE_ABOVE )
@@ -2421,24 +2536,22 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 #endif
 
-#if !FORCE_SILENCE
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM_FREQ, 1) );
-#endif
-
    SCIP_CALL( SolveWSimplex(lpi) );
 
+#ifdef SCIP_DISABLED_CODE
+   /* the following code is unclear: Why should the resolve change anything ?????? */
    if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
    {
       MSKsolstae solsta;
 
-      MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, NULL, &solsta) );
+      MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
 
       if( solsta != MSK_SOL_STA_DUAL_FEAS )
       {
          SCIP_CALL( SolveWSimplex(lpi) );
       }
    }
+#endif
 
 #if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -2474,14 +2587,13 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #if FORCE_MOSEK_LOG
    if( optimizecount > WRITE_ABOVE )
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 4) );
    }
    else
    {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, 0) );
    }
 #endif
-
 
    SCIPdebugMessage("Calling SCIPlpiSolveBarrier[%d] (%d) ", optimizecount, lpi->lpid);
 
@@ -2498,7 +2610,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_BASIS, crossover ? MSK_BI_ALWAYS : MSK_BI_NEVER) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_INTPNT) );
-
+   lpi->lastalgo = MSK_OPTIMIZER_INTPNT;
 
 #if WRITE_INTPNT > 0
    if( optimizecount > WRITE_ABOVE )
@@ -2520,7 +2632,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_INTPNT_ITER, &lpi->itercount) );
 
-   MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, lpi->lastsolvetype, &prosta, &solsta) );
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, lpi->lastsolvetype, &prosta, &solsta) );
    SCIPdebugMessage("termcode = %d, prosta = %d, solsta = %d, iter = %d\n",
       lpi->termcode, prosta, solsta, lpi->itercount);
 
@@ -2554,7 +2666,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    case MSK_SOL_STA_INTEGER_OPTIMAL:
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
 #endif
 
@@ -2592,7 +2704,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #endif
       break;
    default:
-#if SHOW_ERRORS && !FORCE_SILENCE
+#if SHOW_ERRORS
       SCIPerrorMessage("Barrier[%d] returned prosta = %d\n", optimizecount, prosta);
 #endif
 
@@ -2631,13 +2743,14 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    assert(lpi != NULL);
    /* assert(MosekEnv != NULL);
    assert(lpi->task != NULL); */
+
    /* currently do nothing */
    return SCIP_OKAY;
 }
 
 /** performs strong branching iterations on all candidates
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE SCIPlpiStrongbranch(
@@ -2876,7 +2989,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /** performs strong branching iterations on one @b fractional candidate
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2900,7 +3013,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
 /** performs strong branching iterations on given @b fractional candidates
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2940,7 +3053,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 
 /** performs strong branching iterations on one candidate with @b integral value
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchInt(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2964,7 +3077,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
 /** performs strong branching iterations on given candidates with @b integral values
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiStrongbranchesInt(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3018,61 +3131,67 @@ SCIP_Bool SCIPlpiWasSolved(
    return lpi->solved;
 }
 
-/** gets information about primal and dual feasibility of the current LP solution */
+/** gets information about primal and dual feasibility of the current LP solution
+ *
+ *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
+ *  returns true. If the LP is changed, this information might be invalidated.
+ *
+ *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
+ *  the problem might actually be feasible).
+ */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool*            primalfeasible,     /**< stores primal feasibility status */
-   SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
+   SCIP_Bool*            primalfeasible,     /**< pointer to store primal feasibility status */
+   SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {
-   MSKsolstae solsta;
-   SCIP_Bool pfeas;
-   SCIP_Bool dfeas;
+   MSKprostae prosta;
 
-   assert(MosekEnv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->task != NULL);
+   assert( MosekEnv != NULL );
+   assert( lpi != NULL );
+   assert( lpi->task != NULL );
    assert( primalfeasible != NULL );
    assert( dualfeasible != NULL );
 
    SCIPdebugMessage("Calling SCIPlpiGetSolFeasibility (%d)\n", lpi->lpid);
 
-   pfeas = FALSE;
-   dfeas = FALSE;
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, lpi->lastsolvetype, &prosta, NULL) );
 
-   MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, lpi->lastsolvetype, NULL, &solsta) );
-
-   switch (solsta)
+   switch (prosta)
    {
-   case MSK_SOL_STA_OPTIMAL:
-   case MSK_SOL_STA_PRIM_AND_DUAL_FEAS:
-      pfeas = TRUE;
-      dfeas = TRUE;
+   case MSK_PRO_STA_PRIM_AND_DUAL_FEAS:
+      *primalfeasible = TRUE;
+      *dualfeasible = TRUE;
       break;
-   case MSK_SOL_STA_PRIM_FEAS:
-      pfeas = TRUE;
+   case MSK_PRO_STA_PRIM_FEAS:
+      *primalfeasible = TRUE;
+      *dualfeasible = FALSE;
       break;
-   case MSK_SOL_STA_DUAL_FEAS:
-      dfeas = TRUE;
+   case MSK_PRO_STA_DUAL_FEAS:
+      *primalfeasible = FALSE;
+      *dualfeasible = TRUE;
       break;
-   case MSK_SOL_STA_UNKNOWN:
-   case MSK_SOL_STA_NEAR_OPTIMAL:
-   case MSK_SOL_STA_NEAR_PRIM_FEAS:
-   case MSK_SOL_STA_NEAR_DUAL_FEAS:
-   case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
-   case MSK_SOL_STA_PRIM_INFEAS_CER:
-   case MSK_SOL_STA_DUAL_INFEAS_CER:
-   case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
-   case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
-   case MSK_SOL_STA_INTEGER_OPTIMAL:
-   case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
+   case MSK_PRO_STA_DUAL_INFEAS:
+      /* assume that we have a primal solution if we used the primal simplex */
+      *primalfeasible = (lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX);
+      *dualfeasible = FALSE;
+      break;
+   case MSK_PRO_STA_UNKNOWN:
+   case MSK_PRO_STA_PRIM_INFEAS:
+   case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
+   case MSK_PRO_STA_ILL_POSED:
+   case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
+   case MSK_PRO_STA_NEAR_PRIM_FEAS:
+   case MSK_PRO_STA_NEAR_DUAL_FEAS:
+   case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
+      *primalfeasible = FALSE;
+      *dualfeasible = FALSE;
       break;
    default:
       return SCIP_LPERROR;
    }  /*lint !e788*/
-
-   *primalfeasible = pfeas;
-   *dualfeasible = dfeas;
 
    return SCIP_OKAY;
 }
@@ -3097,7 +3216,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    return ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
-      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
+      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS );
 }
 
 /** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
@@ -3125,10 +3244,16 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   MSKsolstae solsta;
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
-   return FALSE;
+
+   SCIP_ABORT_FALSE( getSolutionStatus(lpi, NULL, &solsta) );
+
+   /* assume primal solution and ray is available if we used the primal simplex and the dual is proven to be infeasible */
+   return (solsta == MSK_SOL_STA_DUAL_INFEAS_CER && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3139,6 +3264,7 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
    return SCIPlpiExistsDualRay(lpi);
 }
 
@@ -3157,7 +3283,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, NULL) );
 
-   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
+   return (prosta == MSK_PRO_STA_PRIM_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS || (prosta == MSK_PRO_STA_DUAL_INFEAS && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3178,9 +3304,9 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
-   return (   solsta == MSK_SOL_STA_PRIM_INFEAS_CER
+   return ( solsta == MSK_SOL_STA_PRIM_INFEAS_CER
       || prosta == MSK_PRO_STA_PRIM_INFEAS
-      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
+      || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS );
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
@@ -3211,6 +3337,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
    return FALSE;
 }
 
@@ -3222,6 +3349,7 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
    return SCIPlpiExistsPrimalRay(lpi);
 }
 
@@ -3243,7 +3371,6 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    return (prosta == MSK_PRO_STA_DUAL_FEAS || prosta == MSK_PRO_STA_PRIM_AND_DUAL_FEAS);
 }
 
-
 /** returns TRUE iff LP was solved to optimality */
 SCIP_Bool SCIPlpiIsOptimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
@@ -3262,7 +3389,13 @@ SCIP_Bool SCIPlpiIsOptimal(
    return (solsta == MSK_SOL_STA_OPTIMAL);
 }
 
-/** returns TRUE iff current LP basis is stable */
+/** returns TRUE iff current LP solution is stable
+ *
+ *  This function should return true if the solution is reliable, i.e., feasible and optimal (or proven
+ *  infeasible/unbounded) with respect to the original problem. The optimality status might be with respect to a scaled
+ *  version of the problem, but the solution might not be feasible to the unscaled original problem; in this case,
+ *  SCIPlpiIsStable() should return false.
+ */
 SCIP_Bool SCIPlpiIsStable(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -3271,10 +3404,10 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return (   lpi->termcode == MSK_RES_OK
+   return ( lpi->termcode == MSK_RES_OK
       || lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS
       || lpi->termcode == MSK_RES_TRM_MAX_TIME
-      || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE);
+      || lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE );
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -3286,7 +3419,7 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE;
+   return ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE );
 }
 
 /** returns TRUE iff the iteration limit was reached */
@@ -3298,7 +3431,7 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS;
+   return ( lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS );
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -3310,7 +3443,7 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   return lpi->termcode == MSK_RES_TRM_MAX_TIME;
+   return ( lpi->termcode == MSK_RES_TRM_MAX_TIME );
 }
 
 /** returns the internal solution status of the solver */
@@ -3331,7 +3464,7 @@ int SCIPlpiGetInternalStatus(
    if ( retcode != SCIP_OKAY )
       return 0;
 
-   return solsta; /*lint !e641*/
+   return (int) solsta;
 }
 
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
@@ -3372,7 +3505,11 @@ SCIP_RETCODE SCIPlpiGetObjval(
    return SCIP_OKAY;
 }
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs
+ *
+ *  Before calling this function, the caller must ensure that the LP has been solved to optimality, i.e., that
+ *  SCIPlpiIsOptimal() returns true.
+ */
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval,             /**< stores the objective value, may be NULL if not needed */
@@ -3381,9 +3518,10 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            activity,           /**< row activity vector, may be NULL if not needed */
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
-{  /*lint --e{715}*/
-   double* sux;
-   int ncols;
+{
+   MSKsolstae solsta;
+   double* sux = NULL;
+   int ncols = 0;
    int i;
 
    assert(MosekEnv != NULL);
@@ -3392,8 +3530,10 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    SCIPdebugMessage("Calling SCIPlpiGetSol (%d)\n", lpi->lpid);
 
-   sux = NULL;
-   ncols = 0;
+   if ( objval != NULL )
+   {
+      MOSEK_CALL( MSK_getprimalobj(lpi->task, lpi->lastsolvetype, objval) );
+   }
 
    if( redcost )
    {
@@ -3401,9 +3541,59 @@ SCIP_RETCODE SCIPlpiGetSol(
       SCIP_ALLOC( BMSallocMemoryArray(&sux, ncols) );
    }
 
-   MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
-         primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+   if ( primsol != NULL && lpi->lastalgo == MSK_OPTIMIZER_PRIMAL_SIMPLEX )
+   {
+      /* If the status shows that the dual is infeasible this is due to the primal being unbounded. In this case, we need
+       * to compute a feasible solution by setting the objective to 0.
+       */
+      MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &solsta) );
+      if ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER )
+      {
+         SCIP_Real* objcoefs;
+         int j;
 
+         MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
+         SCIP_ALLOC( BMSallocMemoryArray(&objcoefs, ncols) );
+
+         /* store old objective coefficients and set them to 0 */
+         for (j = 0; j < ncols; ++j)
+         {
+            MOSEK_CALL( MSK_getcj(lpi->task, j, &objcoefs[j]) );
+            MOSEK_CALL( MSK_putcj(lpi->task, j, 0.0) );
+         }
+
+         /* solve problem again */
+         SCIP_CALL( SolveWSimplex(lpi) );
+
+         /* At this point we assume that the problem is feasible, since we previously ran the primal simplex and it
+          * produced a ray.
+          */
+
+         /* get primal solution */
+         MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+               primsol, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+         /* restore objective */
+         MOSEK_CALL( MSK_putcslice(lpi->task, 0, ncols, objcoefs) );
+
+         /* resolve to restore original status */
+         SCIP_CALL( SolveWSimplex(lpi) );
+
+         BMSfreeMemoryArray(&objcoefs);
+      }
+      else
+      {
+         MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+               primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+      }
+   }
+   else
+   {
+      MOSEK_CALL( MSK_getsolution(lpi->task, lpi->lastsolvetype, NULL, NULL, NULL, NULL, NULL, activity,
+            primsol, dualsol, NULL, NULL, redcost, sux, NULL) );
+   }
+
+   /* the reduced costs are given by the difference of the slx and sux variables (third and second to last parameters) */
    if( redcost )
    {
       for( i = 0; i < ncols; i++ )
@@ -3411,9 +3601,8 @@ SCIP_RETCODE SCIPlpiGetSol(
          assert(sux != NULL);
          redcost[i] -= sux[i];
       }
+      BMSfreeMemoryArray(&sux);
    }
-
-   BMSfreeMemoryArray(&sux);
 
    return SCIP_OKAY;
 }
@@ -3522,17 +3711,17 @@ SCIP_RETCODE handle_singular(
  * LP Basis Methods
  */
 
-/** convert Mosek status to SCIP status
+/** convert Mosek basis status to SCIP basis status
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE convertstat_mosek2scip(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
+   MSKaccmodee           acc,                /**< whether constraints/variables are considered */
+   MSKstakeye*           sk,                 /**< status array of Mosek */
    int                   n,                  /**< size */
-   int*                  stat                /**< status array */
+   int*                  stat                /**< status array of SCIP */
    )
 {
    int i;
@@ -3583,9 +3772,9 @@ SCIP_RETCODE convertstat_mosek2scip(
    return SCIP_OKAY;
 }
 
-/** convert Mosek to SCIP status - slack variables
+/** convert Mosek to SCIP basis status - slack variables
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
@@ -3638,7 +3827,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
    return SCIP_OKAY;
 }
 
-/** convert SCIP to Mosek status */
+/** convert SCIP to Mosek basis status */
 static
 void convertstat_scip2mosek(
    const int*            stat,               /**< SCIP status array */
@@ -3669,7 +3858,7 @@ void convertstat_scip2mosek(
    }
 }
 
-/** convert SCIP to Mosek status - slack variables */
+/** convert SCIP to Mosek basis status - slack variables */
 static
 void convertstat_scip2mosek_slack(
    const int*            stat,               /**< SCIP status array */
@@ -3704,7 +3893,7 @@ void convertstat_scip2mosek_slack(
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3792,15 +3981,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_OFF) );
-#endif
-
    SCIP_CALL( handle_singular(lpi, bind, MSK_initbasissolve(lpi->task, bind)) );
-
-#if 0
-   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
-#endif
 
    for (i = 0; i < nrows; i++ )
    {
@@ -4179,21 +4360,29 @@ void lpistateFree(
 #ifndef NDEBUG
 /** check state
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   n,                  /**< number of rows or columns */
-   MSKstakeye*           sk,                 /**< ??? */
-   MSKaccmodee           accmode,            /**< ??? */
-   char                  xc                  /**< ??? */
+   MSKstakeye*           sk,                 /**< basis status */
+   MSKaccmodee           accmode             /**< whether rows/columns are considered */
    )
 {
+   char xc;
    int i;
 
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
+
+   if( accmode == MSK_ACC_VAR )
+      xc = 'x';
+   else
+   {
+      assert( accmode == MSK_ACC_CON );
+      xc = 'c';
+   }
 
    /* printout for all except LOW, UPR, FIX and BAS with sl[xc]==su[xc] */
    for( i = 0; i < n; i++ )
@@ -4206,9 +4395,12 @@ SCIP_RETCODE checkState1(
          SCIPdebugMessage("STATE[%d]: %c[%d] = unk\n", optimizecount, xc, i);
          break;
       case MSK_SK_BAS:
+         /* the following function is deprecated */
          MOSEK_CALL( MSK_getsolutioni(lpi->task, accmode, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
+         {
             SCIPdebugMessage("STATE[%d]: %c[%d] = bas, sl%c = %g, su%c = %g\n", optimizecount, xc, i, xc, sl, xc, su);
+         }
          break;
       case MSK_SK_SUPBAS:
          SCIPdebugMessage("STATE[%d]: %c[%d] = supbas\n", optimizecount, xc, i);
@@ -4231,7 +4423,7 @@ SCIP_RETCODE checkState1(
 
 /** check state
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE checkState(
@@ -4243,8 +4435,8 @@ SCIP_RETCODE checkState(
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
-   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR, 'x') );
-   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, MSK_ACC_CON, 'c') );
+   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR) );
+   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, MSK_ACC_CON) );
 
    return SCIP_OKAY;
  }
@@ -4252,7 +4444,7 @@ SCIP_RETCODE checkState(
 
 /** store row and column basis status in a packed LPi state object
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 static
 SCIP_RETCODE lpistatePack(
@@ -4281,8 +4473,8 @@ SCIP_RETCODE lpistatePack(
 static
 void lpistateUnpack(
    const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
-   MSKstakeye*           skx,                /**< ??? */
-   MSKstakeye*           skc                 /**< ??? */
+   MSKstakeye*           skx,                /**< basis status for columns */
+   MSKstakeye*           skc                 /**< basis status for rows */
    )
 {
    assert(sizeof(int) == sizeof(MSKstakeye));
@@ -4296,7 +4488,7 @@ void lpistateUnpack(
 
 /** stores LP state (like basis information) into lpistate object
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiGetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4332,7 +4524,7 @@ SCIP_RETCODE SCIPlpiGetState(
 
    lpistate[0]->num = optimizecount;
 
-   MOSEK_CALL(MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, NULL, &lpistate[0]->solsta));
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, NULL, &lpistate[0]->solsta) );
 
    SCIP_CALL( getbase(lpi, ncols, nrows) );
 
@@ -4353,8 +4545,6 @@ SCIP_RETCODE SCIPlpiGetState(
 
 /** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
  *  columns and rows since the state was stored with SCIPlpiGetState()
- *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4370,7 +4560,9 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(blkmem != NULL);
+#ifdef SCIP_DISABLED_CODE
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
+#endif
 
    if (lpistate == NULL)
    {
@@ -4387,7 +4579,10 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpistate->ncols <= ncols);
 
    SCIP_CALL( ensureStateMem(lpi, ncols, nrows) );
-   SCIP_CALL( getbase(lpi, ncols, nrows) );
+
+#ifdef SCIP_DISABLED_CODE
+   SCIP_CALL( getbase(lpi, ncols, nrows) ); /* Why do we need to get the basis ????? */
+#endif
 
    lpistateUnpack(lpistate, lpi->skx, lpi->skc);
 
@@ -4475,7 +4670,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
 
 /** reads LP state (like basis information) from a file
  *
- * @note last solve call must have been either Simplex or barrier with crossover or base must have been set manually
+ * @note last solve call must have been either simplex or barrier with crossover or base must have been set manually
  */
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -4553,9 +4748,9 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    if( emptyname )
    {
-      SCIPerrorMessage("LP Error: MOSEK cannot write state since name of %s %d is empty.\n",
-            v < nvars ? "variable" : "constraint", v < nvars ? v : c);/*lint !e644*/
-      return SCIP_LPERROR;
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Writing LP state with unnamed %s %d, using default"
+            " names instead. Note that this state cannot be read back in later!\n",
+            v < nvars ? "variable" : "constraint", v < nvars ? v : c);
    }
 
    /* set parameter to be able to write */
@@ -4644,8 +4839,8 @@ static const char* paramname[] = {
    "SCIP_LPPAR_DUALFEASTOL",                 /* feasibility tolerance for dual variables and reduced costs */
    "SCIP_LPPAR_BARRIERCONVTOL",              /* convergence tolerance used in barrier algorithm */
    "SCIP_LPPAR_OBJLIM",                      /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit */
-   "SCIP_LPPAR_LPTILIM",                     /* LP time limit */
+   "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit, greater than or equal 0 */
+   "SCIP_LPPAR_LPTILIM",                     /* LP time limit, positive */
    "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
    "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
                                               * if number of rows divided by number of columns exceeds this value */
@@ -4674,8 +4869,8 @@ const char* paramty2str(
    assert(SCIP_LPPAR_DUALFEASTOL == 7);      /* feasibility tolerance for dual variables and reduced costs */
    assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /* convergence tolerance used in barrier algorithm */
    assert(SCIP_LPPAR_OBJLIM == 9);           /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
-   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit */
-   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit */
+   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit, greater than or equal 0 */
+   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit, positive */
    assert(SCIP_LPPAR_MARKOWITZ == 12);       /* Markowitz tolerance */
    assert(SCIP_LPPAR_ROWREPSWITCH == 13);    /* row representation switch */
    assert(SCIP_LPPAR_THREADS == 14);         /* number of threads used to solve the LP */
@@ -4713,10 +4908,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
       if( *ival == MSK_SCALING_NONE )
          *ival = 0;
+      else if( *ival == MSK_SCALING_FREE )
+         *ival = 1;
       else if( *ival == MSK_SCALING_AGGRESSIVE )
          *ival = 2;
-      else
-         *ival = 1;
+      else /* MSK_SCALING_MODERATE should not be used by the interface */
+         return SCIP_PARAMETERWRONGVAL;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -4751,29 +4948,24 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    int                   ival                /**< parameter value */
    )
 {
-   int scaling;
-
-#if SCIP_CONTROLS_PRICING
-   /*lint --e{641}*/
    static int pricing[7] =
    {
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_FULL,
-      MSK_SIM_SELECTION_PARTIAL,
-      MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_ASE,
-      MSK_SIM_SELECTION_DEVEX,
+      (int)MSK_SIM_SELECTION_SE,             /**< mosek pricing for SCIP_PRICING_LPIDEFAULT */
+      (int)MSK_SIM_SELECTION_FREE,           /**< mosek pricing for SCIP_PRICING_AUTO */
+      (int)MSK_SIM_SELECTION_FULL,           /**< mosek pricing for SCIP_PRICING_FULL */
+      (int)MSK_SIM_SELECTION_PARTIAL,        /**< mosek pricing for SCIP_PRICING_PARTIAL */
+      (int)MSK_SIM_SELECTION_SE,             /**< mosek pricing for SCIP_PRICING_STEEP */
+      (int)MSK_SIM_SELECTION_ASE,            /**< mosek pricing for SCIP_PRICING_STEEPQSTART */
+      (int)MSK_SIM_SELECTION_DEVEX,          /**< mosek pricing for SCIP_PRICING_DEVEX */
    };
-#endif
 
-   assert(SCIP_PRICING_LPIDEFAULT == 0);
-   assert(SCIP_PRICING_AUTO == 1);
-   assert(SCIP_PRICING_FULL == 2);
-   assert(SCIP_PRICING_PARTIAL == 3);
-   assert(SCIP_PRICING_STEEP == 4);
-   assert(SCIP_PRICING_STEEPQSTART == 5);
-   assert(SCIP_PRICING_DEVEX == 6);
+   assert((int)SCIP_PRICING_LPIDEFAULT == 0);
+   assert((int)SCIP_PRICING_AUTO == 1);
+   assert((int)SCIP_PRICING_FULL == 2);
+   assert((int)SCIP_PRICING_PARTIAL == 3);
+   assert((int)SCIP_PRICING_STEEP == 4);
+   assert((int)SCIP_PRICING_STEEPQSTART == 5);
+   assert((int)SCIP_PRICING_DEVEX == 6);
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -4789,84 +4981,51 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
+      assert( ival >= 0 && ival <= 2 );
       if( ival == 0 )
-         scaling = MSK_SCALING_NONE;
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_NONE) );
+      }
       else if( ival == 1 )
-         scaling = MSK_SCALING_FREE;
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_FREE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_FREE) );
+      }
       else
-         scaling = MSK_SCALING_AGGRESSIVE;
+      {
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_AGGRESSIVE) );
+         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, MSK_SCALING_AGGRESSIVE) );
+      }
 
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_PRESOLVE_USE,
             ival ? MSK_PRESOLVE_MODE_FREE : MSK_PRESOLVE_MODE_OFF) );
-
-#ifdef SCIP_DEBUG
-      if( ival )
-      {
-         SCIPdebugMessage("Setting presolve to on\n");
-      }
-#endif
       break;
    case SCIP_LPPAR_PRICING:                   /* pricing strategy */
-      assert(ival >= 0 && ival <= SCIP_PRICING_DEVEX);
+      assert(ival >= 0 && ival <= (int)SCIP_PRICING_DEVEX);
       lpi->pricing = (SCIP_PRICING)ival;
 
-#ifdef SCIP_DEBUG
-      switch( (SCIP_PRICING)ival )
-      {
-      case SCIP_PRICING_AUTO:
-         SCIPdebugMessage("Setting pricing to auto\n");
-         break;
-      case SCIP_PRICING_FULL:
-         SCIPdebugMessage("Setting pricing to full\n");
-         break;
-      case SCIP_PRICING_PARTIAL:
-         SCIPdebugMessage("Setting pricing to partial\n");
-         break;
-      case SCIP_PRICING_LPIDEFAULT:
-         SCIPdebugMessage("Setting pricing to lpi default\n");
-         break;
-      case SCIP_PRICING_STEEP:
-         SCIPdebugMessage("Setting pricing to steep\n");
-         break;
-      case SCIP_PRICING_STEEPQSTART:
-         SCIPdebugMessage("Setting pricing to steep quick start\n");
-         break;
-      case SCIP_PRICING_DEVEX:
-         SCIPdebugMessage("Setting pricing to devex\n");
-         break;
-      }
-#endif
-
-#if SCIP_CONTROLS_PRICING
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_SELECTION, pricing[ival]) );
-
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, pricing[ival]) );
 
-      if( !(lpi->pricing == SCIP_PRICING_PARTIAL || lpi->pricing == SCIP_PRICING_AUTO ) )
-      {
-         /* No restrict */
-         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_RESTRICT_SELECTION, 0) );
+      /* for certain pricing values, do not use restricted pricing */
+      if( lpi->pricing == SCIP_PRICING_PARTIAL || lpi->pricing == SCIP_PRICING_AUTO )
+         lpi->restrictselectdef = 50;
+      else
+         lpi->restrictselectdef = 0;
 
-         MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
-      }
-#else
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_PRIMAL_SELECTION, MSK_SIM_SELECTION_FREE) );
-
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, MSK_SIM_SELECTION_FREE) );
-#endif
       break;
    case SCIP_LPPAR_LPINFO:
       /* should LP solver output information to the screen? */
 #if FORCE_MOSEK_LOG
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? MSK_ON : MSK_OFF) );
-      lpi->lpinfo = (SCIP_Bool) ival;
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? 4 : MSK_OFF) );
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG_SIM, ival ? 4 : MSK_OFF) );
 #endif
+      lpi->lpinfo = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
 #if DEBUG_PARAM_SETTING
@@ -4875,7 +5034,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIPdebugMessage("Setting max iter to : %d\n", ival);
       }
 #endif
-
+      /* 0 <= ival, 0 stopping immediately */
+      assert( ival >= 0 );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
       break;
    case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
@@ -4909,7 +5069,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
 
    switch (type)
    {
-#if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
@@ -4919,7 +5078,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
-#endif
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
       MSKobjsensee objsen;
@@ -4962,26 +5120,33 @@ SCIP_RETCODE SCIPlpiSetRealpar(
 
    switch (type)
    {
-#if SCIP_CONTROLS_TOLERANCES
    case SCIP_LPPAR_FEASTOL:                   /* feasibility tolerance for primal variables and slacks */
-      if (dval < 1e-9)
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= inf */
+      if( dval < 1e-9 )
          dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_X, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:               /* feasibility tolerance for dual variables and reduced costs */
-      if (dval < 1e-9)
-         return SCIP_PARAMETERUNKNOWN;
-      /*         dval = 1e-9; */
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= inf */
+      if( dval < 1e-9 )
+         dval = 1e-9;
 
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_BASIS_TOL_S, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:            /* convergence tolerance used in barrier algorithm */
+      /* 1e-14 <= dval <= inf */
+      assert( dval >= 0.0 );
+      if( dval < 1e-14 )
+         dval = 1e-14;
+
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
-#endif
    case SCIP_LPPAR_OBJLIM:                    /* objective limit */
    {
+      /* no restriction on dval */
       MSKobjsensee objsen;
       MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
       if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
@@ -4995,6 +5160,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
+      assert( dval > 0.0 );
+      /* mosek requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:                 /* Markowitz tolerance */

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -645,7 +645,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
          }
          branchcand->nprioexternimpls++;
 
-
          if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
          {
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
@@ -661,7 +660,6 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             }
             branchcand->nprioexternints++;
             branchcand->nprioexternimpls--;
-
 
             if( vartype == SCIP_VARTYPE_BINARY )
             {
@@ -1263,8 +1261,9 @@ SCIP_RETCODE SCIPbranchruleCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a branching rule */
-SCIP_RETCODE SCIPbranchruleCreate(
+/** internal method for creating a branching rule */
+static
+SCIP_RETCODE doBranchruleCreate(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1296,6 +1295,8 @@ SCIP_RETCODE SCIPbranchruleCreate(
    assert(desc != NULL);
 
    SCIP_ALLOC( BMSallocMemory(branchrule) );
+   BMSclearMemory(*branchrule);
+
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*branchrule)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*branchrule)->desc, desc, strlen(desc)+1) );
    (*branchrule)->priority = priority;
@@ -1343,6 +1344,42 @@ SCIP_RETCODE SCIPbranchruleCreate(
    return SCIP_OKAY;
 }
 
+/** creates a branching rule */
+SCIP_RETCODE SCIPbranchruleCreate(
+   SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of branching rule */
+   const char*           desc,               /**< description of branching rule */
+   int                   priority,           /**< priority of the branching rule */
+   int                   maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECEXT((*branchexecext)),/**< branching execution method for external solutions */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   assert(branchrule != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   SCIP_CALL_FINALLY( doBranchruleCreate(branchrule, set, messagehdlr, blkmem, name, desc, priority, maxdepth,
+      maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol, branchexeclp,
+      branchexecext, branchexecps, branchruledata), (void) SCIPbranchruleFree(branchrule, set) );
+
+   return SCIP_OKAY;
+}
+
 /** frees memory of branching rule */
 SCIP_RETCODE SCIPbranchruleFree(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
@@ -1350,7 +1387,8 @@ SCIP_RETCODE SCIPbranchruleFree(
    )
 {
    assert(branchrule != NULL);
-   assert(*branchrule != NULL);
+   if( *branchrule == NULL )
+      return SCIP_OKAY;
    assert(!(*branchrule)->initialized);
    assert(set != NULL);
 
@@ -1362,8 +1400,8 @@ SCIP_RETCODE SCIPbranchruleFree(
 
    SCIPclockFree(&(*branchrule)->branchclock);
    SCIPclockFree(&(*branchrule)->setuptime);
-   BMSfreeMemoryArray(&(*branchrule)->name);
-   BMSfreeMemoryArray(&(*branchrule)->desc);
+   BMSfreeMemoryArrayNull(&(*branchrule)->name);
+   BMSfreeMemoryArrayNull(&(*branchrule)->desc);
    BMSfreeMemory(branchrule);
 
    return SCIP_OKAY;
@@ -2297,13 +2335,43 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
-       * otherwise, if the value in the LP or pseudosolution is large (here 1e+12), use 0.0
-       * in both cases, project onto bounds of course
-       */
+      /* if no point is suggested, try the LP or pseudo solution */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+
       if( REALABS(branchpoint) > 1e+12 )
+      {
+         /* if the value in the LP or pseudosolution is large (here 1e+12), use 0.0 (will be projected onto bounds below) */
          branchpoint = 0.0;
+      }
+      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      {
+         /* if the value is from the LP and midpull is activated, then push towards middle of domain */
+         SCIP_Real midpull = set->branch_midpull;
+         SCIP_Real glb;
+         SCIP_Real gub;
+         SCIP_Real reldomainwidth;
+
+         /* shrink midpull if width of local domain, relative to global domain, is small
+          * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
+          *
+          * do this only if the relative domain width is below the minreldomainwidth value
+          */
+         glb = SCIPvarGetLbGlobal(var);
+         gub = SCIPvarGetUbGlobal(var);
+         assert(glb < gub);
+
+         if( !SCIPsetIsInfinity(set, -glb) && !SCIPsetIsInfinity(set, gub) )
+            reldomainwidth = (ub - lb) / (gub - glb);
+         else
+            reldomainwidth = SCIPsetEpsilon(set);
+
+         if( reldomainwidth < set->branch_midpullreldomtrig )
+            midpull *= reldomainwidth;
+
+         branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
+      }
+
+      /* make sure branchpoint is on interval, below we make sure that it is within bounds for continuous vars */
       branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
 
@@ -2495,7 +2563,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }

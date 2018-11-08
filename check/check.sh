@@ -59,7 +59,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "PERMUTE       = $PERMUTE"
@@ -75,6 +75,8 @@ fi
 
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
+# defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
+#                                              TIMELIMLIST, HARDTIMELIMLIST
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
@@ -137,7 +139,11 @@ do
 
 
 		# infer the names of all involved files from the arguments
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
+
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
+		  $THREADS $GLBSEEDSHIFT
 
 		if test "$INSTANCE" = "DONE"
 		then
@@ -166,7 +172,7 @@ do
 		# overwrite the tmp file now
 		# call tmp file configuration for SCIP
 		. ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
+		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH

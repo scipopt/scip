@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,11 +28,31 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/prop_pseudoobj.h"
-
+#include "scip/pub_event.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_prop.h"
+#include "scip/pub_var.h"
+#include "scip/scip_conflict.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_prop.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/scip_var.h"
+#include <string.h>
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
@@ -260,14 +280,14 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
 
    /* second criteria the locks which indicate most effect */
    if( SCIPvarGetObj(var1) > 0.0 )
-      locks1 = SCIPvarGetNLocksDown(var1);
+      locks1 = SCIPvarGetNLocksDownType(var1, SCIP_LOCKTYPE_MODEL);
    else
-      locks1 = SCIPvarGetNLocksUp(var1);
+      locks1 = SCIPvarGetNLocksUpType(var1, SCIP_LOCKTYPE_MODEL);
 
    if( SCIPvarGetObj(var2) > 0.0 )
-      locks2 = SCIPvarGetNLocksDown(var2);
+      locks2 = SCIPvarGetNLocksDownType(var2, SCIP_LOCKTYPE_MODEL);
    else
-      locks2 = SCIPvarGetNLocksUp(var2);
+      locks2 = SCIPvarGetNLocksUpType(var2, SCIP_LOCKTYPE_MODEL);
 
    if( locks1 < locks2 )
       return -1;
@@ -276,14 +296,14 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
 
    /* third criteria the other locks */
    if( SCIPvarGetObj(var1) > 0.0 )
-      locks1 = SCIPvarGetNLocksUp(var1);
+      locks1 = SCIPvarGetNLocksUpType(var1, SCIP_LOCKTYPE_MODEL);
    else
-      locks1 = SCIPvarGetNLocksDown(var1);
+      locks1 = SCIPvarGetNLocksDownType(var1, SCIP_LOCKTYPE_MODEL);
 
    if( SCIPvarGetObj(var2) >  0.0 )
-      locks2 = SCIPvarGetNLocksUp(var2);
+      locks2 = SCIPvarGetNLocksUpType(var2, SCIP_LOCKTYPE_MODEL);
    else
-      locks2 = SCIPvarGetNLocksDown(var2);
+      locks2 = SCIPvarGetNLocksDownType(var2, SCIP_LOCKTYPE_MODEL);
 
    if( locks1 < locks2 )
       return -1;
@@ -381,7 +401,7 @@ SCIP_RETCODE objimplicsCreate(
          assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
 
          assert(SCIPhashmapExists(binobjvarmap, var));
-         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         pos = SCIPhashmapGetImageInt(binobjvarmap, (void*)var);
          assert(pos > 0);
          assert(collectedlbvars[pos]);
 
@@ -423,7 +443,7 @@ SCIP_RETCODE objimplicsCreate(
          assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
 
          assert(SCIPhashmapExists(binobjvarmap, var));
-         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         pos = SCIPhashmapGetImageInt(binobjvarmap, (void*)var);
          assert(pos > 0);
          assert(collectedubvars[pos]);
 
@@ -782,7 +802,7 @@ SCIP_Real collectMinactImplicVar(
       return 0.0;
 
    assert(SCIPhashmapExists(binobjvarmap, var));
-   pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+   pos = SCIPhashmapGetImageInt(binobjvarmap, var);
    assert(pos > 0);
 
    /* check if the variables was already collected through other cliques */
@@ -1335,7 +1355,7 @@ void resetContributors(
       assert(var != NULL);
 
       assert(SCIPhashmapExists(binobjvarmap, var));
-      pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+      pos = SCIPhashmapGetImageInt(binobjvarmap, var);
       assert(pos > 0);
       collectedvars[pos] = FALSE;
    }
@@ -1541,7 +1561,7 @@ SCIP_RETCODE propdataInit(
 
          if( SCIPvarIsBinary(var) )
          {
-            SCIP_CALL( SCIPhashmapInsert(binobjvarmap, (void*)var, (void*)(size_t)(nbinobjvars + 1)) );
+            SCIP_CALL( SCIPhashmapInsertInt(binobjvarmap, (void*)var, nbinobjvars + 1) );
             nbinobjvars++;
          }
       }
@@ -1801,7 +1821,6 @@ SCIP_RETCODE propdataInit(
    }
    else
       propdata->addedvars = NULL;
-
 
    return SCIP_OKAY;
 }
@@ -3464,7 +3483,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
 static
 SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
 {  /*lint --e{715}*/
-
    SCIP_PROPDATA* propdata;
    SCIP_VAR** vars;
    SCIP_Real cutoffbound;
@@ -3485,7 +3503,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       return SCIP_OKAY;
 
    /* do nothing if objective propagation is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
@@ -3566,7 +3584,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
@@ -3683,7 +3701,6 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 {
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
-
 
    /* create pseudoobj propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );

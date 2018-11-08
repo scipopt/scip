@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,10 +20,29 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
 #include "scip/heur_oneopt.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include <string.h>
 
 /* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
  *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
@@ -132,7 +151,6 @@ SCIP_Real calcShiftVal(
    int ncolrows;
    int i;
 
-
    /* get variable's solution value, global bounds and objective coefficient */
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -149,7 +167,6 @@ SCIP_Real calcShiftVal(
    }
    else
       return 0.0;
-
 
    SCIPdebugMsg(scip, "Try to shift %s variable <%s> with\n", shiftdown ? "down" : "up", SCIPvarGetName(var) );
    SCIPdebugMsg(scip, "    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval);
@@ -263,7 +280,7 @@ static
 SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_HEUR*            heur,               /**< oneopt heuristic */
    SCIP_VAR**            vars,               /**< SCIP variables */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
    SCIP_SOL*             bestsol,            /**< incumbent solution */
@@ -486,7 +503,6 @@ SCIP_DECL_HEURINIT(heurInitOneopt)
 static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
-
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* bestsol;                        /* incumbent solution                   */
    SCIP_SOL* worksol;                        /* heuristic's working solution         */
@@ -801,8 +817,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
          shifted = TRUE;
       }
-
-   } while( heurdata->useloop && shifted );
+   }
+   while( heurdata->useloop && shifted );
 
    if( nsuccessfulshifts > 0 )
    {

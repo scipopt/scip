@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,11 +42,16 @@ struct SCIP_SparseSol
    int                   nvars;              /**< number of variables */
 };
 
+typedef union {
+   void*                 ptr;                /**< pointer element */
+   unsigned int          uinteger;           /**< unsigned integer element */
+} SCIP_QUEUEELEMENT;
+
 /** (circular) Queue data structure */
 struct SCIP_Queue
 {
    SCIP_Real             sizefac;            /**< memory growing factor */
-   void**                slots;              /**< array of element slots */
+   SCIP_QUEUEELEMENT*    slots;              /**< array of element slots */
    int                   firstfree;          /**< first free slot */
    int                   firstused;          /**< first used slot */
    int                   size;               /**< total number of available element slots */
@@ -107,6 +112,7 @@ struct SCIP_MultiHash
 
 typedef union {
    void*                 ptr;                /**< pointer image */
+   int                   integer;            /**< integer image */
    SCIP_Real             real;               /**< real image */
 } SCIP_HASHMAPIMAGE;
 

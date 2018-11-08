@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,13 +20,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
+#include "blockmemshell/memory.h"
+#include "nlpi/exprinterpret.h"
+#include "nlpi/pub_expr.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_subnlp.h"
+#include "scip/pub_heur.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
+#include "scip/pub_nlp.h"
+#include "scip/pub_var.h"
+#include "scip/scip_general.h"
+#include "scip/scip_heur.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_timing.h"
+#include <string.h>
 
-#include "nlpi/exprinterpret.h"
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
@@ -100,10 +117,10 @@ int getVarIndex(
    assert(var != NULL);
    assert(SCIPhashmapExists(varindex, (void*)var));
 
-   return (int)(size_t)SCIPhashmapGetImage(varindex, (void*)var);
+   return SCIPhashmapGetImageInt(varindex, (void*)var);
 }
 #else
-#define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
+#define getVarIndex(varindex,var) (SCIPhashmapGetImageInt((varindex), (void*)(var)))
 #endif
 
 /** samples and stores random points; stores points which have a better objective value than the current incumbent
@@ -812,7 +829,7 @@ SCIP_RETCODE applyHeur(
    /* create an unique mapping of all variables to 0,..,SCIPgetNVars(scip)-1 */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(varindex, (void*)SCIPgetVars(scip)[i], i) );
    }
 
    /* compute estimated costs of computing a gradient for each nlrow */
@@ -974,7 +991,7 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
    assert(heurdata != NULL);
 
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         DEFAULT_RANDSEED, TRUE) );
 
    /* try to find sub-NLP heuristic */
    heurdata->heursubnlp = SCIPfindHeur(scip, "subnlp");

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1361,12 +1361,17 @@ SCIP_RETCODE SCIPlpGetPrimalRay(
                                               *   (all entries have to be initialized to 0 before) */
    );
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows */
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
+ *  lp/checkfarkas = TRUE.
+ *
+ *  @note the check will not be performed if @p valid is NULL.
+ */
 extern
 SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
 /** get number of iterations used in last LP solve */

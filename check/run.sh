@@ -29,13 +29,17 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
+DATFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.dat
 TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 
+# only wait for optimi to be mounted in run.sh if you are on an opt computer at zib
+OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]')
+
 # check if the scripts runs a *.zib.de host
-if hostname -f | grep -q zib.de ;
+if $(hostname -f | grep -q zib.de) && $([[ "${OPTHOST}" == "opt" ]] || [[ "${OPTHOST}" == "optc" ]]);
 then
   # access /optimi once to force a mount
   ls /nfs/optimi/QUOTAS >/dev/null 2>&1
@@ -102,6 +106,7 @@ then
     # indicate that an instance is infeasible.
     sed ' /solution status:/d;
             s/objective value:/=obj=/g;
+            s/infinity/1e+20/g;
             s/no solution available//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
     
@@ -124,6 +129,12 @@ echo =ready=                        >> $OUTFILE
 
 mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+
+# move a possible data file
+if [ -f "${DATFILE}" ] ;
+then
+    mv $DATFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
+fi
 
 rm -f $TMPFILE
 rm -f $SOLFILE
