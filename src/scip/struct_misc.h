@@ -42,11 +42,16 @@ struct SCIP_SparseSol
    int                   nvars;              /**< number of variables */
 };
 
+typedef union {
+   void*                 ptr;                /**< pointer element */
+   unsigned int          uinteger;           /**< unsigned integer element */
+} SCIP_QUEUEELEMENT;
+
 /** (circular) Queue data structure */
 struct SCIP_Queue
 {
    SCIP_Real             sizefac;            /**< memory growing factor */
-   void**                slots;              /**< array of element slots */
+   SCIP_QUEUEELEMENT*    slots;              /**< array of element slots */
    int                   firstfree;          /**< first free slot */
    int                   firstused;          /**< first used slot */
    int                   size;               /**< total number of available element slots */

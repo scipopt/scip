@@ -32,6 +32,13 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef WITH_LPSCHECK
 #include <cplex.h>
