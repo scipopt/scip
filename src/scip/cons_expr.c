@@ -11924,7 +11924,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       SCIP_CALL( computeVertexPolyhedralFacetUnivariate(scip, box[2 * nonfixedpos[0]], box[2 * nonfixedpos[0] + 1], funvals[0], funvals[1], success, &facetcoefs[nonfixedpos[0]], facetconstant) );
 
       /* check whether target has been missed */
-      if( *success && overestimate == (*facetconstant + *facetcoefs * xstar[nonfixedpos[0]] > targetvalue) )
+      if( *success && overestimate == (*facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]] > targetvalue) )
          *success = FALSE;
    }
    else if( nvars == 2 )
