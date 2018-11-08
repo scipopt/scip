@@ -41,7 +41,7 @@
  * Installation
  * ============
  *
- * See the @ref INSTALL "INSTALL file".
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  *
  * Usage
  * =====

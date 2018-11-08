@@ -179,6 +179,7 @@
  * - @subpage MAKE    "Installation information using Makefiles"
  * - @subpage LPI         "Available implementations of the LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
+ * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
  */
 
 /**@page PROGRAMMING Programming with SCIP
@@ -619,22 +620,20 @@
  * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
  * ---------------------|--------------------------------|------------------------|--------------------------------------------|
  * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
- * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list           |
- * GMP                  | on, off                        | GMP=[true, false]      |                                            |
+ * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
+ * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
+ * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_INCLUDE_DIR and BLISS_LIBRARY |
+ * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
- * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
- * SYM                  | bliss, none                    | --                     |                                            |
+ * ..._DIR              | <custom/path/to/.../package>   | --                     | e.g. IPOPT_DIR, CPLEX_DIR, WORHP_DIR, Readline_DIR ...  |
  * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
  * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
- * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
- * GMP_DIR              | <path/to/GMP/installation>     | --                     |                                            |
- * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
+ * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
  * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
  * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
  * DEBUGSOL             | on, off                        | DEBUGSOL=[true,false]  | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
- * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
- * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0           |
- * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked                     |
  * LPSCHECK             | on, off                        | LPSCHECK=[true,false]  | double check SoPlex results with CPLEX     |
  * NOBLKMEM             | on, off                        | NOBLKMEM=[true,false]  |                                            |
  * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
@@ -834,19 +833,22 @@
  *
  * The \SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
- * - <code>all (or no target)</code> Build \SCIP library and binary.
+ * - <code>all</code> (or no target) Build \SCIP library and binary.
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Creates dependencies files. This is only needed if you add files to \SCIP.
- * - <code>check or test</code> Runs the check script, see \ref TEST.
- *
+ * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
+ * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
+ *   which contains all the detected warnings.
+ * - <code>tags</code> Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
+
  * The \SCIP makefiles are structured as follows.
  *
  * - <code>Makefile</code> This is the basic makefile in the \SCIP root directory. It loads
  *   additional makefile information depending on the parameters set.
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
- *   that use \SCIP, for instance, the examples.
+ *   that use \SCIP, for instance, the example.
  * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
  *   definitions. If you have an unsupported compiler, you can copy one of these and modify it
  *   accordingly.
@@ -1153,7 +1155,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage VRP_MAIN Vehicle Routing
+ *  @subpage VRP_MAIN "Vehicle Routing"
  *  </td>
  *  <td>
  *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
