@@ -1367,12 +1367,12 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/performpresolving",
-         "Run orbital fixing during presolving?",
+         "run orbital fixing during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "Recompute symmetries after a restart has occured?",
+         "recompute symmetries after a restart has occured?",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
 
    return SCIP_OKAY;
