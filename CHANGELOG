@@ -1,4 +1,3 @@
-
 @page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
@@ -12,10 +11,12 @@ Features
 Performance improvements
 ------------------------
 
-- extended cut presolving staff by removing variable that have already be fixed at their bounds from the cut
+- Extended cut presolving by removing variables that been fixed at their bounds
 
 - Improved branching point selection when branching on externals branching candidates. Instead of using exactly the
   LP solution, a point closer to the middle of the variables domain is chosen.
+
+- Matrix presolvers that do not work on incomplete matrices now skip matrix creation if unsupported constraint types are detected.
 
 Examples and applications
 -------------------------
@@ -33,6 +34,8 @@ Interface changes
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
 
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+
+- new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
 ### New API functions
 
