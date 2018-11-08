@@ -273,7 +273,7 @@ SCIP_DECL_EVENTEXEC(eventExecOrbitalFixing)
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 static
-SCIP_RETCODE SCIPcomputeGroupOrbitsFilterSymbreak(
+SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< length of a permutation array */
    int                   nmovedpermvars,     /**< number of variables moved by any permutation */
@@ -992,7 +992,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbitsFilterSymbreak(scip, npermvars, propdata->nmovedpermvars, propdata->movedpermvars,
+   SCIP_CALL( computeGroupOrbitsFilterSymbreak(scip, npermvars, propdata->nmovedpermvars, propdata->movedpermvars,
          permstrans, nperms, inactiveperms, orbits, orbitbegins, &norbits) );
 
    if ( norbits > 0 )
