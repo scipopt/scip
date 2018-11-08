@@ -200,6 +200,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< subSCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   randseed,           /**< global seed shift used in the sub-SCIP */
    SCIP_RESULT*          result              /**< result pointer */
    )
 {
@@ -236,420 +237,424 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-    /* initializing the subproblem */
-    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-    valid = FALSE;
+   /* initializing the subproblem */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   valid = FALSE;
 
-    /* copy the subproblem */
-    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+   /* copy the subproblem */
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
-    if( sepadata->copycuts )
-    {
-       /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
-    }
+   if( sepadata->copycuts )
+   {
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
+   }
 
-    for( i = 0; i < nvars; i++ )
-    {
-       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+   for( i = 0; i < nvars; i++ )
+   {
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-       /* change implicit integer variables to integer type */
-       if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
-       {
-          SCIP_Bool infeasible;
+      /* change implicit integer variables to integer type */
+      if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
+      {
+         SCIP_Bool infeasible;
 
-          SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
-          assert(!infeasible);
-       }
+         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
+         assert(!infeasible);
+      }
 
-       /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
-        * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
-        */
-       if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
-       {
-          SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
-          SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
-          SCIP_Real obj = SCIPvarGetObj(subvars[i]);
+      /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
+      * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
+      */
+      if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
+         SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
+         SCIP_Real obj = SCIPvarGetObj(subvars[i]);
 
-          if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
-             || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
-          {
-             /* free local hash map */
-             SCIPhashmapFree(&varmapfw);
+         if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
+            || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
+         {
+            /* free local hash map */
+            SCIPhashmapFree(&varmapfw);
 
-             SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip heuristic\n",
-                SCIPvarGetName(subvars[i]), lb, ub, obj);
-             goto TERMINATE;
-          }
-       }
-    }
+            SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip heuristic\n",
+               SCIPvarGetName(subvars[i]), lb, ub, obj);
+            goto TERMINATE;
+         }
+      }
+   }
 
-    SCIPhashmapFree(&varmapfw);
+   SCIPhashmapFree(&varmapfw);
 
-    /* This avoids dual presolving.
-     *
-     * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
-     * but no variables should be missing because we stop earlier anyway if pricers are present).
-     * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
-     */
-    if( ! valid )
-    {
-       for( i = 0; i < nvars; i++ )
-       {
-          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
-       }
-    }
+   /* This avoids dual presolving.
+   *
+   * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
+   * but no variables should be missing because we stop earlier anyway if pricers are present).
+   * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+   */
+   if( ! valid )
+   {
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
+      }
+   }
 
-    SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
+   SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
 
-    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
-    if( SCIPisParamFixed(subscip, "lp/solvefreq") )
-    {
-       SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of rapidlearning\n");
-       SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
-    }
-    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-    if( !SCIPisParamFixed(subscip, "conflict/fuiplevels") )
-    {
-       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
-    }
-    if( SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
-    {
-       SCIPwarningMessage(scip, "unfixing parameter nodeselection/dfs/stdpriority in subscip of rapidlearning\n");
-       SCIP_CALL( SCIPunfixParam(subscip, "nodeselection/dfs/stdpriority") );
-    }
-    SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+   /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
+   if( SCIPisParamFixed(subscip, "lp/solvefreq") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
+   }
+   SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
+   if( !SCIPisParamFixed(subscip, "conflict/fuiplevels") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
+   }
+   if( SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   {
+      SCIPwarningMessage(scip, "unfixing parameter nodeselection/dfs/stdpriority in subscip of rapidlearning\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "nodeselection/dfs/stdpriority") );
+   }
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
 
-    if( !SCIPisParamFixed(subscip, "propagating/pseudoobj/freq") )
-    {
-       SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
-    }
-    if( !SCIPisParamFixed(subscip, "constraints/disableenfops") )
-    {
-       SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
-    }
+   if( !SCIPisParamFixed(subscip, "propagating/pseudoobj/freq") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
+   }
+   if( !SCIPisParamFixed(subscip, "constraints/disableenfops") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
+   }
 
-    /* use inference branching */
-    if( !SCIPisParamFixed(subscip, "branching/inference/useweightedsum") )
-    {
-       SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
-    }
+   /* use inference branching */
+   if( !SCIPisParamFixed(subscip, "branching/inference/useweightedsum") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
+   }
 
-    /* only create short conflicts */
-    if( !SCIPisParamFixed(subscip, "conflict/maxvarsfac") )
-    {
-       SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
-    }
+   /* only create short conflicts */
+   if( !SCIPisParamFixed(subscip, "conflict/maxvarsfac") )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
+   }
 
-    /* set limits for the subproblem */
-    nodelimit = SCIPgetNLPIterations(scip);
-    nodelimit = MAX(sepadata->minnodes, nodelimit);
-    nodelimit = MIN(sepadata->maxnodes, nodelimit);
+   /* set limits for the subproblem */
+   nodelimit = SCIPgetNLPIterations(scip);
+   nodelimit = MAX(sepadata->minnodes, nodelimit);
+   nodelimit = MIN(sepadata->maxnodes, nodelimit);
 
-    restartnum = 1000;
+   /* change global random seed */
+   assert(randseed >= 0);
+   SCIP_CALL( SCIPsetIntParam(subscip, "random/randomseedshift", randseed) );
+
+   restartnum = 1000;
 
  #ifdef SCIP_DEBUG
-    /* for debugging, enable full output */
-    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
  #else
-    /* disable statistic timing inside sub SCIP and output to console */
-    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
  #endif
 
-    /* set limits for the subproblem */
-    SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
-    SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", 0) );
-    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
-    /* forbid recursive call of heuristics and separators solving subMIPs */
-    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-    /* disable cutting plane separation */
-    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
-    /* disable expensive presolving */
-    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
-    /* do not abort subproblem on CTRL-C */
-    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-    /* add an objective cutoff */
-    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
+   /* add an objective cutoff */
+   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
 
-    /* create the variable mapping hash map */
-    SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapbw, SCIPblkmem(scip), nvars) );
 
-    /* store reversing mapping of variables */
-    SCIP_CALL( SCIPtransformProb(subscip) );
-    for( i = 0; i < nvars; ++i)
-    {
-       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
-    }
+   /* store reversing mapping of variables */
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   for( i = 0; i < nvars; ++i)
+   {
+      SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
+   }
 
-    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
-     * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
-     */
-    nconshdlrs = 4;
-    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
-    SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );
+   /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
+   * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
+   */
+   nconshdlrs = 4;
+   SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );
 
-    /* store number of constraints before rapid learning search */
-    conshdlrs[0] = SCIPfindConshdlr(subscip, "setppc");
-    conshdlrs[1] = SCIPfindConshdlr(subscip, "logicor");
-    conshdlrs[2] = SCIPfindConshdlr(subscip, "linear");
-    conshdlrs[3] = SCIPfindConshdlr(subscip, "bounddisjunction");
+   /* store number of constraints before rapid learning search */
+   conshdlrs[0] = SCIPfindConshdlr(subscip, "setppc");
+   conshdlrs[1] = SCIPfindConshdlr(subscip, "logicor");
+   conshdlrs[2] = SCIPfindConshdlr(subscip, "linear");
+   conshdlrs[3] = SCIPfindConshdlr(subscip, "bounddisjunction");
 
-    /* redundant constraints might be eliminated in presolving */
-    SCIP_CALL( SCIPpresolve(subscip));
+   /* redundant constraints might be eliminated in presolving */
+   SCIP_CALL( SCIPpresolve(subscip));
 
-    for( i = 0; i < nconshdlrs; ++i)
-    {
-       if( conshdlrs[i] != NULL )
-          oldnconss[i] = SCIPconshdlrGetNConss(conshdlrs[i]);
-    }
+   for( i = 0; i < nconshdlrs; ++i)
+   {
+      if( conshdlrs[i] != NULL )
+         oldnconss[i] = SCIPconshdlrGetNConss(conshdlrs[i]);
+   }
 
-    nfixedvars = SCIPgetNFixedVars(scip);
+   nfixedvars = SCIPgetNFixedVars(scip);
 
-    /* solve the subproblem, abort after errors in debug mode */
-    SCIP_CALL_ABORT( SCIPsolve(subscip) );
+   /* solve the subproblem, abort after errors in debug mode */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
-    /* if problem was already solved do not increase limits to run again */
-    if( SCIPgetStage(subscip) == SCIP_STAGE_SOLVED )
-    {
-       SCIPdebugMsg(scip, "Subscip was completely solved, status %d.\n", SCIPgetStatus(subscip));
-    }
-    /* abort solving, if limit of applied conflicts is reached */
-    else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
-    {
-       SCIPdebugMsg(scip, "finish after %" SCIP_LONGINT_FORMAT " successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
-    }
-    /* if the first 20% of the solution process were successful, proceed */
-    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
-       || (sepadata->applybdchgs && SCIPgetNFixedVars(subscip) > nfixedvars)
-       || (sepadata->applyconflicts && SCIPgetNConflictConssApplied(subscip) > 0) )
-    {
-       SCIPdebugMsg(scip, "proceed solving after the first 20%% of the solution process, since:\n");
+   /* if problem was already solved do not increase limits to run again */
+   if( SCIPgetStage(subscip) == SCIP_STAGE_SOLVED )
+   {
+      SCIPdebugMsg(scip, "Subscip was completely solved, status %d.\n", SCIPgetStatus(subscip));
+   }
+   /* abort solving, if limit of applied conflicts is reached */
+   else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
+   {
+      SCIPdebugMsg(scip, "finish after %" SCIP_LONGINT_FORMAT " successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
+   }
+   /* if the first 20% of the solution process were successful, proceed */
+   else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
+      || (sepadata->applybdchgs && SCIPgetNFixedVars(subscip) > nfixedvars)
+      || (sepadata->applyconflicts && SCIPgetNConflictConssApplied(subscip) > 0) )
+   {
+      SCIPdebugMsg(scip, "proceed solving after the first 20%% of the solution process, since:\n");
 
-       if( SCIPgetNSols(subscip) > 0 && SCIPisFeasLE(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
-       {
-          SCIPdebugMsg(scip, "   - there was a better solution (%f < %f)\n",SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip));
-       }
-       if( SCIPgetNFixedVars(subscip) > nfixedvars )
-       {
-          SCIPdebugMsg(scip, "   - there were %d variables fixed\n", SCIPgetNFixedVars(scip)-nfixedvars );
-       }
-       if( SCIPgetNConflictConssFound(subscip) > 0 )
-       {
-          SCIPdebugMsg(scip, "   - there were %" SCIP_LONGINT_FORMAT " conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
-       }
+      if( SCIPgetNSols(subscip) > 0 && SCIPisFeasLE(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
+      {
+         SCIPdebugMsg(scip, "   - there was a better solution (%f < %f)\n",SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip));
+      }
+      if( SCIPgetNFixedVars(subscip) > nfixedvars )
+      {
+         SCIPdebugMsg(scip, "   - there were %d variables fixed\n", SCIPgetNFixedVars(scip)-nfixedvars );
+      }
+      if( SCIPgetNConflictConssFound(subscip) > 0 )
+      {
+         SCIPdebugMsg(scip, "   - there were %" SCIP_LONGINT_FORMAT " conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
+      }
 
-       /* set node limit to 100% */
-       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
+      /* set node limit to 100% */
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
-       /* solve the subproblem, abort after errors in debug mode */
-        SCIP_CALL_ABORT( SCIPsolve(subscip) );
-    }
-    else
-    {
-       SCIPdebugMsg(scip, "do not proceed solving after the first 20%% of the solution process.\n");
-    }
+      /* solve the subproblem, abort after errors in debug mode */
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "do not proceed solving after the first 20%% of the solution process.\n");
+   }
 
  #ifdef SCIP_DEBUG
-    SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
  #endif
 
-    disabledualreductions = FALSE;
+   disabledualreductions = FALSE;
 
-    /* check, whether a solution was found */
-    if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
-    {
-       SCIP_HEUR* heurtrysol;
-       SCIP_SOL** subsols;
-       int nsubsols;
+   /* check, whether a solution was found */
+   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
+   {
+      SCIP_HEUR* heurtrysol;
+      SCIP_SOL** subsols;
+      int nsubsols;
 
-       /* check, whether a solution was found;
-        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until was declared to be feasible
-        */
-       nsubsols = SCIPgetNSols(subscip);
-       subsols = SCIPgetSols(subscip);
-       soladded = FALSE;
-       heurtrysol = SCIPfindHeur(scip, "trysol");
+      /* check, whether a solution was found;
+      * due to numerics, it might happen that not all solutions are feasible -> try all solutions until was declared to be feasible
+      */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      soladded = FALSE;
+      heurtrysol = SCIPfindHeur(scip, "trysol");
 
-       /* sequentially add solutions to trysol heuristic */
-       for( i = 0; i < nsubsols && !soladded; ++i )
-       {
-          SCIPdebugMsg(scip, "Try to create new solution by copying subscip solution.\n");
-          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
+      /* sequentially add solutions to trysol heuristic */
+      for( i = 0; i < nsubsols && !soladded; ++i )
+      {
+         SCIPdebugMsg(scip, "Try to create new solution by copying subscip solution.\n");
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
 
-          if( SCIPgetSubscipDepth(scip) == 0 )
-            printf(">> accepted RL solution\n");
-       }
-       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
-          disabledualreductions = TRUE;
-    }
+         if( SCIPgetSubscipDepth(scip) == 0 )
+         printf(">> accepted RL solution\n");
+      }
+      if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
+         disabledualreductions = TRUE;
+   }
 
-    /* if the sub problem was solved completely, we update the dual bound */
-    dualboundchg = FALSE;
-    if( sepadata->applysolved && !disabledualreductions
-       && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
-    {
-       /* we need to multiply the dualbound with the scaling factor and add the offset,
-        * because this information has been disregarded in the sub-SCIP
-        */
-       SCIPdebugMsg(scip, "Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
+   /* if the sub problem was solved completely, we update the dual bound */
+   dualboundchg = FALSE;
+   if( sepadata->applysolved && !disabledualreductions
+      && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
+   {
+      /* we need to multiply the dualbound with the scaling factor and add the offset,
+      * because this information has been disregarded in the sub-SCIP
+      */
+      SCIPdebugMsg(scip, "Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
 
-       SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
-       dualboundchg = TRUE;
-    }
+      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
+      dualboundchg = TRUE;
+   }
 
-    /* check, whether conflicts were created */
-    nconflicts = 0;
-    if( sepadata->applyconflicts && !disabledualreductions && SCIPgetNConflictConssApplied(subscip) > 0 )
-    {
-       SCIP_HASHMAP* consmap;
-       int hashtablesize;
-       int nmaxconfs;
+   /* check, whether conflicts were created */
+   nconflicts = 0;
+   if( sepadata->applyconflicts && !disabledualreductions && SCIPgetNConflictConssApplied(subscip) > 0 )
+   {
+      SCIP_HASHMAP* consmap;
+      int hashtablesize;
+      int nmaxconfs;
 
-       assert(SCIPgetNConflictConssApplied(subscip) < (SCIP_Longint) INT_MAX);
-       hashtablesize = (int) SCIPgetNConflictConssApplied(subscip);
-       assert(hashtablesize < INT_MAX/5);
+      assert(SCIPgetNConflictConssApplied(subscip) < (SCIP_Longint) INT_MAX);
+      hashtablesize = (int) SCIPgetNConflictConssApplied(subscip);
+      assert(hashtablesize < INT_MAX/5);
 
-       /* create the variable mapping hash map */
-       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), hashtablesize) );
+      /* create the variable mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), hashtablesize) );
 
-       SCIP_CALL( SCIPgetIntParam(scip, "conflict/maxconss", &nmaxconfs) );
+      SCIP_CALL( SCIPgetIntParam(scip, "conflict/maxconss", &nmaxconfs) );
 
-       /* loop over all constraint handlers that might contain conflict constraints
-        * @todo select promising constraints and not greedy
-        */
-       for( i = 0; i < nconshdlrs && nconflicts < nmaxconfs; ++i)
-       {
-          /* copy constraints that have been created in FD run */
-          if( conshdlrs[i] != NULL && SCIPconshdlrGetNConss(conshdlrs[i]) > oldnconss[i] )
-          {
-             SCIP_CONS** conss;
-             int c;
-             int nconss;
+      /* loop over all constraint handlers that might contain conflict constraints
+      * @todo select promising constraints and not greedy
+      */
+      for( i = 0; i < nconshdlrs && nconflicts < nmaxconfs; ++i)
+      {
+         /* copy constraints that have been created in FD run */
+         if( conshdlrs[i] != NULL && SCIPconshdlrGetNConss(conshdlrs[i]) > oldnconss[i] )
+         {
+            SCIP_CONS** conss;
+            int c;
+            int nconss;
 
-             nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
-             conss = SCIPconshdlrGetConss(conshdlrs[i]);
+            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+            conss = SCIPconshdlrGetConss(conshdlrs[i]);
 
-             /* loop over all constraints that have been added in sub-SCIP run, these are the conflicts */
-             for( c = oldnconss[i]; c < nconss && nconflicts < nmaxconfs; ++c)
-             {
-                SCIP_CONS* cons;
-                SCIP_CONS* conscopy;
+            /* loop over all constraints that have been added in sub-SCIP run, these are the conflicts */
+            for( c = oldnconss[i]; c < nconss && nconflicts < nmaxconfs; ++c)
+            {
+               SCIP_CONS* cons;
+               SCIP_CONS* conscopy;
 
-                cons = conss[c];
-                assert(cons != NULL);
+               cons = conss[c];
+               assert(cons != NULL);
 
-                success = FALSE;
+               success = FALSE;
 
-                /* @todo assert that flags are as they should be for conflicts */
-                SCIP_CALL( SCIPgetConsCopy(subscip, scip, cons, &conscopy, conshdlrs[i], varmapbw, consmap, NULL,
-                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                      SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons),
-                      SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
+               /* @todo assert that flags are as they should be for conflicts */
+               SCIP_CALL( SCIPgetConsCopy(subscip, scip, cons, &conscopy, conshdlrs[i], varmapbw, consmap, NULL,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons),
+                     SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
 
-                if( success )
-                {
-                   nconflicts++;
-                   SCIP_CALL( SCIPaddCons(scip, conscopy) );
-                   SCIP_CALL( SCIPreleaseCons(scip, &conscopy) );
-                }
-                else
-                {
-                   SCIPdebugMsg(scip, "failed to copy conflict constraint %s back to original SCIP\n", SCIPconsGetName(cons));
-                }
-             }
-          }
-       }
-       SCIPhashmapFree(&consmap);
-    }
+               if( success )
+               {
+                  nconflicts++;
+                  SCIP_CALL( SCIPaddCons(scip, conscopy) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &conscopy) );
+               }
+               else
+               {
+                  SCIPdebugMsg(scip, "failed to copy conflict constraint %s back to original SCIP\n", SCIPconsGetName(cons));
+               }
+            }
+         }
+      }
+      SCIPhashmapFree(&consmap);
+   }
 
-    /* check, whether tighter global bounds were detected */
-    nbdchgs = 0;
-    if( sepadata->applybdchgs && !disabledualreductions )
-       for( i = 0; i < nvars; ++i )
-       {
-          SCIP_Bool infeasible;
-          SCIP_Bool tightened;
+   /* check, whether tighter global bounds were detected */
+   nbdchgs = 0;
+   if( sepadata->applybdchgs && !disabledualreductions )
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
 
-          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
-          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
-          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
+         assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
+         assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
+         assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
 
-          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
-          /* @todo handle infeasible pointer? can it be set to TRUE? */
-          SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-          if( tightened )
-             nbdchgs++;
+         /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
+         /* @todo handle infeasible pointer? can it be set to TRUE? */
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+         if( tightened )
+            nbdchgs++;
 
-          SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-          if( tightened )
-             nbdchgs++;
-       }
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+         if( tightened )
+            nbdchgs++;
+      }
 
-    n1startinfers = 0;
-    n2startinfers = 0;
+   n1startinfers = 0;
+   n2startinfers = 0;
 
-    /* install start values for inference branching */
-    /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
-    if( sepadata->applyinfervals && SCIPgetDepth(scip) == 0 && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
-    {
-       for( i = 0; i < nvars; ++i )
-       {
-          SCIP_Real downinfer;
-          SCIP_Real upinfer;
-          SCIP_Real downvsids;
-          SCIP_Real upvsids;
-          SCIP_Real downconflen;
-          SCIP_Real upconflen;
+   /* install start values for inference branching */
+   /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
+   if( sepadata->applyinfervals && SCIPgetDepth(scip) == 0 && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
+   {
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_Real downinfer;
+         SCIP_Real upinfer;
+         SCIP_Real downvsids;
+         SCIP_Real upvsids;
+         SCIP_Real downconflen;
+         SCIP_Real upconflen;
 
-          /* copy downwards branching statistics */
-          downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
-          downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
-          downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
+         /* copy downwards branching statistics */
+         downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
+         downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
+         downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
 
-          /* copy upwards branching statistics */
-          upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
-          upconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
-          upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
+         /* copy upwards branching statistics */
+         upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
+         upconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
+         upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
 
-          /* memorize statistics */
-          if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )
-             n1startinfers++;
+         /* memorize statistics */
+         if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )
+            n1startinfers++;
 
-          if( downinfer+downconflen+downvsids > 0.0 && upinfer+upconflen+upvsids != 0 )
-             n2startinfers++;
+         if( downinfer+downconflen+downvsids > 0.0 && upinfer+upconflen+upvsids != 0 )
+            n2startinfers++;
 
-          SCIP_CALL( SCIPinitVarBranchStats(scip, vars[i], 0.0, 0.0, downvsids, upvsids, downconflen, upconflen, downinfer, upinfer, 0.0, 0.0) );
-       }
-    }
+         SCIP_CALL( SCIPinitVarBranchStats(scip, vars[i], 0.0, 0.0, downvsids, upvsids, downconflen, upconflen, downinfer, upinfer, 0.0, 0.0) );
+      }
+   }
 
-    SCIPdebugMsg(scip, "Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
-       nconflicts, nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
+   SCIPdebugMsg(scip, "Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
+      nconflicts, nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
 
-    SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
-       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
+   SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
+      100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
 
-    /* change result pointer */
-    if( nconflicts > 0 || dualboundchg )
-       *result = SCIP_CONSADDED;
-    else if( nbdchgs > 0 )
-       *result = SCIP_REDUCEDDOM;
+   /* change result pointer */
+   if( nconflicts > 0 || dualboundchg )
+      *result = SCIP_CONSADDED;
+   else if( nbdchgs > 0 )
+      *result = SCIP_REDUCEDDOM;
 
-    /* free local data */
-    assert(oldnconss != NULL);
-    assert(conshdlrs != NULL);
-    assert(varmapbw != NULL);
-    SCIPfreeBufferArray(scip, &oldnconss);
-    SCIPfreeBufferArray(scip, &conshdlrs);
-    SCIPhashmapFree(&varmapbw);
+   /* free local data */
+   assert(oldnconss != NULL);
+   assert(conshdlrs != NULL);
+   assert(varmapbw != NULL);
+   SCIPfreeBufferArray(scip, &oldnconss);
+   SCIPfreeBufferArray(scip, &conshdlrs);
+   SCIPhashmapFree(&varmapbw);
 
   TERMINATE:
 
@@ -897,7 +902,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, result);
+   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, SCIPsepaGetNCalls(sepa)+1, result);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
