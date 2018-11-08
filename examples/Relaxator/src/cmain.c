@@ -71,7 +71,7 @@ SCIP_RETCODE runShell(
 /** main method */
 int main(
    int                   argc,               /**< number of shell parameters */
-   char**                argv,               /**< array with shell parameters */
+   char**                argv                /**< array with shell parameters */
    )
 {
   SCIP_RETCODE retcode;
