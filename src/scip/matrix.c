@@ -433,11 +433,10 @@ SCIP_RETCODE calcActivityBounds(
  * public functions
  */
 
-/** initialize matrix
+/** initialize matrix by copying all check constraints
  *
  *  @note Completeness is checked by testing whether all check constraints are from a list of linear constraint handlers
- *        that can be represented.  This ignores constraint handlers that do not need constraints, i.e., where
- *        SCIPconshdlrNeedsCons() is false.
+ *        that can be represented.
  */
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
