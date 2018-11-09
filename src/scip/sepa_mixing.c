@@ -210,7 +210,7 @@ SCIP_RETCODE separateCuts(
    int vlbmixsize;
    int vubmixsize;
    int cutnnz;
-   int firstvars;
+   int firstvar;
    int nvars;
    int i;
    int k;
@@ -230,12 +230,12 @@ SCIP_RETCODE separateCuts(
    if( sepadata->iscutsonints )
    {
       /* generate cuts based on all nonbinary variabls */
-      firstvars = SCIPgetNBinVars(scip);
+      firstvar = SCIPgetNBinVars(scip);
    }
    else
    {
       /* only generate cuts based on continuous variables */
-      firstvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
+      firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
 
    /* allocate temporary memory */
@@ -250,7 +250,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
 
-   for( i=firstvars; i<nvars; i++ )
+   for( i=firstvar; i<nvars; i++ )
    {
       SCIP_VAR** vlbvars;
       SCIP_Real* vlbcoefs;
@@ -321,9 +321,11 @@ SCIP_RETCODE separateCuts(
          }
       }
 
-      if( SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), lb) )
+      /* stop if the lower bound is larger than the upper bound */
+      if( SCIPisLT(scip, SCIPvarGetUbLocal(var), lb) )
       {
-         /* Never happen: already done by propagation */
+         *cutoff = TRUE;
+         goto ENDMIXING;
       }
 
       /* extract the useful variable bounds information (binary and nonredundant) */
@@ -373,7 +375,7 @@ SCIP_RETCODE separateCuts(
       if( vlbmixsize == 0 )
          goto VUB;
 
-      /* stop if the current solution value of the transformed continuous variable is larger than the maxial coefficient */
+      /* stop if the current solution value of the transformed continuous variable is larger than the maximal coefficient */
       if( SCIPisFeasGT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
          goto VUB;
 
@@ -477,6 +479,13 @@ VUB:
          }
       }
 
+      /* stop if the upper bound is less than the lower bound */
+      if( SCIPisLT(scip, ub, SCIPvarGetLbLocal(var)) )
+      {
+         *cutoff = TRUE;
+         goto ENDMIXING;
+      }
+
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j=0; j < nvub; j++ )
       {
@@ -524,7 +533,7 @@ VUB:
       if( vubmixsize == 0 )
          goto CONFLICT;
 
-      /* stop if the current solution value of transformed continuous variable is larger than the maxial coefficient */
+      /* stop if the current solution value of transformed continuous variable is larger than the maximal coefficient */
       if( SCIPisFeasGT(scip, (ub - SCIPvarGetLPSol(var)), maxabscoef) )
          goto CONFLICT;
 
@@ -623,6 +632,7 @@ CONFLICT:
          }
       }
    }
+ENDMIXING:
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &vlbmixcoefs);
