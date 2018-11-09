@@ -28,10 +28,13 @@
 
 #include "include/scip_test.h"
 
-#define DISP_WIDTH              14      /**< the width of the display column */
-#define DISP_PRIORITY           110000  /**< the priority of the display column */
-#define DISP_POSITION           30100   /**< the relative position of the display column */
-#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated */
+#define DISP_WIDTH              14                /**< the width of the display column */
+#define DISP_PRIORITY           110000            /**< the priority of the display column */
+#define DISP_POSITION           30100             /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE              /**< the default for whether the display column should be separated */
+
+#define TABLE_POSITION          -1000             /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT   /**< output of the statistics table is only printed from this stage onwards */
 
 /** dialog data */
 struct SCIP_DialogData
@@ -40,6 +43,11 @@ struct SCIP_DialogData
 
 /** display column data */
 struct SCIP_DispData
+{
+};
+
+/** statistics table data */
+struct SCIP_TableData
 {
 };
 
@@ -122,13 +130,12 @@ SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
 
 /** creates the xyz display column and includes it in SCIP */
 SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*  scip    /**< SCIP data structure */
 )
 {
    SCIP_DISPDATA* dispdata;
 
    /* create mydisplaycolumn display column data */
-   dispdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
 
    /* include display column */
@@ -138,7 +145,7 @@ SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
                               NULL, NULL, dispOutputMydisplaycolumn,
                               dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
-   /* add xyz display column parameters */
+   /* add display column parameters */
    /* TODO: (optional) add display column specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
@@ -164,6 +171,38 @@ SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
 }
 /**! [SnippetTableFree] */
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputMystatisticstable)
+{
+   SCIPinfoMessage(scip, file, "output method of my statistics table\n");
+
+   return SCIP_OKAY;
+}
+
+/** creates the statistics table and includes it in SCIP */
+SCIP_RETCODE SCIPincludeMytable(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_TABLEDATA* tabledata;
+
+   /* create statistics table data */
+   SCIP_CALL( SCIPallocMemory(scip, &tabledata) );
+   /* TODO: (optional) create statistics table specific data here */
+
+   /* include statistics table */
+   SCIP_CALL( SCIPincludeTable(scip, "my statistics table", "an example of a statistics table", TRUE,
+                               NULL, tableFreeMystatisticstable, NULL, NULL,
+                               NULL, NULL, tableOutputMystatisticstable,
+                               tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
+
+   /* add statistics table parameters */
+   /* TODO: (optional) add statistics table specific parameters with SCIPaddTypeParam() here */
+
+   return SCIP_OKAY;
+}
+
 /* TEST SUITE */
 static
 void setup(void)
@@ -187,7 +226,7 @@ void teardown(void)
 
 TestSuite(snippets, .init = setup, .fini = teardown);
 
-Test(snippets, dialog, .description = "tests example Dialog code")
+Test(snippets, dialog, .description = "tests an example of dialog code")
 {
    /**! [SnippetDialogCreate] */
    SCIP_DIALOG* root;
@@ -226,5 +265,5 @@ Test(snippets, display, .description = "tests an example of display code")
 
 Test(snippets, table, .description = "tests an example of table code")
 {
-
+   SCIPincludeMytable(scip);
 }
