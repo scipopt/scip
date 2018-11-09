@@ -50,11 +50,11 @@
  *
  * Some remarks:
  * - Besides the mixing inequality, we also add the conflict inequality.
- * - Currently, we found the performance is really bad on the neos-565672 instances.
- *   The reason is that, with the mixing inequality, SCIP spends a lot of time on cutting planes generations.
- * - Currently, we do not consider sparsity of the cuts as we only care about finding a most violated cut.
+ * - Currently, the performance is bad on the neos-565672 instance.
+ *   The reason is that, after adding the separator, SCIP spends a lot of time at the stage of cutting plane generation.
+ * - We do not consider sparsity of the cuts as we aim to find a most violated cut.
  * - Besides the most violated cut we consider, we also add an additional variable to make the cut be the strongest one,
- *   even the additional variable does not contribute any violation.
+ *   even the additional variable does not contribute any to the violation.
  *
  */
 
@@ -95,13 +95,13 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define DEFAULT_USELOACLBOUNDS    FALSE /**< should local bounds be used? */
-#define DEFAULT_ISCUTSONINTS      FALSE /**< should general integer variables be used to generate cuts? */
+#define DEFAULT_ISCUTSONINTS      FALSE /**< should general/implied integer variables be used to generate cuts? */
 
 /** separator-specific data for the implied bounds separator */
 struct SCIP_SepaData
 {
    SCIP_Bool             uselocalbounds;     /**< should local bounds be used? */
-   SCIP_Bool             iscutsonints;       /**< should general integer variables be used to generate cuts? */
+   SCIP_Bool             iscutsonints;       /**< should general/implied integer variables be used to generate cuts? */
    int                   maxrounds;          /**< maximal number of mixing separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
 };
@@ -128,6 +128,7 @@ SCIP_RETCODE addCut(
    SCIP_ROW* cut;
    char cutname[SCIP_MAXSTRLEN];
    int v;
+
 
    assert(cutcoefs != NULL);
    assert(cutinds != NULL);
@@ -276,6 +277,7 @@ SCIP_RETCODE separateCuts(
 
       cutnnz = 0;
       vlbmixsize = 0;
+      islocallb = FALSE;
       var=vars[i];
       assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
 
@@ -284,7 +286,6 @@ SCIP_RETCODE separateCuts(
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
       nvlb = SCIPvarGetNVlbs(var);
-      islocallb = FALSE;
       lb = SCIPvarGetLbGlobal(var);
       if( nvlb == 0 )
          goto VUB;
@@ -293,15 +294,16 @@ SCIP_RETCODE separateCuts(
       maxabsind = -1;
       maxabssign = 0;
 
+      /* stop if the upper bound is equal to the LP solution value of the continuous variable */
+      if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var)) )
+         goto VUB;
+
       if( sepadata->uselocalbounds && lb < SCIPvarGetLbLocal(var) )
       {
          /* This is a lcoal cut */
          islocallb = TRUE;
          lb = SCIPvarGetLbLocal(var);
       }
-
-      if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var)) )
-         goto VUB;
 
       /* obtain a new lower (and global) bound if possible */
       for( j=0; j < nvlb; j++ )
@@ -321,7 +323,7 @@ SCIP_RETCODE separateCuts(
 
       if( SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), lb) )
       {
-         /*Never happen: already done by propagation*/
+         /* Never happen: already done by propagation */
       }
 
       /* extract the useful variable bounds information (binary and nonredundant) */
@@ -354,12 +356,15 @@ SCIP_RETCODE separateCuts(
             vlbmixcoefs[vlbmixsize] = REALABS(coef);
             vlbmixinds[vlbmixsize] = SCIPvarGetProbindex(vlbvars[j]);
             vlbmixsols[vlbmixsize] = (!vlbmixsigns[vlbmixsize]) ? SCIPvarGetLPSol(vlbvars[j]) : (1-SCIPvarGetLPSol(vlbvars[j]));
+
+            /* update the maximal coefficient if needed */
             if( maxabscoef < vlbmixcoefs[vlbmixsize] )
             {
                maxabscoef = vlbmixcoefs[vlbmixsize];
                maxabsind = vlbmixinds[vlbmixsize];
                maxabssign = vlbmixsigns[vlbmixsize];
             }
+
             vlbmixsize += 1;
          }
       }
@@ -368,32 +373,35 @@ SCIP_RETCODE separateCuts(
       if( vlbmixsize == 0 )
          goto VUB;
 
-      /* stop if the current solution value is larger than the maxial coefficient */
+      /* stop if the current solution value of the transformed continuous variable is larger than the maxial coefficient */
       if( SCIPisFeasGT(scip, (SCIPvarGetLPSol(var) - lb), maxabscoef) )
          goto VUB;
 
-      /* sort the lp solutions decreasingly */
+      /* sort the lp solutions in non-increasing order */
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds,  vlbmixsigns, vlbmixsize);
 
       /* add the continuous variable */
-      activity = -(SCIPvarGetLPSol(var) - lb);
       cutcoefs[cutnnz] = -1;
       cutinds[cutnnz] = SCIPvarGetProbindex(var);
       cutrhs = -lb;
       cutnnz++;
+
+      activity = -(SCIPvarGetLPSol(var) - lb);
       lastcoef = 0;
+
+      /* loop over the variables and add the variable to the cut if its coefficient is larger than that of the last variable */
       for( j=0; j < vlbmixsize; j++ )
       {
          SCIP_Real solval;
 
          solval = vlbmixsols[j];
 
-         /* stop if we could not find a violated cut */
+         /* stop if we can not find a violated cut */
          if( activity + solval*(maxabscoef-lastcoef) < 0.0 || SCIPisFeasZero(scip, solval) )
             break;
          else
          {
-            /* skip if we have already add a variable with bigger coefficients */
+            /* skip if we have already added a variable with bigger coefficient */
             if( SCIPisLE(scip, vlbmixcoefs[j], lastcoef) )
                continue;
             else
@@ -408,7 +416,7 @@ SCIP_RETCODE separateCuts(
          }
       }
 
-      /* adding the variable with maximal coefficient to make sure the cut is strong enough */
+      /* add the variable with maximal coefficient to make sure the cut is strong enough */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
          cutrhs -= maxabssign*(maxabscoef - lastcoef);
@@ -417,15 +425,16 @@ SCIP_RETCODE separateCuts(
          cutnnz++;
       }
 
+      /* add the cut if the violtion is good enough */
       if( SCIPisEfficacious(scip, activity) )
       {
-         /* add the cut if the violtion is good enough */
          SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocallb, cutoff, ncuts) );
       }
 
 VUB:
       cutnnz = 0;
       vubmixsize = 0;
+      islocalub = FALSE;
 
       /* get variable upper bounds information */
       vubvars = SCIPvarGetVubVars(var);
@@ -433,7 +442,6 @@ VUB:
       vubconsts = SCIPvarGetVubConstants(var);
       nvub = SCIPvarGetNVubs(var);
       ub = SCIPvarGetUbGlobal(var);
-      islocalub = FALSE;
       if( nvub == 0 )
          goto CONFLICT;
 
@@ -441,6 +449,7 @@ VUB:
       maxabsind = -1;
       maxabssign = 0;
 
+      /* stop if the lower bound is equal to the LP solution value of the continuous variable */
       if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLPSol(var)) )
          goto CONFLICT;
 
@@ -498,12 +507,15 @@ VUB:
             vubmixcoefs[vubmixsize] = REALABS(coef);
             vubmixinds[vubmixsize] = SCIPvarGetProbindex(vubvars[j]);
             vubmixsols[vubmixsize] = (!vubmixsigns[vubmixsize])? SCIPvarGetLPSol(vubvars[j]):1-SCIPvarGetLPSol(vubvars[j]);
+
+            /* update the maximal coefficient if needed */
             if( maxabscoef < vubmixcoefs[vubmixsize] )
             {
                maxabscoef = vubmixcoefs[vubmixsize];
                maxabsind = vubmixinds[vubmixsize];
                maxabssign = vubmixsigns[vubmixsize];
             }
+
             vubmixsize += 1;
          }
       }
@@ -512,19 +524,20 @@ VUB:
       if( vubmixsize == 0 )
          goto CONFLICT;
 
-      /* stop if the current solution value is larger than the maxial coefficient */
+      /* stop if the current solution value of transformed continuous variable is larger than the maxial coefficient */
       if( SCIPisFeasGT(scip, (ub - SCIPvarGetLPSol(var)), maxabscoef) )
          goto CONFLICT;
 
-      /* sort the lp solutions decreasingly */
+      /* sort the lp solutions in non-increasing order */
       SCIPsortDownRealRealIntInt(vubmixsols, vubmixcoefs, vubmixinds,  vubmixsigns, vubmixsize);
 
       /* add the continuous variables */
-      activity = SCIPvarGetLPSol(var) - ub;
       cutcoefs[cutnnz] = 1;
       cutinds[cutnnz] = SCIPvarGetProbindex(var);
       cutrhs = ub;
       cutnnz++;
+
+      activity = SCIPvarGetLPSol(var) - ub;
       lastcoef = 0;
       for( j=0; j < vubmixsize; j++  )
       {
@@ -550,7 +563,7 @@ VUB:
          }
       }
 
-      /* adding the variable with maximal coefficient */
+      /* add the variable with maximal coefficient if needed */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
          cutrhs -= maxabssign*(maxabscoef - lastcoef);
@@ -584,11 +597,14 @@ CONFLICT:
 
          for( k=0; k<vubmixsize; k++ )
          {
-            /* add the cut if the violation is good enough */
+            /* only consider the inequality if its violation is good enough */
             if( SCIPisEfficacious(scip, solval+vubmixsols[k]-1) )
             {
                SCIP_Real tmp;
+
                tmp = lb + vlbmixcoefs[j] + vubmixcoefs[k] - ub;
+
+               /* add the cut if it is valid */
                if( SCIPisEfficacious(scip, tmp) )
                {
                   cutnnz = 2;
