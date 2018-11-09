@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_miniisc.c
  * @brief  main document page
  * @author Marc Pfetsch
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page MINIISC_MAIN MinIISC
  * @version  0.1
  * @author   Marc Pfetsch
  *
@@ -75,8 +75,8 @@
  * The input to the code should be an infeasible linear program (the objective is ignored) in any format that SCIP can
  * handle. The basic benders algorithm is implemented in the file benders.c using a call back for the cut generation.
  *
- * Compiling the MinIISC application
- * ----------------------------------
+ * Installation
+ * ============
  *
- * See the @ref INSTALL "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

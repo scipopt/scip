@@ -114,9 +114,7 @@ int SCIPtpiGetNewJobID(
    void
    );
 
-/** submit a job for parallel processing
- *  the return is a globally defined status
- */
+/** submit a job for parallel processing the return is a globally defined status */
 EXTERN
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */

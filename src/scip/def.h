@@ -37,6 +37,13 @@
 #include <assert.h>
 
 /*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
+/*
  * GNU COMPILER VERSION define
  */
 #ifdef __GNUC__
@@ -110,7 +117,7 @@ extern "C" {
 
 #define SCIP_VERSION                601 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_APIVERSION              33 /**< SCIP API version number */
+#define SCIP_APIVERSION              34 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 

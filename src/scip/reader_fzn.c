@@ -3919,11 +3919,20 @@ SCIP_RETCODE getActiveVariables(
       }
    }
    else
+   {
+      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e774 !e845*/
+      {
+         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
       {
          assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
       }
+   }
 
    return SCIP_OKAY;
 }
@@ -3976,7 +3985,7 @@ SCIP_RETCODE appendBuffer(
    }
 
    /* append extension to linebuffer - safe to use strcpy */
-   (void)strcpy((*buffer) + (*bufferpos), extension);
+   (void)SCIPstrncpy((*buffer) + (*bufferpos), extension, (int)strlen(extension));
    *bufferpos = newpos;
 
    return SCIP_OKAY;

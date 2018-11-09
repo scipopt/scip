@@ -3997,6 +3997,7 @@ SCIP_RETCODE copyConsPseudoboolean(
             SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
 
             /* create new pseudoboolean constraint */
+            /* coverity[var_deref_op] */
             SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                   targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
                   indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.c
+/**@file   scip/src/main.c
  * @brief  main file for C compilation
  * @author Tobias Achterberg
  */

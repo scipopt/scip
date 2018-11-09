@@ -17,9 +17,9 @@
  * @brief  Miscellaneous methods used for solving Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.
+ * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref STP_MISC page.
  *
- * @page MISCSTP Miscellaneous methods used for Steiner tree problems
+ * @page STP_MISC Miscellaneous methods used for Steiner tree problems
  *
  * This file implements an integer data linked list, a linear link-cut tree, a union-find data structure
  * and a pairing heap.
