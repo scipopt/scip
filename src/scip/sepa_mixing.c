@@ -305,28 +305,20 @@ SCIP_RETCODE separateCuts(
          lb = SCIPvarGetLbLocal(var);
       }
 
-      /* obtain a new lower (and global) bound if possible */
+#ifdef SCIP_DEBUG
       for( j=0; j < nvlb; j++ )
       {
          SCIP_Real tmplb;
+
          if( SCIPvarIsBinary(vlbvars[j]) && (SCIPvarGetProbindex(vlbvars[j]) >= 0) )
          {
             tmplb = (vlbcoefs[j] > 0) ? vlbconsts[j] : (vlbconsts[j] + vlbcoefs[j]);
-            if( tmplb >= lb )
-            {
-               /* variable bounds information is global, as a result, the cut should be global at this point */
-               islocallb = FALSE;
-               lb = tmplb;
-            }
+            assert( SCIPisFeasLE(scip, tmplb, lb) );
          }
       }
+#endif
 
-      /* stop if the lower bound is larger than the upper bound */
-      if( SCIPisLT(scip, SCIPvarGetUbLocal(var), lb) )
-      {
-         *cutoff = TRUE;
-         goto ENDMIXING;
-      }
+      assert( SCIPisFeasLE(scip, lb, SCIPvarGetUbLocal(var)) );
 
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j=0; j < nvlb; j++ )
@@ -462,7 +454,7 @@ VUB:
          ub = SCIPvarGetUbLocal(var);
       }
 
-      /* obtain a new upper bound (and global) if possible */
+#ifdef SCIP_DEBUG
       for( j=0; j < nvub; j++ )
       {
          SCIP_Real tmpub;
@@ -470,21 +462,12 @@ VUB:
          if( SCIPvarIsBinary(vubvars[j]) && (SCIPvarGetProbindex(vubvars[j]) >= 0) )
          {
             tmpub = (vubcoefs[j] < 0) ? vubconsts[j] : (vubconsts[j] + vubcoefs[j]);
-            if( tmpub <= ub )
-            {
-               /* variable bounds information is global, as a result, the cut should be global at this point */
-               islocalub = FALSE;
-               ub = tmpub;
-            }
+            assert( SCIPisFeasGE(scip, tmpub, ub) );
          }
       }
+#endif
 
-      /* stop if the upper bound is less than the lower bound */
-      if( SCIPisLT(scip, ub, SCIPvarGetLbLocal(var)) )
-      {
-         *cutoff = TRUE;
-         goto ENDMIXING;
-      }
+      assert( SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), ub) );
 
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j=0; j < nvub; j++ )
@@ -632,7 +615,6 @@ CONFLICT:
          }
       }
    }
-ENDMIXING:
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &vlbmixcoefs);
