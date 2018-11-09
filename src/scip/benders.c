@@ -1480,8 +1480,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    if( sourcebenders->cutsasconss )
    {
       /* only release if the creation of the constraint failed. */
-      //if( fail )
-         SCIP_CALL( SCIPreleaseCons(sourcescip, &transfercons) );
+      SCIP_CALL( SCIPreleaseCons(sourcescip, &transfercons) );
    }
    else
    {
