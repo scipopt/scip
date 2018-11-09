@@ -75,6 +75,7 @@ EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
+SLURMACCOUNT    =       ""
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
@@ -295,6 +296,8 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
+# skip config header
+FLAGS		+=  -DNO_CONFIG_HEADER
 
 #-----------------------------------------------------------------------------
 # Memory Management

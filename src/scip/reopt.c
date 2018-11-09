@@ -242,7 +242,7 @@ SCIP_RETCODE reopttreeCheckMemory(
 
       for( id = reopttree->reoptnodessize; id < (unsigned int)newsize; id++ )
       {
-         SCIP_CALL( SCIPqueueInsert(reopttree->openids, (void*) (size_t) id) ); /*lint !e571*/
+         SCIP_CALL( SCIPqueueInsertUInt(reopttree->openids, id) );
          reopttree->reoptnodes[id] = NULL;
       }
 
@@ -1171,7 +1171,7 @@ SCIP_RETCODE createReopttree(
    for( id = 1; id < reopttree->reoptnodessize; id++ )
    {
       reopttree->reoptnodes[id] = NULL;
-      SCIP_CALL( SCIPqueueInsert(reopttree->openids, (void*) (size_t) id) ); /*lint !e571*/
+      SCIP_CALL( SCIPqueueInsertUInt(reopttree->openids, id) );
    }
    assert(SCIPqueueNElems(reopttree->openids) == (int)(reopttree->reoptnodessize)-1);
 
@@ -1220,7 +1220,7 @@ SCIP_RETCODE clearReoptnodes(
 
       if( id > 0 )
       {
-         SCIP_CALL( SCIPqueueInsert(reopttree->openids, (void* ) (size_t ) id) ); /*lint !e571*/
+         SCIP_CALL( SCIPqueueInsertUInt(reopttree->openids, id) );
       }
    }
    assert(SCIPqueueNElems(reopttree->openids) == (int)(reopttree->reoptnodessize)-1);
@@ -1835,7 +1835,7 @@ SCIP_RETCODE deleteChildrenBelow(
    if( delnodeitself )
    {
       SCIP_CALL( reopttreeDeleteNode(reopttree, set, blkmem, id, exitsolve) );
-      SCIP_CALL( SCIPqueueInsert(reopttree->openids, (void*) (size_t) id) );
+      SCIP_CALL( SCIPqueueInsertUInt(reopttree->openids, id) );
    }
 
    return SCIP_OKAY;
@@ -1907,7 +1907,7 @@ SCIP_RETCODE shrinkNode(
          --reoptnodes[parentid]->nchilds;
 
          SCIP_CALL( reopttreeDeleteNode(reopt->reopttree, set, blkmem, id, TRUE) );
-         SCIP_CALL( SCIPqueueInsert(reopt->reopttree->openids, (void*) (size_t) id) );
+         SCIP_CALL( SCIPqueueInsertUInt(reopt->reopttree->openids, id) );
 
          *shrank = TRUE;
 
@@ -2982,7 +2982,7 @@ SCIP_RETCODE addNode(
       /* check if there are free slots to store the node */
       SCIP_CALL( reopttreeCheckMemory(reopt->reopttree, set, blkmem) );
 
-      id = (unsigned int) (size_t) SCIPqueueRemove(reopt->reopttree->openids);
+      id = SCIPqueueRemoveUInt(reopt->reopttree->openids);
 
       SCIPsetDebugMsg(set, " -> save at ID %u\n", id);
 
@@ -4496,7 +4496,7 @@ SCIP_RETCODE dryBranch(
 
          /* delete the redundant node */
          SCIP_CALL( reopttreeDeleteNode(reopt->reopttree, set, blkmem, redchilds[nredchilds-1], TRUE) );
-         SCIP_CALL( SCIPqueueInsert(reopt->reopttree->openids, (void*) (size_t) redchilds[nredchilds-1]) );
+         SCIP_CALL( SCIPqueueInsertUInt(reopt->reopttree->openids, redchilds[nredchilds-1]) );
 
          /* decrease the number of redundant nodes */
          --nredchilds;
@@ -6705,7 +6705,7 @@ SCIP_RETCODE SCIPreoptApplyCompression(
    for( r = 0; r < nrepresentatives; r++ )
    {
       /* get an empty slot*/
-      id = (unsigned int) (size_t) SCIPqueueRemove(reopttree->openids);
+      id = SCIPqueueRemoveUInt(reopttree->openids);
       assert(1 <= id && id < reopttree->reoptnodessize);
       assert(reopttree->reoptnodes[id] == NULL);
 
@@ -6945,7 +6945,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
    /* ensure that two free slots are available  */
    SCIP_CALL( reopttreeCheckMemory(reopttree, set, blkmem) );
-   id = (unsigned int) (size_t) SCIPqueueRemove(reopttree->openids);
+   id = SCIPqueueRemoveUInt(reopttree->openids);
 
    assert(0 < id && id < reopt->reopttree->reoptnodessize);
    assert(reoptnodes[id] == NULL || reoptnodes[id]->nvars == 0);
@@ -7007,7 +7007,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
       /* ensure that there is a free slots */
       SCIP_CALL( reopttreeCheckMemory(reopttree, set, blkmem) );
-      id = (unsigned int) (size_t) SCIPqueueRemove(reopttree->openids);
+      id = SCIPqueueRemoveUInt(reopttree->openids);
       assert(0 < id && id < reopt->reopttree->reoptnodessize);
 
       /* 1. create the node
@@ -7104,7 +7104,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       {
          /* ensure that two free slots are available  */
          SCIP_CALL( reopttreeCheckMemory(reopttree, set, blkmem) );
-         id = (unsigned int) (size_t) SCIPqueueRemove(reopttree->openids);
+         id = SCIPqueueRemoveUInt(reopttree->openids);
 
          assert(0 < id && id < reopt->reopttree->reoptnodessize);
          assert(reoptnodes[id] == NULL || reoptnodes[id]->nvars == 0);
@@ -7288,7 +7288,7 @@ SCIP_RETCODE SCIPreoptDeleteNode(
    assert(blkmem != NULL);
 
    SCIP_CALL( reopttreeDeleteNode(reopt->reopttree, set, blkmem, id, TRUE) );
-   SCIP_CALL( SCIPqueueInsert(reopt->reopttree->openids, (void*) (size_t) id) );
+   SCIP_CALL( SCIPqueueInsertUInt(reopt->reopttree->openids, id) );
 
    return SCIP_OKAY;
 }

@@ -2115,7 +2115,7 @@ void removeConsFromOccurList(
 
       assert(SCIPhashmapExists(varstopos, (void*) var));
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2177,7 +2177,7 @@ void findShortestOccurlist(
          return;
       }
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2391,13 +2391,13 @@ SCIP_RETCODE addConsToOccurList(
          ++(noccurlistentries[pos]);
 
          /* add new variable to map */
-         SCIP_CALL( SCIPhashmapInsert(varstopos, var, (void*) (size_t) (pos + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(varstopos, var, pos + 1) );
 
          ++(*occurlistlength);
       }
       else
       {
-         pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+         pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
          assert(0 < pos && pos <= *occurlistlength);
 
          --pos;
@@ -2618,7 +2618,7 @@ SCIP_RETCODE removeRedundantNonZeros(
 
                   if( consdata1->nvars > nvars )
                   {
-                     pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)artvar);
+                     pos = SCIPhashmapGetImageInt(varstopos, (void*)artvar);
                      assert(0 < pos && pos <= occurlistlength);
 
                      --pos;
@@ -4500,7 +4500,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
 
