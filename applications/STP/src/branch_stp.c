@@ -608,6 +608,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   if( !branchruledata->active )
+      return SCIP_OKAY;
+
    /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -645,7 +648,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
 
-   branchruledata->active = TRUE;
    SCIPdebugMessage("Branched on stp vertex %d \n", branchvertex);
 
    *result = SCIP_BRANCHED;
@@ -673,6 +675,9 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
 
    SCIPdebugMessage("Execps method of STP branching\n");
    *result = SCIP_DIDNOTRUN;
+
+   if( !branchruledata->active )
+      return SCIP_OKAY;
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -879,7 +884,6 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    /* create stp branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
-   branchruledata->active = FALSE;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -898,6 +902,10 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP_CALL( SCIPaddIntParam(scip, "branching/stp/type",
          "Branching: 0 based on LP, 1 based on LP and with indegree > 1, 2 based on best solution",
          &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_LP, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/stp/vertexbranching",
+         "use branching on vertices?",
+         &(branchruledata->active), FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
