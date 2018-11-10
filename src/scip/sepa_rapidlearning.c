@@ -694,7 +694,7 @@ SCIP_Bool checkLocalExec(
       return TRUE;
 
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
-   if( SCIPgetNObjVars(scip) == 0 )
+   if( sepadata->checklocalobj && SCIPgetNObjVars(scip) == 0 )
    {
          SCIPdebugMsg(scip, "-> allow local RL due to global zero objective\n");
 

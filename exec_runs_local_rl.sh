@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 VERSION1=local-rl-de298f7f1  #git hash de298f7f1 (SoPlex 82cab95)
-VERSION2=local-rl-311a14096  #git hash 311a14096 (SoPlex 82cab95)
+VERSION2=local-rl-c0ca752b9  #git hash c0ca752b9 (SoPlex 82cab95)
 OUTPUTDIR=results-local-rapidlearning
 
 QUEUE=M640
@@ -10,6 +10,8 @@ TIME=3600
 
 #further settings: rapidlearning-freq-15-full-exp4,rapidlearning-freq-20-full-exp4,rapidlearning-freq-5-full-exp4,rapidlearning-freq-10-full-exp4,default,rapidlearning-freq-5-full,rapidlearning-freq-10-full,rapidlearning-freq-5-exp4-nsolsF,rapidlearning-freq-10-exp4-nsolsF
 
+
+## TODO rerun rapidlearning-freq-*-exp4-no-checks for VERSION1 on FEASIBILITY ! ! !
 
 
 #### FEASIBILITY (VERSION 1)
