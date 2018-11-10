@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-VERSION1=local-rl          #git hash e23051a (SoPlex 82cab95)
-VERSION2=local-rl-9404627  #git hash 9404627 (SoPlex 82cab95)
+VERSION1=local-rl            #git hash e23051a (SoPlex 82cab95)
+VERSION2=local-rl-c0ca752b9  #git hash c0ca752b9 (SoPlex 82cab95)
 OUTPUTDIR=results-local-rapidlearning
 
 QUEUE=M640
