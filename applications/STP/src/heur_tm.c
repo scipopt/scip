@@ -2676,11 +2676,11 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
                   if( partrand )
                      cost[e] = cost[e] * randval;
                }
-
+#if 0
                for( int e = 0; e < nedges; e++ )
                   if( graph->cost[e] == graph->cost[flipedge_Uint(e)] )
                      cost[e] = MIN(cost[e], cost[flipedge_Uint(e)]);
-
+#endif
             } /* graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP */
          } /* graph->stp_type != STP_DHCSTP */
       } /* xval != NULL */

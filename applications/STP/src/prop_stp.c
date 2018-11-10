@@ -76,6 +76,7 @@ struct SCIP_PropData
    SCIP_Longint          nfails;             /**< number of failures since last successful call */
    SCIP_Longint          ncalls;             /**< number of calls */
    SCIP_Longint          nlastcall;          /**< number of last call */
+   SCIP_Longint          nlastnlpiter;       /**< number of last LP iterations */
    SCIP_Longint          lastnodenumber;     /**< number of last call */
    SCIP_Longint          propgraphnodenumber;/**< b&b node number at which propgraph was updated */
    int                   nfixededges;        /**< total number of arcs fixed by 'fixedgevar' method of this propagator */
@@ -909,6 +910,11 @@ SCIP_DECL_PROPEXEC(propExecStp)
      && (propdata->nlastcall + propdata->nfails > propdata->ncalls) )
       return SCIP_OKAY;
 
+   /* new LP needs to have been solved to avoid conflicts between reduction based and red. cost propagation */
+   if( propdata->nlastnlpiter == SCIPgetNLPIterations(scip) )
+      return SCIP_OKAY;
+
+   propdata->nlastnlpiter = SCIPgetNLPIterations(scip);
    propdata->nlastcall = propdata->ncalls;
 
    graph = SCIPprobdataGetGraph(probdata);
@@ -950,7 +956,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
             callreduce = TRUE;
          }
       }
-      /* and root and is ratio of newly fixed edges higher than bound? */
+      /* at root and is ratio of newly fixed edges higher than bound? (== 0 is necessary, could be -1) */
       else if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) && SCIPgetDepth(scip) == 0 )
       {
          callreduce = TRUE;
@@ -1032,6 +1038,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->nfails = 0;
    propdata->ncalls = 0;
    propdata->nlastcall = 0;
+   propdata->nlastnlpiter = 0;
    propdata->lastnodenumber = -1;
    propdata->nfixededges = 0;
    propdata->postrednfixededges = 0;
