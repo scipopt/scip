@@ -57,7 +57,7 @@
 #define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before RL is
                                          *   executed locally based on the progress of the dualbound */
 #define DEFAULT_SBFRAC              1.0 /**< maximal fraction of strong branching LPs that were pruned or the
-                                       *     objetive value has not changed to allow local RL */
+                                         *   objetive value has not changed to allow local RL */
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
@@ -687,6 +687,12 @@ SCIP_Bool checkLocalExec(
 
    runlocal = FALSE;
 
+   /* return TRUE if all checks are disabled but frequency is > 0 */
+   if( !sepadata->checkdegeneracy && !sepadata->checkdualbound
+      && !sepadata->checkleaves && !sepadata->checklocalobj
+      && !sepadata->checknsols && !sepadata->checksblps )
+      return TRUE;
+
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
    if( SCIPgetNObjVars(scip) == 0 )
    {
@@ -696,7 +702,7 @@ SCIP_Bool checkLocalExec(
             printf("-> allow local RL due to global zero objective\n");
 
          runlocal = TRUE;
-      }
+   }
 
    /* check whether a solution was found */
    if( !runlocal && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
