@@ -398,10 +398,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );
 
     /* store number of constraints before rapid learning search */
-    conshdlrs[0] = SCIPfindConshdlr(subscip, "setppc");
-    conshdlrs[1] = SCIPfindConshdlr(subscip, "logicor");
+    conshdlrs[0] = SCIPfindConshdlr(subscip, "bounddisjunction");
+    conshdlrs[1] = SCIPfindConshdlr(subscip, "setppc");
     conshdlrs[2] = SCIPfindConshdlr(subscip, "linear");
-    conshdlrs[3] = SCIPfindConshdlr(subscip, "bounddisjunction");
+    conshdlrs[3] = SCIPfindConshdlr(subscip, "logicor");
 
     /* redundant constraints might be eliminated in presolving */
     SCIP_CALL( SCIPpresolve(subscip));
@@ -512,7 +512,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     {
        SCIP_HASHMAP* consmap;
        int hashtablesize;
-       int nmaxconfs;
 
        assert(SCIPgetNConflictConssApplied(subscip) < (SCIP_Longint) INT_MAX);
        hashtablesize = (int) SCIPgetNConflictConssApplied(subscip);
@@ -521,12 +520,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
        /* create the variable mapping hash map */
        SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), hashtablesize) );
 
-       SCIP_CALL( SCIPgetIntParam(scip, "conflict/maxconss", &nmaxconfs) );
-
-       /* loop over all constraint handlers that might contain conflict constraints
-        * @todo select promising constraints and not greedy
-        */
-       for( i = 0; i < nconshdlrs && nconflicts < nmaxconfs; ++i)
+       /* loop over all constraint handlers that might contain conflict constraints */
+       for( i = 0; i < nconshdlrs; ++i)
        {
           /* copy constraints that have been created in FD run */
           if( conshdlrs[i] != NULL && SCIPconshdlrGetNConss(conshdlrs[i]) > oldnconss[i] )
@@ -539,7 +534,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
              conss = SCIPconshdlrGetConss(conshdlrs[i]);
 
              /* loop over all constraints that have been added in sub-SCIP run, these are the conflicts */
-             for( c = oldnconss[i]; c < nconss && nconflicts < nmaxconfs; ++c)
+             for( c = oldnconss[i]; c < nconss; ++c)
              {
                 SCIP_CONS* cons;
                 SCIP_CONS* conscopy;
