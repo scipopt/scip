@@ -1999,7 +1999,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    SCIPdebugMessage("REC: checking ... \n");
 
-   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP);
+   pcmw = graph_pc_isPcMw(graph);
    nallsols = SCIPgetNSolsFound(scip);
    nreadysols = SCIPgetNSols(scip);
 
@@ -2018,7 +2018,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          i = 0;
       else if( heurdata->maxfreq )
          i = 1;
-      else if( probtype == STP_RPCSPG || probtype == STP_DCSTP )
+      else if( probtype == STP_DCSTP )
          i = MIN(2 * heurdata->nwaitingsols, 2 * heurdata->nfailures);
       else
          i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
