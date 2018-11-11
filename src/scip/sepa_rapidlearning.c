@@ -46,6 +46,7 @@
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP?                      */
 
+#define DEFAULT_CHECKLOCALEXEC     TRUE
 #define DEFAULT_CHECKDEGANERAGY   FALSE /**< should local LP degeneracy be checked? */
 #define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
 #define DEFAULT_CHECKLEAVES       FALSE /**< should the ration of leaves proven to be infeasible and exceeding the
@@ -98,6 +99,7 @@ struct SCIP_SepaData
    SCIP_Bool             checkdegeneracy;
    SCIP_Bool             checkdualbound;     /**< should the progress on the dual bound be checked? */
    SCIP_Bool             checkleaves;
+   SCIP_Bool             checklocalexec;
    SCIP_Bool             checklocalobj;      /**< should the local objective function be checked? */
    SCIP_Bool             checknsols;         /**< should number if solutions found so far be checked? */
    SCIP_Bool             checksblps;         /**< should strong branching results be considered? */
@@ -685,13 +687,11 @@ SCIP_Bool checkLocalExec(
    assert(scip != NULL);
    assert(sepadata != NULL);
 
-   runlocal = FALSE;
-
-   /* return TRUE if all checks are disabled but frequency is > 0 */
-   if( !sepadata->checkdegeneracy && !sepadata->checkdualbound
-      && !sepadata->checkleaves && !sepadata->checklocalobj
-      && !sepadata->checknsols && !sepadata->checksblps )
+   /* return TRUE if local exec should not be checked */
+   if( !sepadata->checklocalexec )
       return TRUE;
+
+   runlocal = FALSE;
 
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
    if( sepadata->checklocalobj && SCIPgetNObjVars(scip) == 0 )
@@ -979,6 +979,10 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkleaves",
          "should the ration of leaves proven to be infeasible and exceeding the cutoff bound be checked?",
          &sepadata->checkleaves, TRUE, DEFAULT_CHECKLEAVES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalexec",
+         "",
+         &sepadata->checklocalexec, TRUE, DEFAULT_CHECKLOCALEXEC, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalobj",
          "should the local objective function be checked?",
