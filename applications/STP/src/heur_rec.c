@@ -736,6 +736,9 @@ SCIP_RETCODE buildsolgraph(
       {
          newgraph->extended = TRUE;
          newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
+
+         if( graph_pc_isRootedPcMw(graph) )
+            newgraph->norgmodelknots += graph_pc_nFixedTerms(graph);
       }
 
       SCIPdebugMessage("REC: sol graph with nodes: %d, edges: %d, terminals: %d  \n", nsolnodes, 2 * nsoledges, newgraph->terms);
@@ -817,6 +820,8 @@ SCIP_RETCODE buildsolgraph(
 
    SCIPfreeBufferArray(scip, &solselection);
    assert(graph_valid(newgraph));
+   assert(graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(newgraph));
+
    *solgraph = newgraph;
 
    return SCIP_OKAY;
@@ -1128,7 +1133,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
    {
-      GRAPH* solgraph;
+      GRAPH* solgraph = NULL;
       IDX* curr;
       int* edgeweight;
       int* edgeancestor;
@@ -1514,6 +1519,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       }
       else
       {
+         assert(solgraph == NULL);
          failcount++;
       }
 
