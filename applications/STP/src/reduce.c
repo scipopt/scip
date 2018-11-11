@@ -279,9 +279,10 @@ SCIP_RETCODE level0RpcRmwInfeas(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( !gmark[k] && (g->grad[k] > 0) && Is_term(g->term[k]) )
+      if( !gmark[k] && Is_term(g->term[k]) )
       {
-         const int pterm = graph_pc_getTwinTerm(g, k);
+         assert(k != g->source);
+         assert(graph_pc_knotIsFixedTerm(g, k) || (g->grad[k] > 0));
 
          if( graph_pc_knotIsFixedTerm(g, k) )
          {
@@ -289,11 +290,16 @@ SCIP_RETCODE level0RpcRmwInfeas(
             SCIPfreeBufferArray(scip, &gmark);
             return SCIP_OKAY;
          }
-         assert(g->term2edge[k] >= 0);
-         assert(!gmark[pterm]);
+         else
+         {
+            const int pterm = graph_pc_getTwinTerm(g, k);
 
-         *offsetp += g->prize[pterm];
-         graph_pc_deleteTerm(scip, g, k);
+            assert(g->term2edge[k] >= 0);
+            assert(!gmark[pterm]);
+
+            *offsetp += g->prize[pterm];
+            graph_pc_deleteTerm(scip, g, k);
+         }
       }
    }
 
