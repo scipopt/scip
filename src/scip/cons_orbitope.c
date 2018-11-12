@@ -158,7 +158,7 @@ struct SCIP_ConsData
    int*                  roworder;           /**< order of orbitope rows if dynamic propagation for full orbitopes
                                               *   is used. */
    SCIP_Bool*            rowused;            /**< whether a row has been considered in roworder */
-   int                   nrowsused;       /**< number of rows that have already been considered in roworder */
+   int                   nrowsused;          /**< number of rows that have already been considered in roworder */
 };
 
 
