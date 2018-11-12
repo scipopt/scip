@@ -1852,7 +1852,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, NULL, infeasible, m, n,
          nrowsused, NULL, FALSE) );
 
-   if ( infeasible )
+   if ( *infeasible )
       goto FREELEXMAX;
 
    /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
