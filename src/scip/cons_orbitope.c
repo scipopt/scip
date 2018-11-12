@@ -1379,7 +1379,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 
 /* Compute dynamic order of rows based on the branching decisions, i.e., the row of the first branching variable
  * determines the first row in the new ordering, the row of the second branching variable determines the second
- * rows in the new ordering if it differs from the row of the first branching variable, and so on.
+ * row in the new ordering if it differs from the row of the first branching variable, and so on.
  *
  * The roworder array stores this reordering, where acutally only the first maxrowlabel entries encode the
  * reordering.
