@@ -691,11 +691,6 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
-#define SCIP_DECL_CONSEXPR_NLHDLRUPDATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr)
-
 /** nonlinear handler callback for reformulation
  *
  * The method is called for each expression during SCIP's presolving.

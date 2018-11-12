@@ -2433,13 +2433,13 @@ SCIP_RETCODE replaceCommonSubexpressions(
 
 /** helper function to either simplify or reformulate an expression and its subexpressions */
 static
-SCIP_RETCODE simplifyConsExprExpr(
+SCIP_RETCODE reformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_Bool               simplify,         /**< should the expression be simplified or reformulated? */
    SCIP_CONSEXPR_EXPR**    simplified        /**< buffer to store simplified expression */
-)
+   )
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
@@ -2560,65 +2560,6 @@ SCIP_RETCODE simplifyConsExprExpr(
    assert(*simplified != NULL);
 
    SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-
-/** helper function to either reformulate an expression and its subexpressions */
-static
-SCIP_RETCODE reformulateConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    reformulated      /**< buffer to store simplified expression */
-)
-{
-   assert(scip != NULL);
-   assert(rootexpr != NULL);
-   assert(reformulated != NULL);
-
-   /* reformulate at the root node  */
-
-   SCIP_CONSEXPR_EXPR* refexpr = NULL;
-
-   /* use nonlinear handler to reformulate the expression */
-
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int k;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* iterate through nonlinear handlers and call reformulation callbacks;
-    *
-    * TODO store nonlinear handlers that implement the reformulation callback separately
-    * TODO sort nonlinear handlers according to their priorities
-    */
-   for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
-   {
-      assert(conshdlrdata->nlhdlrs[k] != NULL);
-
-      if( SCIPhasConsExprNlhdlrReformulate(conshdlrdata->nlhdlrs[k]) )
-      {
-         SCIP_CALL( SCIPreformulateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k], rootexpr, &refexpr) );
-         assert(refexpr != NULL);
-
-         /* stop calling other nonlinear handlers as soon as the reformulation was successful */
-         if( refexpr != rootexpr )
-            break;
-      }
-   }
-
-   /* no nonlinear handlers implements the reformulation callback -> capture expression manually */
-   if( refexpr == NULL )
-   {
-      refexpr = rootexpr;
-      SCIPcaptureConsExprExpr(refexpr);
-   }
-
-   *reformulated = refexpr;
-   assert(*reformulated != NULL);
 
    return SCIP_OKAY;
 }
@@ -2781,9 +2722,6 @@ SCIP_RETCODE canonicalizeConstraints(
       SCIPexpriteratorFree(&it);
    }
 #endif
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-      SCIP_CALL( SCIPupdateConsExprNlhdlrs(scip, conshdlr) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -9179,36 +9117,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   SCIP_CALL( simplifyConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
-
-   return SCIP_OKAY;
-}
-
-SCIP_RETCODE SCIPupdateConsExprNlhdlrs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr          /**< constraint handler */
-)
-{
-   assert(scip != NULL);
-
-   SCIP_CONSEXPR_EXPR* refexpr = NULL;
-
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int k;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* iterate through nonlinear handlers and call update callbackss */
-   for( k = 0; k < conshdlrdata->nnlhdlrs; ++k )
-   {
-      assert(conshdlrdata->nlhdlrs[k] != NULL);
-
-      if( SCIPhasConsExprNlhdlrUpdate(conshdlrdata->nlhdlrs[k]) )
-      {
-         SCIP_CALL( SCIPupdateConsExprNlhdlr(scip, conshdlr, conshdlrdata->nlhdlrs[k]) );
-      }
-   }
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified) );
 
    return SCIP_OKAY;
 }
@@ -9229,7 +9138,7 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    assert(rootexpr != NULL);
    assert(refrootexpr != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, refrootexpr) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr) );
 
    return SCIP_OKAY;
 }
@@ -10093,18 +10002,6 @@ void SCIPsetConsExprNlhdlrInitExit(
    nlhdlr->exit = exit_;
 }
 
-/** set the update callback of a nonlinear handler */
-void SCIPsetConsExprNlhdlrUpdate(
-   SCIP*                      scip,           /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,         /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRUPDATE((*update)) /**< update callback */
-)
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->update = update;
-}
-
 /** set the reformulate callback of a nonlinear handler */
 void SCIPsetConsExprNlhdlrReformulate(
    SCIP*                      scip,          /**< SCIP data structure */
@@ -10224,14 +10121,6 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    return nlhdlr->data;
 }
 
-/** returns whether nonlinear handler implements the update callback */
-SCIP_Bool SCIPhasConsExprNlhdlrUpdate(
-   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-)
-{
-   return nlhdlr->update != NULL;
-}
-
 /** returns whether nonlinear handler implements the reformulation callback */
 SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
@@ -10303,27 +10192,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr)
 
    if( *success )
       ++nlhdlr->ndetections;
-
-   return SCIP_OKAY;
-}
-
-/** calls the update callback of a nonlinear handler */
-SCIP_DECL_CONSEXPR_NLHDLRUPDATE(SCIPupdateConsExprNlhdlr)
-{
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->reformulatetime != NULL);
-
-   if( nlhdlr->update == NULL )
-      return SCIP_OKAY;
-
-   /* call reformulation callback */
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->reformulatetime) );
-   SCIP_CALL( nlhdlr->update(scip, conshdlr, nlhdlr) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->reformulatetime) );
-
-   /* TODO check whether the nonlinear handler was updated? */
 
    return SCIP_OKAY;
 }
