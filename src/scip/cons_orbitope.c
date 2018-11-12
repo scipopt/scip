@@ -198,7 +198,7 @@ SCIP_RETCODE consdataFree(
 
    if ( usedynamicprop )
    {
-g      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
@@ -1494,6 +1494,237 @@ SCIP_RETCODE computeDynamicRowOrder(
 }
 
 
+/* Compute lexicographically minimal face of the hypercube w.r.t. some coordinate fixing */
+static
+SCIP_RETCODE findLexMinFace(
+   SCIP_VAR***           vars,               /**< variable matrix */
+   int**                 lexminfixes,        /**< fixings characterzing lex-min face */
+   int*                  roworder,           /**< dynamic row order */
+   int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or
+                                              *   NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
+                                              *   detected or NULL (if in resprop) */
+   int                   m,                  /**< number of rows in vars */
+   int                   n,                  /**< number of columns in vars */
+   int                   nrowsused,          /**< number of rows considered in propagation */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
+   SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
+   )
+{
+   int i;
+   int j;
+   *infeasible = FALSE;
+
+   assert( vars != NULL );
+   assert( lexminfixes != NULL );
+   assert( !resprop || minfixedrowlexmin != NULL );
+   assert( m > 0 );
+   assert( n > 0 );
+   assert( nrowsused > 0 );
+   assert( nrowsused <= m );
+   assert( infeasible != NULL );
+
+   /* iterate over columns in reverse order and find the lexicographically minimal face
+    * of the hypercube containing lexminfixes
+    */
+   for (j = n - 2; j >= 0; --j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
+      for (i = 0; i < nrowsused; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         {
+            assert( lexminfixes[i][j + 1] == 0 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
+         {
+            assert( lexminfixes[i][j + 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+
+               return SCIP_OKAY;
+            }
+         }
+
+         if ( lexminfixes[i][j] == 2 )
+         {
+            if ( minfixed == -1 )
+               lexminfixes[i][j] = lexminfixes[i][j + 1];
+            else
+               lexminfixes[i][j] = 0;
+         }
+      }
+
+      /* ensure that column j is lexicographically not smaller than column j + 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+#ifndef NDEBUG
+         int origrow;
+
+         assert( maxdiscriminating >= 0 );
+         assert( maxdiscriminating < nrowsused );
+
+         origrow = roworder[maxdiscriminating];
+
+         if ( resprop )
+         {
+            assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
+         }
+         else
+         {
+            assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
+         }
+#endif
+
+         lexminfixes[maxdiscriminating][j] = 1;
+      }
+
+      if ( resprop )
+      {
+         /* store minimum fixed row */
+         if ( minfixed == -1 )
+            minfixedrowlexmin[j] = nrowsused - 1;
+         else
+            minfixedrowlexmin[j] = minfixed;
+
+         /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
+          * the minimum fixed row of column n-1 is determined by column n-2 */
+         if ( minfixedrowlexmin[j + 1] < minfixedrowlexmin[j] )
+            minfixedrowlexmin[j + 1] = minfixedrowlexmin[j];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* Compute lexicographically maximal face of the hypercube w.r.t. some coordinate fixing */
+static
+SCIP_RETCODE findLexMaxFace(
+   SCIP_VAR***           vars,               /**< variable matrix */
+   int**                 lexmaxfixes,        /**< fixings characterzing lex-max face */
+   int*                  roworder,           /**< dynamic row order */
+   int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or
+                                              *   NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
+                                              *   detected or NULL (if in resprop) */
+   int                   m,                  /**< number of rows in vars */
+   int                   n,                  /**< number of columns in vars */
+   int                   nrowsused,          /**< number of rows considered in propagation */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
+   SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
+   )
+{
+   int i;
+   int j;
+   *infeasible = FALSE;
+
+   assert( vars != NULL );
+   assert( lexmaxfixes != NULL );
+   assert( !resprop || minfixedrowlexmax != NULL );
+   assert( m > 0 );
+   assert( n > 0 );
+   assert( nrowsused > 0 );
+   assert( nrowsused <= m );
+   assert( infeasible != NULL );
+
+   for (j = 1; j < n; ++j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
+      for (i = 0; i < nrowsused; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         {
+            assert( lexmaxfixes[i][j - 1] == 1 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
+         {
+            assert( lexmaxfixes[i][j - 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
+            {
+               *infeasible = TRUE;
+
+               return SCIP_OKAY;
+            }
+         }
+
+         if ( lexmaxfixes[i][j] == 2 )
+         {
+            if ( minfixed == -1 )
+               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+            else
+               lexmaxfixes[i][j] = 1;
+         }
+      }
+
+      /* ensure that column j is lexicographically not greater than column j - 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+#ifndef NDEBUG
+         int origrow;
+
+         assert( maxdiscriminating >= 0 );
+         assert( maxdiscriminating < nrowsused );
+
+         origrow = roworder[maxdiscriminating];
+
+         if ( resprop )
+         {
+            assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
+         }
+         else
+         {
+            assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
+         }
+#endif
+
+         lexmaxfixes[maxdiscriminating][j] = 0;
+      }
+
+      if ( resprop )
+      {
+         /* store minimum fixed row */
+         if ( minfixed == -1 )
+            minfixedrowlexmax[j] = nrowsused - 1;
+         else
+            minfixedrowlexmax[j] = minfixed;
+
+         /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
+          * the minimum fixed row of column 0 is determined by column 1 */
+         if ( minfixedrowlexmax[j - 1] < minfixedrowlexmax[j] )
+            minfixedrowlexmax[j - 1] = minfixedrowlexmax[j];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** propagation method for a single packing or partitioning orbitope constraint */
 static
 SCIP_RETCODE propagateFullOrbitopeCons(
@@ -1584,66 +1815,12 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       }
    }
 
-   /* iterate over columns in reverse order and find the lexicographically minimal face
-    * of the hypercube containing lexminfixes
-    */
-   for (j = n - 2; j >= 0; --j)
-   {
-      int maxdiscriminating = m;
-      int minfixed = -1;
+   /* find lexicographically minimal face of hypercube containing lexmin fixes */
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, NULL, infeasible, m, n,
+         nrowsused, NULL, FALSE) );
 
-      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
-      for (i = 0; i < nrowsused; ++i)
-      {
-         /* is row i j-discriminating? */
-         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
-         {
-            assert( lexminfixes[i][j + 1] == 0 );
-
-            maxdiscriminating = i;
-         }
-
-         /* is row i j-fixed? */
-         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
-         {
-            assert( lexminfixes[i][j + 1] != 2 );
-
-            minfixed = i;
-
-            /* detect infeasibility */
-            if ( maxdiscriminating > minfixed )
-            {
-               *infeasible = TRUE;
-               goto FREELEXMIN;
-            }
-         }
-
-         if ( lexminfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexminfixes[i][j] = lexminfixes[i][j + 1];
-            else
-               lexminfixes[i][j] = 0;
-         }
-      }
-
-      /* ensure that column j is lexicographically not smaller than column j + 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
-      {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
-#endif
-
-         lexminfixes[maxdiscriminating][j] = 1;
-      }
-   }
+   if ( *infeasible == TRUE )
+      goto FREELEXMIN;
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
     * Free entries in the first column are set to 1.
@@ -1671,64 +1848,12 @@ SCIP_RETCODE propagateFullOrbitopeCons(
       }
    }
 
-   /* iterate over columns and find the lexicographically maximal face of the hypercube containing lexmaxfixes */
-   for (j = 1; j < n; ++j)
-   {
-      int maxdiscriminating = m;
-      int minfixed = -1;
+   /* find lexicographically maximal face of hypercube containing lexmax fixes */
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, NULL, infeasible, m, n,
+         nrowsused, NULL, FALSE) );
 
-      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
-      for (i = 0; i < nrowsused; ++i)
-      {
-         /* is row i j-discriminating? */
-         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
-         {
-            assert( lexmaxfixes[i][j - 1] == 1 );
-
-            maxdiscriminating = i;
-         }
-
-         /* is row i j-fixed? */
-         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
-         {
-            assert( lexmaxfixes[i][j - 1] != 2 );
-
-            minfixed = i;
-
-            /* detect infeasibility */
-            if ( maxdiscriminating > minfixed )
-            {
-               *infeasible = TRUE;
-               goto FREELEXMAX;
-            }
-         }
-
-         if ( lexmaxfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
-            else
-               lexmaxfixes[i][j] = 1;
-         }
-      }
-
-      /* ensure that column j is lexicographically not greater than column j - 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
-      {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
-#endif
-
-         lexmaxfixes[maxdiscriminating][j] = 0;
-      }
-   }
+   if ( infeasible )
+      goto FREELEXMAX;
 
    /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
     * row to the corresponding value in lexminfixes (or lexmaxfixes).
@@ -1844,6 +1969,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    int n;
    int nrowsused;
    SCIP_Bool dynamic;
+   SCIP_Bool terminate;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1909,76 +2035,12 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
       }
    }
 
-   /* iterate over columns in reverse order and find the lexicographically minimal face
-    * of the hypercube containing lexminfixes
-    */
-   for (j = n - 2; j >= 0; --j)
-   {
-      int maxdiscriminating = m;
-      int minfixed = -1;
+   /* find lexicographically minimal face of hypercube containing lexmin fixes */
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, minfixedrowlexmin, &terminate, m, n,
+         nrowsused, bdchgidx, TRUE) );
 
-      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
-      for (i = 0; i < nrowsused; ++i)
-      {
-         /* is row i j-discriminating? */
-         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
-         {
-            assert( lexminfixes[i][j + 1] == 0 );
-
-            maxdiscriminating = i;
-         }
-
-         /* is row i j-fixed? */
-         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
-         {
-            assert( lexminfixes[i][j + 1] != 2 );
-
-            minfixed = i;
-
-            /* detect infeasibility */
-            if ( maxdiscriminating > minfixed )
-            {
-               goto FREELEXMIN;
-            }
-         }
-
-         if ( lexminfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexminfixes[i][j] = lexminfixes[i][j + 1];
-            else
-               lexminfixes[i][j] = 0;
-         }
-      }
-
-      /* ensure that column j is lexicographically not smaller than column j + 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
-      {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
-#endif
-
-         lexminfixes[maxdiscriminating][j] = 1;
-      }
-
-      /* store minimum fixed row */
-      if ( minfixed == -1 )
-         minfixedrowlexmin[j] = nrowsused - 1;
-      else
-         minfixedrowlexmin[j] = minfixed;
-
-      /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
-       * the minimum fixed row of column n-1 is determined by column n-2 */
-      if ( minfixedrowlexmin[j + 1] < minfixedrowlexmin[j] )
-         minfixedrowlexmin[j + 1] = minfixedrowlexmin[j];
-   }
+   if ( terminate )
+      goto FREELEXMIN;
 
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
     * Free entries in the first column are set to 1.
@@ -2010,74 +2072,12 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
       }
    }
 
-   /* iterate over columns and find the lexicographically maximal face of the hypercube containing lexmaxfixes */
-   for (j = 1; j < n; ++j)
-   {
-      int maxdiscriminating = m;
-      int minfixed = -1;
+   /* find lexicographically maximal face of hypercube containing lexmax fixes */
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, minfixedrowlexmax, &terminate, m, n,
+         nrowsused, bdchgidx, TRUE) );
 
-      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
-      for (i = 0; i < nrowsused; ++i)
-      {
-         /* is row i j-discriminating? */
-         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
-         {
-            assert( lexmaxfixes[i][j - 1] == 1 );
-
-            maxdiscriminating = i;
-         }
-
-         /* is row i j-fixed? */
-         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
-         {
-            assert( lexmaxfixes[i][j - 1] != 2 );
-
-            minfixed = i;
-
-            /* detect infeasibility */
-            if ( maxdiscriminating > minfixed )
-            {
-               goto FREELEXMAX;
-            }
-         }
-
-         if ( lexmaxfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
-            else
-               lexmaxfixes[i][j] = 1;
-         }
-      }
-
-      /* ensure that column j is lexicographically not greater than column j - 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
-      {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
-#endif
-
-         lexmaxfixes[maxdiscriminating][j] = 0;
-      }
-
-      /* store minimum fixed row */
-      if ( minfixed == -1 )
-         minfixedrowlexmax[j] = nrowsused - 1;
-      else
-         minfixedrowlexmax[j] = minfixed;
-
-      /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
-       * the minimum fixed row of column 0 is determined by column 1 */
-      if ( minfixedrowlexmax[j - 1] < minfixedrowlexmax[j] )
-         minfixedrowlexmax[j - 1] = minfixedrowlexmax[j];
-   }
+   if ( terminate )
+      goto FREELEXMAX;
 
    /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
     * row to the corresponding value in lexminfixes (or lexmaxfixes).
