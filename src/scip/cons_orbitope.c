@@ -56,6 +56,24 @@
  *   <tr><td>lastones     </td><td>\\alpha </td></tr>
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
+ *
+ * Orbitopal fixing for the full (sub-)orbitope and application to the Unit Commitment Problem@n
+ * Pascale Bendotti, Pierre Fouilhoux, and Cecile Rottner,@n
+ * Optimization Online: http://www.optimization-online.org/DB_HTML/2017/10/6301.html
+ *
+ * Two linear time propagation algorithms for full orbitopes are described in this paper, a static
+ * version and a dynamic one. We implemented the static version as well as a modified version of
+ * the dynamic one. The reason for the latter is to simplify the compatibility with full orbitope
+ * cutting planes.
+ *
+ * Polytopes associated with symmetry handling@n
+ * Christopher Hojny and Marc E. Pfetsch,@n
+ * Math. Program. (2018)
+ *
+ * In this paper, a linear time separation algorithm for orbisacks (full orbitopes with two columnes)
+ * is described. We use this algorithm for every pair of adjacent columns within the orbitope as well
+ * as a version that is adapted to the reordering based on the dynamic full orbitope propagation
+ * algorithm to ensure validity of binary points via cutting planes.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -180,7 +198,7 @@ SCIP_RETCODE consdataFree(
 
    if ( usedynamicprop )
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
+g      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
