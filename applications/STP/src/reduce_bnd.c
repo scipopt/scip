@@ -1057,6 +1057,8 @@ int reduceWithNodeReplaceBounds(
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
 
+   assert(!rpc || graph->extended);
+
    for( int k = 0; k < nnodes; k++ )
       nodetouched[k] = 0;
 
@@ -1065,12 +1067,15 @@ int reduceWithNodeReplaceBounds(
    {
       for( int k = 0; k < nnodes; k++ )
       {
-         if( rpc )
-         {
-            int todo; // pseudo eliminate degree 3?
-         }
+         SCIP_Bool rpc3term = FALSE;
 
-         if( degree != graph->grad[k] || Is_gterm(graph->term[k]) )
+         if( rpc && degree == 3 && Is_pterm(graph->term[k]) && graph_pc_termIsNonLeaf(graph, k)
+               && graph_pc_realDegree(graph, k, FALSE) == 3 )
+         {
+            assert(!graph_pc_knotIsFixedTerm(graph, k));
+            rpc3term = TRUE;
+         }
+         else if( (degree != graph->grad[k] || Is_gterm(graph->term[k])) )
             continue;
 
          if( SCIPisLT(scip, upperbound, replacebounds[k]) && nodetouched[k] == 0 )
@@ -1083,8 +1088,16 @@ int reduceWithNodeReplaceBounds(
 
             /* fill cutoff */
 
-            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-               adjvert[edgecount++] = graph->head[e];
+            if( rpc3term )
+               for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  const int head = graph->head[e];
+                  if( !Is_term(graph->term[head]) )
+                     adjvert[edgecount++] = head;
+               }
+            else
+               for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  adjvert[edgecount++] = graph->head[e];
 
             assert(edgecount == degree);
 
@@ -1112,10 +1125,14 @@ int reduceWithNodeReplaceBounds(
             SCIP_CALL_ABORT(graph_knot_delPseudo(scip, graph, cost, cutoffs, cutoffsrev, k, &success));
 
             if( success )
+            {
                nfixed++;
+               if( rpc3term )
+                  printf("pseudo-eliminated degree-3 terminal %d \n", k);
+            }
             else
             {
-               assert(graph->grad[k] == degree);
+               assert(graph->grad[k] == degree || rpc3term);
 
                for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                {

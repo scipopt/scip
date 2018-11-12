@@ -961,14 +961,37 @@ SCIP_Bool graph_pc_termIsNonLeaf(
    assert(term   < g->knots);
    assert(graph_pc_isPcMw(g));
    assert(g->term2edge);
-   assert(Is_term(g->term[term]));
-   assert(!g->extended);
 
-   for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+   if( graph_pc_knotIsFixedTerm(g, term) )
+      return FALSE;
+
+   if( g->extended )
    {
-      const int neighbor = g->tail[e];
-      if( g->mark[neighbor] && g->cost[e] < g->prize[term] )
-         break;
+      assert(Is_pterm(g->term[term]));
+
+      for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         const int neighbor = g->tail[e];
+         if( !Is_term(g->term[neighbor]) && g->cost[e] < g->prize[term] )
+         {
+            assert(neighbor != g->source);
+            break;
+         }
+      }
+   }
+   else
+   {
+      assert(Is_term(g->term[term]));
+
+      for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         const int neighbor = g->tail[e];
+         if( g->mark[neighbor] && g->cost[e] < g->prize[term] )
+         {
+            assert(!Is_pterm(g->term[neighbor]));
+            break;
+         }
+      }
    }
 
    return (e == EAT_LAST);
