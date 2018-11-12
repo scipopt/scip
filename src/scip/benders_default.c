@@ -310,6 +310,8 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable
        */
+      scalar = 1.0;
+      constant = 0.0;
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       /* using the original variable, the master variable can be retrieved from the hash map */

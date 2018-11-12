@@ -5457,6 +5457,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real viol;
    SCIP_Real delta;
    SCIP_Real gap;
+   SCIP_Bool solchanged;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -5482,24 +5483,23 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   solchanged = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* recompute violation of solution in case solution has changed
-       * get absolution violation and sign */
+      /* recompute violation of constraint in case solution newsol is not identical to sol anymore */
+      if( solchanged )
+      {
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
+      }
+
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->lhs - consdata->activity;
-      }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->rhs - consdata->activity;
-      }
       else
          continue; /* constraint is satisfied */
 
@@ -5526,6 +5526,8 @@ SCIP_RETCODE proposeFeasibleSolution(
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;
@@ -5556,6 +5558,8 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;

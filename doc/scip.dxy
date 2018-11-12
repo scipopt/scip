@@ -1057,7 +1057,8 @@ INPUT_FILTER           = "sed 's/^EXTERN\([ ]*\)$/extern/g; /^SCIP_DEPRECATED/d'
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by doxygen.
 
-FILTER_PATTERNS        = "*/CHANGELOG=sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'"
+# works with doxygen 1.8.13 but not with 1.8.11
+FILTER_PATTERNS        = "*/CHANGELOG=sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/\"/\&quot;/g' -e 's/ \#/ \\#/g'"
 
 # depending on your doxygen version you might need to add/remove the outer pair of escaped quotes:
 # FILTER_PATTERNS        = "*/CHANGELOG=\"sed -e '1i/**' -e '$ a*/' -e 's#/\*#/\&lowast;#g' -e 's/</&lt;/g' -e 's/>/&gt;/g' -e 's/\"/\&quot;/g' -e 's/#R/\\#R/g' -e 's/#P/\\#P/g'\""
