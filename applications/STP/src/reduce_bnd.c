@@ -3392,7 +3392,12 @@ SCIP_RETCODE reduce_da(
       } /* root loop */
 
       if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
+      {
            nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
+
+           if( extended )
+              SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
+      }
 
       if( nfixed == 0 || !userec )
          break;

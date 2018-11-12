@@ -820,7 +820,7 @@ SCIP_RETCODE buildsolgraph(
 
    SCIPfreeBufferArray(scip, &solselection);
    assert(graph_valid(newgraph));
-   assert(graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(newgraph));
+   assert(!pcmw || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(newgraph));
 
    *solgraph = newgraph;
 

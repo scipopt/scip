@@ -1834,12 +1834,14 @@ SCIP_RETCODE redLoopStp(
       if( fullreduce && !SCIPisStopped(scip) )
       {
          int extendedelims = 0;
-         int todo; // fix problem with reduce_da in I002
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
 
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, !TRUE, TRUE) );
+                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE, TRUE) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
@@ -1857,7 +1859,7 @@ SCIP_RETCODE redLoopStp(
          }
       }
    }
-   while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop*/
+   while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop */
 
    if( fullreduce )
    {
