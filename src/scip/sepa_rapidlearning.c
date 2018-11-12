@@ -352,7 +352,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    /* change global random seed */
    assert(randseed >= 0);
-   SCIP_CALL( SCIPsetIntParam(subscip, "random/randomseedshift", randseed) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", randseed) );
 
    restartnum = 1000;
 

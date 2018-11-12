@@ -4,3 +4,7 @@
 # [type: int, advanced: FALSE, range: [-1,65534], default: -1]
 separating/rapidlearning/freq = 15
 
+# 
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/checklocalexec = FALSE
+
