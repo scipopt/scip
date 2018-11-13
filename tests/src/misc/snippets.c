@@ -51,9 +51,6 @@ struct SCIP_TableData
 {
 };
 
-/** GLOBAL VARIABLES **/
-static SCIP* scip;
-
 /** methods **/
 
 
@@ -77,6 +74,7 @@ SCIP_DECL_DIALOGFREE(dialogFreeDrawgraph)
 /**! [SnippetDialogFree] */
 
 /**! [SnippetDialogInclude] */
+static
 SCIP_RETCODE SCIPincludeDialogDrawgraph(
    SCIP*        scip,
    SCIP_DIALOG* root
@@ -129,6 +127,7 @@ SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
 /**! [SnippetDispFree] */
 
 /** creates my display column and includes it in SCIP */
+static
 SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -177,6 +176,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputMystatisticstable)
 }
 
 /** creates the statistics table and includes it in SCIP */
+static
 SCIP_RETCODE SCIPincludeMytable(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -194,6 +194,9 @@ SCIP_RETCODE SCIPincludeMytable(
 
    return SCIP_OKAY;
 }
+
+/** GLOBAL VARIABLES **/
+static SCIP* scip;
 
 /* TEST SUITE */
 static
