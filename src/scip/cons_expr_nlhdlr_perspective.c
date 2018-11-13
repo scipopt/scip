@@ -20,8 +20,10 @@
 
 #include <string.h>
 
+#include "scip/cons_varbound.h"
 #include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "perspective"
@@ -32,11 +34,10 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary nonlinear handler data */
-
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
+   SCIP_SCVAR* scvars;
 };
 
 /** nonlinear handler data */
@@ -48,7 +49,77 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
-/* TODO: put your local methods here, and declare them static */
+/* a variable is semicontinuous if its bounds depend on the binary variable bvar
+ * and bvar == 0 => var = v_off for some real constant v_off.
+ * If the bvar is not specified, find the first binary variable that var depends on.
+ */
+static
+SCIP_Bool varIsSemicontinuous(
+   SCIP*       scip,       /**< SCIP data structure */
+   SCIP_VAR*   var,        /**< the variable to check */
+   SCIP_VAR**  bvar,       /**< the binary variable */
+   SCIP_SCVAR* scv         /**< semicontinuous variable information */
+   )
+{
+   SCIP_CONSHDLR* varboundconshdlr;
+   SCIP_CONS** vbconss;
+   int nvbconss, c;
+   SCIP_Real lb0, ub0, lb1, ub1;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   scv->var = var;
+   scv-> bvar = NULL;
+   scv->lb0 = -SCIPinfinity(scip);
+   scv->ub0 = SCIPinfinity(scip);
+   scv->lb1 = -SCIPinfinity(scip);
+   scv->ub1 = SCIPinfinity(scip);
+
+   varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
+
+   nvbconss = SCIPconshdlrGetNConss(varboundconshdlr);
+   vbconss = SCIPconshdlrGetConss(varboundconshdlr);
+
+   for( c = 0; c < nvbconss; ++c )
+   {
+      /* look for varbounds containing var and, if specified, bvar */
+      if( SCIPgetVarVarbound(scip, vbconss[c]) != var || (*bvar != NULL && SCIPgetVbdvarVarbound(scip, vbconss[c]) != *bvar) )
+         continue;
+
+      *bvar = SCIPgetVbdvarVarbound(scip, vbconss[c]);
+      scv->bvar = *bvar;
+      SCIP_CALL( SCIPprintCons(scip, vbconss[c], NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      lb0 = SCIPgetLhsVarbound(scip, vbconss[c]);
+      ub0 = SCIPgetRhsVarbound(scip, vbconss[c]);
+      lb1 = SCIPgetLhsVarbound(scip, vbconss[c]) - SCIPgetVbdcoefVarbound(scip, vbconss[c]);
+      ub1 = SCIPgetRhsVarbound(scip, vbconss[c]) - SCIPgetVbdcoefVarbound(scip, vbconss[c]);
+
+      scv->lb0 = lb0 > scv->lb0 ? lb0 : scv->lb0;
+      scv->ub0 = ub0 < scv->ub0 ? ub0 : scv->ub0;
+      scv->lb1 = lb1 > scv->lb1 ? lb0 : scv->lb1;
+      scv->ub1 = ub1 > scv->ub1 ? ub1 : scv->ub1;
+   }
+
+   if( SCIPvarGetLbGlobal(var) >= scv->lb0 )
+      scv->lb0 = SCIPvarGetLbGlobal(var);
+
+   if( SCIPvarGetUbGlobal(var) <= scv->ub0 )
+      scv->ub0 = SCIPvarGetUbGlobal(var);
+
+   if( SCIPvarGetLbGlobal(var) >= scv->lb1 )
+      scv->lb1 = SCIPvarGetLbGlobal(var);
+
+   if( SCIPvarGetUbGlobal(var) <= scv->ub1 )
+      scv->ub1 = SCIPvarGetUbGlobal(var);
+
+   if( scv->lb0 == scv-> ub0 && (scv->lb0 != scv-> lb1 || scv-> ub0 != ub1) )
+      return TRUE;
+
+   return FALSE;
+}
 
 /*
  * Callback methods of nonlinear handler
@@ -94,6 +165,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
 
 
 /** callback to be called in initialization */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 {  /*lint --e{715}*/
@@ -138,6 +210,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 
    return SCIP_OKAY;
 }
+#else
+#define nlhdlrInitPerspective NULL
+#endif
 
 
 /** callback to be called in deinitialization */
@@ -155,7 +230,72 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 { /*lint --e{715}*/
-   *success = FALSE;
+   SCIP_EXPRCURV curvature;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   SCIP_SCVAR* scvars;
+   SCIP_SCVAR scvar;
+   SCIP_VAR* var;
+   SCIP_VAR* bvar;
+   int nvars, i;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(enforcemethods != NULL);
+   assert(enforcedbelow != NULL);
+   assert(enforcedabove != NULL);
+   assert(success != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   *success = TRUE;
+   curvature = SCIPgetConsExprExprCurvature(expr);
+
+   /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */
+   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedbelow )
+   {
+      *enforcedbelow = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+
+      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+   }
+   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedabove )
+   {
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+
+      SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
+   }
+   else
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* check if variables are semicontinuous */
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
+   if( nvars == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   SCIPallocBlockMemoryArray(scip, &scvars, nvars);
+   bvar = NULL;
+
+   /* all variables should be semicontinuous */
+   for( i = 0; i < nvars; ++i )
+   {
+      var = SCIPgetConsExprExprVarVar(varexprs[i]);
+      if( !varIsSemicontinuous(scip, var, &bvar, &scvar) )
+      {
+         *success = FALSE;
+         SCIPfreeBlockMemoryArray(scip, &scvars, nvars);
+         return SCIP_OKAY;
+      }
+      scvars[i] = scvar;
+   }
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
+   (*nlhdlrexprdata)->scvars = scvars;
 
    return SCIP_OKAY;
 }
@@ -203,18 +343,12 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 
 
 /** nonlinear handler separation callback */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+   SCIPinfoMessage(scip, NULL, "method of perspective nonlinear handler not implemented yet\n");
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrSepaPerspective NULL
-#endif
 
 
 /** nonlinear handler under/overestimation callback */
@@ -278,6 +412,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 
 
 /** nonlinear handler callback for reformulation */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 { /*lint --e{715}*/
@@ -292,6 +427,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 
    return SCIP_OKAY;
 }
+#else
+#define nlhdlrReformulatePerspective NULL
+#endif
 
 /*
  * nonlinear handler specific interface methods
@@ -320,7 +458,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitPerspective, nlhdlrExitPerspective);
-   SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulatePerspective);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaPerspective, NULL, NULL);
 
    return SCIP_OKAY;
 }

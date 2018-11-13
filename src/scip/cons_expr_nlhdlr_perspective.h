@@ -29,6 +29,19 @@
 extern "C" {
 #endif
 
+/** data structure to store information of a semicontinuous variable
+ */
+struct SCIP_SCVar
+{
+   SCIP_VAR*             var;            /**< the semicontinuous variable */
+   SCIP_VAR*             bvar;           /**< the binary variable on which the variable domain depends */
+   SCIP_Real             lb0;            /**< lower bound when bvar = 0 */
+   SCIP_Real             ub0;            /**< upper bound when bvar = 0 */
+   SCIP_Real             lb1;            /**< lower bound when bvar = 1 */
+   SCIP_Real             ub1;            /**< upper bound when bvar = 1 */
+};
+typedef struct SCIP_SCVar SCIP_SCVAR;
+
 /** includes perspective nonlinear handler to consexpr */
 EXTERN
 SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
