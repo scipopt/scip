@@ -31,9 +31,9 @@
 /** runs the shell */
 static
 SCIP_RETCODE runShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {
    SCIP* scip = NULL;
@@ -56,7 +56,6 @@ SCIP_RETCODE runShell(
 
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
-
    /********************
     * Deinitialization *
     ********************/
@@ -71,8 +70,8 @@ SCIP_RETCODE runShell(
 
 /** main method */
 int main(
-   int                   argc,          /**< number of arguments */
-   char**                argv           /**< string array with arguments */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv                /**< array with shell parameters */
    )
 {
   SCIP_RETCODE retcode;

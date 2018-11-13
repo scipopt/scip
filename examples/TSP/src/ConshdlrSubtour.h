@@ -33,7 +33,6 @@ namespace tsp
 /** C++ constraint handler for TSP subtour elimination constraints */
 class ConshdlrSubtour : public scip::ObjConshdlr
 {
-
 public:
    /** default constructor */
    ConshdlrSubtour(
@@ -307,7 +306,6 @@ SCIP_RETCODE SCIPcreateConsSubtour(
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
-
 }
 
 #endif

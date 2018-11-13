@@ -68,7 +68,6 @@ SCIP_RETCODE runShell(
 
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
 
-
    /**********************************
     * Process command line arguments *
     **********************************/

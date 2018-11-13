@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
 
 #define FOPEN(file, mode)    gzopen(file, mode)
@@ -53,7 +53,7 @@ extern "C" {
 #define FGETS(buf, len, fp)  fgets(buf, len, fp)
 #define FREAD(buf, len, fp)  fread(buf, 1, len, fp)
 #define FPTYPE               FILE*
-#endif /* WITH_ZLIB */
+#endif /* SCIP_WITH_ZLIB */
 
 
 #ifndef ALLOC_ABORT

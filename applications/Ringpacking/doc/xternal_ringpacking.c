@@ -39,8 +39,11 @@
  * -# \subpage RINGPACKING_PROBLEMDATA "Main problem data"
  * -# \subpage RINGPACKING_PRICER "Pricing new variables"
  * -# \subpage RINGPACKING_ENUMERATION "Enumerating circular patterns"
- * -# \subpage RINGPACKING_MAKEFILE "The Makefile"
  *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */
 
 /**@page RINGPACKING_PROBLEM Problem description
@@ -149,58 +152,3 @@
  * In addition to all this, a simple greedy heuristic is used to verify simple patterns before actually solving the NLP.
  */
 
-
-/**@page RINGPACKING_MAKEFILE The Makefile
- *
- * The Makefile is based on the main \SCIP Makefile. This means that all compiling options which are
- * available for \SCIP are also available for the RINGPACKING project. Below, you find a list
- * of the most important compiling flags, the values they can take, and a short description. The
- * values in bold face are the default values.
- *
- * - <code>LPS={clp | cpx | none | <b>spx</b>}</code>
- *   <br>
- *   Defines the linear program solver to use:
- *   - <code>clp</code> use COIN-OR CLP
- *   - <code>cpx</code> use IBM CPLEX
- *   - <code>none</code> no LP solver
- *   - <code><b>spx</b></code> use SoPlex
- *
- * - <code>OPT={dbg | <b>opt</b>}</code>
- *   <br>
- *   Defines if the projects gets compiled in debug (<code>dbg</code>) mode or
- *   optimized (<code><b>opt</b></code>) mode. In the debug mode all assertions are checked.
- *
- * - <code>ZIMPL={false | <b>true</b>}</code>
- *   <br>
- *   Defines if the modeling language ZIMPL should be linked to binary or not.
- *
- * In the following we explain the all <b>Makefile targets</b>.
- *
- * - <b>lint</b>
- *   <br>
- *   Statically checks the code for uninitialized variables and many other possible problems,
- *   which even do not lead to compiler errors. For this,
- *   the external tool flexelint is needed. The call produces the file <code>lint.out</code>
- *   which contains all the detected warnings. From the experience when developing \SCIP, we strongly
- *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.
- *   <br>
- *
- * - <b>clean</b>
- *   <br>
- *   Remove all objective files, libraries, and binaries.
- *   <br>
- *
- * - <b>test</b>
- *   <br>
- *   Starts an automated test run based on the SCIP test runs (see \ref TEST "How to run automated tests with SCIP").
- *   <br>
- *
- * - <b>tags</b>
- *   <br>
- *   Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
- *   <br>
- *
- * - <b>depend</b>
- *   <br>
- *   Generates the dependencies for the compiling process.
- */

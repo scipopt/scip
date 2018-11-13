@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.c
+/**@file   scip/src/scip/benders.c
  * @brief  methods for Benders' decomposition
  * @author Stephen J. Maher
  */
@@ -1143,7 +1143,6 @@ SCIP_RETCODE initialiseSubproblem(
       (*success) = TRUE;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -2223,9 +2222,7 @@ SCIP_RETCODE solveBendersSubproblems(
                   (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
                }
 
-               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
-                  i);
-
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
             }
 
             (*subprobsolved)[i] = TRUE;
@@ -3474,7 +3471,7 @@ SCIP_RETCODE setSubproblemParams(
 /** resets the original parameters from the subproblem */
 static
 SCIP_RETCODE resetOrigSubproblemParams(
-   SCIP*                 subproblem,               /**< the SCIP data structure */
+   SCIP*                 subproblem,         /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
    )
 {
