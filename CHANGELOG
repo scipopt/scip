@@ -51,14 +51,14 @@ Interface changes
 
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
-- changed default values of propagation and separation frequency in cons_orbitope.c
+- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
 
 ### New parameters
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
-- the possibility to propagate orbitope constraints by reordering the rows based on the branching strategy is
-  provided
+- constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
+  branching strategy is provided
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
