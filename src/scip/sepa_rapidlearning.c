@@ -235,7 +235,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                                              * e.g., because a constraint could not be copied or a primal solution
                                              * could not be copied back
                                              */
-   int initialseed;
+   int initseed;
    int seedshift;
    SCIP_Bool valid;
 
