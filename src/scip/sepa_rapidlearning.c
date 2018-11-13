@@ -235,6 +235,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                                              * e.g., because a constraint could not be copied or a primal solution
                                              * could not be copied back
                                              */
+   int initialseed;
+   int seedshift;
    SCIP_Bool valid;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -352,7 +354,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    /* change global random seed */
    assert(randseed >= 0);
-   SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", randseed) );
+   SCIP_CALL( SCIPgetIntParam(scip, "randomization/randomseedshift", &seedshift) );
+
+   initseed = ((randseed + seedshift) % INT_MAX);
+   SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", initseed) );
 
    restartnum = 1000;
 
@@ -677,12 +682,12 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
 /** returns whether rapid learning is allowed to run locally */
 static
-SCIP_Bool checkLocalExec(
+SCIP_Bool checkExec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata            /**< separator's private data */
    )
 {
-   SCIP_Bool runlocal;
+   SCIP_Bool run;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -691,7 +696,7 @@ SCIP_Bool checkLocalExec(
    if( !sepadata->checklocalexec )
       return TRUE;
 
-   runlocal = FALSE;
+   run = FALSE;
 
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
    if( sepadata->checklocalobj && SCIPgetNObjVars(scip) == 0 )
@@ -701,22 +706,22 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to global zero objective\n");
 
-         runlocal = TRUE;
+         run = TRUE;
    }
 
    /* check whether a solution was found */
-   if( !runlocal && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
+   if( !run && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
    {
       SCIPdebugMsg(scip, "-> allow local RL due to no solution found so far\n");
 
       if( SCIPgetSubscipDepth(scip) == 0 )
          printf("-> allow local RL due to no solution found so far\n");
 
-      runlocal = TRUE;
+      run = TRUE;
    }
 
    /* check whether the dual bound has not changed since the root node */
-   if( !runlocal && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
+   if( !run && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
    {
       SCIP_Real rootdualbound;
       SCIP_Real locdualbound;
@@ -731,12 +736,12 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to equal dualbound\n");
 
-         runlocal = TRUE;
+         run = TRUE;
       }
    }
 
    /* check leave nodes */
-   if( !runlocal && sepadata->checkleaves )
+   if( !run && sepadata->checkleaves )
    {
       SCIP_Real ratio = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
 
@@ -747,12 +752,12 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to inf/obj LP ratio\n");
 
-         runlocal = TRUE;
+         run = TRUE;
       }
    }
 
    /* check strong branching LPs */
-   if( !runlocal && sepadata->checksblps )
+   if( !run && sepadata->checksblps )
    {
       int nsblps;
       int nsbcutoffs;
@@ -771,12 +776,12 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to not enough progress in strong branching LPs\n");
 
-         runlocal = TRUE;
+         run = TRUE;
       }
    }
 
    /* check whether all undecided integer variables have zero objective coefficient */
-   if( !runlocal && sepadata->checklocalobj )
+   if( !run && sepadata->checklocalobj )
    {
       SCIP_Bool allzero;
       SCIP_VAR** vars;
@@ -809,12 +814,12 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to local zero objective\n");
 
-         runlocal = TRUE;
+         run = TRUE;
       }
    }
 
    /* check degeneracy */
-   if( !runlocal && sepadata->checkdegeneracy )
+   if( !run && sepadata->checkdegeneracy )
    {
       SCIP_Real degeneracy;
       SCIP_Real varconsratio;
@@ -834,11 +839,11 @@ SCIP_Bool checkLocalExec(
          if( SCIPgetSubscipDepth(scip) == 0 )
             printf("-> allow local RL due to degeneracy\n");
 
-         runlocal = TRUE;
+         run = TRUE;
       }
    }
 
-   return runlocal;
+   return run;
 }
 
 /** LP solution separation method of separator */
@@ -888,7 +893,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY;
 
    /* check if rapid learning should applied locally */
-   if( SCIPgetDepth(scip) > 0 && !checkLocalExec(scip, sepadata) )
+   if( !checkExec(scip, sepadata) )
       return SCIP_OKAY;
 
    /* do not call rapid learning, if the problem is too big */
