@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPincludeDialogDrawgraph(
    if( !SCIPdialogHasEntry(root, "drawgraph") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, NULL, NULL, dialogFreeDrawgraph,
-                                                "drawgraph", "draws the graph for the current problem instance", FALSE, dialogdata) );
+            "drawgraph", "draws the graph for the current problem instance", FALSE, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -128,9 +128,9 @@ SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
 }
 /**! [SnippetDispFree] */
 
-/** creates the xyz display column and includes it in SCIP */
+/** creates my display column and includes it in SCIP */
 SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
-   SCIP*  scip    /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_DISPDATA* dispdata;
@@ -140,17 +140,13 @@ SCIP_RETCODE SCIPincludeDispMydisplaycolumn(
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, "my display column", "an example of display code", "mydisplaycolumn", SCIP_DISPSTATUS_AUTO,
-                              NULL,
-                              dispFreeMydisplaycolumn, NULL, NULL,
-                              NULL, NULL, dispOutputMydisplaycolumn,
-                              dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
-
-   /* add display column parameters */
-   /* TODO: (optional) add display column specific parameters with SCIPaddTypeParam() here */
+            NULL,
+            dispFreeMydisplaycolumn, NULL, NULL,
+            NULL, NULL, dispOutputMydisplaycolumn,
+            dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
    return SCIP_OKAY;
 }
-
 
 /** Table methods **/
 
@@ -189,16 +185,12 @@ SCIP_RETCODE SCIPincludeMytable(
 
    /* create statistics table data */
    SCIP_CALL( SCIPallocMemory(scip, &tabledata) );
-   /* TODO: (optional) create statistics table specific data here */
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, "my statistics table", "an example of a statistics table", TRUE,
-                               NULL, tableFreeMystatisticstable, NULL, NULL,
-                               NULL, NULL, tableOutputMystatisticstable,
-                               tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
-
-   /* add statistics table parameters */
-   /* TODO: (optional) add statistics table specific parameters with SCIPaddTypeParam() here */
+          NULL, tableFreeMystatisticstable, NULL, NULL,
+          NULL, NULL, tableOutputMystatisticstable,
+          tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    return SCIP_OKAY;
 }
@@ -260,7 +252,6 @@ Test(snippets, memory, .description = "tests an example of memory allocation and
 Test(snippets, display, .description = "tests an example of display code")
 {
    SCIPincludeDispMydisplaycolumn(scip);
-
 }
 
 Test(snippets, table, .description = "tests an example of table code")
