@@ -630,10 +630,56 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
    return SCIP_OKAY;
 }
 
-/** variable rounding lock method of constraint handler */
+/** variable rounding lock method of constraint handler
+ *  The auxiliary variables and the master problem variables need to lock added by the Benders' decomposition
+ *  constraint. The auxiliary variables require a down lock. The master problem variable need both up and down lock.
+ *  The master problem variables require locks in both directions because the coefficients in all potential Benders'
+ *  cuts are not known in general.
+ */
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   SCIP_VAR** vars;
+   int nactivebenders;
+   int nsubproblems;
+   int nvars;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* the locks should only be added if the Benders' decomposition constraint handler has been activated */
+   if( conshdlrdata->active )
+   {
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
+
+      /* retrieving the master problem variables */
+      SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+      /* need to compute the lower bound for all active Benders' decompositions */
+      for( i = 0; i < nactivebenders; i++ )
+      {
+         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+
+         /* adding up and down locks for all master problem variables. Since the locks for all constraint handlers
+          * without constraints, no auxiliary variables have been added. As such, all variables are master variables.
+          */
+         for( j = 0; j < nvars; j++ )
+         {
+            SCIP_CALL( SCIPaddVarLocksType(scip, vars[j], locktype, (nlockspos + nlocksneg)*nsubproblems,
+                  (nlockspos + nlocksneg)*nsubproblems) );
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 

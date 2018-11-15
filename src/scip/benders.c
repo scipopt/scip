@@ -632,6 +632,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
          SCIPvarSetData(auxiliaryvar, vardata);
 
          SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+
+         /* adding the down lock for the Benders' decomposition constraint handler */
+         SCIP_CALL( SCIPaddVarLocksType(scip, auxiliaryvar, SCIP_LOCKTYPE_MODEL, 1, 0) );
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
