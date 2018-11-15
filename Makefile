@@ -426,7 +426,7 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
 endif
-FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
+FLAGS		+=	-DSCIP_WITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/include/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/include/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
@@ -1216,7 +1216,7 @@ scipdepend:
 		@echo `grep -l "SCIP_WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
-		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
