@@ -43,8 +43,8 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-#define SCIP_DEBUG
-#define SCIP_STATISTIC
+//#define SCIP_DEBUG
+//#define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
@@ -254,8 +254,8 @@ SCIP_RETCODE candidateCreate(
 
    if( storelpi )
    {
-      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->downwarmstartinfo) );
-      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->upwarmstartinfo) );
+      SCIP_CALL( warmStartInfoCreate(scip, &(*candidate)->downwarmstartinfo) );
+      SCIP_CALL( warmStartInfoCreate(scip, &(*candidate)->upwarmstartinfo) );
    }
    else
    {
@@ -277,6 +277,10 @@ SCIP_RETCODE candidateFree(
 {
    assert(scip != NULL);
    assert(candidate != NULL);
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing candidate <%s>(%u/%u)...\n",
+      (*candidate) != NULL ? SCIPvarGetName((*candidate)->branchvar) : "none",
+      (*candidate)->upwarmstartinfo != NULL, (*candidate)->downwarmstartinfo != NULL);
 
    /* if a candidate is freed, we no longer need the content of the warm start info */
    if( (*candidate)->upwarmstartinfo != NULL )
@@ -1666,6 +1670,10 @@ SCIP_RETCODE scoreContainerSetScore(
    /* remove the warm start info from the dropped candidate */
    if( droppedcandidate != NULL )
    {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing warmstart info of candidate <%s>(%u/%u)...\n",
+         SCIPvarGetName(droppedcandidate->branchvar),
+         droppedcandidate->upwarmstartinfo != NULL, droppedcandidate->downwarmstartinfo != NULL);
+
       SCIP_CALL( warmStartInfoFree(scip, &droppedcandidate->downwarmstartinfo) );
       SCIP_CALL( warmStartInfoFree(scip, &droppedcandidate->upwarmstartinfo) );
    }
@@ -2379,6 +2387,8 @@ SCIP_RETCODE restoreFromWarmStartInfo(
    assert(warmstartinfo != NULL);
    assert(warmstartinfo->lpistate != NULL);
 
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "loading basis...\n");
+
    /* As we solved the very same LP some time earlier and stored the state (the basis) and the norms, we can now set those in
     * the LP solver, such that the solution does not (in best case) need any further calculation.
     * Some iterations may occur, as the conflict analysis may have added some constraints in the meantime. */
@@ -2510,6 +2520,11 @@ SCIP_RETCODE executeBranching(
             SCIPvarGetName(branchvar));
          SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->downwarmstartinfo) );
       }
+      else
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "no warmstart info: %u/%u\n", candidate->upwarmstartinfo != NULL,
+            candidate->upwarmstartinfo != NULL && candidate->upwarmstartinfo->lpistate != NULL);
+      }
    }
    else
    {
@@ -2529,6 +2544,11 @@ SCIP_RETCODE executeBranching(
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for up branch of variable <%s>\n",
             SCIPvarGetName(branchvar));
          SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->upwarmstartinfo) );
+      }
+      else
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "no warmstart info: %u/%u\n", candidate->upwarmstartinfo != NULL,
+            candidate->upwarmstartinfo != NULL && candidate->upwarmstartinfo->lpistate != NULL);
       }
    }
 
@@ -3118,7 +3138,10 @@ SCIP_RETCODE getFSBResult(
    assert(statistics->ncutoffproofnodes == 0 || statistics->ncutoffproofnodes == 2);
    assert(!status->cutoff || localstats->ncutoffproofnodes == 2);
 
-   mergeFSBStatistics(parentstatistics, statistics);
+   if( firstlevel )
+   {
+      mergeFSBStatistics(parentstatistics, statistics);
+   }
 
    localStatisticsFree(scip, &localstats);
    statisticsFree(scip, &statistics);
@@ -3813,7 +3836,10 @@ SCIP_RETCODE executeBranchingRecursive(
    {
       SCIP_Real localgain;
 
-      if( config->abbreviated && config->reusebasis && storewarmstartinfo )
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store warmstart info: reuse: %d, store: %d\n",
+         config->reusebasis, storewarmstartinfo);
+
+      if( config->reusebasis && storewarmstartinfo )
       {
          /* store the warm start information in the candidate, so that it can be reused in a later branching */
          WARMSTARTINFO* warmstartinfo = downbranching ? candidate->downwarmstartinfo : candidate->upwarmstartinfo;
