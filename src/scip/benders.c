@@ -49,8 +49,6 @@
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 
-#define BENDERS_DEFAULT_ARRAYSIZE           100  /** the initial array size */
-
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
 
