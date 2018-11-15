@@ -1070,7 +1070,7 @@ int reduceWithNodeReplaceBounds(
          SCIP_Bool rpc3term = FALSE;
 
          if( rpc && degree == 3 && Is_pterm(graph->term[k]) && graph_pc_termIsNonLeaf(graph, k)
-               && graph_pc_realDegree(graph, k, FALSE) == 3 )
+               && graph->grad[k] == 4 )
          {
             assert(!graph_pc_knotIsFixedTerm(graph, k));
             rpc3term = TRUE;

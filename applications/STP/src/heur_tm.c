@@ -175,7 +175,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 {
    PATH* mst;
    int i;
-   int j;
    int e1;
    int e2;
    int k1;
@@ -208,8 +207,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    }
    else
    {
-      int a;
-
       for( i = 0; i < nnodes; i++ )
       {
          if( connected[i] && !Is_term(g->term[i]) )
@@ -218,18 +215,41 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
             g->mark[i] = FALSE;
       }
 
-      for( a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+      i = -1;
+      if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
       {
-         i = g->head[a];
-         if( !Is_term(g->term[i]) && connected[i] )
-            break;
+         int min = nnodes;
+         const int* termsorder = SCIPprobdataGetPctermsorder(scip);
+
+         for( int k = 0; k < nnodes; k++ )
+            if( termsorder[k] < min && connected[k] )
+            {
+               assert(Is_pterm(g->term[k]));
+
+               min = termsorder[k];
+               i = k;
+            }
+         assert(min >= 0);
+         assert(i == -1 || min < nnodes);
+      }
+      else
+      {
+         for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+         {
+            const int head = g->head[a];
+            if( !Is_term(g->term[head]) && connected[head] )
+            {
+               i = head;
+               break;
+            }
+         }
       }
 
       /* trivial solution? */
-      if( a == EAT_LAST )
+      if( i == -1 )
       {
          printf("trivial solution in pruning \n");
-         for( a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
+         for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
          {
             i = g->head[a];
             if( Is_term(g->term[i]) )
@@ -323,6 +343,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
       for( i = nnodes - 1; i >= 0; --i )
       {
+         int j;
          if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
             continue;
 
@@ -357,6 +378,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    {
       if( connected[i] && i != g->source )
       {
+         int j;
          for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             if( result[j] == CONNECT )
                break;

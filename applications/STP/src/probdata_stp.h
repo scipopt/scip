@@ -94,6 +94,11 @@ int* SCIPprobdataGetRTerms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns array */
+EXTERN
+int* SCIPprobdataGetPctermsorder(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** returns the number of layers */
 EXTERN
@@ -136,6 +141,12 @@ int SCIPprobdataGetNorgEdges(
 /** returns the number of edges */
 EXTERN
 int SCIPprobdataGetNEdges(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of nodes */
+EXTERN
+int SCIPprobdataGetNNodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
