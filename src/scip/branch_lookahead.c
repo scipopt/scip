@@ -43,7 +43,7 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -3586,9 +3586,6 @@ SCIP_RETCODE filterBestCandidates(
    )
 {
    int nusedcands;
-#ifdef SCIP_DEBUG
-   int i;
-#endif
 
    assert(scip != NULL);
    assert(config != NULL);
@@ -3598,20 +3595,6 @@ SCIP_RETCODE filterBestCandidates(
    nusedcands = MIN(config->maxncands, candidatelist->ncandidates);
 
    sortFirstCandidatesByScore(scip, candidatelist, scorecontainer, nusedcands);
-
-#ifdef SCIP_DEBUG
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "All %i candidates, sorted by their FSB score:\n",
-      candidatelist->ncandidates);
-   for( i = 0; i < candidatelist->ncandidates; i++ )
-   {
-      SCIP_VAR* var = candidatelist->candidates[i]->branchvar;
-      SCIP_Real score = scorecontainer->scores[SCIPvarGetProbindex(var)];
-
-      assert(var != NULL);
-
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
-   }
-#endif
 
    SCIP_CALL( candidateListKeep(scip, candidatelist, nusedcands) );
 
@@ -3656,7 +3639,7 @@ SCIP_RETCODE getBestCandidates(
 #endif
 
    /* if we didn't find any domreds or constraints during the FSB, we branch on */
-   if( isBranchFurther(status, TRUE) )
+   if( isBranchFurther(status, !SCIPinProbing(scip)) )
    {
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%s", "Filter the candidates by their score.\n");
 
@@ -4159,7 +4142,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
 
             /* check whether a new solutions rendered the previous child infeasible */
-            if( SCIPallColsInLP(scip) )
+            if( SCIPallColsInLP(scip) && !otherbranchingresult->cutoff )
             {
                if( k == 1 && SCIPisGE(scip, otherbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
                {
@@ -4315,8 +4298,8 @@ SCIP_RETCODE selectVarRecursive(
             }
          }
 
-         /* the current canidate variable has a better score than the best candidate investigated so far */
-         if( SCIPisGE(scip, score, bestscore) )
+         /* the current candidate variable has a better score than the best candidate investigated so far */
+         if( score > bestscore )
          {
             int nvars = SCIPgetNVars(scip);
 
@@ -4698,7 +4681,15 @@ SCIP_RETCODE selectVarStart(
 #ifdef SCIP_DEBUG
    if( config->abbreviated )
    {
-      if( candidatelist->ncandidates > 0 )
+      if( status->domred )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching has added domain reductions. LAB restarts.\n");
+      }
+      else if( status->cutoff )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching cut this node off.\n");
+      }
+      else if( candidatelist->ncandidates > 0 )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
             SCIPvarGetName(candidatelist->candidates[0]->branchvar));
@@ -4708,14 +4699,6 @@ SCIP_RETCODE selectVarStart(
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
                SCIPvarGetName(decision->cand->branchvar));
          }
-      }
-      else if( status->domred )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching has added domain reductions. LAB restarts.\n");
-      }
-      else if( status->cutoff )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching cutoff this node.\n");
       }
       else
       {
@@ -5237,6 +5220,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(*result <= MAXRESULT);
    branchruledata->statistics->ntotalresults++;
    branchruledata->statistics->nresults[*result]++;
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "#### ncutoffproofnodes: %d ndomredproofnodes: %d\n",
+      branchruledata->statistics->ncutoffproofnodes, branchruledata->statistics->ndomredproofnodes);
 #endif
 
    config->usebincons = userusebincons;
