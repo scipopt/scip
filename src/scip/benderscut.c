@@ -288,7 +288,7 @@ SCIP_RETCODE SCIPbenderscutExit(
    {
       SCIPfreeBlockMemoryArray(set->scip, &benderscut->addedcuts[i]->vals, benderscut->addedcuts[i]->nvars);
       SCIPfreeBlockMemoryArray(set->scip, &benderscut->addedcuts[i]->vars, benderscut->addedcuts[i]->nvars);
-      SCIPfreeBlockMemory(set->scip, &benderscut->addedcuts[i]);
+      SCIPfreeBlockMemory(set->scip, &benderscut->addedcuts[i]); /*lint !e866*/
    }
 
    BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benderscut->addedcuts, benderscut->addedcutssize);

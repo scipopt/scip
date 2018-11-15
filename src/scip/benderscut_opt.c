@@ -103,7 +103,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
@@ -366,8 +365,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       SCIPbenderscutGetNFound(benderscut) );
 
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, vars, vals, &lhs, &rhs, &nvars,
-         &checkobj, &success) );
+   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars, &checkobj,
+         &success) );
 
    /* if success is FALSE, then there was an error in generating the optimality cut. No cut will be added to the master
     * problem. Otherwise, the constraint is added to the master problem.

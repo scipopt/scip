@@ -1509,7 +1509,6 @@ SCIP_RETCODE transferBendersCuts(
    int nvars;
    int i;
    int j;
-   int k;
 
    assert(subscip != NULL);
    assert(benders != NULL);
