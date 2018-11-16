@@ -43,8 +43,8 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-//#define SCIP_DEBUG
-//#define SCIP_STATISTIC
+#define SCIP_DEBUG
+#define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
@@ -715,6 +715,12 @@ typedef struct
                                               *   parameter in the CONFIGURATION struct) */
    int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
                                               *   chosen by the following LAB */
+   int*                  stopafterfsb;       /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB, e.g., by adding constraints or domreds. */
+   int*                  cutoffafterfsb;    /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB because of a found cutoff. */
+   int*                  domredafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB because of a found domain reduction. */
    int                   nsinglecandidate;   /**< number of times a single candidate was given to the recursion routine */
    int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
@@ -727,12 +733,6 @@ typedef struct
    int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
    int                   ncutoffproofnodes;  /**< The number of nodes needed to prove all found cutoffs. */
    int                   ndomredproofnodes;  /**< The number of nodes needed to prove all found domreds. */
-   int                   stopafterfsb;       /**< If abbreviated, this is the number of times the rule was stopped after
-                                              *   scoring candidates by FSB, e.g., by adding constraints or domreds. */
-   int                   cutoffafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
-                                              *   scoring candidates by FSB because of a found cutoff. */
-   int                   domredafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
-                                              *   scoring candidates by FSB because of a found domain reduction. */
    int                   ncliquesadded;      /**< The number of cliques added in the root node. */
    int                   maxnbestcands;      /**< If abbreviated, this is the maximum number of candidates the method
                                               *   getBestCandidates will return. */
@@ -761,9 +761,6 @@ void statisticsInit(
    statistics->ndomredcons = 0;
    statistics->ncutoffproofnodes = 0;
    statistics->ndomredproofnodes = 0;
-   statistics->stopafterfsb = 0;
-   statistics->cutoffafterfsb = 0;
-   statistics->domredafterfsb = 0;
    statistics->ncliquesadded = 0;
 
    for( i = 0; i <= MAXRESULT; i++)
@@ -781,6 +778,9 @@ void statisticsInit(
       statistics->nlpiterations[i] = 0;
       statistics->nlpiterationsfsb[i] = 0;
       statistics->nsinglecutoffs[i] = 0;
+      statistics->stopafterfsb[i] = 0;
+      statistics->cutoffafterfsb[i] = 0;
+      statistics->domredafterfsb[i] = 0;
    }
 
    for( i = 0; i < statistics->maxnbestcands; i++ )
@@ -815,6 +815,9 @@ SCIP_RETCODE statisticsAllocate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->chosenfsbcand, maxncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->domredafterfsb, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->cutoffafterfsb, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->stopafterfsb, recursiondepth) );
 
    (*statistics)->recursiondepth = recursiondepth;
    (*statistics)->maxnbestcands = maxncands;
@@ -885,11 +888,6 @@ void statisticsPrint(
             statistics->nresults[i]);
       }
 
-      SCIPinfoMessage(scip, NULL, "Branching was stopped after the scoring FSB %i times. That was:\n",
-         statistics->stopafterfsb);
-      SCIPinfoMessage(scip, NULL, " %i times because of a cutoff.\n", statistics->cutoffafterfsb);
-      SCIPinfoMessage(scip, NULL, " %i times because of a domain reduction.\n", statistics->domredafterfsb);
-
       for( i = 0; i < statistics->maxnbestcands; i++ )
       {
          SCIPinfoMessage(scip, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
@@ -898,6 +896,10 @@ void statisticsPrint(
 
       for( i = 0; i < statistics->recursiondepth; i++ )
       {
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, branching was stopped after the scoring FSB %i times. That was:\n",
+            i, statistics->stopafterfsb[i]);
+         SCIPinfoMessage(scip, NULL, "   %i times because of a cutoff.\n", statistics->cutoffafterfsb[i]);
+         SCIPinfoMessage(scip, NULL, "   %i times because of a domain reduction.\n", statistics->domredafterfsb[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n",
             i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score.\n",
@@ -939,6 +941,9 @@ void statisticsFree(
    assert(scip != NULL);
    assert(statistics != NULL);
 
+   SCIPfreeBufferArray(scip, &(*statistics)->stopafterfsb);
+   SCIPfreeBufferArray(scip, &(*statistics)->cutoffafterfsb);
+   SCIPfreeBufferArray(scip, &(*statistics)->domredafterfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->chosenfsbcand);
    SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
    SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
@@ -3138,9 +3143,14 @@ SCIP_RETCODE getFSBResult(
    assert(statistics->ncutoffproofnodes == 0 || statistics->ncutoffproofnodes == 2);
    assert(!status->cutoff || localstats->ncutoffproofnodes == 2);
 
-   if( firstlevel )
+   //if( firstlevel )
    {
       mergeFSBStatistics(parentstatistics, statistics);
+
+      if( status->cutoff )
+      {
+         parentstatistics->ncutoffproofnodes += localstats->ncutoffproofnodes;
+      }
    }
 
    localStatisticsFree(scip, &localstats);
@@ -3880,11 +3890,15 @@ SCIP_RETCODE executeBranchingRecursive(
             SCIP_Real deeperlpobjval = branchingresult->objval;
 #ifdef SCIP_STATISTIC
             LOCALSTATISTICS* deeperlocalstats;
-#endif
 
+            SCIP_CALL( localStatisticsAllocate(scip, &deeperlocalstats) );
+#endif
             SCIP_CALL( statusCreate(scip, &deeperstatus) );
 
 #ifdef SCIP_STATISTIC
+            /* if FSB identifies a cutoff, we always have 2 proof nodes */
+            deeperlocalstats->ncutoffproofnodes = 2;
+
             SCIP_CALL( filterCandidates(scip, config, deeperstatus, scorecontainer, candidatelist, statistics) );
 #else
             SCIP_CALL( filterCandidates(scip, config, deeperstatus, scorecontainer, candidatelist) );
@@ -3898,7 +3912,7 @@ SCIP_RETCODE executeBranchingRecursive(
                SCIP_CALL( branchingDecisionCreate(scip, &deeperdecision) );
 
 #ifdef SCIP_STATISTIC
-               SCIP_CALL( localStatisticsAllocate(scip, &deeperlocalstats) );
+               deeperlocalstats->ncutoffproofnodes = 0;
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidatelist, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
@@ -3917,26 +3931,41 @@ SCIP_RETCODE executeBranchingRecursive(
                branchingresult->dualbound = deeperdecision->proveddb;
                branchingresult->dualboundvalid = TRUE;
 
-               if( deeperstatus->cutoff )
-               {
-                  /* branchingresult->cutoff is TRUE, if the current child was directly infeasible (so here it is always
-                   * false, as we don't want to branch on an infeasible node)
-                   * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
-                   * */
-                  branchingresult->cutoff = deeperstatus->cutoff;
-#ifdef SCIP_STATISTIC
-                  localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
-#endif
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the %s branch is "
-                     "cutoff\n", downbranching ? "down" : "up");
-               }
-
-#ifdef SCIP_STATISTIC
-               localStatisticsFree(scip, &deeperlocalstats);
-#endif
                branchingDecisionFree(scip, &deeperdecision);
             }
+#ifdef SCIP_STATISTIC
+            else
+            {
+               assert(SCIPgetProbingDepth(scip) == probingdepth + 1);
+
+               statistics->stopafterfsb[probingdepth+1]++;
+
+               if( deeperstatus->cutoff )
+               {
+                  statistics->cutoffafterfsb[probingdepth+1]++;
+               }
+               else if( deeperstatus->domred )
+               {
+                  statistics->domredafterfsb[probingdepth+1]++;
+               }
+            }
+#endif
+
+            /* deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff */
+            if( deeperstatus->cutoff )
+            {
+               branchingresult->cutoff = TRUE;
+#ifdef SCIP_STATISTIC
+               localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
+#endif
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the %s branch is "
+                  "cutoff\n", downbranching ? "down" : "up");
+            }
+
             statusFree(scip, &deeperstatus);
+#ifdef SCIP_STATISTIC
+            localStatisticsFree(scip, &deeperlocalstats);
+#endif
          }
          SCIP_CALL( candidateListFree(scip, &candidatelist) );
       }
@@ -4239,7 +4268,7 @@ SCIP_RETCODE selectVarRecursive(
             scoringlpobjval);
 
          /* both child nodes are infeasible -> the current node is infeasible */
-         if( upbranchingresult->cutoff && downbranchingresult->cutoff )
+         if( SCIPallColsInLP(scip) && upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in both directions\n",
                SCIPvarGetName(branchvar));
@@ -4252,7 +4281,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
          }
          /* up child is infeasible */
-         else if( upbranchingresult->cutoff )
+         else if( SCIPallColsInLP(scip) && upbranchingresult->cutoff )
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in upward branch\n",
                SCIPvarGetName(branchvar));
@@ -4260,7 +4289,7 @@ SCIP_RETCODE selectVarRecursive(
             /* apply down branching bound change at current node if we proved that this node is really infeasible and
              * parameters are set accordingly
              */
-            if( SCIPallColsInLP(scip) && config->usedomainreduction && !useoldbranching )
+            if( config->usedomainreduction && !useoldbranching )
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
@@ -4282,7 +4311,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
          }
          /* down child is infeasible */
-         else if( downbranchingresult->cutoff )
+         else if( SCIPallColsInLP(scip) && downbranchingresult->cutoff )
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in downward branch\n",
                SCIPvarGetName(branchvar));
@@ -4290,7 +4319,7 @@ SCIP_RETCODE selectVarRecursive(
             /* apply up branching bound change at current node if we proved that this node is really infeasible and
              * parameters are set accordingly
              */
-            if( SCIPallColsInLP(scip) && config->usedomainreduction && !useoldbranching )
+            if( config->usedomainreduction && !useoldbranching )
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
@@ -4691,15 +4720,18 @@ SCIP_RETCODE selectVarStart(
 #ifdef SCIP_STATISTIC
    else
    {
-      statistics->stopafterfsb++;
+      int probingdepth = 0;
+      if( SCIPinProbing(scip) )
+         probingdepth = SCIPgetProbingDepth(scip);
+      statistics->stopafterfsb[probingdepth]++;
 
       if( status->cutoff )
       {
-         statistics->cutoffafterfsb++;
+         statistics->cutoffafterfsb[probingdepth]++;
       }
-      else
+      else if( status->domred )
       {
-         statistics->domredafterfsb++;
+         statistics->domredafterfsb[probingdepth]++;
       }
    }
 #endif
@@ -4993,6 +5025,9 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->chosenfsbcand, maxncands) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->domredafterfsb, recursiondepth) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->cutoffafterfsb, recursiondepth) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->stopafterfsb, recursiondepth) );
 
       branchruledata->statistics->recursiondepth = recursiondepth;
       branchruledata->statistics->maxnbestcands = maxncands;
@@ -5022,6 +5057,9 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    statisticsPrint(scip, statistics);
 
+   SCIPfreeMemoryArray(scip, &statistics->stopafterfsb);
+   SCIPfreeMemoryArray(scip, &statistics->cutoffafterfsb);
+   SCIPfreeMemoryArray(scip, &statistics->domredafterfsb);
    SCIPfreeMemoryArray(scip, &statistics->chosenfsbcand);
    SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
    SCIPfreeMemoryArray(scip, &statistics->npropdomred);
