@@ -5236,7 +5236,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       statusFree(scip, &status);
    }
 
-   if( config->usebincons )
+   if( baselpsol != NULL )
    {
       SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
