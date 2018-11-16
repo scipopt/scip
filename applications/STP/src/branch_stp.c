@@ -688,6 +688,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    if( !isProbCompatible(g->stp_type) )
       return SCIP_OKAY;
 
+   branchvertex = UNKNOWN;
 
    /* get vertex to branch on */
    if( graph_pc_isPcMw(g) || branchruledata->branchtype == BRANCH_STP_ON_SOL )

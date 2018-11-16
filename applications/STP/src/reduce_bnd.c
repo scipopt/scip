@@ -3017,8 +3017,9 @@ int reduce_extendedEdge(
    const int*            result,             /**< sol int array */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int                   root,               /**< the root */
-   int*                  nodearr,             /**< for internal stuff */
-   STP_Bool*             marked              /**< edge array to mark which (directed) edge can be removed */
+   int*                  nodearr,            /**< for internal stuff */
+   STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
+   SCIP_Bool             markdirected        /**< try to also mark edge if anti-parallel is not marked */
 )
 {
    unsigned int* eqstack;
@@ -3027,10 +3028,11 @@ int reduce_extendedEdge(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const int halfnedges = graph->edges / 2;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
-   if( rpc )
-      graph_pc_2orgcheck(graph);
+   assert(marked != NULL);
+
+   assert(!pcmw || !graph->extended);
 
    if( SCIPisZero(scip, minpathcost) )
       return 0;
@@ -3041,9 +3043,13 @@ int reduce_extendedEdge(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
+      const int erev = e + 1;
+
+      if( pcmw && graph->cost[e] != graph->cost[erev] )
+         continue;
+
       if( graph->oeat[e] != EAT_FREE )
       {
-         const int erev = e + 1;
          int eqstack_size = 0;
          SCIP_Bool deletable = TRUE;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
@@ -3053,26 +3059,30 @@ int reduce_extendedEdge(
          if( SCIPisZero(scip, cost[e]) || SCIPisZero(scip, cost[erev]) )
             continue;
 
-         if( marked == NULL || !marked[e] )
+         if( !marked[e] )
          {
             SCIP_CALL_ABORT(reduceCheckEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, e, allowequality, nodearr,
                   &deletable, eqstack, &eqstack_size, eqmark));
 
-            if( marked != NULL && deletable )
+            if( deletable )
                marked[e] = TRUE;
          }
 
-         if( (marked == NULL || !marked[erev]) && deletable )
+         if( !marked[erev] && (deletable || markdirected) )
          {
+            SCIP_Bool erevdeletable = TRUE;
             SCIP_CALL_ABORT(reduceCheckEdge(scip, graph, root, cost, pathdist, vnoi, minpathcost, erev, allowequality,
-                  nodearr, &deletable, eqstack, &eqstack_size, eqmark));
+                  nodearr, &erevdeletable, eqstack, &eqstack_size, eqmark));
 
-            if( marked != NULL && deletable )
+            if( erevdeletable )
                marked[erev] = TRUE;
+
+            deletable = (deletable && erevdeletable);
          }
 
          for( int i = 0; i < eqstack_size; i++ )
             eqmark[eqstack[i]] = FALSE;
+
          for( int i = 0; i < halfnedges; i++ )
             assert(eqmark[i] == FALSE);
 
@@ -3387,7 +3397,7 @@ SCIP_RETCODE reduce_da(
          }
 
          if( extended )
-            nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked);
+            nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked, FALSE);
 
          if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
