@@ -14,7 +14,7 @@ TIME=3600
 
 #### FEASIBILITY
 # SETTINGS=rapidlearning-freq-5-exp4-no-checks,rapidlearning-freq-10-exp4-no-checks,rapidlearning-freq-15-exp4-no-checks
-# make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
+# make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
 #
 # SETTINGS=rapidlearning-freq-5-exp4-degeneracy,rapidlearning-freq-10-exp4-degeneracy,rapidlearning-freq-15-exp4-degeneracy
 # make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
@@ -36,17 +36,23 @@ TIME=3600
 #
 # SETTINGS=rapidlearning-glb
 # make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
+#
+# SETTINGS=rapidlearning-freq-5-exp4-full,rapidlearning-freq-10-exp4-full,rapidlearning-freq-15-exp4-full
+# make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
 
-SETTINGS=rapidlearning-freq-5-exp4-full,rapidlearning-freq-10-exp4-full,rapidlearning-freq-15-exp4-full
-make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
+# SETTINGS=rapidlearning-glb-full
+# make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
 
-SETTINGS=rapidlearning-glb-full
+# SETTINGS=default
+# make VERSION=$VERSION2 GLBSEEDSHIFT=0 SEEDS=4 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
+
+SETTINGS=rapidlearning-freq-5-exp4-localobj-dualbound,rapidlearning-freq-5-exp4-nsols-obj,rapidlearning-freq-5-exp4-nsols-dualbound,rapidlearning-freq-5-exp4-leaves-dualbound,rapidlearning-freq-5-exp4-leaves-nsols,rapidlearning-freq-5-exp4-degeneracy-obj,rapidlearning-freq-5-exp4-degeneracy-dualbound,rapidlearning-freq-5-exp4-degeneracy-nsols,rapidlearning-freq-5-exp4-degeneracy-leaves,rapidlearning-freq-5-exp4-leaves-obj
 make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=feasibility-timo-diss OUTPUTDIR=$OUTPUTDIR testcluster
 
 #
 # #### MMM-IP
 # SETTINGS=rapidlearning-freq-5-exp4-no-checks,rapidlearning-freq-10-exp4-no-checks,rapidlearning-freq-15-exp4-no-checks
-# make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+# make VERSION=$VERSION GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 #
 # SETTINGS=rapidlearning-freq-5-exp4-degeneracy,rapidlearning-freq-10-exp4-degeneracy,rapidlearning-freq-15-exp4-degeneracy
 # make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
@@ -68,11 +74,17 @@ make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=
 #
 # SETTINGS=rapidlearning-glb
 # make VERSION=$VERSION CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+#
+# SETTINGS=rapidlearning-freq-5-exp4-full,rapidlearning-freq-10-exp4-full,rapidlearning-freq-15-exp4-full
+# make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
-SETTINGS=rapidlearning-freq-5-exp4-full,rapidlearning-freq-10-exp4-full,rapidlearning-freq-15-exp4-full
-make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+# SETTINGS=rapidlearning-glb-full
+# make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
-SETTINGS=rapidlearning-glb-full
+# SETTINGS=default
+# make VERSION=$VERSION2 GLBSEEDSHIFT=0 SEEDS=4 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+
+SETTINGS=rapidlearning-freq-5-exp4-localobj-dualbound,rapidlearning-freq-5-exp4-nsols-obj,rapidlearning-freq-5-exp4-nsols-dualbound,rapidlearning-freq-5-exp4-leaves-dualbound,rapidlearning-freq-5-exp4-leaves-nsols,rapidlearning-freq-5-exp4-degeneracy-obj,rapidlearning-freq-5-exp4-degeneracy-dualbound,rapidlearning-freq-5-exp4-degeneracy-nsols,rapidlearning-freq-5-exp4-degeneracy-leaves,rapidlearning-freq-5-exp4-leaves-obj
 make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
 
