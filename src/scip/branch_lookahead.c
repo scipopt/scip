@@ -4066,6 +4066,7 @@ SCIP_RETCODE selectVarRecursive(
 
    bestscorelowerbound = SCIPvarGetLbLocal(decision->cand->branchvar);
    bestscoreupperbound = SCIPvarGetUbLocal(decision->cand->branchvar);
+   assert(!SCIPisEQ(scip, bestscorelowerbound, bestscoreupperbound));
 
    SCIP_CALL( branchingResultDataCreate(scip, &downbranchingresult) );
    SCIP_CALL( branchingResultDataCreate(scip, &upbranchingresult) );
@@ -4389,30 +4390,31 @@ SCIP_RETCODE selectVarRecursive(
 
             bestscorelowerbound = branchlb;
             bestscoreupperbound = branchub;
+            assert(!SCIPisEQ(scip, bestscorelowerbound, bestscoreupperbound));
 
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "New best var <%s> with bounds [<%g>..<%g>] and score %g\n",
                SCIPvarGetName(decision->cand->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
          }
 
-#ifdef SCIP_DEBUG
          if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
          {
+#ifdef SCIP_DEBUG
             SCIP_Real downgain = MAX(downbranchingresult->objval - scoringlpobjval, 0);
             SCIP_Real upgain = MAX(upbranchingresult->objval - scoringlpobjval, 0);
 
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%g, downgain=%g, upgain=%g,"
                   " score=%g) -- best: <%s> (%g)\n", c, nlpcands, SCIPvarGetName(branchvar), branchval, downgain,
                   upgain, score, SCIPvarGetName(decision->cand->branchvar), bestscore);
-         }
 #endif
 
-         if( scorecontainer != NULL && storewarmstartinfo )
-         {
-            /* only for abbreviated lookahead branching: we are in the FSB filtering step and store the score for this
-             * variable and the warm starting basis to reuse it in the subsequent lookahead evaluation of the best
-             * candidates
-             */
-            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
+            if( scorecontainer != NULL && storewarmstartinfo )
+            {
+               /* only for abbreviated lookahead branching: we are in the FSB filtering step and store the score for this
+                * variable and the warm starting basis to reuse it in the subsequent lookahead evaluation of the best
+                * candidates
+                */
+               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
+            }
          }
 
          if( probingdepth == 0 && (config->usebincons || config->usedomainreduction) && !useoldbranching
