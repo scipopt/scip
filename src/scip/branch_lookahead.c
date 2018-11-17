@@ -516,6 +516,253 @@ void branchingResultDataFree(
    SCIPfreeBuffer(scip, resultdata);
 }
 
+/** a container to hold the result of a second-level LP */
+typedef struct
+{
+   SCIP_Real             lpobjval;           /**< the objective value of the solved lp; only contains meaningful data, if
+                                              *   cutoff == FALSE. */
+   SCIP_Real             branchval1;         /**< new bound for first branching variable */
+   SCIP_Real             branchval2;         /**< new bound for second branching variable */
+   unsigned int          branchvar1:30;      /**< problem index of first branching variable */
+   unsigned int          branchvar2:30;      /**< problem index of second branching variable */
+   unsigned int          branchdir1:1;       /**< branching direction for first branching variable (0:down, 1:up) */
+   unsigned int          branchdir2:1;       /**< branching direction for second branching variable (0:down, 1:up) */
+   unsigned int          cutoff:1;           /**< indicates whether the node was infeasible and was cut off. */
+   unsigned int          valid:1;            /**< is the lpobjval a valid dual bound? */
+} LEVEL2RESULT;
+
+/** allocates a double branching result in the memory */
+static
+SCIP_RETCODE level2resultCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2RESULT**        result              /**< pointer to the result to be allocated */
+   )
+{
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   SCIP_CALL( SCIPallocBuffer(scip, result) );
+
+   return SCIP_OKAY;
+}
+
+/** initiates the double branching result with default values */
+static
+void level2resultInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2RESULT*         result              /**< pointer to the result to be initialized */
+   )
+{
+   assert(result != NULL);
+
+   result->lpobjval = -SCIPinfinity(scip);
+   result->branchval1 = -SCIPinfinity(scip);
+   result->branchval2 = -SCIPinfinity(scip);
+   result->branchvar1 = 0;
+   result->branchvar2 = 0;
+   result->branchdir1 = 0;
+   result->branchdir2 = 0;
+   result->cutoff = FALSE;
+   result->valid = FALSE;
+}
+
+/** frees the allocated memory of the double branching result */
+static
+void level2resultFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2RESULT**        result              /**< pointer to the result to be freed */
+   )
+{
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   SCIPfreeBuffer(scip, result);
+}
+
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyLevel2result)
+{  /*lint --e{715}*/
+   /* the key is the element itself */
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal; two branchings are equal if they branched on the same variables with the same
+ *  values
+ */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqLevel2Result)
+{
+   LEVEL2RESULT* result1;
+   LEVEL2RESULT* result2;
+
+   assert(key1 != NULL);
+   assert(key2 != NULL);
+   result1 = (LEVEL2RESULT*)key1;
+   result2 = (LEVEL2RESULT*)key2;
+
+   assert(result1->branchvar1 < result1->branchvar2);
+   assert(result2->branchvar1 < result2->branchvar2);
+
+   /* check all cases */
+   if( result1->branchvar1 != result2->branchvar1
+      || result1->branchvar2 != result2->branchvar2
+      || result1->branchdir1 != result2->branchdir1
+      || result1->branchdir2 != result2->branchdir2
+      || result1->branchval1 > result2->branchval1 + 0.5
+      || result1->branchval1 < result2->branchval1 - 0.5
+      || result1->branchval2 > result2->branchval2 + 0.5
+      || result1->branchval2 < result2->branchval2 - 0.5)
+      return FALSE;
+
+   return TRUE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValLevel2Result)
+{
+   LEVEL2RESULT* result;
+   uint32_t branch1;
+   uint32_t branch2;
+
+   result = (LEVEL2RESULT*)key;
+
+   assert(result->branchvar1 < result->branchvar2);
+
+   branch1 = result->branchvar1;
+   if( result->branchdir1 )
+      branch1 |= (1<<31);
+
+   branch2 = result->branchvar2;
+   if( result->branchdir2 )
+      branch2 |= (1<<31);
+
+   return SCIPcombineTwoInt(branch1, branch2);
+}
+
+/** a container to hold the result of second-level LP */
+typedef struct
+{
+   SCIP_HASHMAP*         level2map;          /**< hash map for level2 results */
+   LEVEL2RESULT**        level2results;      /**< array with all level2 results */
+   SCIP_Real             branchval1;         /**< new bound for first branching variable */
+   SCIP_Real             branchval2;         /**< new bound for second branching variable */
+   int                   nlevel2results;     /**< number of level2 results stored */
+   int                   level2resultssize;  /**< size of level2results array */
+   unsigned int          branchvar1:30;      /**< problem index of first branching variable */
+   unsigned int          branchvar2:30;      /**< problem index of second branching variable */
+   unsigned int          branchdir1:1;       /**< branching direction for first branching variable (0:down, 1:up) */
+   unsigned int          branchdir2:1;       /**< branching direction for second branching variable (0:down, 1:up) */
+} LEVEL2DATA;
+
+/** allocates the level2 data */
+static
+SCIP_RETCODE level2dataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2DATA**          data                /**< pointer to the data to be allocated */
+   )
+{
+   assert(scip != NULL);
+   assert(data != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, data) );
+
+   (*data)->level2map = NULL;
+   (*data)->level2results = NULL;
+   (*data)->branchval1 = -SCIPinfinity(scip);
+   (*data)->branchval2 = -SCIPinfinity(scip);
+   (*data)->nlevel2results = 0;
+   (*data)->level2resultssize = 0;
+   (*data)->branchvar1 = 0;
+   (*data)->branchvar2 = 0;
+   (*data)->branchdir1 = 0;
+   (*data)->branchdir2 = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees the allocated memory of the level2 data */
+static
+void level2dataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2DATA**          data                /**< pointer to the data to be freed */
+   )
+{
+   assert(scip != NULL);
+   assert(data != NULL);
+
+   while( (*data)->nlevel2results > 0 )
+   {
+      --(*data)->nlevel2results;
+      SCIPfreeBuffer(scip, &((*data)->level2results[(*data)->nlevel2results]));
+   }
+   assert((*data)->nlevel2results == 0);
+
+   SCIPfreeMemoryArray(scip, &(*data)->level2results);
+
+   SCIPfreeMemory(scip, data);
+}
+
+/** ensures that level2results can store at least one more element */
+static
+SCIP_RETCODE level2dataEnsureSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2DATA*           data                /**< level2 data */
+   )
+{
+   assert(scip != NULL);
+   assert(data != NULL);
+
+   if( data->nlevel2results >= data->level2resultssize )
+   {
+      data->level2resultssize = 2 * data->level2resultssize;
+      data->level2resultssize = MAX(4, data->level2resultssize);
+
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &data->level2results, data->level2resultssize) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** ensures that level2results can store at least one more element */
+static
+SCIP_RETCODE level2dataStoreResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2DATA*           data,               /**< level2 data */
+   SCIP_Real             lpobjval,           /**< LP objective value */
+   SCIP_Bool             cutoff,             /**< was the LP infeasible? */
+   SCIP_Bool             valid               /**< is the LP value a valid dual bound? */
+   )
+{
+   LEVEL2RESULT* result;
+
+   assert(scip != NULL);
+   assert(data != NULL);
+
+   SCIP_CALL( level2dataEnsureSize(scip, data) );
+
+   SCIP_CALL( level2resultCreate(scip, &result) );
+
+   result->lpobjval = lpobjval;
+   result->cutoff = cutoff;
+   result->valid = valid;
+   result->branchval1 = data->branchval1;
+   result->branchval2 = data->branchval2;
+   result->branchvar1 = data->branchvar1;
+   result->branchvar2 = data->branchvar2;
+   result->branchdir1 = data->branchdir1;
+   result->branchdir2 = data->branchdir2;
+
+   data->level2results[data->nlevel2results] = result;
+   ++data->nlevel2results;
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /** The data that is preserved over multiple runs of the branching rule. */
 typedef struct
 {
@@ -1723,6 +1970,7 @@ SCIP_RETCODE selectVarRecursive(
    CANDIDATELIST*        candidatelist,      /**< list of candidates to branch on */
    BRANCHINGDECISION*    decision,           /**< struct to store the final decision */
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores */
+   LEVEL2DATA*           level2data,         /**< level 2 LP results data */
    SCIP_Bool             storewarmstartinfo, /**< should LP information be stored? */
    int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval,           /**< base LP objective value */
@@ -3734,7 +3982,7 @@ SCIP_RETCODE filterCandidates(
    return SCIP_OKAY;
 }
 
-/** Executes the general branching on a node in a given direction (up/down) and repeats the algorithm from the new node */
+/** Executes the general branching on a variable in a given direction (up/down) and repeats the algorithm from the new node */
 static
 SCIP_RETCODE executeBranchingRecursive(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3746,6 +3994,7 @@ SCIP_RETCODE executeBranchingRecursive(
    int                   recursiondepth,     /**< remaining recursion depth */
    DOMAINREDUCTIONS*     domainreductions,   /**< container collecting all domain reductions found */
    BINCONSDATA*          binconsdata,        /**< container collecting all binary constraints */
+   LEVEL2DATA*           level2data,         /**< level 2 LP results data */
    BRANCHINGRESULTDATA*  branchingresult,    /**< container to store the result of the branching in */
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores; or NULL */
    SCIP_Bool             storewarmstartinfo, /**< should lp information be stored? */
@@ -3774,9 +4023,8 @@ SCIP_RETCODE executeBranchingRecursive(
 
    branchvar = candidate->branchvar;
    branchvalfrac = candidate->fracval;
-#ifdef SCIP_DEBUG
    branchval = candidate->branchval;
-#endif
+
    assert(branchvar != NULL);
 
    probingdepth = SCIPgetProbingDepth(scip);
@@ -3812,12 +4060,39 @@ SCIP_RETCODE executeBranchingRecursive(
       }
    }
 
+   if( level2data != NULL )
+   {
+      SCIP_Real newbound = downbranching ? SCIPfeasFloor(scip, branchval) : SCIPfeasCeil(scip, branchval);
+
+      if( SCIPgetProbingDepth(scip) == 0 )
+      {
+         level2data->branchvar1 = SCIPvarGetProbindex(branchvar);
+         level2data->branchdir1 = !downbranching;
+         level2data->branchval1 = newbound;
+      }
+      else
+      {
+         assert(SCIPgetProbingDepth(scip) == 1);
+
+         level2data->branchvar2 = SCIPvarGetProbindex(branchvar);
+         level2data->branchdir2 = !downbranching;
+         level2data->branchval2 = newbound;
+      }
+   }
+
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started %s branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n",
       downbranching ? "down" : "up", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
       SCIPvarGetUbLocal(branchvar));
 
    SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
          status) );
+
+   assert(SCIPgetProbingDepth(scip) == 1 || SCIPgetProbingDepth(scip) == 2);
+
+   if( level2data != NULL && SCIPgetProbingDepth(scip) == 2)
+   {
+      SCIP_CALL( level2dataStoreResult(scip, level2data, branchingresult->objval, branchingresult->cutoff, branchingresult->dualboundvalid) );
+   }
 
 #ifdef SCIP_STATISTIC
    statistics->nlpssolved[probingdepth]++;
@@ -3914,13 +4189,13 @@ SCIP_RETCODE executeBranchingRecursive(
 #ifdef SCIP_STATISTIC
                deeperlocalstats->ncutoffproofnodes = 0;
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
-                     binconsdata, candidatelist, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
+                     binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, storewarmstartinfo, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
                      statistics, deeperlocalstats) );
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
-                     binconsdata, candidatelist, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
+                     binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, storewarmstartinfo, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains) );
 #endif
@@ -4011,6 +4286,7 @@ SCIP_RETCODE selectVarRecursive(
    CANDIDATELIST*        candidatelist,      /**< list of candidates to branch on */
    BRANCHINGDECISION*    decision,           /**< struct to store the final decision */
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores; or NULL */
+   LEVEL2DATA*           level2data,         /**< level 2 LP results data */
    SCIP_Bool             storewarmstartinfo, /**< should lp information be stored? */
    int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval,           /**< base LP objective value */
@@ -4066,7 +4342,7 @@ SCIP_RETCODE selectVarRecursive(
 
    bestscorelowerbound = SCIPvarGetLbLocal(decision->cand->branchvar);
    bestscoreupperbound = SCIPvarGetUbLocal(decision->cand->branchvar);
-   assert(!SCIPisEQ(scip, bestscorelowerbound, bestscoreupperbound));
+   //assert(!SCIPisEQ(scip, bestscorelowerbound, bestscoreupperbound)); ?????????
 
    SCIP_CALL( branchingResultDataCreate(scip, &downbranchingresult) );
    SCIP_CALL( branchingResultDataCreate(scip, &upbranchingresult) );
@@ -4188,12 +4464,12 @@ SCIP_RETCODE selectVarRecursive(
 
 #ifdef SCIP_STATISTIC
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
-                  recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
+                  recursiondepth, localdomainreductions, binconsdata, level2data, localbranchingresult, scorecontainer,
                   storewarmstartinfo, down, statistics, localstats) );
 #else
 
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
-                  recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
+                  recursiondepth, localdomainreductions, binconsdata, level2data, localbranchingresult, scorecontainer,
                   storewarmstartinfo, down) );
 #endif
 
@@ -4459,7 +4735,7 @@ SCIP_RETCODE selectVarRecursive(
          }
       }
 
-      if( areBoundsChanged(scip, decision->cand->branchvar, bestscorelowerbound, bestscoreupperbound) )
+      if( !(status->domred && decision->cand == candidate) && areBoundsChanged(scip, decision->cand->branchvar, bestscorelowerbound, bestscoreupperbound) )
       {
          /* in case the bounds of the current highest scored solution have changed due to domain propagation during
           * the lookahead branching we can/should not branch on this variable but instead report the domain
@@ -4536,6 +4812,7 @@ SCIP_RETCODE selectVarStart(
    int recursiondepth;
    DOMAINREDUCTIONS* domainreductions = NULL;
    BINCONSDATA* binconsdata = NULL;
+   LEVEL2DATA* level2data = NULL;
    SCIP_SOL* baselpsol = NULL;
    SCIP_Bool inprobing;
    SCIP_Real lpobjval;
@@ -4626,14 +4903,25 @@ SCIP_RETCODE selectVarStart(
          SCIPenableVarHistory(scip);
       }
 
+      if( recursiondepth == 2 )
+      {
+         SCIP_CALL( level2dataCreate(scip, &level2data) );
+      }
+
 #ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL,
+            decision, scorecontainer, level2data, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL,
             statistics, localstats) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL) );
+            decision, scorecontainer, level2data, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL) );
 #endif
+
+      if( recursiondepth == 2 )
+      {
+         level2dataFree(scip, &level2data);
+      }
+
 
       /* we are at the top level */
       if( !inprobing )
