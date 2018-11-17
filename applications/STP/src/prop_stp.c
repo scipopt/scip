@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include "prop_stp.h"
 #include "grph.h"
+#include "cons_stp.h"
 #include "branch_stp.h"
 #include "scip/tree.h"
 
@@ -720,8 +721,78 @@ SCIP_RETCODE redbasedVarfixing(
 #endif
    SCIP_CALL( graph_path_init(scip, propgraph) );
 
-
    *probisinfeas = FALSE;
+
+   if( pc )
+   {
+      int* verts = SCIPStpGetPcImplVerts(scip);
+      int* start = SCIPStpGetPcImplStarts(scip);
+
+      if( verts != NULL )
+      {
+         int ptermcount = 0;
+         assert(start != NULL);
+         assert(propgraph->extended);
+
+         for( int i = 0; i < propgraph->knots && !(*probisinfeas); i++ )
+         {
+            if( !Is_pterm(g->term[i]) )
+               continue;
+
+            ptermcount++;
+
+            if( propgraph->grad[i] == 0 )
+            {
+               assert(g->grad[i] > 0);
+               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
+               {
+                  const int vert = verts[j];
+
+                  if( propgraph->grad[vert] == 0 )
+                     continue;
+
+                  if( graph_pc_knotIsFixedTerm(propgraph, vert) )
+                  {
+                     *probisinfeas = TRUE;
+                     break;
+                  }
+
+                  assert(!Is_term(propgraph->term[vert]) && !Is_term(g->term[vert]));
+
+                  if( Is_pterm(propgraph->term[vert]) )
+                     graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert));
+                  else
+                     graph_knot_del(scip, propgraph, vert, TRUE);
+               }
+            }
+            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED - 1.0) && Is_pterm(propgraph->term[i]) )
+            {
+               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
+               {
+                  const int vert = verts[j];
+                  assert(graph_pc_knotIsFixedTerm(propgraph, vert) || !Is_term(propgraph->term[vert]));
+
+                  /* is vert fixed? */
+                  if( SCIPisGE(scip, propgraph->prize[vert], BLOCKED - 1.0))
+                  {
+                     const int twin = graph_pc_getTwinTerm(propgraph, i);
+                     const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
+                     SCIP_CALL( fixedgevar(scip, vars[rootedge], nfixed ) );
+
+                     assert(Is_pterm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
+
+                     enforcePterm(propgraph, i);
+                     break;
+                  }
+               }
+            }
+         }
+
+         if( *probisinfeas )
+            goto TERMINATE;
+      } /* verts != NULL */
+   }
+
    if( propgraph->stp_type == STP_RPCSPG )
       SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, &offset, probisinfeas) );
    else
@@ -735,7 +806,7 @@ SCIP_RETCODE redbasedVarfixing(
       printf("FAIL: problem in propagation has become invalid! \n");
       return SCIP_ERROR;
    }
-   show = TRUE;
+
    /* reduce graph */
 #if 1
    if( pc )
@@ -749,7 +820,7 @@ SCIP_RETCODE redbasedVarfixing(
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
 #endif
-   show = FALSE;
+
    assert(graph_valid(propgraph));
 
    /* try to fix edges ... */

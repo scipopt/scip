@@ -2501,6 +2501,7 @@ int graph_pc_getRoot2PtermEdge(
 {
    int rootedge = -1;
    assert(graph != NULL);
+   assert(pseudoterm >= 0 && pseudoterm < graph->knots);
 
    for( int e = graph->inpbeg[pseudoterm]; e != EAT_LAST; e = graph->ieat[e] )
       if( graph->tail[e] == graph->source )
