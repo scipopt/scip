@@ -43,7 +43,7 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -4009,9 +4009,7 @@ SCIP_RETCODE executeBranchingRecursive(
    SCIP_VAR* branchvar;
    SCIP_Real branchvalfrac;
    SCIP_Bool varisbinary;
-#ifdef SCIP_DEBUG
    SCIP_Real branchval;
-#endif
 
    assert(scip != NULL);
    assert(status != NULL);
