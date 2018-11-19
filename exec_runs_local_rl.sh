@@ -30,7 +30,7 @@ TIME=3600
 # make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
 SETTINGS=rapidlearning-freq-5-exp4-degeneracy-leaves-localobj-applybdchgsF,rapidlearning-freq-5-exp4-degeneracy-leaves-localobj-applyinfervalsF,rapidlearning-freq-5-exp4-degeneracy-leaves-localobj-applyconflictsF,rapidlearning-freq-5-exp4-degeneracy-leaves-localobj-applyprimalsolF
-make VERSION=$VERSION2 GLBSEEDSHIFT=1 SEEDS=3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+make VERSION=$VERSION2 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
 
 
