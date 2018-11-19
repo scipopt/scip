@@ -129,6 +129,7 @@ void cancelCol(
    SCIP_Real *vals2;
 
 
+
    varlen1 =  SCIPmatrixGetColNNonzs(matrix, colidx1);
    varlen2 =  SCIPmatrixGetColNNonzs(matrix, colidx2);
    assert(varlen1 >= 10);
@@ -145,6 +146,7 @@ void cancelCol(
    nnz1 = 0;
    nnz2 = 0;
    *nratios = 0;
+#if 1
    while(i < varlen1 && j < varlen2)
    {
       if(inds1[i] == inds2[j])
@@ -178,7 +180,61 @@ void cancelCol(
             nnz1 += 1;
       }
    }
-   printf("%d, %d, %d\n", *nratios, nnz1, nnz2);
+   if( nnz1<*nratios || nnz2<*nratios )
+   {
+      SCIP_Real maxratio;
+      SCIP_Real secmaxratio;
+      SCIP_Real curratio;
+      int nmaxratio;
+      int nsecmaxratio;
+      int ncurratio;
+
+      nmaxratio = 0;
+      nsecmaxratio = 0;
+      SCIPsortDownReal(ratios, *nratios);
+      curratio = ratios[0];
+      ncurratio = 1;
+      for( i=1; i<*nratios; i++ )
+      {
+         if( SCIPisEQ(scip, curratio, ratios[i]) )
+         {
+            ncurratio++;
+         }
+         else
+         {
+            if( ncurratio > nmaxratio )
+            {
+               maxratio = curratio;
+               nmaxratio = ncurratio;
+            }
+            else if( ncurratio > nsecmaxratio )
+            {
+               secmaxratio = curratio;
+               nsecmaxratio = ncurratio;
+            }
+            curratio = ratios[i];
+            ncurratio = 1;
+         }
+      }
+      if( ncurratio > nmaxratio )
+      {
+         maxratio = curratio;
+         nmaxratio = ncurratio;
+      }
+      else if( ncurratio > nsecmaxratio )
+      {
+         secmaxratio = curratio;
+         nsecmaxratio = ncurratio;
+      }
+
+      if( nmaxratio > nnz1 || nmaxratio > nnz2 )
+      {
+         printf("dualsuceess: %d, %d, %d, %d\n", nmaxratio, nsecmaxratio, nnz1, nnz2);
+      }
+//      printf("%8.4f, %8d\n", maxratio, nmaxratio);
+//      printf("%8.4f, %8d\n", secmaxratio, nsecmaxratio);
+   }
+#endif
 }
 
 
@@ -215,6 +271,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_Bool initialized;
    SCIP_Bool complete;
    int ncols;
+   int nrows;
    int r;
    int i;
    int j;
@@ -266,8 +323,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       int nratios;
       nratios = 0;
       ncols = SCIPmatrixGetNColumns(matrix);
+      nrows = SCIPmatrixGetNRows(matrix);
       SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsidx, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &ratios, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nrows) );
       for(i=0; i<ncols; i++)
       {
          int nnonz;
@@ -285,8 +343,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          int* colpnt = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[i]);
          SCIP_Real* valpnt = SCIPmatrixGetColValPtr(matrix, processedvarsidx[i]);
          SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
-         printf("%s, %d\n", SCIPmatrixGetColName(matrix, processedvarsidx[i]),
-               SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
+   //      printf("%s, %d\n", SCIPmatrixGetColName(matrix, processedvarsidx[i]),
+  //             SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
       }
 
       for(i=0; i<nprocessedvarsidx; i++)
