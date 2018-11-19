@@ -27,7 +27,6 @@
 
 #include "lpi/type_lpi.h"
 #include "scip/def.h"
-#include "scip/struct_tree.h"
 #include "scip/type_cons.h"
 #include "scip/type_history.h"
 #include "scip/type_lp.h"
