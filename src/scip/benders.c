@@ -42,7 +42,7 @@
 #include "scip/benderscut.h"
 
 /* Defaults for parameters */
-#define SCIP_DEFAULT_TRANSFERCUTS          TRUE  /** should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+#define SCIP_DEFAULT_TRANSFERCUTS         FALSE  /** should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
 #define SCIP_DEFAULT_CUTSASCONSS           TRUE  /** should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** maximum depth at which the LNS check is performed */
