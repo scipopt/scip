@@ -669,6 +669,23 @@ SCIP_DECL_CONSLOCK(consLockBenders)
       {
          nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
 
+         /* if the auxiliary variable exists, then we need to add a down lock. Initially, a down lock is added to all
+          * auxiliary variables during creating. This is because the creation of auxiliary variable occurs after
+          * CONS_LOCK is called. The inclusion of the auxiliary variables in this function is to cover the case if locks
+          * are added or removed after presolving.
+          */
+         for( j = 0; j < nsubproblems; j++ )
+         {
+            SCIP_VAR* auxvar;
+
+            auxvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+            if( auxvar != NULL )
+            {
+               SCIP_CALL( SCIPaddVarLocksType(scip, auxvar, locktype, nlockspos, nlocksneg) );
+            }
+         }
+
          /* adding up and down locks for all master problem variables. Since the locks for all constraint handlers
           * without constraints, no auxiliary variables have been added. As such, all variables are master variables.
           */
