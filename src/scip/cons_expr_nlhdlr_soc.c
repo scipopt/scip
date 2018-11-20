@@ -138,7 +138,7 @@ SCIP_RETCODE freeNlhdlrExprData(
 
 /** helper method to create variables for the cone disaggregation */
 static
-SCIP_RETCODE createDisaggrVars(
+SCIP_RETCODE createDisaggr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
@@ -214,7 +214,7 @@ SCIP_RETCODE createDisaggrVars(
 
 /** helper method to free variables for the cone disaggregation */
 static
-SCIP_RETCODE freeDisaggrVars(
+SCIP_RETCODE freeDisaggr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
@@ -604,7 +604,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    assert(nlhdlrexprdata != NULL);
 
    /* create variables for cone disaggregation */
-   SCIP_CALL( createDisaggrVars(scip, conshdlr, expr, nlhdlrexprdata) );
+   SCIP_CALL( createDisaggr(scip, conshdlr, expr, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
@@ -617,7 +617,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
    assert(nlhdlrexprdata != NULL);
 
    /* free variable for cone disaggregation */
-   SCIP_CALL( freeDisaggrVars(scip, nlhdlrexprdata) );
+   SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
 
    return SCIP_OKAY;
 }
