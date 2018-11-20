@@ -243,6 +243,7 @@ set(scipsources
     scip/interrupt.c
     scip/intervalarith.c
     scip/lp.c
+    scip/lpex.c
     scip/matrix.c
     scip/mem.c
     scip/misc.c
@@ -281,6 +282,7 @@ set(scipsources
     scip/scip_general.c
     scip/scip_heur.c
     scip/scip_lp.c
+    scip/scip_lpex.c
     scip/scip_mem.c
     scip/scip_message.c
     scip/scip_nlp.c
@@ -320,6 +322,7 @@ set(scipsources
     scip/table.c
     scip/tree.c
     scip/var.c
+    scip/varex.c
     scip/visual.c
     scip/rbtree.c
     tclique/tclique_branch.c
@@ -365,6 +368,10 @@ set(lpisources
    ${lpi}
    )
 
+set(lpiexsources
+   ${lpiex}
+   )
+
 set(symsources
    ${sym}
    )
@@ -375,7 +382,9 @@ set(blockmemshellheader
 
 set(lpiheaders
     lpi/lpi.h
+    lpi/lpiex.h
     lpi/type_lpi.h
+    lpi/type_lpiex.h
 )
 
 set(dijkstraheaders
@@ -575,6 +584,7 @@ set(scipheaders
     scip/interrupt.h
     scip/intervalarith.h
     scip/lp.h
+    scip/lpex.h
     scip/mem.h
     scip/message_default.h
     scip/message.h
@@ -663,6 +673,7 @@ set(scipheaders
     scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
+    scip/pub_varex.h
     scip/rational.h
     scip/rbtree.h
     scip/reader_bnd.h
@@ -717,6 +728,7 @@ set(scipheaders
     scip/scip_general.h
     scip/scip_heur.h
     scip/scip_lp.h
+    scip/scip_lpex.h
     scip/scip_mem.h
     scip/scip_message.h
     scip/scip_nlp.h
@@ -735,6 +747,7 @@ set(scipheaders
     scip/scip_reopt.h
     scip/scip_sepa.h
     scip/scip_sol.h
+    scip/scip_solex.h
     scip/scip_solve.h
     scip/scip_solvingstats.h
     scip/scip_table.h
@@ -742,6 +755,7 @@ set(scipheaders
     scip/scip_tree.h
     scip/scip_validation.h
     scip/scip_var.h
+    scip/scip_varex.h
     scip/scipshell.h
     scip/sepa_cgmip.h
     scip/sepa_clique.h
@@ -763,6 +777,7 @@ set(scipheaders
     scip/sepa_zerohalf.h
     scip/set.h
     scip/sol.h
+    scip/solex.h
     scip/solve.h
     scip/stat.h
     scip/struct_bandit.h
@@ -785,6 +800,7 @@ set(scipheaders
     scip/struct_history.h
     scip/struct_implics.h
     scip/struct_lp.h
+    scip/struct_lpex.h
     scip/struct_matrix.h
     scip/struct_mem.h
     scip/struct_message.h
@@ -837,6 +853,7 @@ set(scipheaders
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
+    scip/scip_lpex.h
     scip/type_matrix.h
     scip/type_mem.h
     scip/type_message.h
@@ -868,6 +885,7 @@ set(scipheaders
     scip/type_var.h
     scip/type_visual.h
     scip/var.h
+    scip/varex.h
     scip/visual.h
 )
 
@@ -905,7 +923,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -933,7 +951,15 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+add_library(liblpiex EXCLUDE_FROM_ALL
+    ${lpiexsources}
+    scip/bitencode.c
+    blockmemshell/memory.c
+    scip/message.c)
+setLibProperties(liblpiex "lpiex")
+
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources})
+
 setLibProperties(libscip "scip")
 
 target_link_libraries(libscip PRIVATE
@@ -946,7 +972,7 @@ target_link_libraries(libscip PRIVATE
 
 if(SHARED)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources})
 else()
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)

@@ -1,3 +1,5 @@
+
+
 cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
@@ -193,6 +195,7 @@ add_definitions(-DWITH_SCIPDEF)
 if(EXSOLVE)
     add_definitions(-DWITH_EXACTSOLVE)
 endif()
+set(lpiex lpi/lpiex_spx.cpp)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
