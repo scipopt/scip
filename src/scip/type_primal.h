@@ -29,6 +29,8 @@ extern "C" {
 
 typedef struct SCIP_Primal SCIP_PRIMAL;           /**< primal data */
 
+typedef struct SCIP_PrimalEx SCIP_PRIMALEX;       /**< exact primal data */
+
 #ifdef __cplusplus
 }
 #endif
