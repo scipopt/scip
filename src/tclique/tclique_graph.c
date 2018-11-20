@@ -691,6 +691,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    for( i = 0; i < (*tcliquegraph)->nedges; i++ )
    {
       /* read edge (node1, node2) */
+      /* coverity[secure_coding] */
       result = fscanf(file, "%d%d", &node1, &node2);
       if( result <= 1 )
       {
