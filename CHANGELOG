@@ -18,6 +18,10 @@ Performance improvements
 
 - Matrix presolvers that do not work on incomplete matrices now skip matrix creation if unsupported constraint types are detected.
 
+- consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
+  up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
+  with Benders' decomposition.
+
 Examples and applications
 -------------------------
 
