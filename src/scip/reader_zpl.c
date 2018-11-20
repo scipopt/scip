@@ -468,9 +468,6 @@ SCIP_RETCODE addConsTerm(
          if( SCIPisExactSolve(scip) )
          {
             // todo: (exip) create exact constraint and add to SCIP
-            sciplhs = RgetRealRelax(ratlhs, SCIP_ROUND_DOWNWARDS);
-            sciprhs = RgetRealRelax(ratrhs, SCIP_ROUND_UPWARDS);
-
             SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
                   initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1110,6 +1107,7 @@ SCIP_RETCODE addVar(
       // todo: create exact variable with lbrat/ubrat
       SCIPdebugMessage("zimpl reader: added new variable");
       SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
       SCIPdebug(SCIPprintVar(scip, var, NULL));
       RtoString(lbrat, strlb);
       RtoString(ubrat, strub);
