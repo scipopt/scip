@@ -630,9 +630,28 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
    int naggrs;
    int k;
 
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->row != NULL);
+
    *result = SCIP_DIDNOTRUN;
 
    naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+
+   /* check whether aggregation row is in the LP */
+   if( SCIProwIsInLP(nlhdlrexprdata->row) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->row, FALSE, &infeasible) );
+
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      *result = SCIP_SUCCESS;
+   }
 
    for( k = 0; k < naggrs && *result != SCIP_CUTOFF; ++k )
    {
