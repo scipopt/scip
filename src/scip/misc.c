@@ -5588,6 +5588,15 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntPtrIntRealPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntPtrIntRealPtrPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_FIELD4TYPE  void*
+#define SORTTPL_FIELD5TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Long
