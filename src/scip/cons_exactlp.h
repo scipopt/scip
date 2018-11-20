@@ -321,16 +321,18 @@ void SCIPgetFeasibilityExactLinear(
 
 /** gets the dual solution of the linear constraint in the current LP */
 EXTERN
-SCIP_Rational* SCIPgetDualsolExactLinear(
+void SCIPgetDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Rational*        ret                 /**< pointer to store the result */
    );
 
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 EXTERN
-SCIP_Rational* SCIPgetDualfarkasExactLinear(
+void SCIPgetDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Rational*        ret                 /**< pointer to store the result */
    );
 
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
