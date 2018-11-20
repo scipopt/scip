@@ -51,6 +51,36 @@ struct SCIP_Rational{
  */
 
 /** allocate and create a rational from nominator and denominator */
+SCIP_Rational* Rcreate(
+   BMS_BLKMEM*           mem                 /**< block memory */
+   )
+{
+   SCIP_Rational* retrat;
+
+   BMSallocBlockMemory(mem, &retrat);
+
+   retrat->isinf = FALSE;
+   new (&retrat->r) Rational();
+
+   return retrat;
+}
+
+/** allocate and create a rational from nominator and denominator */
+SCIP_Rational* RcreateTemp(
+   BMS_BUFMEM*           mem                 /**< block memory */
+   )
+{
+   SCIP_Rational* retrat;
+
+   BMSallocBufferMemory(mem, &retrat);
+
+   retrat->isinf = FALSE;
+   new (&retrat->r) Rational();
+
+   return retrat;
+}
+
+/** allocate and create a rational from nominator and denominator */
 SCIP_Rational* RcreateInt(
    BMS_BLKMEM*           mem,                /**< block memory */
    int                   nom,                /**< the nominator */
@@ -192,11 +222,22 @@ void Rdelete(
    SCIP_Rational**       r                   /**< adress of the rational */
    )
 {
-   if( r == NULL)
-      return;
+   assert(*r != NULL);
 
    (*r)->r.~Rational();
    BMSfreeBlockMemory(mem, r);
+}
+
+/** delete a rational and free the allocated memory */
+void RdeleteTemp(
+   BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational**       r                   /**< adress of the rational */
+   )
+{
+   assert(*r != NULL);
+
+   (*r)->r.~Rational();
+   BMSfreeBufferMemory(mem, r);
 }
 
 /** set a rational to the value of another rational */
@@ -220,6 +261,42 @@ void RsetInt(
    assert(res != NULL);
 
    res->r = (nom/denom);
+}
+
+/** set a rational to the value described by a string */
+void RsetString(
+   SCIP_Rational*        res,                /**< the result */
+   const char*           desc                /**< the String describing the rational */
+   )
+{
+   assert(res != NULL);
+   assert(res->r != NULL);
+
+   res->r = Rational(desc);
+
+   if( 0 == strcmp(desc, "inf") )
+   {
+      res->r = 1;
+      res->isinf = TRUE;
+   }
+   else if ( 0 == strcmp(desc, "-inf") )
+   {
+      res->r = -1;
+      res->isinf = TRUE;
+   }
+}
+
+/** set a rational to the value of another a real */
+void RsetReal(
+   SCIP_Rational*        r,
+   SCIP_Real             real
+   )
+{
+   assert(r != NULL);
+   assert(r->r != NULL);
+
+   r->isinf = false;
+   r->r = real;
 }
 
 /*
@@ -291,7 +368,7 @@ void RrelDiff(
    absval1 = abs(val1->r);
    absval2 = abs(val2->r);
    quot = max(absval1, absval2);
-   if( 1.0 > quot );
+   if( 1.0 > quot )
       quot = 1.0;
 
    res->r = ((val1->r)-(val2->r))/quot;
@@ -318,7 +395,7 @@ void RmultReal(
 {
     assert(res != NULL && op1 != NULL);
 
-    if( op2->isinf )
+    if( op1->isinf )
     {
        res->r = op2 > 0 ? op1->r : -op1->r;
        res->isinf = true;
@@ -412,6 +489,24 @@ void Rmin(
       ret->r = r1->r > 0 ? r2->r : r1->r;
    else
       ret->r = min(r1->r, r2->r);
+}
+
+/** compute the minimum of two rationals */
+void Rmax(
+   SCIP_Rational*        ret,                /**< the result */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
+   )
+{
+   assert(r1 != NULL && r2 != NULL);
+   assert(r1->r != NULL && r2->r != NULL);
+
+   if( r1->isinf )
+      ret->r = r1->r > 0 ? r1->r : r2->r;
+   else if( r2->isinf )
+      ret->r = r2->r > 0 ? r1->r : r1->r;
+   else
+      ret->r = max(r1->r, r2->r);
 }
 
 /** check if two rationals are equal */
@@ -595,6 +690,16 @@ SCIP_Bool RisAbsInfinity(
    return r->isinf;
 }
 
+/** check if the rational is negative infinity */
+SCIP_Bool RisIntegral(
+   SCIP_Rational*        r                   /**< the rational to check */
+   )
+{
+   assert(r != NULL);
+
+   return !(r->isinf) && (denominator(r->r) == 1);
+}
+
 /*
  * Printing/Conversion methods 
  */
@@ -714,6 +819,447 @@ void testNumericsRational(
       std::cout << "type rational is signed " << std::endl;
    }
    std::cout << "rounding style is " << std::numeric_limits<double>::round_style << std::endl;
+}
+
+/*
+ * Dynamic Arrays
+ */
+
+/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
+static
+int calcGrowSize(
+   int                   initsize,           /**< initial size of array */
+   SCIP_Real             growfac,            /**< growing factor of array */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   int size;
+
+   assert(initsize >= 0);
+   assert(growfac >= 1.0);
+   assert(num >= 0);
+
+   if( growfac == 1.0 )
+      size = MAX(initsize, num);
+   else
+   {
+      int oldsize;
+
+      /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+      initsize = MAX(initsize, 4);
+      size = initsize;
+      oldsize = size - 1;
+
+      /* second condition checks against overflow */
+      while( size < num && size > oldsize )
+      {
+         oldsize = size;
+         size = (int)(growfac * size + initsize);
+      }
+
+      /* if an overflow happened, set the correct value */
+      if( size <= oldsize )
+         size = num;
+   }
+
+   assert(size >= initsize);
+   assert(size >= num);
+
+   return size;
+}
+
+/** creates a dynamic array of real values */
+SCIP_RETCODE SCIPrationalarrayCreate(
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(rationalarray != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, rationalarray) );
+   (*rationalarray)->blkmem = blkmem;
+   (*rationalarray)->vals = NULL;
+   (*rationalarray)->valssize = 0;
+   (*rationalarray)->firstidx = -1;
+   (*rationalarray)->minusedidx = INT_MAX;
+   (*rationalarray)->maxusedidx = INT_MIN;
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a dynamic array of real values */
+SCIP_RETCODE SCIPrationalarrayCopy(
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the copied real array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONALARRAY*   sourcerationalarray /**< dynamic real array to copy */
+   )
+{
+   assert(rationalarray != NULL);
+   assert(sourcerationalarray != NULL);
+
+   SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
+   if( sourcerationalarray->valssize > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*rationalarray)->vals, sourcerationalarray->vals, \
+                     sourcerationalarray->valssize) );
+   }
+   (*rationalarray)->valssize = sourcerationalarray->valssize;
+   (*rationalarray)->firstidx = sourcerationalarray->firstidx;
+   (*rationalarray)->minusedidx = sourcerationalarray->minusedidx;
+   (*rationalarray)->maxusedidx = sourcerationalarray->maxusedidx;
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic array of real values */
+SCIP_RETCODE SCIPrationalarrayFree(
+   SCIP_RATIONALARRAY**  rationalarray   /**< pointer to the real array */
+   )
+{
+   assert(rationalarray != NULL);
+   assert(*rationalarray != NULL);
+
+   RdeleteArray((*rationalarray)->blkmem, &(*rationalarray)->vals, (*rationalarray)->valssize);
+
+   BMSfreeBlockMemory((*rationalarray)->blkmem, rationalarray);
+
+   return SCIP_OKAY;
+}
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+SCIP_RETCODE SCIPrationalarrayExtend(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
+   )
+{
+   int nused;
+   int nfree;
+   int newfirstidx;
+   int i;
+
+   assert(rationalarray != NULL);
+   assert(rationalarray->minusedidx == INT_MAX || rationalarray->firstidx >= 0);
+   assert(rationalarray->maxusedidx == INT_MIN || rationalarray->firstidx >= 0);
+   assert(rationalarray->minusedidx == INT_MAX || rationalarray->minusedidx >= rationalarray->firstidx);
+   assert(rationalarray->maxusedidx == INT_MIN || rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+
+   minidx = MIN(minidx, rationalarray->minusedidx);
+   maxidx = MAX(maxidx, rationalarray->maxusedidx);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+
+   SCIPdebugMessage("extending rationalarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
+      (void*)rationalarray, rationalarray->firstidx, rationalarray->valssize, rationalarray->minusedidx, rationalarray->maxusedidx, minidx, maxidx);
+
+   /* check, whether we have to allocate additional memory, or shift the array */
+   nused = maxidx - minidx + 1;
+   if( nused > rationalarray->valssize )
+   {
+      SCIP_Rational** newvals;
+      int newvalssize;
+
+      /* allocate new memory storage */
+      newvalssize = calcGrowSize(arraygrowinit, arraygrowfac, nused);
+      SCIP_ALLOC( BMSallocBlockMemoryArray(rationalarray->blkmem, &newvals, newvalssize) );
+      nfree = newvalssize - nused;
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + newvalssize);
+
+      /* initialize memory array by copying old values and setting new values to zero */
+      if( rationalarray->firstidx != -1 )
+      {
+         for( i = 0; i < rationalarray->minusedidx - newfirstidx; ++i )
+            newvals[i] = Rcreate(rationalarray->blkmem);
+
+         /* check for possible overflow or negative value */
+         assert(rationalarray->maxusedidx - rationalarray->minusedidx + 1 > 0);
+
+         for( i = 0; i < rationalarray->maxusedidx - rationalarray->minusedidx + 1; ++i )
+         {
+            newvals[i + rationalarray->minusedidx - newfirstidx] =
+               rationalarray->vals[i + rationalarray->minusedidx - rationalarray->firstidx];
+         }
+
+         for( i = rationalarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
+            newvals[i] = Rcreate(rationalarray->blkmem);
+      }
+      else
+      {
+         for( i = 0; i < newvalssize; ++i )
+            newvals[i] = Rcreate(rationalarray->blkmem);
+      }
+
+      /* free old memory storage, and set the new array parameters */
+      BMSfreeBlockMemoryArrayNull(rationalarray->blkmem, &rationalarray->vals, rationalarray->valssize);
+      rationalarray->vals = newvals;
+      rationalarray->valssize = newvalssize;
+      rationalarray->firstidx = newfirstidx;
+   }
+   else if( rationalarray->firstidx == -1 )
+   {
+      /* a sufficiently large memory storage exists, but it was cleared */
+      nfree = rationalarray->valssize - nused;
+      assert(nfree >= 0);
+      rationalarray->firstidx = minidx - nfree/2;
+      assert(rationalarray->firstidx <= minidx);
+      assert(maxidx < rationalarray->firstidx + rationalarray->valssize);
+#ifndef NDEBUG
+      for( i = 0; i < rationalarray->valssize; ++i )
+         assert(RisZero(rationalarray->vals[i]));
+#endif
+   }
+   else if( minidx < rationalarray->firstidx )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the right */
+      nfree = rationalarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + rationalarray->valssize);
+
+      if( rationalarray->minusedidx <= rationalarray->maxusedidx )
+      {
+         int shift;
+
+         assert(rationalarray->firstidx <= rationalarray->minusedidx);
+         assert(rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+
+         /* shift used part of array to the right */
+         shift = rationalarray->firstidx - newfirstidx;
+         assert(shift > 0);
+         for( i = rationalarray->maxusedidx - rationalarray->firstidx; i >= rationalarray->minusedidx - rationalarray->firstidx; --i )
+         {
+            assert(0 <= i + shift && i + shift < rationalarray->valssize);
+            Rset(rationalarray->vals[i + shift], rationalarray->vals[i]);
+         }
+         /* clear the formerly used head of the array */
+         for( i = 0; i < shift; ++i )
+            RsetReal(rationalarray->vals[rationalarray->minusedidx - rationalarray->firstidx + i], 0.0);
+      }
+      rationalarray->firstidx = newfirstidx;
+   }
+   else if( maxidx >= rationalarray->firstidx + rationalarray->valssize )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the left */
+      nfree = rationalarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + rationalarray->valssize);
+
+      if( rationalarray->minusedidx <= rationalarray->maxusedidx )
+      {
+         int shift;
+
+         assert(rationalarray->firstidx <= rationalarray->minusedidx);
+         assert(rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+
+         /* shift used part of array to the left */
+         shift = newfirstidx - rationalarray->firstidx;
+         assert(shift > 0);
+         for( i = rationalarray->minusedidx - rationalarray->firstidx; i <= rationalarray->maxusedidx - rationalarray->firstidx; ++i )
+         {
+            assert(0 <= i - shift && i - shift < rationalarray->valssize);
+            Rset(rationalarray->vals[i - shift], rationalarray->vals[i]);
+         }
+         /* clear the formerly used tail of the array */
+         for( i = 0; i < shift; ++i )
+            RsetReal(rationalarray->vals[rationalarray->maxusedidx - rationalarray->firstidx - i], 0.0);
+      }
+      rationalarray->firstidx = newfirstidx;
+   }
+
+   assert(minidx >= rationalarray->firstidx);
+   assert(maxidx < rationalarray->firstidx + rationalarray->valssize);
+
+   return SCIP_OKAY;
+}
+
+/* todo: exip this might be wrong */
+/** clears a dynamic real array */
+SCIP_RETCODE SCIPrationalarrayClear(
+   SCIP_RATIONALARRAY*   rationalarray           /**< dynamic real array */
+   )
+{
+   assert(rationalarray != NULL);
+
+   SCIPdebugMessage("clearing rationalarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
+      (void*)rationalarray, rationalarray->firstidx, rationalarray->valssize, rationalarray->minusedidx, rationalarray->maxusedidx);
+
+   if( rationalarray->minusedidx <= rationalarray->maxusedidx )
+   {
+      assert(rationalarray->firstidx <= rationalarray->minusedidx);
+      assert(rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+      assert(rationalarray->firstidx != -1);
+      assert(rationalarray->valssize > 0);
+
+      /* clear the used part of array */
+      BMSclearMemoryArray(&rationalarray->vals[rationalarray->minusedidx - rationalarray->firstidx],
+         rationalarray->maxusedidx - rationalarray->minusedidx + 1); /*lint !e866*/
+
+      /* mark the array cleared */
+      rationalarray->minusedidx = INT_MAX;
+      rationalarray->maxusedidx = INT_MIN;
+   }
+   assert(rationalarray->minusedidx == INT_MAX);
+   assert(rationalarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
+
+}
+
+/** gets value of entry in dynamic array */
+void SCIPrationalarrayGetVal(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   idx,                /**< array index to get value for */
+   SCIP_Rational*        result              /**< store the result */
+   )
+{
+   assert(rationalarray != NULL);
+   assert(idx >= 0);
+   assert(idx >= rationalarray->minusedidx && idx <= rationalarray->maxusedidx);
+
+   if( idx < rationalarray->minusedidx || idx > rationalarray->maxusedidx )
+      RsetReal(result, 0.0);
+   else
+   {
+      assert(rationalarray->vals != NULL);
+      assert(idx - rationalarray->firstidx >= 0);
+      assert(idx - rationalarray->firstidx < rationalarray->valssize);
+
+      Rset(result, rationalarray->vals[idx - rationalarray->firstidx]);
+   }
+}
+
+/** sets value of entry in dynamic array */
+SCIP_RETCODE SCIPrationalarraySetVal(
+   SCIP_RATIONALARRAY*   rationalarray,          /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Rational*        val                 /**< value to set array index to */
+   )
+{
+   assert(rationalarray != NULL);
+   assert(idx >= 0);
+
+   SCIPdebugMessage("setting rationalarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n",
+      (void*)rationalarray, rationalarray->firstidx, rationalarray->valssize, rationalarray->minusedidx, rationalarray->maxusedidx, idx, RgetRealApprox(val));
+
+   if( !RisZero(val) )
+   {
+      /* extend array to be able to store the index */
+      SCIP_CALL( SCIPrationalarrayExtend(rationalarray, arraygrowinit, arraygrowfac, idx, idx) );
+      assert(idx >= rationalarray->firstidx);
+      assert(idx < rationalarray->firstidx + rationalarray->valssize);
+
+      /* set the array value of the index */
+      Rset(rationalarray->vals[idx - rationalarray->firstidx], val);
+
+      /* update min/maxusedidx */
+      rationalarray->minusedidx = MIN(rationalarray->minusedidx, idx);
+      rationalarray->maxusedidx = MAX(rationalarray->maxusedidx, idx);
+   }
+   else if( idx >= rationalarray->firstidx && idx < rationalarray->firstidx + rationalarray->valssize )
+   {
+      /* set the array value of the index to zero */
+      RsetReal(rationalarray->vals[idx - rationalarray->firstidx], 0.0);
+
+      /* check, if we can tighten the min/maxusedidx */
+      if( idx == rationalarray->minusedidx )
+      {
+         assert(rationalarray->maxusedidx >= 0);
+         assert(rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+         do
+         {
+            Rdelete(rationalarray->blkmem, &rationalarray->vals[rationalarray->minusedidx]);
+            rationalarray->minusedidx++;
+         }
+         while( rationalarray->minusedidx <= rationalarray->maxusedidx
+            && RisZero(rationalarray->vals[rationalarray->minusedidx - rationalarray->firstidx]) );
+
+         if( rationalarray->minusedidx > rationalarray->maxusedidx )
+         {
+            rationalarray->minusedidx = INT_MAX;
+            rationalarray->maxusedidx = INT_MIN;
+         }
+      }
+      else if( idx == rationalarray->maxusedidx )
+      {
+         assert(rationalarray->minusedidx >= 0);
+         assert(rationalarray->minusedidx < rationalarray->maxusedidx);
+         assert(rationalarray->maxusedidx < rationalarray->firstidx + rationalarray->valssize);
+         do
+         {
+            Rdelete(rationalarray->blkmem, &rationalarray->vals[rationalarray->maxusedidx]);
+            rationalarray->maxusedidx--;
+            assert(rationalarray->minusedidx <= rationalarray->maxusedidx);
+         }
+         while( RisZero(rationalarray->vals[rationalarray->maxusedidx - rationalarray->firstidx]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** increases value of entry in dynamic array */
+SCIP_RETCODE SCIPrationalarrayIncVal(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   idx,                /**< array index to increase value for */
+   SCIP_Rational*        incval              /**< value to increase array index */
+   )
+{
+   assert(incval != NULL);
+
+   if( RisZero(incval) )
+      return SCIP_OKAY;
+   else
+   {
+      /* extend array to be able to store the index */
+      SCIP_CALL( SCIPrationalarrayExtend(rationalarray, arraygrowinit, arraygrowfac, idx, idx) );
+      assert(idx >= rationalarray->firstidx);
+      assert(idx < rationalarray->firstidx + rationalarray->valssize);
+
+      /* set the array value of the index */
+      Radd(rationalarray->vals[idx - rationalarray->firstidx], rationalarray->vals[idx - rationalarray->firstidx], incval);
+
+      /* update min/maxusedidx */
+      rationalarray->minusedidx = MIN(rationalarray->minusedidx, idx);
+      rationalarray->maxusedidx = MAX(rationalarray->maxusedidx, idx);
+   }
+}
+
+
+/** returns the minimal index of all stored non-zero elements */
+int SCIPrationalarrayGetMinIdx(
+   SCIP_RATIONALARRAY*   rationalarray           /**< dynamic real array */
+   )
+{
+   assert(rationalarray != NULL);
+
+   return rationalarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPrationalarrayGetMaxIdx(
+   SCIP_RATIONALARRAY*   rationalarray           /**< dynamic real array */
+   )
+{
+   assert(rationalarray != NULL);
+
+   return rationalarray->maxusedidx;
 }
 
 }

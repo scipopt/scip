@@ -27,6 +27,8 @@
 #include <stdbool.h>
 #include "scip/def.h"
 #include "scip/intervalarith.h"
+#include "scip/mem.h"
+#include "scip/type_misc.h"
 #ifdef WITH_GMP
 #include <gmp.h>
 #ifdef WITH_ZIMPL
@@ -45,9 +47,17 @@ enum SCIP_RoundModeR
    SCIP_ROUND_NEAREST
 };
 
-typedef enum SCIP_RoundModeR SCIP_ROUNDMODER;
+struct SCIP_RationalArray
+{
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   SCIP_Rational**       vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
+};
 
-typedef struct SCIP_Rational SCIP_Rational;
+typedef enum SCIP_RoundModeR SCIP_ROUNDMODER;
 
 /*
  * Creation methods
@@ -82,6 +92,16 @@ SCIP_Rational* Rcopy(
    SCIP_Rational*        src                 /**< rational to copy */
    );
 
+EXTERN
+SCIP_Rational* RcreateTemp(
+   BMS_BUFMEM*           buf
+   );
+
+EXTERN
+SCIP_Rational* Rcreate(
+   BMS_BLKMEM*           buf
+   );
+
 #ifdef WITH_GMP
 /** create a rational from an mpq_t */
 EXTERN
@@ -96,6 +116,12 @@ EXTERN
 void Rdelete(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       r                   /**< adress of the rational */
+   );
+
+EXTERN
+void RdeleteTemp(
+   BMS_BUFMEM*           buf,
+   SCIP_Rational**       r
    );
 
 /** delete an array of rationals and free the allocated memory */
@@ -248,6 +274,14 @@ void Rmin(
    SCIP_Rational*        r2                  /**< the second rational */
    );
 
+/** compute the maximum of two rationals */
+EXTERN
+void Rmax(
+   SCIP_Rational*        ret,                /**< the result */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
+   );
+
 /*
  * Comparisoon methods
  */
@@ -330,6 +364,12 @@ SCIP_Bool RisAbsInfinity(
    SCIP_Rational*        r                   /**< the rational to check */
    );
 
+/** check if the rational is of infinite value */
+EXTERN
+SCIP_Bool RisIntegral(
+   SCIP_Rational*        r                   /**< the rational to check */
+   );
+
 /*
  * Printing/Conversion methods
  */
@@ -358,8 +398,86 @@ SCIP_Real RgetRealApprox(
    SCIP_Rational*        r                   /**< the rational to convert */
    );
 
-EXTERN
-void testNumericsRational();
+/*
+ * Dynamic Arrays
+ */
+
+/** creates a dynamic array of real values */
+extern
+SCIP_RETCODE SCIPrationalarrayCreate(
+   SCIP_RATIONALARRAY**  rationalarray,          /**< pointer to store the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** creates a copy of a dynamic array of real values */
+extern
+SCIP_RETCODE SCIPrationalarrayCopy(
+   SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to store the copied real array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONALARRAY*   sourcerationalarray /**< dynamic real array to copy */
+   );
+
+/** frees a dynamic array of real values */
+extern
+SCIP_RETCODE SCIPrationalarrayFree(
+   SCIP_RATIONALARRAY**      rationalarray   /**< pointer to the real array */
+   );
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+extern
+SCIP_RETCODE SCIPrationalarrayExtend(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
+   );
+
+/** clears a dynamic real array */
+extern
+SCIP_RETCODE SCIPrationalarrayClear(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
+   );
+
+/** gets value of entry in dynamic array */
+extern
+void SCIPrationalarrayGetVal(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   idx,                /**< array index to get value for */
+   SCIP_Rational*        result              /**< store the result */
+   );
+
+/** sets value of entry in dynamic array */
+extern
+SCIP_RETCODE SCIPrationalarraySetVal(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Rational*        val                 /**< value to set array index to */
+   );
+
+/** increases value of entry in dynamic array */
+extern
+SCIP_RETCODE SCIPrationalarrayIncVal(
+   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
+   int                   arraygrowinit,      /**< initial size of array */
+   SCIP_Real             arraygrowfac,       /**< growing factor of array */
+   int                   idx,                /**< array index to increase value for */
+   SCIP_Rational*        incval              /**< value to increase array index */
+   );
+
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPrationalarrayGetMinIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPrationalarrayGetMaxIdx(
+   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
+   );
 
 #ifdef __cplusplus
 }
