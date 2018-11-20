@@ -107,7 +107,10 @@ void cancelCol(
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   colidx1,            /**< one of the indexes of column to try non-zero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try non-zero cancellation for */
-   int*                  success,            /**< does cancellation success? 0: failed, 1: cancel variable j, 2: cancel both variables i and j */
+   SCIP_Real*            col1tocol2ratio,    /**< pointer to store the ratio of var1 to var2 when applying variable substitution */
+   SCIP_Real*            col2tocol1ratio,    /**< pointer to store the ratio of var2 to var1 when applying variable substitution */
+   SCIP_Bool*            col1tocol2success,  /** pointer to store whether var1 can be added to var2 to sparsify the matrix */
+   SCIP_Bool*            col2tocol1success,  /** pointer to store whether var2 can be added to var1 to sparsify the matrix */
    SCIP_Real*            ratios,             /**< ratio of the vectors*/
    int*                  nratios,            /**< number of different ratios*/
    int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
@@ -128,8 +131,6 @@ void cancelCol(
    SCIP_Real *vals1;
    SCIP_Real *vals2;
 
-
-
    varlen1 =  SCIPmatrixGetColNNonzs(matrix, colidx1);
    varlen2 =  SCIPmatrixGetColNNonzs(matrix, colidx2);
    assert(varlen1 >= 10);
@@ -146,6 +147,8 @@ void cancelCol(
    nnz1 = 0;
    nnz2 = 0;
    *nratios = 0;
+   *col1tocol2success = FALSE;
+   *col2tocol1success = FALSE;
 #if 1
    while(i < varlen1 && j < varlen2)
    {
@@ -188,6 +191,9 @@ void cancelCol(
       int nmaxratio;
       int nsecmaxratio;
       int ncurratio;
+      int tmp;
+      SCIP_Bool tmp_sign;
+
 
       nmaxratio = 0;
       nsecmaxratio = 0;
@@ -227,9 +233,31 @@ void cancelCol(
          nsecmaxratio = ncurratio;
       }
 
-      if( nmaxratio > nnz1 || nmaxratio > nnz2 )
+      tmp = nnz1 < nnz2 ? nnz1 : nnz2;
+      tmp_sign = nnz1 < nnz2 ? TRUE : FALSE;
+      if( nmaxratio > tmp )
       {
-         printf("dualsuceess: %d, %d, %d, %d\n", nmaxratio, nsecmaxratio, nnz1, nnz2);
+         if( tmp_sign )
+         {
+            *col1tocol2ratio = maxratio;
+            *col1tocol2success = TRUE;
+            if( nsecmaxratio > nnz2 )
+            {
+               *col2tocol1ratio = 1.0/secmaxratio;
+               *col2tocol1success = TRUE;
+            }
+         }
+         else
+         {
+            *col1tocol2ratio = maxratio;
+            *col1tocol2success = TRUE;
+            if( nsecmaxratio > nnz1 )
+            {
+               *col2tocol1ratio = 1.0/secmaxratio;
+               *col2tocol1success = TRUE;
+            }
+         }
+         printf("dualsuccess: %d, %d, %d, %d\n", nmaxratio, nsecmaxratio, nnz1, nnz2);
       }
 //      printf("%8.4f, %8d\n", maxratio, nmaxratio);
 //      printf("%8.4f, %8d\n", secmaxratio, nsecmaxratio);
@@ -362,16 +390,23 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          vari = SCIPmatrixGetVar(matrix, processedvarsidx[i]);
          SCIP_Real newlb;
          SCIP_Real newub;
-         int success;
 
          for(j=i+1; j<nprocessedvarsidx; j++)
          {
+            SCIP_Real col1tocol2ratio;
+            SCIP_Real col2tocol1ratio;
             SCIP_Bool infeasible;
             SCIP_Bool aggregated;
+            SCIP_Bool col1tocol2success;
+            SCIP_Bool col2tocol1success;
+
+
             varj = SCIPmatrixGetVar(matrix, processedvarsidx[j]);
 
-            cancelCol(scip, matrix, processedvarsidx[i], processedvarsidx[j], &success, ratios, &nratios, nchgcoefs, &ncancels, &nfillins); 
-#if 0 
+            cancelCol(scip, matrix, processedvarsidx[i], processedvarsidx[j], &col1tocol2ratio, &col2tocol1ratio, &col1tocol2success,
+                  &col2tocol1success, ratios, &nratios, nchgcoefs, &ncancels, &nfillins);
+            printf("%8.4f %8.4f %8d %8d\n", col1tocol2ratio, col2tocol1ratio, col1tocol2success, col2tocol1success);
+#if 0
             int* colpntj = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[j]);
             SCIP_Real* valpntj = SCIPmatrixGetColValPtr(matrix, processedvarsidx[j]);
             char newvarname[SCIP_MAXSTRLEN];
