@@ -33,6 +33,8 @@
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
 #include "scip/type_lp.h"
+#include "scip/rational.h"
+#include "scip/type_lpex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -194,9 +196,22 @@ struct SCIP_Negate
    SCIP_Real             constant;           /**< constant shift c in negation */
 };
 
+struct SCIP_ExVarData
+{
+   SCIP_Rational*        obj;
+   SCIP_Rational*        lbglb;
+   SCIP_Rational*        ubglb;
+   SCIP_Rational*        lbloc;
+   SCIP_Rational*        ubloc;
+   SCIP_Rational*        lborig;
+   SCIP_Rational*        uborig;
+   SCIP_COLEX*           excol;
+};
+
 /** variable of the problem */
 struct SCIP_Var
 {
+   SCIP_EXVARDATA*       exactdata;          /**< exact variable data (obj, lb, ub, ...) */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif

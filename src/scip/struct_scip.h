@@ -33,6 +33,7 @@
 #include "scip/type_mem.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpex.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
@@ -69,6 +70,7 @@ struct Scip
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
    SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
+   SCIP_PRIMALEX*        origprimalex;
 
    /* REOPTIMIZATION */
    SCIP_REOPT*           reopt;              /**< reoptimization data */
@@ -78,9 +80,11 @@ struct Scip
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
+   SCIP_LPEX*            lpex;               /**< exact LP data */
    SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
+   SCIP_PRIMALEX*        primalex;           /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict;           /**< conflict analysis data */
    SCIP_CLIQUETABLE*     cliquetable;        /**< collection of cliques */
