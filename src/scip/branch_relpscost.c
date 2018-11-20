@@ -27,6 +27,7 @@
 #include "scip/cons_and.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
