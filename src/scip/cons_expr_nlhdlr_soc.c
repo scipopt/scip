@@ -145,8 +145,6 @@ SCIP_RETCODE createDisaggr(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
-   SCIP_VAR* aggvars[2];
-   SCIP_Real scalars[2];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    char name[SCIP_MAXSTRLEN];
@@ -167,9 +165,7 @@ SCIP_RETCODE createDisaggr(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + 1) );
 
-   /* create and multi-aggregate variables */
-   aggvars[0] = nlhdlrexprdata->rhsvar;
-   scalars[0] = nlhdlrexprdata->rhscoef;
+   /* create disaggregation variables */
    for( i = 0; i < nlhdlrexprdata->nexprs; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*)expr, i);
@@ -289,10 +285,10 @@ SCIP_RETCODE evalDisaggr(
    }
 
    /* gradient w.r.t. the disaggregation variable */
-   gradient[1] = -nlhdlrexprdata->rhscoef + (nlhdlrexprdata->rhscoef * (nlhdlrexprdata->rhscoef * rhsval - disvarval)) / tmp;
+   gradient[1] = -nlhdlrexprdata->rhscoef - (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
 
    /* gradient w.r.t. the RHS variable */
-   gradient[2] = -1.0 - (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
+   gradient[2] = -1.0 - nlhdlrexprdata->rhscoef * (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
 
    return SCIP_OKAY;
 }
@@ -301,6 +297,7 @@ SCIP_RETCODE evalDisaggr(
 static
 SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
@@ -311,6 +308,13 @@ SCIP_RETCODE generateCutSol(
 {
    SCIP_Real gradient[3];
    SCIP_Real value;
+
+   assert(expr != NULL);
+   assert(conshdlr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(k < nlhdlrexprdata->nexprs + 1);
+   assert(mincutviolation >= 0.0);
+   assert(row != NULL);
 
    *row = NULL;
 
@@ -337,14 +341,15 @@ SCIP_RETCODE generateCutSol(
       {
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k]), gradient[0]) );
       }
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->rhsvar, gradient[1]) );
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->disvars[k], gradient[2]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->disvars[k], gradient[1]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->rhsvar, gradient[2]) );
 
       /* add side */
       SCIPaddRowprepSide(rowprep, exprauxval * gradient[0] + disvarval * gradient[1] + rhsval * gradient[2] - value);
 
       if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
       {
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*)expr, k);
          SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, conshdlr) );
       }
 
@@ -367,6 +372,7 @@ SCIP_RETCODE detectSocNorm(
    )
 {
    SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONSEXPR_EXPR** exprs;
    SCIP_CONSEXPR_EXPR* child;
    int nchildren;
    int i;
@@ -401,15 +407,19 @@ SCIP_RETCODE detectSocNorm(
    }
 
    /* found SOC structure -> create required auxiliary variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], NULL) );
+      assert(SCIPgetConsExprExprNChildren(children[i]) == 1);
+
+      exprs[i] = SCIPgetConsExprExprChildren(children[i])[0];
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, exprs[i], NULL) );
    }
 
    *success = TRUE;
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, children, SCIPgetConsExprExprSumCoefs(child),
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, exprs, SCIPgetConsExprExprSumCoefs(child),
       nchildren, SCIPgetConsExprExprSumConstant(child), auxvar, 1.0, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
@@ -418,6 +428,9 @@ SCIP_RETCODE detectSocNorm(
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
    SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
 #endif
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &exprs);
 
    return SCIP_OKAY;
 }
@@ -659,7 +672,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
       SCIP_Bool cutoff;
 
       /* compute gradient cut */
-      SCIP_CALL( generateCutSol(scip, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
+      SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
 
       if( row != NULL )
       {
