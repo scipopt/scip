@@ -566,6 +566,26 @@ void level2resultInit(
    result->valid = FALSE;
 }
 
+/** prints the double branching result */
+static
+void level2resultPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2RESULT*         result              /**< pointer to the result to be initialized */
+   )
+{
+   SCIP_VAR** vars;
+
+   assert(result != NULL);
+
+   vars = SCIPgetVars(scip);
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
+      "level 2 result: <%s> %s %g + <%s> %s %g: lpval: %g, inf: %d, valid: %d\n",
+      SCIPvarGetName(vars[result->branchvar1]), result->branchdir1 ? ">=" : "<=", result->branchval1,
+      SCIPvarGetName(vars[result->branchvar2]), result->branchdir2 ? ">=" : "<=", result->branchval2,
+      result->lpobjval, result->cutoff, result->valid);
+}
+
 /** frees the allocated memory of the double branching result */
 static
 void level2resultFree(
@@ -695,7 +715,7 @@ void level2dataFree(
    while( (*data)->nlevel2results > 0 )
    {
       --(*data)->nlevel2results;
-      SCIPfreeBuffer(scip, &((*data)->level2results[(*data)->nlevel2results]));
+      level2resultFree(scip, &((*data)->level2results[(*data)->nlevel2results]));
    }
    assert((*data)->nlevel2results == 0);
 
@@ -725,20 +745,78 @@ SCIP_RETCODE level2dataEnsureSize(
    return SCIP_OKAY;
 }
 
-/** ensures that level2results can store at least one more element */
+/** get a result from the level 2 data */
+static
+SCIP_RETCODE level2dataGetResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LEVEL2DATA*           data,               /**< level2 data */
+   LEVEL2RESULT**        result              /**< pointer to store result */
+   )
+{
+   LEVEL2RESULT* tmpresult;
+   int i;
+
+   assert(data != NULL);
+   assert(result != NULL);
+
+   *result = NULL;
+
+   SCIP_CALL( level2resultCreate(scip, &tmpresult) );
+
+   assert(data->branchvar1 != data->branchvar2);
+
+   if( data->branchvar1 < data->branchvar2 )
+   {
+      tmpresult->branchval1 = data->branchval1;
+      tmpresult->branchval2 = data->branchval2;
+      tmpresult->branchvar1 = data->branchvar1;
+      tmpresult->branchvar2 = data->branchvar2;
+      tmpresult->branchdir1 = data->branchdir1;
+      tmpresult->branchdir2 = data->branchdir2;
+   }
+   else
+   {
+      tmpresult->branchval1 = data->branchval2;
+      tmpresult->branchval2 = data->branchval1;
+      tmpresult->branchvar1 = data->branchvar2;
+      tmpresult->branchvar2 = data->branchvar1;
+      tmpresult->branchdir1 = data->branchdir2;
+      tmpresult->branchdir2 = data->branchdir1;
+   }
+
+   for( i = 0; i < data->nlevel2results; ++i )
+   {
+      if( hashKeyEqLevel2Result((void*)scip, (void*)data->level2results[i], (void*)tmpresult) )
+      {
+         *result = data->level2results[i];
+      }
+   }
+
+   level2resultFree(scip, &tmpresult);
+
+   return SCIP_OKAY;
+}
+
+
+/** store a new result in the level 2 data */
 static
 SCIP_RETCODE level2dataStoreResult(
    SCIP*                 scip,               /**< SCIP data structure */
    LEVEL2DATA*           data,               /**< level2 data */
    SCIP_Real             lpobjval,           /**< LP objective value */
    SCIP_Bool             cutoff,             /**< was the LP infeasible? */
-   SCIP_Bool             valid               /**< is the LP value a valid dual bound? */
+   SCIP_Bool             valid,              /**< is the LP value a valid dual bound? */
+   SCIP_Bool*            duplicate
    )
 {
    LEVEL2RESULT* result;
+   int i;
 
    assert(scip != NULL);
    assert(data != NULL);
+   assert(duplicate != NULL);
+
+   *duplicate = FALSE;
 
    SCIP_CALL( level2dataEnsureSize(scip, data) );
 
@@ -747,20 +825,44 @@ SCIP_RETCODE level2dataStoreResult(
    result->lpobjval = lpobjval;
    result->cutoff = cutoff;
    result->valid = valid;
-   result->branchval1 = data->branchval1;
-   result->branchval2 = data->branchval2;
-   result->branchvar1 = data->branchvar1;
-   result->branchvar2 = data->branchvar2;
-   result->branchdir1 = data->branchdir1;
-   result->branchdir2 = data->branchdir2;
+
+   assert(data->branchvar1 != data->branchvar2);
+
+   if( data->branchvar1 < data->branchvar2 )
+   {
+      result->branchval1 = data->branchval1;
+      result->branchval2 = data->branchval2;
+      result->branchvar1 = data->branchvar1;
+      result->branchvar2 = data->branchvar2;
+      result->branchdir1 = data->branchdir1;
+      result->branchdir2 = data->branchdir2;
+   }
+   else
+   {
+      result->branchval1 = data->branchval2;
+      result->branchval2 = data->branchval1;
+      result->branchvar1 = data->branchvar2;
+      result->branchvar2 = data->branchvar1;
+      result->branchdir1 = data->branchdir2;
+      result->branchdir2 = data->branchdir1;
+   }
+
+   for( i = 0; i < data->nlevel2results; ++i )
+   {
+      if( hashKeyEqLevel2Result((void*)scip, (void*)data->level2results[i], (void*)result) )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "##### same level2 node already processed:\n");
+         level2resultPrint(scip, data->level2results[i]);
+         level2resultPrint(scip, result);
+         *duplicate = TRUE;
+      }
+   }
 
    data->level2results[data->nlevel2results] = result;
    ++data->nlevel2results;
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** The data that is preserved over multiple runs of the branching rule. */
@@ -953,6 +1055,7 @@ typedef struct
    int*                  nfullcutoffs;       /**< The number of double cutoffs on a (probing) node per probingdepth. */
    int*                  nlpssolved;         /**< The number of all lps solved for a given probingdepth (incl. FSB). */
    int*                  nlpssolvedfsb;      /**< The number of lps solved by the initial FSB to get the FSB scores. */
+   int*                  nduplicatelps;      /**< The number of lps solved for duplicate grand-child nodes. */
    SCIP_Longint*         nlpiterations;      /**< The number of all lp iterations needed for a given probingdepth
                                               *   (incl. FSB). */
    SCIP_Longint*         nlpiterationsfsb;   /**< The number of lp iterations needed to get the FSB scores. */
@@ -1022,6 +1125,7 @@ void statisticsInit(
       statistics->nfullcutoffs[i] = 0;
       statistics->nlpssolved[i] = 0;
       statistics->nlpssolvedfsb[i] = 0;
+      statistics->nduplicatelps[i] = 0;
       statistics->nlpiterations[i] = 0;
       statistics->nlpiterationsfsb[i] = 0;
       statistics->nsinglecutoffs[i] = 0;
@@ -1057,6 +1161,7 @@ SCIP_RETCODE statisticsAllocate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nfullcutoffs, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolved, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolvedfsb, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nduplicatelps, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterations, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterationsfsb, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
@@ -1149,8 +1254,8 @@ void statisticsPrint(
          SCIPinfoMessage(scip, NULL, "   %i times because of a domain reduction.\n", statistics->domredafterfsb[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n",
             i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score.\n",
-            i, statistics->nlpssolved[i], statistics->nlpssolvedfsb[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score, <%i> of them for duplicate grandchildren.\n",
+            i, statistics->nlpssolved[i], statistics->nlpssolvedfsb[i], statistics->nduplicatelps[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, <%" SCIP_LONGINT_FORMAT "> iterations were needed to solve the LPs, <%"
             SCIP_LONGINT_FORMAT "> of them to calculate the FSB score.\n", i, statistics->nlpiterations[i],
             statistics->nlpiterationsfsb[i]);
@@ -1196,6 +1301,7 @@ void statisticsFree(
    SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpiterationsfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpiterations);
+   SCIPfreeBufferArray(scip, &(*statistics)->nduplicatelps);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpssolvedfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpssolved);
    SCIPfreeBufferArray(scip, &(*statistics)->nfullcutoffs);
@@ -3375,7 +3481,7 @@ SCIP_RETCODE getFSBResult(
    /* Even for one single candidate we want to get the corresponding score */
    config->forcebranching = TRUE;
 
-   /* use the FSB scoring function */
+   /* use the default scoring function */
    config->scoringfunction = 'd';
 
 #ifdef SCIP_STATISTIC
@@ -4008,8 +4114,9 @@ SCIP_RETCODE executeBranchingRecursive(
    int probingdepth;
    SCIP_VAR* branchvar;
    SCIP_Real branchvalfrac;
-   SCIP_Bool varisbinary;
    SCIP_Real branchval;
+   SCIP_Bool varisbinary;
+   SCIP_Bool solvedlp = TRUE;
 
    assert(scip != NULL);
    assert(status != NULL);
@@ -4070,52 +4177,82 @@ SCIP_RETCODE executeBranchingRecursive(
       }
       else
       {
+         LEVEL2RESULT* result;
+
          assert(SCIPgetProbingDepth(scip) == 1);
 
          level2data->branchvar2 = SCIPvarGetProbindex(branchvar);
          level2data->branchdir2 = !downbranching;
          level2data->branchval2 = newbound;
+
+         SCIP_CALL( level2dataGetResult(scip, level2data, &result) );
+
+         /* we already processed a similar level 2 node */
+         if( result != NULL )
+         {
+            solvedlp = FALSE;
+            statistics->nduplicatelps[probingdepth]++;
+
+            branchingresult->objval = result->lpobjval;
+            branchingresult->dualbound = result->lpobjval;
+            branchingresult->dualboundvalid = result->valid;
+            branchingresult->cutoff = result->cutoff;
+            branchingresult->niterations = 0;
+            assert(branchingresult->cutoff || SCIPisLT(scip, branchingresult->objval, SCIPgetCutoffbound(scip)));
+
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
+               "Use old %s branching result on var <%s> with 'val > %g' and bounds [<%g>..<%g>]: objval <%g>, cutoff <%d> "
+               "(the parent objval was <%g>)\n",
+               downbranching ? "down" : "up", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
+               SCIPvarGetUbLocal(branchvar), branchingresult->objval, branchingresult->cutoff, localbaselpsolval);
+         }
       }
    }
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started %s branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n",
-      downbranching ? "down" : "up", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
-      SCIPvarGetUbLocal(branchvar));
-
-   SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
-         status) );
-
-   assert(SCIPgetProbingDepth(scip) == 1 || SCIPgetProbingDepth(scip) == 2);
-
-   if( level2data != NULL && SCIPgetProbingDepth(scip) == 2)
+   if( solvedlp )
    {
-      SCIP_CALL( level2dataStoreResult(scip, level2data, branchingresult->objval, branchingresult->cutoff, branchingresult->dualboundvalid) );
-   }
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started %s branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n",
+         downbranching ? "down" : "up", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
+         SCIPvarGetUbLocal(branchvar));
+
+      SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
+            status) );
+
+      assert(SCIPgetProbingDepth(scip) == 1 || SCIPgetProbingDepth(scip) == 2);
+
+      if( level2data != NULL && SCIPgetProbingDepth(scip) == 2)
+      {
+         SCIP_Bool duplicate;
+
+         SCIP_CALL( level2dataStoreResult(scip, level2data, branchingresult->objval, branchingresult->cutoff, branchingresult->dualboundvalid, &duplicate) );
+         assert(!duplicate);
+      }
 
 #ifdef SCIP_STATISTIC
-   statistics->nlpssolved[probingdepth]++;
-   statistics->nlpiterations[probingdepth] += branchingresult->niterations;
+      statistics->nlpssolved[probingdepth]++;
+      statistics->nlpiterations[probingdepth] += branchingresult->niterations;
 #endif
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations.\n",
-      branchingresult->niterations);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations.\n",
+         branchingresult->niterations);
 
 #ifdef SCIP_DEBUG
-   if( status->lperror )
-   {
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
-   }
-   else if( branchingresult->cutoff )
-   {
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
-   }
-   else
-   {
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was feasible and has an objval <%g> (the parent objval was "
-         "<%g>)\n", branchingresult->objval, localbaselpsolval);
-   }
+      if( status->lperror )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
+      }
+      else if( branchingresult->cutoff )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
+      }
+      else
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was feasible and has an objval <%g> (the parent objval was "
+            "<%g>)\n", branchingresult->objval, localbaselpsolval);
+      }
 #endif
+   }
 
-   if( !branchingresult->cutoff && !status->lperror && !status->limitreached )
+   if( solvedlp && !branchingresult->cutoff && !status->lperror && !status->limitreached )
    {
       SCIP_Real localgain;
 
@@ -4250,7 +4387,7 @@ SCIP_RETCODE executeBranchingRecursive(
    }
 
    /* the current branching child is infeasible and we only branched on binary variables in lookahead branching */
-   if( SCIPallColsInLP(scip) && !status->lperror && config->usebincons && branchingresult->cutoff
+   if( solvedlp && SCIPallColsInLP(scip) && !status->lperror && config->usebincons && branchingresult->cutoff
       && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
    {
 #ifdef SCIP_STATISTIC
@@ -4673,12 +4810,11 @@ SCIP_RETCODE selectVarRecursive(
          if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
          {
 #ifdef SCIP_DEBUG
-            SCIP_Real downgain = MAX(downbranchingresult->objval - scoringlpobjval, 0);
-            SCIP_Real upgain = MAX(upbranchingresult->objval - scoringlpobjval, 0);
-
-            LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%g, downgain=%g, upgain=%g,"
-                  " score=%g) -- best: <%s> (%g)\n", c, nlpcands, SCIPvarGetName(branchvar), branchval, downgain,
-                  upgain, score, SCIPvarGetName(decision->cand->branchvar), bestscore);
+            LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%g, downgain=%g->%g, upgain=%g->%g,"
+               " score=%g) -- best: <%s> (%g)\n", c, nlpcands, SCIPvarGetName(branchvar), branchval,
+               MAX(downbranchingresult->objval - scoringlpobjval, 0), MAX(downbranchingresult->dualbound - scoringlpobjval, 0),
+               MAX(upbranchingresult->objval - scoringlpobjval, 0), MAX(upbranchingresult->dualbound - scoringlpobjval, 0),
+               score, SCIPvarGetName(decision->cand->branchvar), bestscore);
 #endif
 
             if( scorecontainer != NULL && storewarmstartinfo )
@@ -5310,6 +5446,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpssolvedfsb, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpiterations, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpiterationsfsb, recursiondepth) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nduplicatelps, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->chosenfsbcand, maxncands) );
@@ -5353,6 +5490,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
    SCIPfreeMemoryArray(scip, &statistics->npropdomred);
    SCIPfreeMemoryArray(scip, &statistics->nlpiterationsfsb);
    SCIPfreeMemoryArray(scip, &statistics->nlpiterations);
+   SCIPfreeMemoryArray(scip, &statistics->nduplicatelps);
    SCIPfreeMemoryArray(scip, &statistics->nlpssolvedfsb);
    SCIPfreeMemoryArray(scip, &statistics->nlpssolved);
    SCIPfreeMemoryArray(scip, &statistics->nfullcutoffs);
