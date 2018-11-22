@@ -1439,7 +1439,6 @@ SCIP_RETCODE redLoopPc(
 
       if( show && dualascent ) printf("simple %d \n", nelims);
 
-
       if( bd3 && dualascent )
       {
          SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND, &fix) );
@@ -1590,10 +1589,13 @@ SCIP_RETCODE redLoopPc(
          graph_pc_2org(g);
       }
    }
-#if 0
+
    if( dualascent && tryrpc)
-      reduce_simple_aritculations(scip, g, NULL, NULL);
-#endif
+   {
+      //reduce_simple_aritculations(scip, g, NULL, NULL);
+      SCIP_CALL( reduce_deleteConflictEdges(scip, g) );
+   }
+
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
    assert(graph_pc_term2edgeConsistent(g));

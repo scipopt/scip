@@ -518,16 +518,29 @@ SCIP_RETCODE reduceRedcostExtended(
    /* initialize Voronoi structures */
    setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
 
+   if( graph_pc_isPcMw(propgraph) )
+           graph_pc_2org(propgraph);
+
    /* reduce graph */
    extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, marked, TRUE);
-   SCIPdebugMessage("extended fixes: %d \n", extnfixed);
+
+   if( graph_pc_isPcMw(propgraph) )
+           graph_pc_2trans(propgraph);
 
    for( int e = 0; e < nedges; e++ )
        if( SCIPvarGetUbLocal(vars[e]) > 0.5 && marked[e] )
        {
-          printf("fix with reduce_extendedEdge: %d \n", e);
+          if( propgraph->cost[e] != propgraph->cost[flipedge_Uint(e)] )
+          {
+             assert(graph_pc_isPcMw(propgraph));
+             continue;
+          }
+
+         // printf("fix with reduce_extendedEdge: %d \n", e);
           SCIP_CALL( fixedgevar(scip, vars[e], &extnfixed) );
        }
+
+   SCIPdebugMessage("extended fixes: %d \n", extnfixed);
 
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &nodearr);
@@ -539,8 +552,7 @@ SCIP_RETCODE reduceRedcostExtended(
    SCIPfreeBufferArray(scip, &redcost);
    SCIPfreeBufferArray(scip, &state);
 
-   if( extnfixed < 0 )
-      return SCIP_ERROR;
+   assert(extnfixed >= 0);
 
    return SCIP_OKAY;
 }
@@ -811,6 +823,8 @@ SCIP_RETCODE redbasedVarfixing(
 #if 1
    if( pc )
    {
+      SCIP_CALL( reduceRedcostExtended(scip, lpobjval, vars, propgraph) );
+
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
    else
