@@ -2488,6 +2488,11 @@ SCIP_RETCODE reduceCheckEdge(
    assert(edge >= 0 && edge < graph->edges);
 
 #ifndef NDEBUG
+   for( int k = 0; k < graph->knots; k++ )
+      if(graph->mark[k] != (graph->grad[k] > 0))
+       graph_knot_printInfo(graph, k);
+
+
    if( !graph_pc_isPcMw(graph) )
       for( int k = 0; k < graph->knots; k++ )
          assert(graph->mark[k] == (graph->grad[k] > 0));
@@ -3077,6 +3082,10 @@ int reduce_extendedEdge(
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &eqmark, halfnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eqstack, halfnedges) );
 
+   if( !pcmw )
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
+
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
@@ -3125,7 +3134,16 @@ int reduce_extendedEdge(
 
          if( deletable )
          {
+            const int tail = graph->tail[e];
+            const int head = graph->head[e];
             graph_edge_del(scip, graph, e, TRUE);
+
+            if( graph->grad[tail] == 0 )
+               graph->mark[tail] = FALSE;
+
+            if( graph->grad[head] == 0 )
+               graph->mark[head] = FALSE;
+
             nfixed++;
          }
       }
@@ -3134,9 +3152,11 @@ int reduce_extendedEdge(
    SCIPfreeBufferArray(scip, &eqstack);
    SCIPfreeCleanBufferArray(scip, &eqmark);
 
+#ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
       if( graph->grad[k] == 0 && k != root )
-         graph->mark[k] = FALSE;
+         assert(!graph->mark[k]);
+#endif
 
    return nfixed;
 }

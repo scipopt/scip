@@ -134,8 +134,6 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    assert(maxdegree > 0);
 
-   printf("vertex selected by degree branching rule: %d \n\n", *vertex);
-
    SCIPfreeBufferArray(scip, &nodestate);
 
    return SCIP_OKAY;
@@ -330,9 +328,6 @@ SCIP_RETCODE selectBranchingVertexBySol(
          }
       }
    }
-
-   printf("Solution branching selected:  ");
-   graph_knot_printInfo(graph, *vertex);
 
    assert(maxdeg >= 0);
 
@@ -693,7 +688,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    /* get vertex to branch on */
    if( graph_pc_isPcMw(g) || branchruledata->branchtype == BRANCH_STP_ON_SOL )
    {
-      int todo; // check what is better degree or sol
+      int todo; // check what is better degree or sol and for sol us extended local heuristic!
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
    }
 
