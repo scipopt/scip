@@ -2528,7 +2528,7 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* correct linear constraint and create new name */
-      if ( ! SCIPisInfinity(scip, -lhs) )
+      if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
          /* we have added lhs above and only need the rhs */
          SCIP_CALL( SCIPchgLhsLinear(scip, lincons, -SCIPinfinity(scip) ) );
