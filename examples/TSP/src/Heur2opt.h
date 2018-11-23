@@ -38,7 +38,6 @@ class Heur2opt : public scip::ObjHeur
 
 public:
 
-
    /** default constructor */
    Heur2opt(
       SCIP* scip
@@ -50,7 +49,6 @@ public:
       tour_(NULL)
    {
    }
-
 
    /** destructor */
    virtual ~Heur2opt()

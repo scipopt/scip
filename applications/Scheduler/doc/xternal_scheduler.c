@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_scheduler.c
  * @brief  main document page
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page SCHEDULER_MAIN Scheduler
  * @author Stefan Heinz
  * @author Jens Schulz
  *
@@ -32,8 +32,8 @@
  *  - resource-constrained project scheduling problem with minimal and maximal time lags (RCPSP/max) (see reader_sch.h)
  *  - pack instances (see reader_rcp.h)
  *
- * Compiling the Scheduling application
- * ------------------------------------
+ * Installation
+ * ------------
  *
- * See the @ref INSTALL "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

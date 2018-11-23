@@ -124,9 +124,9 @@ SCIP_RETCODE globalfixing(
    int*                  nfixededges,        /**< points to number of fixed edges */
    const SCIP_Real*      fixingbounds,       /**< fixing bounds */
    const GRAPH*          graph,              /**< graph structure */
-   SCIP_Real             cutoffbound,        /**> cutoff bound  */
+   SCIP_Real             cutoffbound,        /**< cutoff bound  */
    int                   nedges              /**< number of edges */
-)
+   )
 {
    for( int e = 0; e < nedges; e++ )
    {
@@ -175,14 +175,14 @@ SCIP_Bool redcostAvailable(
    return TRUE;
 }
 
-/* initialize reduced costs*/
+/** initialize reduced costs*/
 static
 void setRedcosts(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
    int                   nedges,             /**< nedges */
    SCIP_Real*            cost                /**< reduced costs */
-)
+   )
 {
    assert(nedges >= 0);
 
@@ -222,18 +222,18 @@ void setRedcosts(
 }
 
 
-/* initialize (Voronoi) distances */
+/** initialize (Voronoi) distances */
 static
 void setVnoiDistances(
    SCIP*                 scip,               /**< SCIP structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    const GRAPH*          graph,              /**< graph data structure */
-   PATH*                 vnoi,               /**> Voronoi paths  */
+   PATH*                 vnoi,               /**< Voronoi paths  */
    SCIP_Real*            costrev,            /**< reversed reduced costs */
    SCIP_Real*            pathdist,           /**< path distance */
    int*                  pathedge,           /**< path edge */
    int*                  vbase               /**< Voronoi base */
-)
+   )
 {
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
@@ -255,16 +255,16 @@ void setVnoiDistances(
    graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 }
 
-/* updates fixing bounds for reduced cost fixings */
+/** updates fixing bounds for reduced cost fixings */
 static
 void updateFixingBounds(
    SCIP_Real*            fixingbounds,       /**< fixing bounds */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
-   const SCIP_Real*      pathdist,           /**> shortest path distances  */
-   const PATH*           vnoi,               /**> Voronoi paths  */
-   SCIP_Real             lpobjal             /**> LP objective  */
-)
+   const SCIP_Real*      pathdist,           /**< shortest path distances  */
+   const PATH*           vnoi,               /**< Voronoi paths  */
+   SCIP_Real             lpobjal             /**< LP objective  */
+   )
 {
    const int nnodes = graph->knots;
 
@@ -291,7 +291,7 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
    const GRAPH*          graph               /**< graph data structure */
-      )
+   )
 {
    PATH* vnoi;
    SCIP_Real* cost;
@@ -369,7 +369,7 @@ SCIP_RETCODE reduceRedcostExtended(
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    GRAPH*                propgraph           /**< graph data structure */
-)
+   )
 {
    PATH* vnoi;
    SCIP_Real* redcost;
@@ -429,7 +429,7 @@ SCIP_RETCODE redbasedVarfixing(
    int*                  nfixed,             /**< pointer to number of fixed edges */
    SCIP_Bool*            probisinfeas,       /**< is problem infeasible? */
    const GRAPH*          g                   /**< graph data structure */
-)
+   )
 {
    GRAPH* propgraph;
    IDX* curr;

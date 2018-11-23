@@ -28,7 +28,7 @@
 
 #define BUFFER_LEN 8192
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 
 /* file i/o using zlib */
 #include <zlib.h>

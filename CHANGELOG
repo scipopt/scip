@@ -21,6 +21,10 @@ Performance improvements
 
 - Matrix presolvers that do not work on incomplete matrices now skip matrix creation if unsupported constraint types are detected.
 
+- consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
+  up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
+  with Benders' decomposition.
+
 Examples and applications
 -------------------------
 
@@ -35,7 +39,9 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
-
+- Symmetry:
+  + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
+    handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
@@ -52,11 +58,14 @@ Interface changes
 
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
+- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
 
 ### New parameters
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
+  branching strategy is provided
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
@@ -171,6 +180,7 @@ Build system
 
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
+- new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
 
 ### Makefile
 

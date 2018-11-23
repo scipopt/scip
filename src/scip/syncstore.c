@@ -47,6 +47,7 @@ int getNSyncdata(
    )
 {
    int maxnsyncdelay;
+
    SCIP_CALL_ABORT( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &maxnsyncdelay) );
 
    return 2 * (maxnsyncdelay + 1);
@@ -546,7 +547,6 @@ int SCIPsyncstoreGetNSolvers(
    return syncstore->nsolvers;
 }
 
-
 /** read amount total memory used from synchronization data */
 SCIP_Longint SCIPsyncdataGetMemTotal(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
@@ -705,8 +705,8 @@ void SCIPsyncdataGetSolutionBuffer(
                                               *   if the buffer is not NULL */
    )
 {
-   int                  pos;
-   int                  i;
+   int pos;
+   int i;
 
    assert(syncstore != NULL);
    assert(syncstore->initialized);

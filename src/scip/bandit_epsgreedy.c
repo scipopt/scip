@@ -31,6 +31,7 @@
 
 #define BANDIT_NAME           "eps-greedy"
 #define EPSGREEDY_SMALL       1e-6
+
 /*
  * Data structures
  */

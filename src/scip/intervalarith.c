@@ -33,7 +33,7 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
-#ifdef ROUNDING_FE
+#ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
  * Linux rounding operations
@@ -79,7 +79,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_FP
+#ifdef SCIP_ROUNDING_FP
 #define ROUNDING
 /*
  * OSF rounding operations
@@ -125,7 +125,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_MS
+#ifdef SCIP_ROUNDING_MS
 #define ROUNDING
 /*
  * Microsoft compiler rounding operations
