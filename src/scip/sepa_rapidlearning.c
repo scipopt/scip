@@ -564,14 +564,14 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                /* @todo assert that flags are as they should be for conflicts */
                SCIP_CALL( SCIPgetConsCopy(subscip, scip, cons, &conscopy, conshdlrs[i], varmapbw, consmap, NULL,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons),
+                     SCIPconsIsPropagated(cons), FALSE, FALSE, SCIPconsIsDynamic(cons),
                      SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
 
                if( success )
                {
                   nconflicts++;
-                  SCIP_CALL( SCIPaddCons(scip, conscopy) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &conscopy) );
+
+                  SCIP_CALL( SCIPaddConflict(scip, NULL, conscopy, NULL, SCIP_CONFTYPE_UNKNOWN, FALSE) );
                }
                else
                {
