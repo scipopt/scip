@@ -8,6 +8,9 @@ Features
 
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
+- extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
+  scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
 Performance improvements
 ------------------------
 
