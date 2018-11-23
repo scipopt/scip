@@ -1156,7 +1156,7 @@ const char* stoinputField5(
    return stoi->f5;
 }
 
-/** return the current value of field 5 */
+/** return the current value of field 6 */
 static
 const char* stoinputField6(
    const STOINPUT*       stoi                /**< sto input structure */
