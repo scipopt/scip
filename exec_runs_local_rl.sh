@@ -40,11 +40,12 @@ TIME=3600
 
 ### FINAL TEST
 
-SETTINGS=rapidlearning-freq-5-exp4-degeneracy,rapidlearning-freq-5-exp4-dualbound,rapidlearning-freq-5-exp4-leaves,rapidlearning-freq-5-exp4-localobj,rapidlearning-freq-5-exp4-sblps,rapidlearning-freq-5-exp4-nsols
+# SETTINGS=rapidlearning-freq-5-exp4-degeneracy,rapidlearning-freq-5-exp4-dualbound,rapidlearning-freq-5-exp4-leaves,rapidlearning-freq-5-exp4-localobj,rapidlearning-freq-5-exp4-sblps,rapidlearning-freq-5-exp4-nsols
+SETTINGS=rapidlearning-freq-5-exp4-no-checks
 make VERSION=$VERSION3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
-SETTINGS=rapidlearning-glb,rapidlearning-glb-full,rapidlearning-glb-degeneracy,rapidlearning-glb-localobj,rapidlearning-glb-nsols
-make VERSION=$VERSION3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
+# SETTINGS=rapidlearning-glb,rapidlearning-glb-full,rapidlearning-glb-degeneracy,rapidlearning-glb-localobj,rapidlearning-glb-nsols
+# make VERSION=$VERSION3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
 
 # SETTINGS=rapidlearning-freq-5-exp4-degeneracy-applybdchgsF,rapidlearning-freq-5-exp4-degeneracy-applyinfervalsF,rapidlearning-freq-5-exp4-degeneracy-applyconflictsF,rapidlearning-freq-5-exp4-degeneracy-applyprimalsolF
 # make VERSION=$VERSION3 CONTINUE=true TIME=$TIME MEM=$MEM QUEUE=$QUEUE EXCLUSIVE=true SETTINGS=$SETTINGS TEST=MMM-IP OUTPUTDIR=$OUTPUTDIR testcluster
