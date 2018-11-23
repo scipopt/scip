@@ -2,7 +2,7 @@
 
 VERSION=local-rl-64c5928       #git hash c0ca752b9 (SoPlex 82cab95)
 VERSION2=local-rl-cb58065fd    #git hash cb58065fd (SoPlex 82cab95)
-VERSION3=local-rl-625d18a6f    #git hash 625d18a6f (SoPlex 82cab95)
+VERSION3=local-rl-4177d804d    #git hash 4177d804d (SoPlex 82cab95)
 
 OUTPUTDIR=results-local-rapidlearning
 
