@@ -1192,14 +1192,25 @@ SCIP_RETCODE initLP(
 
    *cutoff = FALSE;
 
-   /* at the root node, we have to add the initial variables as columns */
    if( root )
    {
       assert(SCIPlpGetNCols(lp) == 0);
       assert(SCIPlpGetNRows(lp) == 0);
       assert(lp->nremovablecols == 0);
       assert(lp->nremovablerows == 0);
+   }
 
+   /* put all initial constraints into the LP */
+   /* @todo check whether we jumped through the tree */
+   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+         eventfilter, cliquetable, root, TRUE, cutoff) );
+
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   /* at the root node, we have to add the initial variables as columns */
+   if( root )
+   {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
@@ -1225,14 +1236,6 @@ SCIP_RETCODE initLP(
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
    }
-
-   if( *cutoff )
-      return SCIP_OKAY;
-
-   /* put all initial constraints into the LP */
-   /* @todo check whether we jumped through the tree */
-   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-         eventfilter, cliquetable, root, TRUE, cutoff) );
 
    return SCIP_OKAY;
 }
