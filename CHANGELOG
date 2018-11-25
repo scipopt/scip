@@ -22,6 +22,10 @@ Interface changes
 
 ### Deleted and changed API methods and macros
 
+- The proprocessor macro NO_CONFIG_HEADER now needs to be defined when
+  including SCIP header files from a SCIP build or installation that
+  has been build via the Makefile-only build system.
+
 - The following proprocessor macros have been renamed:
   WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
   to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
