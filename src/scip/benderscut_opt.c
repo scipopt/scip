@@ -112,14 +112,13 @@ SCIP_RETCODE computeStandardOptimalityCut(
 {
    SCIP_VAR** vars;
    SCIP_VAR** fixedvars;
-   SCIP_CONS** conss;
    int nvars;
    int nfixedvars;
-   int nconss;
    SCIP_Real dualsol;
    SCIP_Real addval;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   int nrows;
    int i;
 
    SCIP_Real verifyobj = 0;
@@ -138,23 +137,17 @@ SCIP_RETCODE computeStandardOptimalityCut(
    nfixedvars = SCIPgetNFixedVars(subproblem);
    fixedvars = SCIPgetFixedVars(subproblem);
 
-   nconss = SCIPgetNConss(subproblem);
-   conss = SCIPgetConss(subproblem);
-
-   /* looping over all constraints and setting the coefficients of the cut */
-   for( i = 0; i < nconss; i++ )
+   /* looping over all rows and setting the coefficients of the cut */
+   nrows = SCIPgetNLPRows(subproblem);
+   for( i = 0; i < nrows; i++ )
    {
-      SCIP_Bool conssuccess;
+      SCIP_ROW* lprow;
       addval = 0;
 
-      SCIPconsGetDualsol(subproblem, conss[i], &dualsol, &conssuccess);
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
-         return SCIP_OKAY;
-      }
+      lprow = SCIPgetLPRows(subproblem)[i];
+      assert(lprow != NULL);
 
+      dualsol = SCIProwGetDualsol(lprow);
       assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
 
       if( SCIPisZero(subproblem, dualsol) )
@@ -165,17 +158,10 @@ SCIP_RETCODE computeStandardOptimalityCut(
       else
          lhs = SCIPgetLhsLinear(masterprob, cons);
 
-      if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
-      else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
-
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating optimality cut.\n");
-         return SCIP_OKAY;
-      }
+      if( dualsol > 0.0 )
+         addval = dualsol*SCIProwGetLhs(lprow);
+      else
+         addval = dualsol*SCIProwGetRhs(lprow);
 
       lhs += addval;
 
