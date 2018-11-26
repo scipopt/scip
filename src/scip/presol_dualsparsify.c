@@ -53,7 +53,7 @@
 #define PRESOL_NAME            "dualsparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
 
-#define PRESOL_PRIORITY              -240    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY            -24000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
@@ -70,6 +70,10 @@
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
+
+
+#define DEFAULT_MINACCEPTCANCELNNZS     5    /**< minimal cancel nonzeros when accepting to aggregate variables */
+#define DEFAULT_MINCONSIDEREDNNZS      10    /**< minimal number of considered non-zeros within one column */
 
 
 /*
@@ -94,6 +98,10 @@ struct SCIP_PresolData
    SCIP_Bool             enablecopy;         /**< should dualsparsify presolver be copied to sub-SCIPs? */
    SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
+   int                   naggregated;
+
+   int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate variables */
+   int                   minconsiderednnzs;  /**< minimal number of considered non-zeros within one column */
 };
 
 /*
@@ -104,6 +112,7 @@ struct SCIP_PresolData
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   colidx1,            /**< one of the indexes of column to try non-zero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try non-zero cancellation for */
@@ -122,14 +131,12 @@ SCIP_RETCODE aggregation(
    SCIP_Bool infeasible;
    SCIP_Bool aggregated;
 
-
    assert( !SCIPisZero(weight1) );
-   assert( !SCIPisZero(weight2) );
 
+   presoldata->naggregated += 1;
    aggregatedvar = SCIPmatrixGetVar(matrix, colidx2);
 
-   (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_agg_%s",
-       SCIPvarGetName(SCIPmatrixGetVar(matrix, colidx1)), SCIPvarGetName(aggregatedvar));
+   (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "dualsparsifyvar_%d", presoldata->naggregated);
    /* TODO: we need to consider the infinite bounds here */
    if( weight1 > 0 )
    {
@@ -155,8 +162,8 @@ SCIP_RETCODE aggregation(
    assert(!infeasible);
    assert(aggregated);
 
-   (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "%s_dual_%s",
-         SCIPvarGetName(vars[0]), SCIPvarGetName(aggregatedvar));
+   (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
+ 
    SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, newconsname, 2, vars, coefs,
             SCIPmatrixGetColLb(matrix, colidx2), SCIPmatrixGetColUb(matrix, colidx2),
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -167,17 +174,14 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 }
 
-
 static
 SCIP_RETCODE cancelCol(
    SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    int                   colidx1,            /**< one of the indexes of column to try non-zero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try non-zero cancellation for */
-   SCIP_Real*            col1tocol2ratio,    /**< pointer to store the ratio of var1 to var2 when applying variable substitution */
-   SCIP_Real*            col2tocol1ratio,    /**< pointer to store the ratio of var2 to var1 when applying variable substitution */
-   SCIP_Bool*            col1tocol2success,  /**< pointer to store whether var1 can be added to var2 to sparsify the matrix */
-   SCIP_Bool*            col2tocol1success,  /**< pointer to store whether var2 can be added to var1 to sparsify the matrix */
+   SCIP_Bool*            success,            /**< pointer to store whether the aggregations succeed or not */
    SCIP_Real*            ratios,             /**< ratio of the vectors*/
    int*                  nratios,            /**< number of different ratios*/
    int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
@@ -214,9 +218,8 @@ SCIP_RETCODE cancelCol(
    nnz1 = 0;
    nnz2 = 0;
    *nratios = 0;
-   *col1tocol2success = FALSE;
-   *col2tocol1success = FALSE;
-   printf("%d, %d\n", varlen1, varlen2);
+   *success = FALSE;
+   //printf("%d, %d\n", varlen1, varlen2);
    while(i < varlen1 && j < varlen2)
    {
       if(inds1[i] == inds2[j])
@@ -258,17 +261,15 @@ SCIP_RETCODE cancelCol(
    if( nnz1<*nratios || nnz2<*nratios )
    {
       SCIP_Real maxratio;
-      SCIP_Real secmaxratio;
       SCIP_Real curratio;
       int nmaxratio;
-      int nsecmaxratio;
       int ncurratio;
       int tmp;
       SCIP_Bool tmp_sign;
 
 
       nmaxratio = 0;
-      nsecmaxratio = 0;
+
       SCIPsortDownReal(ratios, *nratios);
       curratio = ratios[0];
       ncurratio = 1;
@@ -285,63 +286,40 @@ SCIP_RETCODE cancelCol(
                maxratio = curratio;
                nmaxratio = ncurratio;
             }
-            else if( ncurratio > nsecmaxratio )
+            else
             {
-               secmaxratio = curratio;
-               nsecmaxratio = ncurratio;
+               curratio = ratios[i];
+               ncurratio = 1;
             }
-            curratio = ratios[i];
-            ncurratio = 1;
          }
       }
+
       if( ncurratio > nmaxratio )
       {
          maxratio = curratio;
          nmaxratio = ncurratio;
       }
-      else if( ncurratio > nsecmaxratio )
-      {
-         secmaxratio = curratio;
-         nsecmaxratio = ncurratio;
-      }
 
       tmp = nnz1 < nnz2 ? nnz1 : nnz2;
       tmp_sign = nnz1 < nnz2 ? TRUE : FALSE;
-      /* TODO: by a conservative way */
-      if( nmaxratio > tmp )
+      if( nmaxratio >= tmp + presoldata->minacceptcancelnnzs )
       {
+         *success = TRUE;
+
          if( tmp_sign )
          {
-            *col1tocol2ratio = maxratio;
-            *col1tocol2success = TRUE;
-            SCIP_CALL( aggregation(scip, matrix, colidx2, colidx1, 1.0/maxratio) );
+            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, 1.0/maxratio) );
+
             *ncanceled = *ncanceled + nmaxratio - nnz1;
             *nchgcoefs = *nchgcoefs + varlen2;
-            printf("%s, %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
-            printf("wei %8.4f\n", maxratio);
-
-            if( nsecmaxratio > nnz2 )
-            {
-               *col2tocol1ratio = 1.0/secmaxratio;
-               *col2tocol1success = TRUE;
-            }
          }
          else
          {
-            *col1tocol2ratio = maxratio;
-            *col1tocol2success = TRUE;
-            SCIP_CALL( aggregation(scip, matrix, colidx1, colidx2, maxratio) );
+            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, maxratio) );
+
             *ncanceled = *ncanceled + nmaxratio - nnz2;
             *nchgcoefs = *nchgcoefs + varlen1;
-            printf("%s, %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
-            printf("chen  %8.4f\n", maxratio);
-            if( nsecmaxratio > nnz1 )
-            {
-               *col2tocol1ratio = 1.0/secmaxratio;
-               *col2tocol1success = TRUE;
-            }
          }
-         printf("dualsuccess: %d, %d, %d, %d\n", nmaxratio, nsecmaxratio, nnz1, nnz2);
       }
    }
 }
@@ -387,8 +365,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    int ncancels;
    int nfillins;
    int nchgcoef;
+   int ncancel;
    int* locks;
-   int* perm;
    int* rowidxsorted;
    int* rowsparsity;
    int nvarpairs;
@@ -398,6 +376,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_Longint nuseless;
 
    int *processedvarsidx;
+   int *processedvarsnnz;
    int nprocessedvarsidx;
 
    nprocessedvarsidx = 0;
@@ -436,16 +415,19 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       nratios = 0;
       ncancels = 0;
       nchgcoef = 0;
-      SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsidx, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsidx, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsnnz, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nrows) );
+
       for(i=0; i<ncols; i++)
       {
          int nnonz;
          nnonz = SCIPmatrixGetColNNonzs(matrix, i);
-         if(nnonz > 10 && SCIPvarGetType(SCIPmatrixGetVar(matrix, i)) == SCIP_VARTYPE_CONTINUOUS
+         if(nnonz > presoldata->minacceptcancelnnzs && SCIPvarGetType(SCIPmatrixGetVar(matrix, i)) == SCIP_VARTYPE_CONTINUOUS
                && !SCIPdoNotMultaggrVar(scip, SCIPmatrixGetVar(matrix, i)))
          {
             processedvarsidx[nprocessedvarsidx] = i;
+            processedvarsnnz[nprocessedvarsidx] = nnonz;
             nprocessedvarsidx++;
          }
       }
@@ -455,55 +437,44 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          int* colpnt = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[i]);
          SCIP_Real* valpnt = SCIPmatrixGetColValPtr(matrix, processedvarsidx[i]);
          SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
-   //      printf("%s, %d\n", SCIPmatrixGetColName(matrix, processedvarsidx[i]),
-  //             SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
       }
 
-      for(i=0; i<nprocessedvarsidx; i++)
+      SCIPsortIntInt(processedvarsnnz, processedvarsidx, nprocessedvarsidx);
+
+      i=0;
+      while(i < nprocessedvarsidx - 1)
       {
-         int* colpnti = SCIPmatrixGetColIdxPtr(matrix, processedvarsidx[i]);
-         SCIP_Real* valpnti = SCIPmatrixGetColValPtr(matrix, processedvarsidx[i]);
-         SCIP_VAR* vari;
-         SCIP_VAR* varj;
-         SCIP_VAR* newvar;
-         SCIP_CONS* newcons;
-         SCIP_VAR* vars[2];
-         SCIP_Real coefs[2];
+         SCIP_Bool success;
 
+         nchgcoef = 0;
+         ncancel = 0;
+         cancelCol(scip, presoldata, matrix, processedvarsidx[i], processedvarsidx[i+1], &success, ratios, &nratios, &nchgcoef, &ncancel, &nfillins);
 
-         vari = SCIPmatrixGetVar(matrix, processedvarsidx[i]);
-         SCIP_Real newlb;
-         SCIP_Real newub;
-
-         for(j=i+1; j<nprocessedvarsidx; j++)
+         if( success )
          {
-            SCIP_Real col1tocol2ratio;
-            SCIP_Real col2tocol1ratio;
-            SCIP_Bool infeasible;
-            SCIP_Bool aggregated;
-            SCIP_Bool col1tocol2success;
-            SCIP_Bool col2tocol1success;
-
-
-            varj = SCIPmatrixGetVar(matrix, processedvarsidx[j]);
-
-            cancelCol(scip, matrix, processedvarsidx[i], processedvarsidx[j], &col1tocol2ratio, &col2tocol1ratio, &col1tocol2success,
-                  &col2tocol1success, ratios, &nratios, &nchgcoef, &ncancels, &nfillins);
-  //          printf("%8.4f %8.4f %8d %8d\n", col1tocol2ratio, col2tocol1ratio, col1tocol2success, col2tocol1success);
+            ncancels += ncancel;
+            *nchgcoefs += nchgcoef;
+            *naggrvars += 1;
+            *naddconss += 1;
          }
+         i=i+2;
       }
 
       presoldata->ncancels += ncancels;
-
-      *nchgcoefs += nchgcoef;
 
       if( ncancels > 0 )
       {
          *result = SCIP_SUCCESS;
       }
+      /* if matrix construction fails once, we do not ever want to be called again */
+      else
+      {
+         presoldata->nwaitingcalls = INT_MAX;
+      }
 
       SCIPfreeBufferArray(scip, ratios);
       SCIPfreeBufferArray(scip, processedvarsidx);
+      SCIPfreeBufferArray(scip, processedvarsnnz);
    }
 
    SCIPmatrixFree(scip, &matrix);
@@ -543,6 +514,7 @@ SCIP_DECL_PRESOLINIT(presolInitDualsparsify)
    presoldata->nfillin = 0;
    presoldata->nfailures = 0;
    presoldata->nwaitingcalls = 0;
+   presoldata->naggregated = 0;
 
    return SCIP_OKAY;
 }
@@ -566,23 +538,18 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDualsparsify) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitDualsparsify) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/dualsparsify/enablecopy",
-         "should dualsparsify presolver be copied to sub-SCIPs?",
-         &presoldata->enablecopy, TRUE, DEFAULT_ENABLECOPY, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/dualsparsify/cancellinear",
-         "should we cancel nonzeros in constraints of the linear constraint handler?",
-         &presoldata->cancellinear, TRUE, DEFAULT_CANCELLINEAR, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/dualsparsify/preserveintcoefs",
-         "should we forbid cancellations that destroy integer coefficients?",
-         &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/maxcontfillin",
+         "presolving/dualsparsify/minacceptcancelnnzs",
+         "minimal cancel nonzeros when accepting to aggregate variables",
+         &presoldata->minacceptcancelnnzs, FALSE, DEFAULT_MINACCEPTCANCELNNZS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/dualsparsify/minconsiderednnzs",
+         "minimal number of considered non-zeros within one column",
+         &presoldata->minconsiderednnzs, FALSE, DEFAULT_MINCONSIDEREDNNZS, 0, INT_MAX, NULL, NULL) );
+
+#if 0
          "maximal fillin for continuous variables (-1: unlimited)",
          &presoldata->maxcontfillin, FALSE, DEFAULT_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
 
@@ -620,6 +587,7 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "presolving/dualsparsify/waitingfac",
          "number of calls to wait until next execution as a multiple of the number of useless calls",
          &presoldata->waitingfac, TRUE, DEFAULT_WAITINGFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+#endif
 
    return SCIP_OKAY;
 }
