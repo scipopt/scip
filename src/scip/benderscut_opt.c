@@ -25,6 +25,7 @@
 #include "scip/pub_benderscut.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_nlp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_linear.h"
@@ -41,6 +42,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_var.h"
+#include "scip/scip_nlp.h"
 #include <string.h>
 
 #define BENDERSCUT_NAME             "optimality"
@@ -132,57 +134,120 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
    (*success) = FALSE;
 
-   nvars = SCIPgetNVars(subproblem);
-   vars = SCIPgetVars(subproblem);
-   nfixedvars = SCIPgetNFixedVars(subproblem);
-   fixedvars = SCIPgetFixedVars(subproblem);
-
-   /* looping over all rows and setting the coefficients of the cut */
-   nrows = SCIPgetNLPRows(subproblem);
-   for( i = 0; i < nrows; i++ )
+   if( SCIPisNLPConstructed(subproblem) )
    {
-      SCIP_ROW* lprow;
-      addval = 0;
+      assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT);
+      assert(SCIPhasNLPSolution(subproblem));
 
-      lprow = SCIPgetLPRows(subproblem)[i];
-      assert(lprow != NULL);
-
-      dualsol = SCIProwGetDualsol(lprow);
-      assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
-
-      if( SCIPisZero(subproblem, dualsol) )
-         continue;
-
-      if( addcut )
-         lhs = SCIProwGetLhs(row);
-      else
-         lhs = SCIPgetLhsLinear(masterprob, cons);
-
-      if( dualsol > 0.0 )
-         addval = dualsol*SCIProwGetLhs(lprow);
-      else
-         addval = dualsol*SCIProwGetRhs(lprow);
-
-      lhs += addval;
-
-      /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
-         || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
+      /* looping over all NLP rows and setting the coefficients of the cut */
+      nrows = SCIPgetNNLPNlRows(subproblem);
+      for( i = 0; i < nrows; i++ )
       {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g addval = %g.\n", lhs, addval);
-         return SCIP_OKAY;
+         SCIP_NLROW* nlrow;
+         addval = 0;
+
+         nlrow = SCIPgetNLPNlRows(subproblem)[i];
+         assert(nlrow != NULL);
+
+         dualsol = -SCIPnlrowGetDualsol(nlrow);
+         assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
+
+         if( SCIPisZero(subproblem, dualsol) )
+            continue;
+
+         if( addcut )
+            lhs = SCIProwGetLhs(row);
+         else
+            lhs = SCIPgetLhsLinear(masterprob, cons);
+
+         if( dualsol > 0.0 )
+            addval = dualsol*SCIPnlrowGetLhs(nlrow);
+         else
+            addval = dualsol*SCIPnlrowGetRhs(nlrow);
+
+         lhs += addval;
+
+         /* if the bound becomes infinite, then the cut generation terminates. */
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+            || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
+         {
+            (*success) = FALSE;
+            SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g addval = %g.\n", lhs, addval);
+            return SCIP_OKAY;
+         }
+
+         /* Update the lhs of the cut */
+         if( addcut )
+         {
+            SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
+         }
       }
 
-      /* Update the lhs of the cut */
-      if( addcut )
+      nvars = SCIPgetNNLPVars(subproblem);
+      vars = SCIPgetNLPVars(subproblem);
+      nfixedvars = SCIPgetNFixedVars(subproblem);
+      fixedvars = SCIPgetFixedVars(subproblem);
+   }
+   else
+   {
+      assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
+
+      /* looping over all LP rows and setting the coefficients of the cut */
+      nrows = SCIPgetNLPRows(subproblem);
+      for( i = 0; i < nrows; i++ )
       {
-         SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+         SCIP_ROW* lprow;
+         addval = 0;
+
+         lprow = SCIPgetLPRows(subproblem)[i];
+         assert(lprow != NULL);
+
+         dualsol = SCIProwGetDualsol(lprow);
+         assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
+
+         if( SCIPisZero(subproblem, dualsol) )
+            continue;
+
+         if( addcut )
+            lhs = SCIProwGetLhs(row);
+         else
+            lhs = SCIPgetLhsLinear(masterprob, cons);
+
+         if( dualsol > 0.0 )
+            addval = dualsol*SCIProwGetLhs(lprow);
+         else
+            addval = dualsol*SCIProwGetRhs(lprow);
+
+         lhs += addval;
+
+         /* if the bound becomes infinite, then the cut generation terminates. */
+         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+            || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
+         {
+            (*success) = FALSE;
+            SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g addval = %g.\n", lhs, addval);
+            return SCIP_OKAY;
+         }
+
+         /* Update the lhs of the cut */
+         if( addcut )
+         {
+            SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
+         }
       }
-      else
-      {
-         SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
-      }
+
+      nvars = SCIPgetNVars(subproblem);
+      vars = SCIPgetVars(subproblem);
+      nfixedvars = SCIPgetNFixedVars(subproblem);
+      fixedvars = SCIPgetFixedVars(subproblem);
    }
 
    /* looping over all variables to update the coefficients in the computed cut. */
@@ -200,9 +265,24 @@ SCIP_RETCODE computeStandardOptimalityCut(
       /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
-      redcost = SCIPgetVarRedcost(subproblem, var);
+      if( SCIPisNLPConstructed(subproblem) )
+      {
+         /* the code below multiplies redcost with lb, if redcost > 0, and with ub otherwise
+          * so make redcost the dual value for the lb, if nonzero, and -dual value for the ub, if nonzero
+          */
+         if( i < nvars )
+            redcost = SCIPgetNLPVarsLbDualsol(subproblem)[i] - SCIPgetNLPVarsUbDualsol(subproblem)[i];
+         else
+            redcost = 0.0;
 
-      checkobj += SCIPvarGetUnchangedObj(var)*SCIPvarGetSol(var, TRUE);
+         checkobj += SCIPvarGetUnchangedObj(var) * SCIPvarGetNLPSol(var);
+      }
+      else
+      {
+         redcost = SCIPgetVarRedcost(subproblem, var);
+
+         checkobj += SCIPvarGetUnchangedObj(var) * SCIPvarGetSol(var, TRUE);
+      }
 
       /* checking whether the subproblem variable has a corresponding master variable. */
       if( mastervar != NULL )
@@ -371,7 +451,6 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
-   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
 
    row = NULL;
    cons = NULL;
@@ -523,16 +602,17 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 
    /* only generate optimality cuts if the subproblem is optimal */
    if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL ||
-    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) )
+    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && !SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
+    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(subproblem) && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
             sol, probnumber, type, result) );
 
       /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
-       * resolved and the generation of the cut is reattempted
+       * resolved and the generation of the cut is reattempted. For NLPs, we do not have such a polishing yet.
        */
-      if( (*result) == SCIP_DIDNOTFIND )
+      if( (*result) == SCIP_DIDNOTFIND && !SCIPisNLPConstructed(subproblem) )
       {
          SCIP_Bool success;
 
