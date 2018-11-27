@@ -313,175 +313,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
    return SCIP_OKAY;
 }
 
-
-/** adds the gradient for a given point and nonlinear row to a linear row or constraint
- * adds mult times gradient times solution in dirderiv
- */
-static
-SCIP_RETCODE addGradient(
-   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
-   SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
-   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_ROW*             row,                /**< linear row to add to */
-   SCIP_CONS*            cons,               /**< linear constraint to add to */
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_Real             mult,               /**< multiplier */
-   SCIP_Real*            dirderiv            /**< storage to add directional derivative */
-   )
-{
-   SCIP_EXPRTREE* tree;
-   SCIP_VAR* var;
-   SCIP_VAR* mastervar;
-   SCIP_Real coef;
-   SCIP_Bool addcut;
-   int i;
-
-   assert(masterprob != NULL);
-   assert(subproblem != NULL);
-   assert(benders != NULL);
-   assert(row != NULL || cons != NULL);
-   assert(nlrow != NULL);
-   assert(exprint != NULL);
-   assert(mult != 0.0);
-   assert(dirderiv != NULL);
-
-   addcut = row != NULL;
-
-   /* linear part */
-   for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
-   {
-      var = SCIPnlrowGetLinearVars(nlrow)[i];
-      assert(var != NULL);
-
-      /* retrieving the master problem variable for the given subproblem variable. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-      if( mastervar == NULL )
-         continue;
-
-      coef = mult * SCIPnlrowGetLinearCoefs(nlrow)[i];
-
-      if( addcut )
-      {
-         SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar, coef) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar, coef) );
-      }
-
-      *dirderiv += coef * SCIPvarGetNLPSol(var);
-   }
-
-   /* quadratic part */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
-   {
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
-      SCIP_VAR* mastervar1;
-      SCIP_VAR* mastervar2;
-      SCIP_Real coef1;
-      SCIP_Real coef2;
-
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
-
-      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
-      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
-
-      /* retrieving the master problem variables for the given subproblem variables. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var1, &mastervar1) );
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var2, &mastervar2) );
-
-      coef1 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var2);
-      coef2 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var1);
-
-      if( addcut )
-      {
-         if( mastervar1 != NULL )
-         {
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar1, coef1) );
-         }
-         if( mastervar2 != NULL )
-         {
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar2, coef2) );
-         }
-      }
-      else
-      {
-         if( mastervar1 != NULL )
-         {
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar1, coef1) );
-         }
-         if( mastervar2 != NULL )
-         {
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar2, coef2) );
-         }
-      }
-
-      if( mastervar1 != NULL )
-         *dirderiv += coef1 * SCIPvarGetNLPSol(var1);
-
-      if( mastervar2 != NULL )
-         *dirderiv += coef2 * SCIPvarGetNLPSol(var2);
-   }
-
-   /* tree part */
-   tree = SCIPnlrowGetExprtree(nlrow);
-   if( tree != NULL )
-   {
-      SCIP_Real* treegrad;
-      SCIP_Real* x;
-      SCIP_Real val;
-
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &x, SCIPexprtreeGetNVars(tree)) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &treegrad, SCIPexprtreeGetNVars(tree)) );
-
-      /* compile expression tree, if not done before */
-      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
-      {
-         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
-      }
-
-      /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         x[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(tree)[i]);
-
-      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
-
-      /* update corresponding gradient entry */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-      {
-         var = SCIPexprtreeGetVars(tree)[i];
-         assert(var != NULL);
-
-         /* retrieving the master problem variable for the given subproblem variable. */
-         SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-         if( mastervar == NULL )
-            continue;
-
-         coef = mult * treegrad[i];
-
-         if( addcut )
-         {
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar, coef) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar, coef) );
-         }
-
-         *dirderiv += coef * SCIPvarGetNLPSol(var);
-      }
-
-      SCIPfreeBufferArray(subproblem, &treegrad);
-      SCIPfreeBufferArray(subproblem, &x);
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** computes a standard Benders' optimality cut from the dual solutions of the NLP */
 static
 SCIP_RETCODE computeStandardOptimalityCutNL(
@@ -547,7 +378,7 @@ SCIP_RETCODE computeStandardOptimalityCutNL(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      SCIP_CALL( addGradient(masterprob, subproblem, benders, row, cons, nlrow, exprinterpreter, -dualsol, &dirderiv) );
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, row, cons, nlrow, exprinterpreter, -dualsol, &dirderiv) );
    }
 
    SCIPexprintFree(&exprinterpreter);
@@ -930,6 +761,174 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** adds the gradient of a nonlinear row in the current NLP solution of a subproblem to a linear row or constraint in the master problem
+ *
+ * Only computes gradient w.r.t. master problem variables.
+ * Computes also the directional derivative, that is, mult times gradient times solution.
+ */
+SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_ROW*             row,                /**< linear row to add to */
+   SCIP_CONS*            cons,               /**< linear constraint to add to */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
+   SCIP_Real             mult,               /**< multiplier */
+   SCIP_Real*            dirderiv            /**< storage to add directional derivative */
+   )
+{
+   SCIP_EXPRTREE* tree;
+   SCIP_VAR* var;
+   SCIP_VAR* mastervar;
+   SCIP_Real coef;
+   SCIP_Bool addcut;
+   int i;
+
+   assert(masterprob != NULL);
+   assert(subproblem != NULL);
+   assert(benders != NULL);
+   assert(row != NULL || cons != NULL);
+   assert(nlrow != NULL);
+   assert(exprint != NULL);
+   assert(mult != 0.0);
+   assert(dirderiv != NULL);
+
+   addcut = row != NULL;
+
+   /* linear part */
+   for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
+   {
+      var = SCIPnlrowGetLinearVars(nlrow)[i];
+      assert(var != NULL);
+
+      /* retrieving the master problem variable for the given subproblem variable. */
+      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
+      if( mastervar == NULL )
+         continue;
+
+      coef = mult * SCIPnlrowGetLinearCoefs(nlrow)[i];
+
+      if( addcut )
+      {
+         SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar, coef) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar, coef) );
+      }
+
+      *dirderiv += coef * SCIPvarGetNLPSol(var);
+   }
+
+   /* quadratic part */
+   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
+   {
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+      SCIP_VAR* mastervar1;
+      SCIP_VAR* mastervar2;
+      SCIP_Real coef1;
+      SCIP_Real coef2;
+
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
+
+      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
+      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
+
+      /* retrieving the master problem variables for the given subproblem variables. */
+      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var1, &mastervar1) );
+      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var2, &mastervar2) );
+
+      coef1 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var2);
+      coef2 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPvarGetNLPSol(var1);
+
+      if( addcut )
+      {
+         if( mastervar1 != NULL )
+         {
+            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar1, coef1) );
+         }
+         if( mastervar2 != NULL )
+         {
+            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar2, coef2) );
+         }
+      }
+      else
+      {
+         if( mastervar1 != NULL )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar1, coef1) );
+         }
+         if( mastervar2 != NULL )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar2, coef2) );
+         }
+      }
+
+      if( mastervar1 != NULL )
+         *dirderiv += coef1 * SCIPvarGetNLPSol(var1);
+
+      if( mastervar2 != NULL )
+         *dirderiv += coef2 * SCIPvarGetNLPSol(var2);
+   }
+
+   /* tree part */
+   tree = SCIPnlrowGetExprtree(nlrow);
+   if( tree != NULL )
+   {
+      SCIP_Real* treegrad;
+      SCIP_Real* x;
+      SCIP_Real val;
+
+      SCIP_CALL( SCIPallocBufferArray(subproblem, &x, SCIPexprtreeGetNVars(tree)) );
+      SCIP_CALL( SCIPallocBufferArray(subproblem, &treegrad, SCIPexprtreeGetNVars(tree)) );
+
+      /* compile expression tree, if not done before */
+      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
+      {
+         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
+      }
+
+      /* sets the solution value */
+      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+         x[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(tree)[i]);
+
+      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
+
+      /* update corresponding gradient entry */
+      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+      {
+         var = SCIPexprtreeGetVars(tree)[i];
+         assert(var != NULL);
+
+         /* retrieving the master problem variable for the given subproblem variable. */
+         SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
+         if( mastervar == NULL )
+            continue;
+
+         coef = mult * treegrad[i];
+
+         if( addcut )
+         {
+            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar, coef) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar, coef) );
+         }
+
+         *dirderiv += coef * SCIPvarGetNLPSol(var);
+      }
+
+      SCIPfreeBufferArray(subproblem, &treegrad);
+      SCIPfreeBufferArray(subproblem, &x);
+   }
 
    return SCIP_OKAY;
 }

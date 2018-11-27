@@ -44,8 +44,12 @@
 
 #include "scip/def.h"
 #include "scip/type_benders.h"
+#include "scip/type_cons.h"
+#include "scip/type_lp.h"
+#include "scip/type_nlp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "nlpi/type_exprinterpret.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +63,24 @@ EXTERN
 SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** adds the gradient of a nonlinear row in the current NLP solution of a subproblem to a linear row or constraint in the master problem
+ *
+ * Only computes gradient w.r.t. master problem variables.
+ * Computes also the directional derivative, that is, mult times gradient times solution.
+ */
+EXTERN
+SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_ROW*             row,                /**< linear row to add to */
+   SCIP_CONS*            cons,               /**< linear constraint to add to */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
+   SCIP_Real             mult,               /**< multiplier */
+   SCIP_Real*            dirderiv            /**< storage to add directional derivative */
    );
 
 /* @} */
