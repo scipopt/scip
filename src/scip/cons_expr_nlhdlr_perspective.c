@@ -18,8 +18,6 @@
  * @author Benjamin Mueller
  */
 
-#define SCIP_DEBUG 1
-
 #include <string.h>
 
 #include "scip/cons_varbound.h"
@@ -28,7 +26,8 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/type_cons_expr.h"
-#include "struct_cons_expr.h"
+#include "scip/struct_cons_expr.h"
+#include "scip/scip_sol.h"
 
 
 /* fundamental nonlinear handler properties */
@@ -142,10 +141,9 @@ SCIP_Bool varIsSemicontinuous(
    {
       SCIPallocBlockMemory(scip, &scv);
       scv->bvar = *bvar;
-      scv->lb0 = lb0;
-      scv->ub0 = ub0;
-      scv->lb1 = lb1;
-      scv->ub1 = ub1;
+      scv->val0 = lb0;
+      if( lb0 != 0.0 )
+         SCIPdebugMsg(scip, "var %s has a non-zero off value %f", SCIPvarGetName(var), lb0);
       SCIPhashmapInsert(scvars, var, scv);
       return TRUE;
    }
@@ -399,6 +397,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_Real* coefs;
    SCIP_Bool expr_is_onoff;
 
+   SCIP_CONSEXPR_EXPRENFO_METHOD oldenfo;
+   oldenfo = *enforcemethods;
+
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
@@ -526,15 +527,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    {
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
       {
-         *enforcedbelow = TRUE;
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         SCIPinfoMessage(scip, NULL, "detected expr to be convex -> can enforce expr <= auxvar\n");
+         SCIPinfoMessage(scip, NULL, "\ndetected expr to be convex -> can enforce expr <= auxvar\n");
       }
       else if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONCAVE )
       {
-         *enforcedabove = TRUE;
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         SCIPinfoMessage(scip, NULL, "detected expr to be concave -> can enforce expr >= auxvar\n");
+         SCIPinfoMessage(scip, NULL, "\ndetected expr to be concave -> can enforce expr >= auxvar\n");
       }
       *success = TRUE;
       for( c = 0; c < (*nlhdlrexprdata)->nlinterms; ++c )
@@ -614,10 +613,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    SCIP_ROW* row;
    SCIP_VAR* auxvar;
    int i, v, nvars;
-   SCIP_Real gval;
+   SCIP_Real fval, fval0;
    SCIP_Real scalar_prod;
    SCIP_CONSEXPR_EXPR* pexpr;
-   SCIP_CONSEXPR_EXPR** pexprvars;
    SCIP_VAR* var;
    SCIP_Bool success;
 
@@ -646,8 +644,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    }
 
    /*
-    * add the cut: auxvar >= x \nabla f(sol) + (f(sol) - sol \nabla f(sol)) z,
-    * where x is semicontinuous and z is binary
+    * add the cut: auxvar >= (x - x0) \nabla f(sol) + (f(sol) - f(x0) - (sol - x0) \nabla f(sol)) z + f(x0),
+    * where x is semicontinuous, z is binary and x0 is the value of x when z = 0
     */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
@@ -668,9 +666,19 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    for( i = 0; i < SCIPhashmapGetNEntries(nlhdlrexprdata->persp); ++i )
    {
       SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(nlhdlrexprdata->persp, i);
+      SCIP_SOL* sol0;
+      SCIP_Real* vals0;
+      SCIP_CONSEXPR_EXPR** varexprs;
+      SCIP_VAR** vars;
+
       if( entry == NULL )
          continue;
       pexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetImage(entry);
+      SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, pexpr, varexprs, &nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals0, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "\nbvar = ");
       SCIPprintVar(scip, SCIPhashmapEntryGetOrigin(entry), NULL);
@@ -678,19 +686,42 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       SCIPprintConsExprExpr(scip, conshdlr, pexpr, NULL);
 #endif
 
-      /* get g(x*) */
-      SCIPevalConsExprExpr(scip, conshdlr, pexpr, sol, 0);
-      gval = SCIPgetConsExprExprValue(pexpr);
+      /* get x0 */
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_SCVARDATA* vardata;
+         vars[v] = SCIPgetConsExprExprVarVar(varexprs[v]);
+         vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrexprdata->scvars, (void*)vars[v]);
+         vals0[v] = vardata->val0;
+      }
+      SCIPsetSolVals(scip, sol0, nvars, vars, vals0);
+
+      /* get f(x0) */
+      SCIPevalConsExprExpr(scip, conshdlr, pexpr, sol0, 0);
+      fval0 = SCIPgetConsExprExprValue(pexpr);
+      SCIPfreeSol(scip, &sol0);
 
       /* evaluation error or a too large constant -> skip */
-      if( SCIPisInfinity(scip, REALABS(gval)) )
+      if( SCIPisInfinity(scip, REALABS(fval0)) )
       {
-         SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", gval, (void*)pexpr);
+         SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval0, (void*)pexpr);
          return SCIP_OKAY;
       }
 
-      /* add f(sol)z */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry), gval) );
+      /* get f(sol) */
+      SCIPevalConsExprExpr(scip, conshdlr, pexpr, sol, 0);
+      fval = SCIPgetConsExprExprValue(pexpr);
+
+      /* evaluation error or a too large constant -> skip */
+      if( SCIPisInfinity(scip, REALABS(fval)) )
+      {
+         SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval, (void*)pexpr);
+         return SCIP_OKAY;
+      }
+
+      /* add (f(sol) - f(x0))z + f(x0) */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry), fval - fval0) );
+      SCIPaddRowprepConstant(rowprep, fval0);
 
       /* compute gradient */
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, pexpr, sol, 0) );
@@ -703,22 +734,24 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       }
 
       scalar_prod = 0.0;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pexprvars, SCIPgetNTotalVars(scip)) );
-      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, pexpr, pexprvars, &nvars) );
       for(v = 0; v < nvars; ++v)
       {
-         var = SCIPgetConsExprExprVarVar(pexprvars[v]);
+         var = SCIPgetConsExprExprVarVar(varexprs[v]);
 
-         /* add xi pterm'xi(sol) */
+         /* add xi f'xi(sol) */
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, SCIPgetConsExprExprPartialDiff(scip, conshdlr, pexpr, var)) );
+         /* add -x0i f'xi(sol) */
+         SCIPaddRowprepConstant(rowprep, -vals0[v]*SCIPgetConsExprExprPartialDiff(scip, conshdlr, pexpr, var));
 
-         /* compute -xisol pterm'xi(sol) */
-         scalar_prod -= SCIPgetSolVal(scip, sol, var)*SCIPgetConsExprExprPartialDiff(scip, conshdlr, pexpr, var);
-         SCIPreleaseConsExprExpr(scip, &pexprvars[v]);
+         /* compute -(soli - x0i) f'xi(sol) */
+         scalar_prod -= (SCIPgetSolVal(scip, sol, var) - vals0[v])*SCIPgetConsExprExprPartialDiff(scip, conshdlr, pexpr, var);
+         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
       }
-      SCIPfreeBlockMemoryArray(scip, &pexprvars, SCIPgetNTotalVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
 
-      /* add -sol \nabla f(sol)) z */
+      /* add -(sol - x0) \nabla f(sol)) z */
       SCIPaddRowprepTerm(scip, rowprep, (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry), scalar_prod);
    }
 
@@ -738,9 +771,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "\nAt sol point ");
       SCIPprintSol(scip, sol, NULL, TRUE);
-      SCIPdebugMsg(scip, "\nadding cut ");
-         SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
+      SCIPinfoMessage(scip, NULL, "\nadding cut ");
+      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
       *ncuts++;

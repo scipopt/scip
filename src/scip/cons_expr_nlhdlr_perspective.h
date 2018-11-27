@@ -35,10 +35,7 @@ extern "C" {
 struct SCIP_SCVarData
 {
    SCIP_VAR*             bvar;           /**< the binary variable on which the variable domain depends */
-   SCIP_Real             lb0;            /**< lower bound when bvar = 0 */
-   SCIP_Real             ub0;            /**< upper bound when bvar = 0 */
-   SCIP_Real             lb1;            /**< lower bound when bvar = 1 */
-   SCIP_Real             ub1;            /**< upper bound when bvar = 1 */
+   SCIP_Real             val0;            /**< var value when bvar = 0 */
 };
 typedef struct SCIP_SCVarData SCIP_SCVARDATA;
 
