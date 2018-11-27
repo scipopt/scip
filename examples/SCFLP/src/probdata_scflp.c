@@ -183,6 +183,13 @@ SCIP_RETCODE createOriginalproblem(
    int j;
    int k;
    char name[SCIP_MAXSTRLEN];
+
+#ifdef QUADCOST
+   SCIP_VAR* sqrvar;
+   SCIP_Real one = 1.0;
+   SCIP_Real minusone = -1.0;
+#endif
+
    assert(scip != NULL);
 
    /* adding the sufficient capacity constraints */
@@ -255,6 +262,7 @@ SCIP_RETCODE createOriginalproblem(
       {
          for( k = 0; k < nscenarios; k++ )
          {
+#ifndef QUADCOST
             coeff = costs[i][j]/(SCIP_Real)nscenarios;
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
             SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
@@ -272,6 +280,41 @@ SCIP_RETCODE createOriginalproblem(
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(scip, demandconss[i][k], customervars[i][j][k], 1.0) );
             }
+#else
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
+            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
+            SCIP_CALL( SCIPaddVar(scip, var) );
+
+            /* storing the customer variable in the list */
+            customervars[i][j][k] = var;
+
+            if( costs[i][j] > 0 )
+            {
+               /* adding the variable to the capacity constraints */
+               SCIP_CALL( SCIPaddCoefLinear(scip, capconss[j][k], customervars[i][j][k], 1.0) );
+
+               /* adding the variable to the demand constraints */
+               SCIP_CALL( SCIPaddCoefLinear(scip, demandconss[i][k], customervars[i][j][k], 1.0) );
+
+               coeff = costs[i][j]/(SCIP_Real)nscenarios / 10000.0;
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
+               SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+
+               SCIP_CALL( SCIPaddVar(scip, sqrvar) );
+
+               /* add constraint var^2 <= sqrvar
+                * TODO try var^2 <= sqrvar * subfacilityvar[j]
+                */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
+               SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 1, &sqrvar, &minusone, 1, &var, &var, &one, -SCIPinfinity(scip), 0.0) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               SCIP_CALL( SCIPreleaseVar(scip, &sqrvar) );
+            }
+#endif
          }
       }
    }
@@ -457,7 +500,7 @@ SCIP_RETCODE createSubproblems(
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(subproblems[k], demandconss[i][k], customervars[i][j][k], 1.0) );
 
-               coeff = costs[i][j]/(SCIP_Real)nscenarios;
+               coeff = costs[i][j]/(SCIP_Real)nscenarios / 10000.0;
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
                SCIP_CALL( SCIPcreateVarBasic(subproblems[k], &sqrvar, name, 0.0, SCIPinfinity(subproblems[k]), coeff, SCIP_VARTYPE_CONTINUOUS) );
 
