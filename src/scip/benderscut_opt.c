@@ -356,6 +356,15 @@ SCIP_RETCODE computeStandardOptimalityCutNL(
    nfixedvars = SCIPgetNFixedVars(subproblem);
    fixedvars = SCIPgetFixedVars(subproblem);
 
+   /* our optimality cut implementation assumes that SCIP did not modify the objective function and sense,
+    * that is, that the objective function value of the NLP corresponds to the value of the auxiliary variable
+    * if that wouldn't be the case, then the scaling and offset may have to be considered when adding the
+    * auxiliary variable to the cut (cons/row)?
+    */
+   assert(SCIPgetTransObjoffset(subproblem) == 0.0);
+   assert(SCIPgetTransObjscale(subproblem) == 1.0);
+   assert(SCIPgetObjsense(subproblem) == SCIP_OBJSENSE_MINIMIZE);
+
    lhs = SCIPgetNLPObjval(subproblem);
    assert(!SCIPisInfinity(subproblem, REALABS(lhs)));
 

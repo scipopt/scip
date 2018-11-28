@@ -3527,7 +3527,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    /* setting the subproblem parameters */
    SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
-   if( SCIPisNLPEnabled(subproblem) )
+   if( SCIPisNLPConstructed(subproblem) )
    {
       SCIP_NLPSOLSTAT nlpsolstat;
       SCIP_NLPTERMSTAT nlptermstat;
@@ -3559,7 +3559,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       else
       {
          (*solvestatus) = SCIP_STATUS_OPTIMAL;
-         (*objective) = SCIPgetNLPObjval(subproblem);  /* FIXME transform to original */
+         (*objective) = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
       }
    }
    else
