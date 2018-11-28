@@ -27,6 +27,7 @@
 #include "scip/cons_linear.h"
 #include "scip/pub_benderscut.h"
 #include "scip/pub_benders.h"
+#include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_linear.h"
@@ -69,10 +70,9 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 {
    SCIP_VAR** vars;
    SCIP_VAR** fixedvars;
-   SCIP_CONS** conss;
    int nvars;
    int nfixedvars;
-   int nconss;
+   int nrows;
    SCIP_Real dualsol;
    SCIP_Real lhs;       /* the left hand side of the cut */
    SCIP_Real addval;    /* the value that must be added to the lhs */
@@ -93,40 +93,28 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    nfixedvars = SCIPgetNFixedVars(subproblem);
    fixedvars = SCIPgetFixedVars(subproblem);
 
-   nconss = SCIPgetNConss(subproblem);
-   conss = SCIPgetConss(subproblem);
-
-   /* looping over all constraints and setting the coefficients of the cut */
-   /* TODO better loop over all LP rows */
-   for( i = 0; i < nconss; i++ )
+   /* looping over all LP rows and setting the coefficients of the cut */
+   nrows = SCIPgetNLPRows(subproblem);
+   for( i = 0; i < nrows; i++ )
    {
-      SCIP_Bool conssuccess;
-
+      SCIP_ROW* lprow;
       addval = 0;
-      SCIPconsGetDualfarkas(subproblem, conss[i], &dualsol, &conssuccess);
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
-         return SCIP_OKAY;
-      }
+
+      lprow = SCIPgetLPRows(subproblem)[i];
+      assert(lprow != NULL);
+
+      dualsol = SCIProwGetDualfarkas(lprow);
+      assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
 
       if( SCIPisDualfeasZero(subproblem, dualsol) )
          continue;
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
 
-      if( SCIPisPositive(subproblem, dualsol) )
-         addval = dualsol*SCIPconsGetLhs(subproblem, conss[i], &conssuccess);
-      else if( SCIPisNegative(subproblem, dualsol) )
-         addval = dualsol*SCIPconsGetRhs(subproblem, conss[i], &conssuccess);
-
-      if( !conssuccess )
-      {
-         (*success) = FALSE;
-         SCIPdebugMsg(masterprob, "Error when generating feasibility cut.\n");
-         return SCIP_OKAY;
-      }
+      if( dualsol > 0.0 )
+         addval = dualsol*SCIProwGetLhs(lprow);
+      else
+         addval = dualsol*SCIProwGetRhs(lprow);
 
       lhs += addval;
 
