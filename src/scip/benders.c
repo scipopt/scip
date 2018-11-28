@@ -822,6 +822,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* the flag is set to indicate that the Benders' decomposition is a copy */
       targetbenders->iscopy = TRUE;
 
+      targetbenders->lnscheck = benders->lnscheck;
+
       /* calling the copy method for the Benders' cuts */
       SCIPbendersSortBenderscuts(benders);
       for( i = 0; i < benders->nbenderscuts; i++ )
