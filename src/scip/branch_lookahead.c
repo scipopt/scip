@@ -764,9 +764,14 @@ SCIP_RETCODE level2dataGetResult(
 
    *result = NULL;
 
-   SCIP_CALL( level2resultCreate(scip, &tmpresult) );
+   /* we branched twice on the same variable; the result cannot be stored already */
+   if( data->branchvar1 == data->branchvar2 )
+   {
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      return SCIP_OKAY;
+   }
 
-   assert(data->branchvar1 != data->branchvar2);
+   SCIP_CALL( level2resultCreate(scip, &tmpresult) );
 
    if( data->branchvar1 < data->branchvar2 )
    {
@@ -821,6 +826,13 @@ SCIP_RETCODE level2dataStoreResult(
 
    *duplicate = FALSE;
 
+   /* we branched twice on the same variable; the result cannot be re-used lated */
+   if( data->branchvar1 == data->branchvar2 )
+   {
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( level2dataEnsureSize(scip, data) );
 
    SCIP_CALL( level2resultCreate(scip, &result) );
@@ -828,8 +840,6 @@ SCIP_RETCODE level2dataStoreResult(
    result->lpobjval = lpobjval;
    result->cutoff = cutoff;
    result->valid = valid;
-
-   assert(data->branchvar1 != data->branchvar2);
 
    if( data->branchvar1 < data->branchvar2 )
    {
