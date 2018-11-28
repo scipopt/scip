@@ -3534,13 +3534,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
       SCIP_CALL( SCIPsolveNLP(subproblem) );
 
-      /* TODO set NLP parameters ? */
-#if 0
-      SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1);
-
-      SCIP_CALL( SCIPwriteNLP(subproblem, NULL) );
-#endif
-
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
       nlptermstat = SCIPgetNLPTermstat(subproblem);
       SCIPdebugMsg(scip, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
@@ -3688,11 +3681,13 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
 
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
+      SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
    }
 
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_FULL) );
+      SCIP_CALL( SCIPsetIntParam(subproblem, "display/freq", 1) );
 #endif
 
    SCIP_CALL( SCIPsolve(subproblem) );
