@@ -4626,6 +4626,9 @@ SCIP_RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->row != NULL && !SCIProwIsModifiable(consdata->row) )
+      return SCIP_OKAY;
+
    if( !consdata->removedfixings )
    {
       SCIP_Real lhssubtrahend;
