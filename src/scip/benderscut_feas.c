@@ -284,7 +284,17 @@ SCIP_RETCODE computeStandardFeasibilityCutNL(
       SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, NULL, cut, nlrow, exprinterpreter, -dualsol, &dirderiv) );
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
-      lhs += dualsol * activity;
+
+      if( dualsol > 0.0 )
+      {
+         assert(!SCIPisInfinity(subproblem, SCIPnlrowGetRhs(nlrow)));
+         lhs += dualsol * (activity - SCIPnlrowGetRhs(nlrow));
+      }
+      else
+      {
+         assert(!SCIPisInfinity(subproblem, -SCIPnlrowGetLhs(nlrow)));
+         lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
+      }
    }
 
    SCIPexprintFree(&exprinterpreter);
