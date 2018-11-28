@@ -70,10 +70,12 @@
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
+#define MINSCALE                    0.001    /**< minimal allowed scale for cancelling non-zeros */
 
 
 #define DEFAULT_MINACCEPTCANCELNNZS     5    /**< minimal cancel nonzeros when accepting to aggregate variables */
 #define DEFAULT_MINCONSIDEREDNNZS      10    /**< minimal number of considered non-zeros within one column */
+#define DEFAULT_MAXCOMPAREDEVERYPAIR  200    /**< maximal number on the implementaion of doing reduction on every pair of variables */
 
 
 /*
@@ -102,6 +104,7 @@ struct SCIP_PresolData
 
    int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate variables */
    int                   minconsiderednnzs;  /**< minimal number of considered non-zeros within one column */
+   int                   maxcompareeverypair;/**< maximal number on the implementaion of doing reduction on every pair of variables */
 };
 
 /*
@@ -131,7 +134,7 @@ SCIP_RETCODE aggregation(
    SCIP_Bool infeasible;
    SCIP_Bool aggregated;
 
-   assert( !SCIPisZero(weight1) );
+   assert( !SCIPisZero(scip, weight1) );
 
    presoldata->naggregated += 1;
    aggregatedvar = SCIPmatrixGetVar(matrix, colidx2);
@@ -204,8 +207,9 @@ SCIP_RETCODE cancelCol(
 
    varlen1 =  SCIPmatrixGetColNNonzs(matrix, colidx1);
    varlen2 =  SCIPmatrixGetColNNonzs(matrix, colidx2);
-   assert(varlen1 >= 10);
-   assert(varlen2 >= 10);
+   assert(varlen1 >= presoldata->minconsiderednnzs);
+   assert(varlen2 >= presoldata->minconsiderednnzs);
+
    var1 = SCIPmatrixGetVar(matrix, colidx1);
    var2 = SCIPmatrixGetVar(matrix, colidx2);
    inds1 = SCIPmatrixGetColIdxPtr(matrix, colidx1);
@@ -306,14 +310,14 @@ SCIP_RETCODE cancelCol(
       {
          *success = TRUE;
 
-         if( tmp_sign )
+         if( tmp_sign && 1.0/maxratio > MINSCALE )
          {
             SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, 1.0/maxratio) );
 
             *ncanceled = *ncanceled + nmaxratio - nnz1;
             *nchgcoefs = *nchgcoefs + varlen2;
          }
-         else
+         else if( maxratio < MAXSCALE )
          {
             SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, maxratio) );
 
@@ -377,6 +381,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
    int *processedvarsidx;
    int *processedvarsnnz;
+   SCIP_Bool *processedvarssign;
    int nprocessedvarsidx;
 
    nprocessedvarsidx = 0;
@@ -415,8 +420,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       nratios = 0;
       ncancels = 0;
       nchgcoef = 0;
+
       SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsidx, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &processedvarsnnz, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &processedvarssign, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ratios, nrows) );
 
       for(i=0; i<ncols; i++)
@@ -428,6 +435,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          {
             processedvarsidx[nprocessedvarsidx] = i;
             processedvarsnnz[nprocessedvarsidx] = nnonz;
+            processedvarssign[nprocessedvarsidx] = TRUE;
             nprocessedvarsidx++;
          }
       }
@@ -441,23 +449,62 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       SCIPsortIntInt(processedvarsnnz, processedvarsidx, nprocessedvarsidx);
 
-      i=0;
-      while(i < nprocessedvarsidx - 1)
+      /* compare every pair of variables if the number of considered variables is small enough */
+      if( nprocessedvarsidx > presoldata->maxcompareeverypair )
       {
-         SCIP_Bool success;
-
-         nchgcoef = 0;
-         ncancel = 0;
-         cancelCol(scip, presoldata, matrix, processedvarsidx[i], processedvarsidx[i+1], &success, ratios, &nratios, &nchgcoef, &ncancel, &nfillins);
-
-         if( success )
+         for(i=0; i<nprocessedvarsidx; i++)
          {
-            ncancels += ncancel;
-            *nchgcoefs += nchgcoef;
-            *naggrvars += 1;
-            *naddconss += 1;
+            /* only consider the variable that has not aggregated or used to aggregated */
+            if( processedvarssign[i] )
+            {
+               for(j=i+1; j<nprocessedvarsidx; j++)
+               {
+                  SCIP_Bool success;
+
+                  if( !processedvarssign[j] )
+                     continue;
+
+                  nchgcoef = 0;
+                  ncancel = 0;
+                  cancelCol(scip, presoldata, matrix, processedvarsidx[i], processedvarsidx[j], &success, ratios, &nratios, &nchgcoef, &ncancel, &nfillins);
+
+                  if( success )
+                  {
+                     ncancels += ncancel;
+                     *nchgcoefs += nchgcoef;
+                     *naggrvars += 1;
+                     *naddconss += 1;
+                     processedvarssign[i] = FALSE;
+                     processedvarssign[j] = FALSE;
+                     break;
+                  }
+               }
+            }
          }
-         i=i+2;
+      }
+      /* compare only the neighbor pair of variables if the number of considered variables is too large */
+      else
+      {
+         i=0;
+         while(i < nprocessedvarsidx - 1)
+         {
+            SCIP_Bool success;
+
+            nchgcoef = 0;
+            ncancel = 0;
+            cancelCol(scip, presoldata, matrix, processedvarsidx[i], processedvarsidx[i+1], &success, ratios, &nratios, &nchgcoef, &ncancel, &nfillins);
+
+            if( success )
+            {
+               ncancels += ncancel;
+               *nchgcoefs += nchgcoef;
+               *naggrvars += 1;
+               *naddconss += 1;
+               i += 2;
+            }
+            else
+               i++;
+         }
       }
 
       presoldata->ncancels += ncancels;
@@ -472,9 +519,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          presoldata->nwaitingcalls = INT_MAX;
       }
 
-      SCIPfreeBufferArray(scip, ratios);
-      SCIPfreeBufferArray(scip, processedvarsidx);
-      SCIPfreeBufferArray(scip, processedvarsnnz);
+      SCIPfreeBufferArray(scip, &ratios);
+      SCIPfreeBufferArray(scip, &processedvarsidx);
+      SCIPfreeBufferArray(scip, &processedvarsnnz);
+      SCIPfreeBufferArray(scip, &processedvarssign);
    }
 
    SCIPmatrixFree(scip, &matrix);
@@ -549,6 +597,10 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "minimal number of considered non-zeros within one column",
          &presoldata->minconsiderednnzs, FALSE, DEFAULT_MINCONSIDEREDNNZS, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/dualsparsify/maxcompareeverypair",
+         "maximal number on the implementaion of doing reduction on every pair of variables",
+         &presoldata->maxcompareeverypair, FALSE, DEFAULT_MAXCOMPAREDEVERYPAIR, 0, INT_MAX, NULL, NULL) );
 #if 0
          "maximal fillin for continuous variables (-1: unlimited)",
          &presoldata->maxcontfillin, FALSE, DEFAULT_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
