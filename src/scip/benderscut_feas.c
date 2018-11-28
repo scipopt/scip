@@ -69,9 +69,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    )
 {
    SCIP_VAR** vars;
-   SCIP_VAR** fixedvars;
    int nvars;
-   int nfixedvars;
    int nrows;
    SCIP_Real dualsol;
    SCIP_Real lhs;       /* the left hand side of the cut */
@@ -87,11 +85,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
 
    (*success) = FALSE;
-
-   nvars = SCIPgetNVars(subproblem);
-   vars = SCIPgetVars(subproblem);
-   nfixedvars = SCIPgetNFixedVars(subproblem);
-   fixedvars = SCIPgetFixedVars(subproblem);
 
    /* looping over all LP rows and setting the coefficients of the cut */
    nrows = SCIPgetNLPRows(subproblem);
@@ -131,16 +124,16 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
    }
 
+   nvars = SCIPgetNVars(subproblem);
+   vars = SCIPgetVars(subproblem);
+
    /* looping over all variables to update the coefficients in the computed cut. */
-   for( i = 0; i < nvars + nfixedvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {
       SCIP_VAR* var;
       SCIP_VAR* mastervar;
 
-      if( i < nvars )
-         var = vars[i];
-      else
-         var = fixedvars[i - nvars];
+      var = vars[i];
 
       /* retreiving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
