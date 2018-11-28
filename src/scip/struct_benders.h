@@ -76,6 +76,7 @@ struct SCIP_Benders
    SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
    SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
+   SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
