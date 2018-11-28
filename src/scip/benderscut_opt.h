@@ -20,9 +20,9 @@
  *
  * The classical Benders' decomposition optimality cuts arise from a feasible instance of the Benders' decomposition
  * subproblem. The optimality cuts are an underestimator of the subproblem objective function value. Auxiliary
- * variables, \f$\varphi\f$ are added to the master problem as alower bound on the subproblem objective function value.
+ * variables, \f$\varphi\f$ are added to the master problem as a lower bound on the subproblem objective function value.
  *
- * Consider the Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * Consider a linear Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
  * \f[
  * z(\bar{x}) = \min\{d^{T}y : Ty \geq h - H\bar{x}, y \geq 0\}
  * \f]
@@ -32,6 +32,18 @@
  * subproblem. The resulting cut is:
  * \f[
  * \varphi \geq w^{T}(h - Hx)
+ * \f]
+ *
+ * Next, consider a nonlinear Benders' decomposition subproblem that takes the master problem solution \f$\bar{x}\f$ as input:
+ * \f[
+ * z(\bar{x}) = \min\{d^{T}y : g(\bar{x},y) \leq 0, y \geq 0\}
+ * \f]
+ * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
+ * optimal) then the Benders' decomposition optimality cut can be generated from the optimal dual solution of the
+ * subproblem. Let \f$w\f$ be the vector corresponding to the optimal dual solution of the Benders' decomposition subproblem.
+ * The resulting cut is:
+ * \f[
+ * \varphi \geq z(\bar{x}) + w^{T} \nabla_x g(\bar{x}, y) (x-\bar{x})
  * \f]
  *
  */
