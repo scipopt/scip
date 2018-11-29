@@ -391,7 +391,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          SCIP_CALL( SCIPsetConsRemovable(masterprob, cons, TRUE) );
       }
 
-      /* verification of the cut */
+      /* computing the objective function from the cut activity to verify the accuracy of the constraint */
       verifyobj = 0.0;
       if( addcut )
       {
