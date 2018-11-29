@@ -1793,6 +1793,12 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
+extern
+SCIP_Bool SCIPsetGetSubscipsOff(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1896,6 +1902,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
 #define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshift) )
+
+#define SCIPsetGetSubscipsOff(set)         ( (set)->subscipsoff )
 
 #endif
 
