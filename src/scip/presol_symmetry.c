@@ -1606,8 +1606,11 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->nperms);
+   if ( presoldata->ncomponents > 0 )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->nperms);
+   }
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
 
@@ -1753,7 +1756,10 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars or transposed) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
-   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store whether binary variables are affected */
+   int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
+   int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -1764,6 +1770,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( perms != NULL );
+   assert( ncomponents != NULL || (components == NULL && componentbegins == NULL) );
 
    /* find symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
@@ -1783,8 +1790,11 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    {
       int i;
 
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->nperms);
+      if ( presoldata->ncomponents > 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->nperms);
+      }
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
       if ( transposedperms )
@@ -1839,7 +1849,14 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( binvaraffected != NULL )
       *binvaraffected = presoldata->binvaraffected;
 
-   SCIP_CALL( computeComponents(scip, presoldata) );
+   if ( ncomponents != NULL )
+   {
+      SCIP_CALL( computeComponents(scip, presoldata) );
+
+      *components = presoldata->components;
+      *componentbegins = presoldata->componentbegins;
+      *ncomponents = presoldata->ncomponents;
+   }
 
    return SCIP_OKAY;
 }

@@ -590,43 +590,38 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
 static
 SCIP_RETCODE detectOrbitopes(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< pointer to data of symbreak presolver */
+   SCIP_PRESOLDATA*      presoldata,         /**< pointer to data of symbreak presolver */
+   int*                  components,         /**< array containing components of symmetry group */
+   int*                  componentbegins,    /**< array containing begin positions of components in components array */
+   int                   ncomponents         /**< number of components */
    )
 {
    SCIP_VAR** permvars;
-   int** components;
    int** perms;
-   int* npermsincomponent;
-   int ncomponents;
    int npermvars;
    int i;
 
    assert( scip != NULL );
    assert( presoldata != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( ncomponents > 0 );
 
    /* exit if no symmetry is present */
    if ( presoldata->nperms == 0 )
       return SCIP_OKAY;
 
-   /* compute components if not done yet */
-   if ( presoldata->ncomponents == -1 )
-   {
-      SCIP_CALL( computeComponents(scip, presoldata) );
-   }
    assert( presoldata->nperms > 0 );
    assert( presoldata->perms != NULL );
    assert( presoldata->npermvars > 0 );
    assert( presoldata->permvars != NULL );
-   assert( presoldata->ncomponents > 0 );
-   assert( presoldata->components != NULL );
-   assert( presoldata->npermsincomponent != NULL );
 
    perms = presoldata->perms;
    npermvars = presoldata->npermvars;
    permvars = presoldata->permvars;
-   ncomponents = presoldata->ncomponents;
-   npermsincomponent = presoldata->npermsincomponent;
-   components = presoldata->components;
+
+   /* @TODO: remove this, it guarantees functionality for intermediate steps */
+   SCIP_CALL( computeComponents(scip, presoldata) );
 
    /* iterate over components */
    for (i = 0; i < ncomponents; ++i)
@@ -637,6 +632,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool* usedperm;
       int** orbitopevaridx;
       int* columnorder;
+      int npermsincomponent = componentbegins[i + 1] - componentbegins[i];
       int ntwocyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
@@ -647,14 +643,14 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool infeasibleorbitope;
 
       /* get properties of permutations */
-      assert( npermsincomponent[i] > 0 );
-      for (j = 0; j < npermsincomponent[i]; ++j)
+      assert( npermsincomponent > 0 );
+      for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
          SCIP_Bool iscompoftwocycles = FALSE;
          SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( getPermProperties(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
@@ -678,8 +674,8 @@ SCIP_RETCODE detectOrbitopes(
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
 
       /* whether a permutation was considered to contribute to orbitope */
-      SCIP_CALL( SCIPallocBufferArray(scip, &usedperm, npermsincomponent[i]) );
-      for (j = 0; j < npermsincomponent[i]; ++j)
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedperm, npermsincomponent) );
+      for (j = 0; j < npermsincomponent; ++j)
          usedperm[j] = FALSE;
       nusedperms = 0;
 
@@ -687,13 +683,13 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent[i] + 1) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent + 1) ); /*lint !e866*/
       }
 
       /* order of columns of orbitopevaridx */
-      SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, npermsincomponent[i] + 1) );
-      for (j = 0; j < npermsincomponent[i] + 1; ++j)
-         columnorder[j] = npermsincomponent[i] + 2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, npermsincomponent + 1) );
+      for (j = 0; j < npermsincomponent + 1; ++j)
+         columnorder[j] = npermsincomponent + 2;
 
       /* count how often an element was used in the potential orbitope */
       SCIP_CALL( SCIPallocBufferArray(scip, &nusedelems, npermvars) );
@@ -704,7 +700,7 @@ SCIP_RETCODE detectOrbitopes(
       row = 0;
       for (j = 0; j < npermvars; ++j)
       {
-         int permidx = components[i][0];
+         int permidx = components[componentbegins[i]];
 
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
@@ -730,19 +726,19 @@ SCIP_RETCODE detectOrbitopes(
        * intersect the last added left column in each row in exactly one entry, starting with
        * column 0 */
       coltoextend = 0;
-      for (j = 0; j < npermsincomponent[i]; ++j)
+      for (j = 0; j < npermsincomponent; ++j)
       {  /* lint --e{850} */
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
-         if ( nusedperms == npermsincomponent[i] )
+         if ( nusedperms == npermsincomponent )
             break;
 
          if ( usedperm[j] )
             continue;
 
          SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[i][j]], TRUE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], TRUE, &nusedelems, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -763,19 +759,19 @@ SCIP_RETCODE detectOrbitopes(
          goto FREEDATASTRUCTURES;
 
       coltoextend = 1;
-      for (j = 0; j < npermsincomponent[i]; ++j)
+      for (j = 0; j < npermsincomponent; ++j)
       {  /*lint --e(850)*/
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
-         if ( nusedperms == npermsincomponent[i] )
+         if ( nusedperms == npermsincomponent )
             break;
 
          if ( usedperm[j] )
             continue;
 
          SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
-               perms[components[i][j]], FALSE, &nusedelems, &success, &infeasible) );
+               perms[components[componentbegins[i] + j]], FALSE, &nusedelems, &success, &infeasible) );
 
          if ( infeasible )
          {
@@ -793,7 +789,7 @@ SCIP_RETCODE detectOrbitopes(
          }
       }
 
-      if ( nusedperms < npermsincomponent[i] ) /*lint !e850*/
+      if ( nusedperms < npermsincomponent ) /*lint !e850*/
          isorbitope = FALSE;
 
       if ( ! isorbitope )
@@ -803,17 +799,17 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i] + 1) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent + 1) ); /*lint !e866*/
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
-      SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
+      SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
             orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
 
       if ( ! infeasibleorbitope )
       {
-         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent[i] + 1, TRUE,
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent + 1, TRUE,
                presoldata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -977,6 +973,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   int* components;
+   int* componentbegins;
+   int ncomponents;
 
    assert( presol != NULL );
    assert( scip != NULL );
@@ -999,9 +998,18 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
-            &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
-            &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
+      if ( presoldata->detectorbitopes )
+      {
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &ncomponents) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), NULL, NULL, NULL) );
+      }
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1028,7 +1036,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
          if ( presoldata->detectorbitopes )
          {
-            SCIP_CALL( detectOrbitopes(scip, presoldata) );
+            SCIP_CALL( detectOrbitopes(scip, presoldata, components, componentbegins, ncomponents) );
          }
       }
    }
