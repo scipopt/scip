@@ -37,9 +37,9 @@ struct SCIP_BenderscutCut
 {
    SCIP_VAR**            vars;               /**< the variables forming the cut */
    SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
-   int                   nvars;              /**< the number of variables in the cut */
    SCIP_Real             lhs;                /**< the left hand side of the cut */
    SCIP_Real             rhs;                /**< the right hand side of the cut */
+   int                   nvars;              /**< the number of variables in the cut */
 };
 typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
 
