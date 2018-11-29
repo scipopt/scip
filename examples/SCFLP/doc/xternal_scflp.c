@@ -88,7 +88,7 @@
  *         & \\
  *         & \displaystyle \sum_{j \in J} y^{s}_{ij} \le k_{i}x_{i} & \quad \forall i \in I, \forall s \in  S \\
  *         & \\
- *         & \displaystyle \sum_{i \in I} k_{i}x_{i} \le \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
+ *         & \displaystyle \sum_{i \in I} k_{i}x_{i} \ge \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
  *         & \\
  *         & \displaystyle x_{i} \in \{0, 1\} & \quad \forall i \in I \\
  *         & \\
@@ -112,7 +112,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle \sum_{i \in I} f_{i} x_{i} + \frac{1}{|S|}\sum_{s \in S}\varphi^{s} \\
  *         & \\
- *    subject \ to & \displaystyle \sum_{i \in I} k_{i}x_{i} \le \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
+ *    subject \ to & \displaystyle \sum_{i \in I} k_{i}x_{i} \ge \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
  *         & \\
  *         & \displaystyle \varphi^{s} \geq \sum_{j \in J}\lambda^{s}_{j}u^{p}_{j} + \sum_{i \in I}k_{i}x_{i}v^{p}_{i} & \quad \forall s \in S, \forall p \in P^{s} \\
  *         & \\

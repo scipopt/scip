@@ -2305,72 +2305,77 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
-      /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
-      if( cons == NULL )
+      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 ||
+         strncmp(getScenarioEntryCol(scenario, i), rhs, 3) == 0 ||
+         strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
-         SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
-         return SCIP_READERROR;
-      }
-      else
-      {
-         if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 ||
-            strncmp(getScenarioEntryCol(scenario, i), rhs, 3) == 0 ||
-            strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
+         /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
+         if( cons == NULL )
          {
-            /* if the constraint is an equality constraint, then the LHS must also be changed */
-            if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
-            {
-               SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-               SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-            }
-            else if( SCIPisLT(scenarioscip, SCIPgetRhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
-               SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-            else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
-               SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
          }
-         else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
-            strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
-            strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
-         {
-            /* finding the variable associated with the column */
-            getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
-               getScenarioNum(scenarioscip, scenario));
-            var = SCIPfindVar(scenarioscip, name);
 
-            /* changing the coefficient for the variable */
-            if( var == NULL )
-            {
-               SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               return SCIP_READERROR;
-            }
-            else
-            {
-               SCIP_CALL( SCIPchgVarObj(scenarioscip, var, getScenarioEntryValue(scenario, i)*probability) );
-            }
+         /* if the constraint is an equality constraint, then the LHS must also be changed */
+         if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
+         {
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+         }
+         else if( SCIPisLT(scenarioscip, SCIPgetRhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+         else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+      }
+      else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
+      {
+         /* finding the variable associated with the column */
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
+
+         /* changing the coefficient for the variable */
+         if( var == NULL )
+         {
+            SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
          }
          else
          {
-            /* finding the variable associated with the column */
-            getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
-               getScenarioNum(scenarioscip, scenario));
+            SCIP_CALL( SCIPchgVarObj(scenarioscip, var, getScenarioEntryValue(scenario, i)*probability) );
+         }
+      }
+      else
+      {
+         /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
+         if( cons == NULL )
+         {
+            SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
+         }
+
+         /* finding the variable associated with the column */
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
+
+         if( var == NULL )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", getScenarioEntryCol(scenario, i));
             var = SCIPfindVar(scenarioscip, name);
+         }
 
-            if( var == NULL )
-            {
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", getScenarioEntryCol(scenario, i));
-               var = SCIPfindVar(scenarioscip, name);
-            }
-
-            /* changing the coefficient for the variable */
-            if( var == NULL )
-            {
-               SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               return SCIP_READERROR;
-            }
-            else
-            {
-               SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
-            }
+         /* changing the coefficient for the variable */
+         if( var == NULL )
+         {
+            SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
          }
       }
    }
@@ -2602,7 +2607,7 @@ TERMINATE:
    stoinputFree(scip, &stoi);
    SCIPfclose(fp);
 
-   if( error )
+   if( error || retcode != SCIP_OKAY )
       return SCIP_READERROR;
    else
       return SCIP_OKAY;
