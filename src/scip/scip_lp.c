@@ -1600,8 +1600,9 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        violated, the linear relaxation might not be violated anymore.)
  *
  *  @note If the variable being added is FIXED (as given by the status SCIP_VARSTATUS_FIXED), then the variable is not
- *        added to the row, but the corresponding constant is added. Similarly, if the variable is aggregated or
- *        negated, then the aggregated or negated variables will be added in place of the input variable.
+ *        added to the row, but the corresponding constant is added. Similarly, if the input variable is aggregated (as
+ *        given by the status SCIP_VARSTATUS_AGGREGATED), then the input variable is substituted with its aggregation.
+ *        For other cases, and to better understand the function behavior, please check the code of SCIPvarAddToRow.
  */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
