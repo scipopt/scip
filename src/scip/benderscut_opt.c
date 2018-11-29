@@ -354,8 +354,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* allocating memory for the variable and values arrays */
    nmastervars = SCIPgetNVars(masterprob) + SCIPgetNFixedVars(masterprob);
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(masterprob, &vars, nmastervars) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(masterprob, &vals, nmastervars) );
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vars, nmastervars) );
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vals, nmastervars) );
    lhs = 0.0;
    rhs = SCIPinfinity(masterprob);
    nvars = 0;
@@ -471,8 +471,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       }
    }
 
-   SCIPfreeBlockMemoryArray(masterprob, &vals, nmastervars);
-   SCIPfreeBlockMemoryArray(masterprob, &vars, nmastervars);
+   SCIPfreeBufferArray(masterprob, &vals);
+   SCIPfreeBufferArray(masterprob, &vars);
 
    return SCIP_OKAY;
 }

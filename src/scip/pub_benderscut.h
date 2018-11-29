@@ -115,7 +115,7 @@ int SCIPbenderscutGetNAddedCuts(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** returns the cuts that have been added by the Benders' cut plugin */
+/** returns the data for the cuts that have been added by the Benders' cut plugin */
 EXTERN
 SCIP_RETCODE SCIPbenderscutGetAddedCutData(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
