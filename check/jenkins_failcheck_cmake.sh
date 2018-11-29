@@ -355,28 +355,37 @@ done
 
 # construct the rubberband link
 if [ "${PERFORMANCE}" == "performance" ]; then
-  # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
-  RBDB_STRS=`grep -e "\(${OLDTIMESTAMP}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2`
 
-  i=0
-  while read -r line; do
+  function geturl() {
+    RBDB_STRS=$1
+    i=0
+    while read -r line; do
       arr=($line)
       RBIDS[$i]=${arr[-1]}
       ((i++))
-  done <<< "${RBDB_STRS}"
+    done <<< "${RBDB_STRS}"
 
-  IDSTR=$(printf ",%s" "${RBIDS[@]}")
-  IDSTR=${IDSTR:1}
+    IDSTR=$(printf ",%s" "${RBIDS[@]}")
+    IDSTR=${IDSTR:1}
 
-  URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
+    URLSTR=$(echo ${IDSTR} | sed 's/,/?compare=/')
 
-  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
-"`
+    echo ${URLSTR}
+  }
 
+  # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
+  RBDB_STRS=$(grep -e "\(${OLDTIMESTAMP}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2)
+
+  URLSTR=$(geturl "${RBDB_STRS}")
+
+  PERF_MAIL=$(echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
+")
+
+  # add a comparison for all permutations
   PERM=0
   while [ $PERM -le $PERMUTE ]; do
-    LASTWEEK=`grep -e ${OLDTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
-    THISWEEK=`grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2`
+    LASTWEEK=$(grep -e ${OLDTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2)
+    THISWEEK=$(grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2)
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
         PERF_MAIL="${PERF_MAIL}
@@ -385,6 +394,14 @@ Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compar
     fi
     PERM=$((PERM + 1))
   done
+
+  # if there is a comparerelease line in the database, then include the comparison in the mail
+  if [ "$(grep comparerelease ${RBDB})" != "" ]; then
+    RBDB_RELEASE=$(grep -e "\(comparerelease\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2)
+    URLSTR=$(geturl "${RBDB_RELEASE}")
+    PERF_MAIL="${PERF_MAIL}
+Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
+  fi
 
   SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
   echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
