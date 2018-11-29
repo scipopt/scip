@@ -3078,6 +3078,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          /* if the (N)LP was solved without error, then the subproblem is labelled as solved */
          if( solvestatus == SCIP_STATUS_OPTIMAL || solvestatus == SCIP_STATUS_INFEASIBLE )
             (*solved) = TRUE;
+
          if( solvestatus == SCIP_STATUS_INFEASIBLE )
             (*infeasible) = TRUE;
       }
@@ -3105,7 +3106,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
        * If a subproblem is unbounded, then the auxiliary variables are set to -infinity and the unbounded flag is
        * returned as TRUE. No cut will be generated, but the result will be set to SCIP_FEASIBLE.
        */
-      if( solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
+      if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_CIP )
       {
          if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
             bestsol = NULL;
@@ -3117,7 +3118,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( solvestatus == SCIP_STATUS_USERINTERRUPT || solvestatus == SCIP_STATUS_BESTSOLLIMIT )
             SCIPbendersSetSubproblemObjval(benders, probnumber, objective);
-         else if( solvestatus == SCIP_STATUS_MEMLIMIT || solvestatus == SCIP_STATUS_TIMELIMIT || solvestatus == SCIP_STATUS_UNKNOWN )
+         else if( solvestatus == SCIP_STATUS_MEMLIMIT || solvestatus == SCIP_STATUS_TIMELIMIT
+            || solvestatus == SCIP_STATUS_UNKNOWN )
          {
             SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "   Benders' decomposition: Error solving "
                "subproblem %d. No cut will be generated for this subproblem.\n", probnumber);
