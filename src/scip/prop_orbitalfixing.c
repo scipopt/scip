@@ -380,41 +380,45 @@ SCIP_RETCODE computeBranchingVariables(
 
       /* get domain changes of current node */
       domchg = SCIPnodeGetDomchg(node);
-      assert( domchg != NULL );
 
-      /* loop through all bound changes */
-      nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
-      for (i = 0; i < nboundchgs; ++i)
+      /* If we stopped due to a solving limit, it might happen that a non-root node has no domain changes, in all other
+       * cases domchg should not be NULL. */
+      if ( domchg != NULL )
       {
-         /* get bound change info */
-         boundchg = SCIPdomchgGetBoundchg(domchg, i);
-         assert( boundchg != NULL );
-
-         /* branching decisions have to be in the beginning of the bound change array */
-         if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
-            break;
-
-         /* get corresponding branching variable */
-         branchvar = SCIPboundchgGetVar(boundchg);
-
-         /* we only consider binary variables */
-         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
+         /* loop through all bound changes */
+         nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
+         for (i = 0; i < nboundchgs; ++i)
          {
-            /* make sure that branching variable is known, since new binary variables may have
-             * been created meanwhile, e.g., by presol_inttobinary */
-            if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
-            {
-               *success = FALSE;
-               return SCIP_OKAY;
-            }
+            /* get bound change info */
+            boundchg = SCIPdomchgGetBoundchg(domchg, i);
+            assert( boundchg != NULL );
 
-            if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
-            {
-               int branchvaridx;
+            /* branching decisions have to be in the beginning of the bound change array */
+            if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
+               break;
 
-               branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
-               assert( branchvaridx < nvars );
-               b1[branchvaridx] = TRUE;
+            /* get corresponding branching variable */
+            branchvar = SCIPboundchgGetVar(boundchg);
+
+            /* we only consider binary variables */
+            if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
+            {
+               /* make sure that branching variable is known, since new binary variables may have
+                * been created meanwhile, e.g., by presol_inttobinary */
+               if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
+               {
+                  *success = FALSE;
+                  return SCIP_OKAY;
+               }
+
+               if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
+               {
+                  int branchvaridx;
+
+                  branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
+                  assert( branchvaridx < nvars );
+                  b1[branchvaridx] = TRUE;
+               }
             }
          }
       }
