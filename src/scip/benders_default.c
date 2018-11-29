@@ -46,11 +46,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_copy.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_param.h"
-#include "scip/scip_prob.h"
+#include "scip/scip.h"
 
 #define BENDERS_NAME                "default"
 #define BENDERS_DESC                "default implementation of Benders' decomposition"
@@ -75,6 +71,7 @@ struct SCIP_BendersData
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             created;            /**< flag to indicate that the Benders' decomposition Data was created */
+   SCIP_Bool             subprobscopied;     /**< were the subproblems copied during the SCIP copy */
 };
 
 
@@ -232,7 +229,50 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
    /* if the Benders' decomposition is active, then it must be created in the copy */
    if( SCIPbendersIsActive(benders) )
    {
-      SCIP_CALL( SCIPcreateBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
+      SCIP** subproblems;
+      int i;
+
+      /* if Benders' decomposition will be used in a parallel application, then the subproblems need to be copied. */
+      if( SCIPbendersGetParallel(benders) )
+      {
+         /* allocating memory for the subproblems array */
+         SCIP_CALL( SCIPallocBufferArray(scip, &subproblems, bendersdata->nsubproblems) );
+
+         for( i = 0; i < bendersdata->nsubproblems; i++ )
+         {
+            SCIP_Bool valid;
+
+            /* creating the SCIP instance for the subproblem */
+            SCIP_CALL( SCIPcreate(&subproblems[i]) );
+
+            /* the original problem is copied so that the variable mappings are created correctly.
+             * TODO: use a varmap to create the mappings for the copies
+             */
+            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, FALSE, &valid) );
+            assert(valid);
+         }
+      }
+      else
+         subproblems = bendersdata->subproblems;
+
+      SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, bendersdata->nsubproblems) );
+
+      /* freeing the buffer memory for the subproblems */
+      if( SCIPbendersGetParallel(benders) )
+      {
+         SCIP_BENDERS* targetbenders;
+         SCIP_BENDERSDATA* targetbendersdata;
+
+         targetbenders = SCIPfindBenders(scip, BENDERS_NAME);
+         assert(targetbenders != NULL);
+
+         targetbendersdata = SCIPbendersGetData(targetbenders);
+
+         /* indicating that the subproblems have been copied */
+         targetbendersdata->subprobscopied = TRUE;
+
+         SCIPfreeBufferArray(scip, &subproblems);
+      }
    }
 
    return SCIP_OKAY;
@@ -262,6 +302,15 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
       /* free hash map */
       SCIPhashmapFree(&bendersdata->subvartomastervar);
       SCIPhashmapFree(&bendersdata->mastervartosubindex);
+
+      /* if the subproblems were copied, then the copy needs to be freed */
+      if( bendersdata->subprobscopied )
+      {
+         for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
+         {
+            SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
+         }
+      }
 
       SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
    }
@@ -431,6 +480,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
    bendersdata->created = FALSE;
+   bendersdata->subprobscopied = FALSE;
 
    benders = NULL;
 

@@ -134,7 +134,8 @@ SCIP_Bool SCIPbendersIsActive(
  *  that all subproblems are convex relaxations.
  */
 SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    );
 
 /** Are Benders' cuts generated from the LP solutions? */
@@ -158,6 +159,12 @@ SCIP_Bool SCIPbendersCutRelaxation(
 /** Should this Benders' use the auxiliary variables from the highest priority Benders'? */
 EXTERN
 SCIP_Bool SCIPbendersShareAuxVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** returns whether parallelisation will be used. This indicates that thread safe operations must be performed. */
+EXTERN
+SCIP_Bool SCIPbendersGetParallel(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 

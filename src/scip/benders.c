@@ -49,6 +49,7 @@
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 #define SCIP_DEFAULT_AUXVARSIMPLINT        TRUE  /** set the auxiliary variables as implint if the subproblem objective is integer */
+#define SCIP_DEFAULT_PARALLEL             FALSE  /** is Benders' decomposition used within a parallel solver */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -555,7 +556,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodesolved)
    benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
 
    /* The event is only caught if there is an active Benders' decomposition */
-   if( SCIPbendersIsActive(benders) && !SCIPbendersOnlyCheckConvexRelax(benders) )
+   if( SCIPbendersIsActive(benders) && !SCIPbendersOnlyCheckConvexRelax(benders, SCIPgetSubscipsOff(scip)) )
    {
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
    }
@@ -978,6 +979,11 @@ SCIP_RETCODE doBendersCreate(
          "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
          &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/parallel", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "is Benders' decomposition used within a parallel solver?",
+         &(*benders)->parallel, FALSE, SCIP_DEFAULT_PARALLEL, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1245,8 +1251,11 @@ SCIP_RETCODE createSubproblems(
        *
        * This only occurs if the Benders' decomposition is not a copy. It is assumed that the correct objective
        * coefficients are given during the first subproblem creation.
+       *
+       * If the parallel parameter is set, then the master variables will be checked to ensure that they have a zero
+       * objective value.
        */
-      if( !benders->iscopy )
+      if( !benders->iscopy || benders->parallel )
       {
          SCIP_Bool objchanged = FALSE;
 
@@ -1297,9 +1306,11 @@ SCIP_RETCODE createSubproblems(
 
          SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
 
-         /* because the subproblems could be reused in the copy, the event handler is not created again.
+         /* because the subproblems could be reused in the copy, the event handler is not created again. If the parallel
+          * parameter is set to TRUE, then it is assumed that the subproblems are not reused.
           * NOTE: This currently works with the benders_default implementation. It may not be very general. */
-         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL && !benders->iscopy )
+         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
+            && (!benders->iscopy || benders->parallel) )
          {
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
@@ -2013,10 +2024,11 @@ SCIP_RETCODE updateAuxiliaryVarLowerbound(
  *  that all subproblems are convex relaxations.
  */
 SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    )
 {
-   return benders->iscopy && benders->lnscheck;
+   return benders->iscopy && benders->lnscheck && !subscipsoff;
 }
 
 /** returns the number of subproblems that will be checked in this iteration */
@@ -2027,7 +2039,8 @@ int numSubproblemsToCheck(
    SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
    )
 {
-   if( benders->ncalls == 0 || type == SCIP_BENDERSENFOTYPE_CHECK || SCIPbendersOnlyCheckConvexRelax(benders) )
+   if( benders->ncalls == 0 || type == SCIP_BENDERSENFOTYPE_CHECK
+      || SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set)) )
       return SCIPbendersGetNSubproblems(benders);
    else
       return (int) SCIPsetCeil(set, (SCIP_Real) SCIPbendersGetNSubproblems(benders)*benders->subprobfrac);
@@ -2088,7 +2101,7 @@ SCIP_RETCODE solveBendersSubproblems(
     * the CIP is not solved during the LNS check, the solutions are still of higher quality than when Benders' is not
     * employed.
     */
-   onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders);
+   onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set));
 
    /* it is possible to only solve a subset of subproblems. This is given by a parameter. */
    numtocheck = numSubproblemsToCheck(benders, set, type);
@@ -2358,7 +2371,7 @@ SCIP_RETCODE generateBendersCuts(
     * the CIP is not solved during the LNS check, the solutions are still of higher quality than when Benders' is not
     * employed.
     */
-   onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders);
+   onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set));
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
    if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
@@ -2569,10 +2582,11 @@ SCIP_RETCODE SCIPbendersExec(
    assert(infeasible != NULL);
    assert(auxviol != NULL);
 
-   /* if the Benders' decomposition is called from a sub-scip, it is assumed that this is an LNS heuristic. As such, the
-    * check is not performed and the solution is assumed to be feasible
+   /* if the Benders' decomposition is called from a sub-SCIP and the sub-SCIPs have been deactivated, then it is
+    * assumed that this is an LNS heuristic. As such, the check is not performed and the solution is assumed to be
+    * feasible
     */
-   if( benders->iscopy
+   if( benders->iscopy && set->subscipsoff
       && (!benders->lnscheck
          || (benders->lnsmaxdepth > -1 && SCIPgetDepth(benders->sourcescip) > benders->lnsmaxdepth)) )
    {
@@ -2693,7 +2707,7 @@ SCIP_RETCODE SCIPbendersExec(
           * second solving loop solves the CIP subproblems. The second solving loop is only called if the integer
           * feasibility is being checked and if the convex subproblems and convex relaxations are not infeasible.
           */
-         if( !(*infeasible) && checkint && !SCIPbendersOnlyCheckConvexRelax(benders)
+         if( !(*infeasible) && checkint && !SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set))
             && SCIPbendersGetNConvexSubproblems(benders) < SCIPbendersGetNSubproblems(benders))
             nsolveloops = 2;
       }
@@ -2910,7 +2924,7 @@ SCIP_RETCODE executeUserDefinedSolvesub(
       if( benders->benderssolvesubconvex != NULL )
       {
          SCIP_CALL( benders->benderssolvesubconvex(set->scip, benders, sol, probnumber,
-               SCIPbendersOnlyCheckConvexRelax(benders), objective, result) );
+               SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set)), objective, result) );
       }
       else
          (*result) = SCIP_DIDNOTRUN;
@@ -4368,6 +4382,16 @@ SCIP_Bool SCIPbendersShareAuxVars(
    assert(benders != NULL);
 
    return benders->shareauxvars;
+}
+
+/** returns whether parallelisation will be used. This indicates that thread safe operations must be performed. */
+SCIP_Bool SCIPbendersGetParallel(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->parallel;
 }
 
 /** adds a subproblem to the Benders' decomposition data */
