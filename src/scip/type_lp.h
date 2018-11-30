@@ -61,9 +61,10 @@ typedef enum SCIP_SideType SCIP_SIDETYPE;
 enum SCIP_RowOriginType
 {
    SCIP_ROWORIGINTYPE_UNSPEC   = 0,     /**< unspecified origin of row */
-   SCIP_ROWORIGINTYPE_CONSHDLR = 1,     /**< row created by an constraint handler */
-   SCIP_ROWORIGINTYPE_SEPA     = 2,     /**< row created by separator */
-   SCIP_ROWORIGINTYPE_REOPT    = 3      /**< row created by reoptimization */
+   SCIP_ROWORIGINTYPE_CONSHDLR = 1,     /**< row created by a constraint handler */
+   SCIP_ROWORIGINTYPE_CONS     = 2,     /**< row created by a constraint */
+   SCIP_ROWORIGINTYPE_SEPA     = 3,     /**< row created by separator */
+   SCIP_ROWORIGINTYPE_REOPT    = 4      /**< row created by reoptimization */
 };
 typedef enum SCIP_RowOriginType SCIP_ROWORIGINTYPE;
 

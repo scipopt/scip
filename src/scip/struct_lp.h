@@ -253,7 +253,7 @@ struct SCIP_Row
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
    unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
-   unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
+   unsigned int          origintype:3;       /**< origin of row (0: unkown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
 };
 
 /** current LP data */
