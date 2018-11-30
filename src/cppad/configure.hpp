@@ -47,7 +47,7 @@ compiler flags request C++11 features and the install procedure
 determined that all the necessary features are avaiable.
 */
 # if     _MSC_VER
-# if _MSC_VER > 1600
+# if _MSC_VER > 1800
 # define    CPPAD_USE_CPLUSPLUS_2011 1
 # else
 # define    CPPAD_USE_CPLUSPLUS_2011 0
