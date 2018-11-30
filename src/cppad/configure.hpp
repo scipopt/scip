@@ -138,7 +138,11 @@ If this symbol is one, and _MSC_VER is not defined,
 this system supports the gettimeofday funcgtion.
 Otherwise, this smybol should be zero.
 */
+#ifndef _MSC_VER
 # define CPPAD_HAS_GETTIMEOFDAY 1
+#else
+# define CPPAD_HAS_GETTIMEOFDAY 0
+#endif
 
 /*!
 \def CPPAD_TAPE_ADDR_TYPE
