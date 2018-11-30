@@ -91,6 +91,10 @@ then
         echo @FeasTol $FEASTOL >> $fname
         echo @Queue $QUEUE >> $fname
         echo @Exclusive $EXCLUSIVE >> $fname
+        if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
+            echo @QueueNode $CB_QUEUENODE >> $fname
+            echo @ClusterBenchmarkID $CB_ID>> $fname
+        fi
     fi
 fi
 
