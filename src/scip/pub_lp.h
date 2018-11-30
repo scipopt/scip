@@ -426,6 +426,17 @@ SCIP_CONSHDLR* SCIProwGetOriginCons(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns the actual constraint that generated the row (NULL if not available) */
+SCIP_CONS* SCIProwGetCons(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** set cons as the constraint that generated the row */
+void SCIProwSetCons(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns origin separator that created the row (NULL if not available) */
 EXTERN
 SCIP_SEPA* SCIProwGetOriginSepa(
@@ -503,6 +514,8 @@ void SCIProwChgRank(
 #define SCIProwIsRemovable(row)         (row)->removable
 #define SCIProwGetOrigintype(row)       (row)->origintype
 #define SCIProwGetOriginCons(row)       ((SCIP_CONSHDLR*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
+#define SCIProwGetCons(row)             (row)->cons
+#define SCIProwSetCons(row, cons)       ((row)->cons = (cons))
 #define SCIProwGetOriginSepa(row)       ((SCIP_SEPA*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA ? (row)->origin : NULL))
 #define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos
