@@ -310,7 +310,7 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+   SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 0.5790816326530611, 0.3637755102040817, -1.0, -0.7846938775510204) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
@@ -374,7 +374,7 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+   SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 1.45445115010332, 0.9772255750516624, -1.0, -1.9213268615442665) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
