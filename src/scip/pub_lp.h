@@ -422,7 +422,7 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
 
 /** returns origin constraint handler that created the row (NULL if not available) */
 EXTERN
-SCIP_CONSHDLR* SCIProwGetOriginCons(
+SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -513,7 +513,7 @@ void SCIProwChgRank(
 #define SCIProwIsModifiable(row)        (row)->modifiable
 #define SCIProwIsRemovable(row)         (row)->removable
 #define SCIProwGetOrigintype(row)       (row)->origintype
-#define SCIProwGetOriginCons(row)       ((SCIP_CONSHDLR*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
+#define SCIProwGetOriginConshdlr(row)   ((SCIP_CONSHDLR*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONSHDLR ? (row)->origin : NULL))
 #define SCIProwGetCons(row)             (row)->cons
 #define SCIProwSetCons(row, cons)       ((row)->cons = (cons))
 #define SCIProwGetOriginSepa(row)       ((SCIP_SEPA*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA ? (row)->origin : NULL))
