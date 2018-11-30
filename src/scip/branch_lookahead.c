@@ -580,6 +580,7 @@ void level2resultInit(
    result->valid = FALSE;
 }
 
+#ifdef SCIP_DEBUG
 /** prints the double branching result */
 static
 void level2resultPrint(
@@ -599,6 +600,9 @@ void level2resultPrint(
       SCIPvarGetName(vars[result->branchvar2]), result->branchdir2 ? ">=" : "<=", result->branchval2,
       result->lpobjval, result->cutoff, result->valid);
 }
+#else
+#define level2resultPrint(scip,result) /**/
+#endif
 
 /** frees the allocated memory of the double branching result */
 static
@@ -1102,6 +1106,8 @@ typedef struct
    int                   nsinglecandidate;   /**< number of times a single candidate was given to the recursion routine */
    int                   noldcandidate;      /**< number of times the old candidate from last call with nonviolating
                                               *   reductions was branched on */
+   int                   nlperrorcalls;      /**< number of times an LP error occured and LAB branched without completely
+                                              *   evaluating all candidates */
    int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
    int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
@@ -1132,6 +1138,7 @@ void statisticsInit(
 
    statistics->nsinglecandidate = 0;
    statistics->noldcandidate = 0;
+   statistics->nlperrorcalls = 0;
    statistics->ntotalresults = 0;
    statistics->nbinconst = 0;
    statistics->nbinconstvio = 0;
@@ -1299,6 +1306,8 @@ void statisticsPrint(
          statistics->nsinglecandidate);
       SCIPinfoMessage(scip, NULL, "The old branching candidate was used <%i> times.\n",
          statistics->noldcandidate);
+      SCIPinfoMessage(scip, NULL, "An LP error led to branching before all candidates were evaluated <%i> times.\n",
+         statistics->nlperrorcalls);
       SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
       SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n",
          statistics->ndomredcons);
@@ -4155,8 +4164,8 @@ SCIP_RETCODE executeBranchingRecursive(
          statistics->nlpiterationsfsb[probingdepth] += branchingresult->niterations;
       }
 #endif
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations.\n",
-         branchingresult->niterations);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations (status %d).\n",
+         branchingresult->niterations, SCIPgetLPSolstat(scip));
 
 #ifdef SCIP_DEBUG
       if( status->lperror )
@@ -4302,7 +4311,7 @@ SCIP_RETCODE executeBranchingRecursive(
          SCIP_CALL( candidateListFree(scip, &candidatelist) );
       }
    }
-   else if( branchingresult->cutoff && recursiondepth == 1 )
+   else if( branchingresult->cutoff && recursiondepth == 1 ) /* ????????? what if we are in scoring? */
    {
       /* this is a cutoff on the lowest tree level */
       branchingresult->ndeepestcutoffs++;
@@ -4884,7 +4893,9 @@ SCIP_RETCODE selectVarStart(
    SCIP_SOL* baselpsol = NULL;
    SCIP_Real lpobjval;
    int chosencandnr = -1;
+#ifdef SCIP_STATISTIC
    SCIP_Bool performedlab = FALSE;
+#endif
 
    assert(scip != NULL);
    assert(config != NULL);
@@ -4966,7 +4977,7 @@ SCIP_RETCODE selectVarStart(
    {
       assert(candidatelist->ncandidates > 0);
 
-      performedlab = TRUE;
+      SCIPstatistic(performedlab = TRUE);
 
       /* we create the binary constraint data here, because we do not need it for FSB scoring */
       if( config->usebincons )
@@ -4996,7 +5007,7 @@ SCIP_RETCODE selectVarStart(
       }
 
       /* only unviolating constraints and domain changes: store branching decision */
-      if( persistent != NULL && isStoreDecision(config, binconsdata, domainreductions) )
+      if( persistent != NULL && !status->lperror && isStoreDecision(config, binconsdata, domainreductions) )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%lld, cand <%s>\n",
             SCIPgetNNodeLPIterations(scip), SCIPvarGetName(decision->branchvar));
@@ -5097,7 +5108,7 @@ SCIP_RETCODE selectVarStart(
    }
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
 
-#ifdef SCIP_DEBUG
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
    if( config->abbreviated )
    {
       if( status->domred )
@@ -5125,6 +5136,7 @@ SCIP_RETCODE selectVarStart(
             else
                assert(!performedlab);
 #endif
+
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching branches on variable <%s>\n",
                SCIPvarGetName(decision->branchvar));
          }
@@ -5573,6 +5585,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->lperror )
       {
+#ifdef SCIP_STATISTIC
+         ++branchruledata->statistics->nlperrorcalls;
+#endif
          if( !branchingDecisionIsValid(decision) )
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "LP error with no valid candidate: select first candidate variable\n");
@@ -5671,7 +5686,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       int sum;
       int i;
 
-      sum = branchruledata->statistics->nsinglecandidate + branchruledata->statistics->noldcandidate;
+      sum = branchruledata->statistics->nsinglecandidate + branchruledata->statistics->noldcandidate +
+         branchruledata->statistics->nlperrorcalls;
 
       for( i = 0; i < branchruledata->statistics->maxnbestcands; i++ )
       {
