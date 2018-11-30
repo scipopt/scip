@@ -4621,7 +4621,7 @@ SCIP_RETCODE separatePointExprNlhdlr(
          SCIP_ROW* row;
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "adding cut ");

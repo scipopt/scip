@@ -308,7 +308,7 @@ SCIP_RETCODE computeCutsAbs(
             if( success )
             {
                memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, secant, rowprep, conshdlr) );
             }
 
             SCIPfreeRowprep(scip, &rowprep);

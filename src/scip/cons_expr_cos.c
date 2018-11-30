@@ -211,7 +211,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
 
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, cuts[i], conshdlr) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
                SCIProwSetCons(row, SCIPgetConsExprSepaCons(conshdlr));
@@ -241,7 +241,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
 
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, cuts[i], conshdlr) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
                SCIProwSetCons(row, SCIPgetConsExprSepaCons(conshdlr));

@@ -984,7 +984,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 
          assert(i == 0);
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
          /* since we did not relax the overestimator (i=0), we can turn the row into an equality if we need an underestimator, too */
          if( rowprep->sidetype == SCIP_SIDETYPE_LEFT )
@@ -1026,7 +1026,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       {
          SCIP_ROW* row;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "adding row ");
@@ -1106,7 +1106,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       assert(SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation);
 
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "add %s cut with violation %g\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, NULL));
