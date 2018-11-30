@@ -240,7 +240,7 @@ SCIP_RETCODE computeCutsAbs(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_neg_%s", SCIPvarGetName(x));
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowneg, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowneg, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowneg, 2, vars, coefs) );
    }
 
@@ -249,7 +249,7 @@ SCIP_RETCODE computeCutsAbs(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_pos_%s", SCIPvarGetName(x));
       coefs[1] = 1.0;
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowpos, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowpos, 2, vars, coefs) );
    }
 
@@ -272,14 +272,14 @@ SCIP_RETCODE computeCutsAbs(
          {
             /* z = -x, so add -z-x >= 0 here (-z-x <= 0 is the underestimator that is added above) */
             coefs[1] = -1.0;
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
          }
          else if( !SCIPisNegative(scip, lb) )
          {
             /* z =  x, so add -z+x >= 0 here (-z+x <= 0 is the underestimator that is added above) */
             coefs[1] =  1.0;
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
          }
          else

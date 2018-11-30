@@ -863,7 +863,7 @@ SCIP_RETCODE createRelaxation(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
@@ -4949,7 +4949,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
             cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
             cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5116,7 +5116,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       if( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ewseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5243,7 +5243,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcsup%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
