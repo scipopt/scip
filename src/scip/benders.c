@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.c
+/**@file   scip/src/scip/benders.c
  * @brief  methods for Benders' decomposition
  * @author Stephen J. Maher
  */
@@ -42,7 +42,7 @@
 #include "scip/benderscut.h"
 
 /* Defaults for parameters */
-#define SCIP_DEFAULT_TRANSFERCUTS          TRUE  /** should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+#define SCIP_DEFAULT_TRANSFERCUTS         FALSE  /** should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
 #define SCIP_DEFAULT_CUTSASCONSS           TRUE  /** should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** maximum depth at which the LNS check is performed */
@@ -632,6 +632,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
          SCIPvarSetData(auxiliaryvar, vardata);
 
          SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+
+         /* adding the down lock for the Benders' decomposition constraint handler */
+         SCIP_CALL( SCIPaddVarLocksType(scip, auxiliaryvar, SCIP_LOCKTYPE_MODEL, 1, 0) );
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
@@ -818,6 +821,9 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
       /* the flag is set to indicate that the Benders' decomposition is a copy */
       targetbenders->iscopy = TRUE;
+
+      /* storing whether the lnscheck should be performed */
+      targetbenders->lnscheck = benders->lnscheck;
 
       /* calling the copy method for the Benders' cuts */
       SCIPbendersSortBenderscuts(benders);
@@ -1142,7 +1148,6 @@ SCIP_RETCODE initialiseSubproblem(
       SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
       (*success) = TRUE;
    }
-
 
    return SCIP_OKAY;
 }
@@ -1491,6 +1496,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    /* release the row/constraint */
    if( sourcebenders->cutsasconss )
    {
+      /* only release if the creation of the constraint failed. */
       SCIP_CALL( SCIPreleaseCons(sourcescip, &transfercons) );
    }
    else
@@ -1512,18 +1518,14 @@ SCIP_RETCODE transferBendersCuts(
 {
    SCIP_BENDERS* sourcebenders;     /* the Benders' decomposition of the source SCIP */
    SCIP_BENDERSCUT* benderscut;     /* a helper variable for the Benders' cut plugin */
-   SCIP_CONS** addedcons;           /* the constraints added by the Benders' cut */
-   SCIP_ROW** addedcuts;            /* the cuts added by the Benders' cut */
    SCIP_VAR** vars;                 /* the variables of the added constraint/row */
    SCIP_Real* vals;                 /* the values of the added constraint/row */
    SCIP_Real lhs;                   /* the LHS of the added constraint/row */
    SCIP_Real rhs;                   /* the RHS of the added constraint/row */
-   int naddedcons;
    int naddedcuts;
    int nvars;
    int i;
    int j;
-   int k;
 
    assert(subscip != NULL);
    assert(benders != NULL);
@@ -1539,68 +1541,20 @@ SCIP_RETCODE transferBendersCuts(
    {
       benderscut = benders->benderscuts[i];
 
-      /* retreiving the Benders' cuts constraints */
-      SCIP_CALL( SCIPbenderscutGetAddedConss(benderscut, &addedcons, &naddedcons) );
+      /* retreiving the number of stored Benders' cuts */
+      naddedcuts =  SCIPbenderscutGetNAddedCuts(benderscut);
 
-      /* looping over all added constraints to construct the cut for the source scip */
-      for( j = 0; j < naddedcons; j++ )
-      {
-         SCIP_CONSHDLR* conshdlr;
-         const char * conshdlrname;
-
-         conshdlr = SCIPconsGetHdlr(addedcons[j]);
-         assert(conshdlr != NULL);
-         conshdlrname = SCIPconshdlrGetName(conshdlr);
-
-         /* it is only possible to transfer linear constraints. If the Benders' cut has been added as another
-          * constraint, then this will not be transferred to the source SCIP */
-         if( strcmp(conshdlrname, "linear") == 0 )
-         {
-            /* collecting the variable information from the constraint */
-            nvars = SCIPgetNVarsLinear(subscip, addedcons[j]);
-            vars = SCIPgetVarsLinear(subscip, addedcons[j]);
-            vals = SCIPgetValsLinear(subscip, addedcons[j]);
-
-            /* collecting the bounds from the constraint */
-            lhs = SCIPgetLhsLinear(subscip, addedcons[j]);
-            rhs = SCIPgetRhsLinear(subscip, addedcons[j]);
-
-            if( nvars > 0 )
-            {
-               /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
-               SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
-            }
-         }
-      }
-
-      /* retreiving the Benders' cuts added cuts */
-      SCIP_CALL( SCIPbenderscutGetAddedCuts(benderscut, &addedcuts, &naddedcuts) );
-
-      /* looping over all added constraints to costruct the cut for the source scip */
+      /* looping over all added cuts to construct the cut for the source scip */
       for( j = 0; j < naddedcuts; j++ )
       {
-         SCIP_COL** cols;
-         int ncols;
-
-         cols = SCIProwGetCols(addedcuts[j]);
-         ncols = SCIProwGetNNonz(addedcuts[j]);
-
-         /* get all variables of the row */
-         SCIP_CALL( SCIPallocBufferArray(subscip, &vars, ncols) );
-         for( k = 0; k < ncols; ++k )
-            vars[k] = SCIPcolGetVar(cols[k]);
-
          /* collecting the variable information from the constraint */
-         vals = SCIProwGetVals(addedcuts[j]);
+         SCIP_CALL( SCIPbenderscutGetAddedCutData(benderscut, j, &vars, &vals, &lhs, &rhs, &nvars) );
 
-         /* collecting the bounds from the constraint */
-         lhs = SCIProwGetLhs(addedcuts[j]) - SCIProwGetConstant(addedcuts[j]);
-         rhs = SCIProwGetRhs(addedcuts[j]) - SCIProwGetConstant(addedcuts[j]);
-
-         /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
-         SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, ncols) );
-
-         SCIPfreeBufferArray(subscip, &vars);
+         if( nvars > 0 )
+         {
+            /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
+            SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
+         }
       }
    }
 
@@ -2223,9 +2177,7 @@ SCIP_RETCODE solveBendersSubproblems(
                   (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
                }
 
-               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n",
-                  i);
-
+               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
             }
 
             (*subprobsolved)[i] = TRUE;
@@ -3474,7 +3426,7 @@ SCIP_RETCODE setSubproblemParams(
 /** resets the original parameters from the subproblem */
 static
 SCIP_RETCODE resetOrigSubproblemParams(
-   SCIP*                 subproblem,               /**< the SCIP data structure */
+   SCIP*                 subproblem,         /**< the SCIP data structure */
    SCIP_SUBPROBPARAMS*   origparams          /**< the original subproblem parameters */
    )
 {

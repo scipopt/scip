@@ -434,9 +434,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
             SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
          }
 
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
          SCIPinfoMessage(masterprob, NULL, ";\n");
@@ -447,9 +444,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       else
       {
          SCIP_CALL( SCIPaddCons(masterprob, cons) );
-
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 

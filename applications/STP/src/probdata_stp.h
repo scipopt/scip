@@ -20,7 +20,7 @@
  * @author Michael Winkler
  * @author Daniel Rehfeldt
  *
- * This file implements the problem data for Steiner problems. For more details see \ref PROBLEMDATA page.
+ * This file implements the problem data for Steiner problems. For more details see \ref STP_PROBLEMDATA page.
  *
  */
 

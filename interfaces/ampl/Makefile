@@ -75,7 +75,7 @@ lint:		$(MAINSRC)
 			do \
 			echo $$i; \
 			$(LINT) lint/scip.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
 .PHONY: scipampl

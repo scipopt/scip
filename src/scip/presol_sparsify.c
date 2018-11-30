@@ -735,7 +735,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )

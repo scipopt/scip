@@ -1,4 +1,3 @@
-
 @page RN70 Release notes for SCIP 7.0
 
 @section RN700 SCIP 7.0.0
@@ -9,13 +8,22 @@ Features
 
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
+- extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
+  scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
 Performance improvements
 ------------------------
 
-- extended cut presolving staff by removing variable that have already be fixed at their bounds from the cut
+- Extended cut presolving by removing variables that been fixed at their bounds
 
 - Improved branching point selection when branching on externals branching candidates. Instead of using exactly the
   LP solution, a point closer to the middle of the variables domain is chosen.
+
+- Matrix presolvers that do not work on incomplete matrices now skip matrix creation if unsupported constraint types are detected.
+
+- consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
+  up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
+  with Benders' decomposition.
 
 Examples and applications
 -------------------------
@@ -31,8 +39,12 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
-
+- Symmetry:
+  + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
+    handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+
+- new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
 ### New API functions
 
@@ -46,11 +58,14 @@ Interface changes
 
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
+- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
 
 ### New parameters
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
+  branching strategy is provided
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
@@ -107,10 +122,20 @@ Known bugs
 Features
 --------
 
+- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart.
 - when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
 Performance improvements
 ------------------------
+
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
 
 Examples and applications
 -------------------------
@@ -120,7 +145,19 @@ Interface changes
 
 ### New and changed callbacks
 
-### Deleted and changed API methods
+### Deleted and changed API methods and macros
+
+- The proprocessor macro NO_CONFIG_HEADER now needs to be defined when
+  including SCIP header files from a SCIP build or installation that
+  has been build via the Makefile-only build system.
+
+- The following proprocessor macros have been renamed:
+  WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
+  to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
+  to SCIP_NO_STRTOK_R, ROUNDING_FE to SCIP_ROUNDING_FE, ROUNDING_FP to
+  SCIP_ROUNDING_FP, ROUNDING_MS to SCIP_ROUNDING_MS. Note, however, that
+  the names of macros NO_RAND_R and NO_STRERROR_R have not been changed
+  so far.
 
 ### New API functions
 
@@ -132,6 +169,7 @@ Interface changes
 
 ### Changed parameters
 
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - default clock type for timing is now wallclock
 
 ### New parameters
@@ -154,6 +192,7 @@ Build system
 
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
+- new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
 
 ### Makefile
 
@@ -163,11 +202,15 @@ Fixed bugs
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
+- fix and improve memory handling in symmetry computation
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
 - fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
 - fixed update of constraint violations in solution repair in cons_bivariate, cons_quadratic, and cons_nonlinear
 - print error message and terminate if matrix entries of a column are not consecutive in mps format
+- fixed incorrect handling of fixed variables when transfer of cuts from LNS heuristic for Benders' decomposition
+- fix returning local infeasible status by Ipopt interface if Ipopt finds problem locally infeasible
+- skip attempt to apply fixings in linear constraint handler during solving stage as LP rows cannot change anymore
 
 Miscellaneous
 -------------

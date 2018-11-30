@@ -19,9 +19,9 @@
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
- * This file implements a graph minimum cut routine for Steiner problems. For more details see \ref MINCUT page.
+ * This file implements a graph minimum cut routine for Steiner problems. For more details see \ref STP_MINCUT page.
  *
- * @page MINCUT Graph minimum cut routine
+ * @page STP_MINCUT Graph minimum cut routine
  *
  * The implemented algorithm is described in "A Faster Algorithm for Finding the Minimum Cut in a Graph" by Hao and Orlin.
  *

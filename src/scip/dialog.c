@@ -33,7 +33,7 @@
 
 #include "scip/struct_dialog.h"
 
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -45,7 +45,7 @@
  * read line methods
  */
 
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
 
 /** reads a line of input from stdin */
 static
@@ -326,7 +326,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
 {  /*lint --e{715}*/
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
    char readlineversion[20];
 #endif
 
@@ -342,7 +342,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
    (void) SCIPsnprintf(readlineversion, sizeof(readlineversion), "Readline %s", rl_library_version);
    SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
 #endif

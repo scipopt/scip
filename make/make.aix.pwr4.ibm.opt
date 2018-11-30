@@ -1,4 +1,4 @@
-FLAGS		+=	-DNDEBUG -DROUNDING_FE
+FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -q64 -qmaxmem=-1 -qarch=auto -qtune=auto -qcache=auto -qsuppress=1506-732
 CFLAGS		+=	
 CXXFLAGS	+=	

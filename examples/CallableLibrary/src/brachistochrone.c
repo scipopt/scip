@@ -293,7 +293,7 @@ void visualizeSolutionGnuplot(
    unsigned int          n,                  /**< number of points for discretization */
    SCIP_VAR**            x,                  /**< x coordinates */
    SCIP_VAR**            y                   /**< y coordinates */
-)
+   )
 {
 #if _POSIX_C_SOURCE < 2
    SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
@@ -325,7 +325,7 @@ static
 SCIP_RETCODE runBrachistochrone(
    unsigned int          n,                  /**< number of points for discretization */
    SCIP_Real*            coord               /**< array containing [y(0), y(N), x(0), x(N)] */
-)
+   )
 {
    SCIP* scip;
    SCIP_VAR** y;

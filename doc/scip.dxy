@@ -786,6 +786,7 @@ WARN_LOGFILE           =
 
 INPUT                  = . \
                          ../CHANGELOG \
+                         ../INSTALL_APPLICATIONS_EXAMPLES.md \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
@@ -797,8 +798,21 @@ INPUT                  = . \
                          ../src/symmetry \
                          ../src/xml \
                          ../src/blockmemshell \
+                         ../applications \
+                         ../applications/Coloring/src \
+                         ../applications/Coloring/doc/xternal_coloring.c \
+                         ../applications/CycleClustering/src \
+                         ../applications/CycleClustering/doc/xternal_cycleclustering.c \
+                         ../applications/MinIISC/src \
+                         ../applications/MinIISC/doc/xternal_miniisc.c \
+                         ../applications/PolySCIP/src \
+                         ../applications/PolySCIP/doc/xternal_polyscip.c \
                          ../applications/Ringpacking/src/ \
                          ../applications/Ringpacking/doc/xternal_ringpacking.c \
+                         ../applications/STP/src \
+                         ../applications/STP/doc/xternal_stp.c \
+                         ../applications/Scheduler/src \
+                         ../applications/Scheduler/doc/xternal_scheduler.c \
                          ../examples \
                          ../examples/Binpacking/src/ \
                          ../examples/CallableLibrary/src/ \
@@ -811,13 +825,16 @@ INPUT                  = . \
                          ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \
                          ../examples/GMI/doc/xternal_gmi.c \
+                         ../examples/Queens/src/ \
+                         ../examples/Queens/doc/xternal_queens.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
                          ../examples/SCFLP/src/ \
                          ../examples/SCFLP/doc/xternal_scflp.c \
                          ../examples/TSP/src/ \
                          ../examples/TSP/doc/xternal_tsp.c \
-                         ../examples/VRP/src/ ../examples/VRP/doc/xternal_vrp.c
+                         ../examples/VRP/src/ \
+                         ../examples/VRP/doc/xternal_vrp.c
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -1023,7 +1040,8 @@ EXAMPLE_RECURSIVE      = NO
 
 IMAGE_PATH             = pictures/ \
                          ../examples/Binpacking/doc/pics \
-                         ../applications/Ringpacking/doc/pics
+                         ../applications/Ringpacking/doc/pics \
+                         ../applications/STP/doc/pics
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -1648,7 +1666,7 @@ MATHJAX_RELPATH        = ../MathJax
 # This tag requires that the tag USE_MATHJAX is set to YES.
 
 MATHJAX_EXTENSIONS     = TeX/AMSmath \
-                         TeX/AMSsymbol
+                         TeX/AMSsymbols
 
 # The MATHJAX_CODEFILE tag can be used to specify a file with javascript pieces
 # of code that will be used on startup of the MathJax code. See the MathJax site
