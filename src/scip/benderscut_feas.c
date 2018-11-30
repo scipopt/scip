@@ -294,6 +294,9 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          SCIPdebugPrintCons(masterprob, cut, NULL);
 
          (*result) = SCIP_CONSADDED;
+
+         /* storing the data that is used to create the cut */
+         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, SCIPinfinity(masterprob), nvars) );
       }
 
       SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );

@@ -34,6 +34,16 @@
 extern "C" {
 #endif
 
+struct SCIP_BenderscutCut
+{
+   SCIP_VAR**            vars;               /**< the variables forming the cut */
+   SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs;                /**< the left hand side of the cut */
+   SCIP_Real             rhs;                /**< the right hand side of the cut */
+   int                   nvars;              /**< the number of variables in the cut */
+};
+typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
+
 /** Benders' decomposition data */
 struct SCIP_Benders
 {
@@ -113,6 +123,12 @@ struct SCIP_Benders
    int                   benderscutssize;    /**< the size of the Benders' cuts algorithms array */
    SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
    SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
+
+   /* cut storage information */
+   SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
+   int                   storedcutssize;     /**< the size of the added cuts array */
+   int                   nstoredcuts;        /**< the number of the added cuts */
+
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

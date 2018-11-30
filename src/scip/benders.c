@@ -54,6 +54,8 @@
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
 
+#define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
+
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 
 /* event handler properties */
@@ -1386,6 +1388,14 @@ SCIP_RETCODE SCIPbendersInit(
     * callback. */
    SCIP_CALL( createSubproblems(benders, set) );
 
+   /* allocating memory for the stored constraints array */
+   if( benders->storedcutssize == 0 )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(SCIPblkmem(set->scip), &benders->storedcuts, BENDERS_ARRAYSIZE) );
+      benders->storedcutssize = BENDERS_ARRAYSIZE;
+      benders->nstoredcuts = 0;
+   }
+
    /* initialising the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
    for( i = 0; i < benders->nbenderscuts; i++ )
@@ -1528,7 +1538,6 @@ SCIP_RETCODE transferBendersCuts(
    )
 {
    SCIP_BENDERS* sourcebenders;     /* the Benders' decomposition of the source SCIP */
-   SCIP_BENDERSCUT* benderscut;     /* a helper variable for the Benders' cut plugin */
    SCIP_VAR** vars;                 /* the variables of the added constraint/row */
    SCIP_Real* vals;                 /* the values of the added constraint/row */
    SCIP_Real lhs;                   /* the LHS of the added constraint/row */
@@ -1548,24 +1557,19 @@ SCIP_RETCODE transferBendersCuts(
    if( !sourcebenders->transfercuts )
       return SCIP_OKAY;
 
-   for( i = 0; i < benders->nbenderscuts; i++ )
+   /* retreiving the number of stored Benders' cuts */
+   naddedcuts =  SCIPbendersGetNStoredCuts(benders);
+
+   /* looping over all added cuts to construct the cut for the source scip */
+   for( j = 0; j < naddedcuts; j++ )
    {
-      benderscut = benders->benderscuts[i];
+      /* collecting the variable information from the constraint */
+      SCIP_CALL( SCIPbendersGetStoredCutData(benders, j, &vars, &vals, &lhs, &rhs, &nvars) );
 
-      /* retreiving the number of stored Benders' cuts */
-      naddedcuts =  SCIPbenderscutGetNAddedCuts(benderscut);
-
-      /* looping over all added cuts to construct the cut for the source scip */
-      for( j = 0; j < naddedcuts; j++ )
+      if( nvars > 0 )
       {
-         /* collecting the variable information from the constraint */
-         SCIP_CALL( SCIPbenderscutGetAddedCutData(benderscut, j, &vars, &vals, &lhs, &rhs, &nvars) );
-
-         if( nvars > 0 )
-         {
-            /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
-            SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
-         }
+         /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
+         SCIP_CALL( createAndAddTransferredCut(sourcescip, benders, vars, vals, lhs, rhs, nvars) );
       }
    }
 
@@ -1604,6 +1608,18 @@ SCIP_RETCODE SCIPbendersExit(
    {
       SCIP_CALL( transferBendersCuts(benders->sourcescip, set->scip, benders) );
    }
+
+   /* releasing the stored constraints */
+   for( i = benders->nstoredcuts - 1; i >= 0; i-- )
+   {
+      SCIPfreeBlockMemoryArray(set->scip, &benders->storedcuts[i]->vals, benders->storedcuts[i]->nvars);
+      SCIPfreeBlockMemoryArray(set->scip, &benders->storedcuts[i]->vars, benders->storedcuts[i]->nvars);
+      SCIPfreeBlockMemory(set->scip, &benders->storedcuts[i]); /*lint !e866*/
+   }
+
+   BMSfreeBlockMemoryArray(SCIPblkmem(set->scip), &benders->storedcuts, benders->storedcutssize);
+   benders->storedcutssize = 0;
+   benders->nstoredcuts = 0;
 
    /* releasing all of the auxiliary variables */
    nsubproblems = SCIPbendersGetNSubproblems(benders);
@@ -4793,6 +4809,143 @@ SCIP_Real SCIPbendersGetSubproblemLowerbound(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->subproblowerbound[probnumber];
+}
+
+/** returns the number of cuts that have been added for storage */
+int SCIPbendersGetNStoredCuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstoredcuts;
+}
+
+/** returns the cuts that have been stored for transfer */
+SCIP_RETCODE SCIPbendersGetStoredCutData(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   cutidx,             /**< the index for the cut data that is requested */
+   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   SCIP_Real*            rhs,                /**< the right hand side of the cut */
+   int*                  nvars               /**< the number of variables with non-zero coefficients in the cut */
+   )
+{
+   assert(benders != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nvars != NULL);
+   assert(cutidx >= 0 && cutidx < benders->nstoredcuts);
+
+   (*vars) = benders->storedcuts[cutidx]->vars;
+   (*vals) = benders->storedcuts[cutidx]->vals;
+   (*lhs) = benders->storedcuts[cutidx]->lhs;
+   (*rhs) = benders->storedcuts[cutidx]->rhs;
+   (*nvars) = benders->storedcuts[cutidx]->nvars;
+
+   return SCIP_OKAY;
+}
+
+/** returns the original problem data for the cuts that have been added by the Benders' cut plugin. The stored
+ *  variables and values will populate the input vars and vals arrays. Thus, memory must be allocated for the vars and
+ *  vals arrays
+ */
+SCIP_RETCODE SCIPbendersGetStoredCutOrigData(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
+   int                   cutidx,             /**< the index for the cut data that is requested */
+   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   SCIP_Real*            rhs,                /**< the right hand side of the cut */
+   int*                  nvars,              /**< the number of variables with non-zero coefficients in the cut */
+   int                   varssize            /**< the available slots in the array */
+   )
+{
+   SCIP_VAR* origvar;
+   SCIP_Real scalar;
+   SCIP_Real constant;
+   int i;
+
+   assert(benders != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nvars != NULL);
+   assert(cutidx >= 0 && cutidx < benders->nstoredcuts);
+
+   (*lhs) = benders->storedcuts[cutidx]->lhs;
+   (*rhs) = benders->storedcuts[cutidx]->rhs;
+   (*nvars) = benders->storedcuts[cutidx]->nvars;
+
+   /* if there are enough slots, then store the cut variables and values */
+   if( varssize >= *nvars )
+   {
+      for( i = 0; i < *nvars; i++ )
+      {
+         /* getting the original variable for the transformed variable */
+         origvar = benders->storedcuts[cutidx]->vars[i];
+         scalar = 1.0;
+         constant = 0.0;
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+         (*vars)[i] = origvar;
+         (*vals)[i] = benders->storedcuts[cutidx]->vals[i];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds the data for the generated cuts to the Benders' cut storage */
+SCIP_RETCODE SCIPbendersStoreCut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             rhs,                /**< the right hand side of the cut */
+   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
+   )
+{
+   SCIP_BENDERSCUTCUT* cut;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* allocating the block memory for the cut storage */
+   SCIP_CALL( SCIPallocBlockMemory(set->scip, &cut) );
+
+   /* storing the cut data */
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(set->scip, &cut->vars, vars, nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(set->scip, &cut->vals, vals, nvars) );
+   cut->lhs = lhs;
+   cut->rhs = rhs;
+   cut->nvars = nvars;
+
+   /* ensuring the required memory is available for the stored cuts array */
+   if( benders->storedcutssize < benders->nstoredcuts + 1 )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, benders->nstoredcuts + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benders->storedcuts,
+            benders->storedcutssize, newsize) );
+
+      benders->storedcutssize = newsize;
+   }
+   assert(benders->storedcutssize >= benders->nstoredcuts + 1);
+
+   /* adding the cuts to the Benders' cut storage */
+   benders->storedcuts[benders->nstoredcuts] = cut;
+   benders->nstoredcuts++;
+
+   return SCIP_OKAY;
 }
 
 /** sets the sorted flags in the Benders' decomposition */

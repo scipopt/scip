@@ -869,9 +869,9 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */

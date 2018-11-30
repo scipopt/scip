@@ -1344,9 +1344,9 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
@@ -1355,13 +1355,13 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    )
 {
    assert(scip != NULL);
-   assert(benderscut != NULL);
+   assert(benders != NULL);
    assert(vars != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBendersCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, vars, vals, lhs, rhs, nvars) );
+   SCIP_CALL( SCIPbendersStoreCut(benders, scip->set, vars, vals, lhs, rhs, nvars) );
 
    return SCIP_OKAY;
 }
