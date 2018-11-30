@@ -1978,3 +1978,34 @@ SCIP_RETCODE SCIPsetSymmetryComponentblocked(
 
    return SCIP_OKAY;
 }
+
+
+/* get blocked status component of symmetry group */
+SCIP_Shortbool SCIPgetSymmetryComponentblocked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   i                   /**< index of component to check blocked status */
+   )
+{
+   SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
+
+   assert( i >= 0 );
+
+   /* find symmetry presolver */
+   presol = SCIPfindPresol(scip, "symmetry");
+   if ( presol == NULL )
+   {
+      SCIPerrorMessage("Could not find symmetry presolver.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+   assert( presoldata->ncomponents > 0 );
+   assert( i < presoldata->ncomponents );
+   assert( presoldata->componentblocked != NULL );
+
+   return presoldata->componentblocked[i];
+}

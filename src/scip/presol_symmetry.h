@@ -73,6 +73,13 @@ SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    int                   i                   /**< index of component to block */
    );
 
+/* get blocked status component of symmetry group */
+EXTERN
+SCIP_Shortbool SCIPgetSymmetryComponentblocked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   i                   /**< index of component to check blocked status */
+   );
+
 #ifdef __cplusplus
 }
 #endif
