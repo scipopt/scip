@@ -96,10 +96,6 @@ struct SCIP_PresolData
    SCIP_Bool             computeorbits;      /**< whether the orbits of the symmetry group should be computed */
    int*                  orbits;             /**< array containing the indices of variables sorted by orbits */
    int*                  orbitbegins;        /**< array containing in i-th position the first position of orbit i in orbits array */
-   int                   ncomponents;        /**< number of components of symmetry group */
-   int*                  npermsincomponent;  /**< array containing number of permutations per component */
-   int**                 components;         /**< array containing for each components the corresponding permutations */
-   SCIP_Shortbool*       componentblocked;   /**< array to store whether a component is blocked to be considered by symmetry handling techniques */
 };
 
 
@@ -107,188 +103,6 @@ struct SCIP_PresolData
 /*
  * Local methods
  */
-
-
-/** compute components of symmetry group */
-static
-SCIP_RETCODE computeComponents(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
-   )
-{
-   SCIP_DISJOINTSET* componentstoperm = NULL;
-   SCIP_Bool startchanged;
-   int** perms;
-   int npermsincomponent;
-   int curcomponent;
-   int ncomponents;
-   int componentcnt;
-   int npermvars;
-   int nperms;
-   int newstart;
-   int start;
-   int i;
-   int j;
-   int k;
-
-   assert( scip != NULL );
-   assert( presoldata != NULL );
-
-   nperms = presoldata->nperms;
-
-   presoldata->ncomponents = -1;
-
-   if ( nperms <= 0 )
-      return SCIP_OKAY;
-
-   /* at this point, we have at least one non-trivial permutation */
-   npermvars = presoldata->npermvars;
-   perms = presoldata->perms;
-
-   /* if there exists only one orbit, we have exactly one component */
-   if ( presoldata->norbits == 1 )
-      ncomponents = 1;
-   else
-   {
-      /* init array that assigns to each permutation its component of the group */
-      SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
-      ncomponents = nperms;
-
-      /* check whether two permutations belong to the same component */
-      for (i = 0; i < nperms && ncomponents > 1; ++i)
-      {
-         for (j = i + 1; j < nperms && ncomponents > 1; ++j)
-         {
-            int componentI;
-            int componentJ;
-            int* permI;
-            int* permJ;
-
-            componentI = SCIPdisjointsetFind(componentstoperm, i);
-            componentJ = SCIPdisjointsetFind(componentstoperm, j);
-            if ( componentI == componentJ )
-               continue;
-
-            permI = perms[i];
-            permJ = perms[j];
-
-            /* Do perms[i] and perms[j] belong to the same component? */
-            for (k = 0; k < npermvars; ++k)
-            {
-               /* both permutations belong to the same component */
-               if ( permI[k] != k && permJ[k] != k )
-               {
-                  /* Keep the smallest identifier to keep track of where a new component starts.
-                   * Note that it is necessary to store the smaller identifier to be able to iterate
-                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
-                   * pairs {i,j}. */
-                  if ( componentI < componentJ )
-                     SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
-                  else
-                     SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
-
-                  --ncomponents;
-                  break;
-               }
-            }
-         }
-      }
-      assert( ncomponents > 0 );
-   }
-
-   /* store data */
-   presoldata->ncomponents = ncomponents;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->npermsincomponent, ncomponents) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->components, ncomponents) );
-
-   /* copy componentstoperm adequatly to components and npermsincomponent */
-   if ( ncomponents == 1 )
-   {
-      presoldata->npermsincomponent[0] = nperms;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->components[0]), nperms) );
-      for (i = 0; i < nperms; ++i)
-         presoldata->components[0][i] = i;
-   }
-   else
-   {
-      componentcnt = 0;
-      start = 0;
-      newstart = 0;
-      startchanged = TRUE;
-      while ( startchanged )
-      {
-         startchanged = FALSE;
-         npermsincomponent = 0;
-         assert( componentstoperm != NULL );
-         curcomponent = SCIPdisjointsetFind(componentstoperm, start);
-
-         /* find number of permutations in current component and detect first perm in another permutation */
-         for (i = start; i < nperms; ++i)
-         {
-            if ( SCIPdisjointsetFind(componentstoperm, i) == curcomponent )
-               ++npermsincomponent;
-            /* only store other component if it has the same identifier as its node (mark that new component starts) */
-            else if ( ! startchanged && SCIPdisjointsetFind(componentstoperm, i) == i )
-            {
-               newstart = i;
-               startchanged = TRUE;
-            }
-         }
-
-         /* store number of permutations and permutation per component */
-         presoldata->npermsincomponent[componentcnt] = npermsincomponent;
-
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->components[componentcnt]), npermsincomponent) );
-
-         j = 0;
-         for (i = start; i < nperms; ++i)
-         {
-            if ( SCIPdisjointsetFind(componentstoperm, i) == curcomponent )
-               presoldata->components[componentcnt][j++] = i;
-         }
-
-         ++componentcnt;
-         start = newstart;
-      }
-   }
-
-   if ( presoldata->norbits != 1 )
-      SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->componentblocked), ncomponents) );
-   for (i = 0; i < ncomponents; ++i)
-      presoldata->componentblocked[i] = FALSE;
-
-#ifdef SCIP_OUTPUT
-   printf("\n\n\nTESTS\n\n");
-   printf("Number of components:\t\t%d\n", presoldata->ncomponents);
-   for (i = 0; i < presoldata->ncomponents; ++i)
-   {
-      printf("Component %d: Number of perms: %d\n", i, presoldata->npermsincomponent[i]);
-      for (j = 0; j < presoldata->npermsincomponent[i]; ++j)
-      {
-         printf("%d ", presoldata->components[i][j]);
-      }
-      printf("\n");
-   }
-
-   printf("GENERATORS:");
-   for (i = 0; i < presoldata->nperms; ++i)
-   {
-      printf("generator %d:\n", i);
-      for (j = 0; j < presoldata->npermvars; ++j)
-      {
-         if ( presoldata->perms[i][j] != j )
-            printf("%d ", presoldata->perms[i][j]);
-      }
-      printf("\n");
-   }
-#endif
-
-   return SCIP_OKAY;
-}
 
 
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
@@ -620,9 +434,6 @@ SCIP_RETCODE detectOrbitopes(
    npermvars = presoldata->npermvars;
    permvars = presoldata->permvars;
 
-   /* @TODO: remove this, it guarantees functionality for intermediate steps */
-   SCIP_CALL( computeComponents(scip, presoldata) );
-
    /* iterate over components */
    for (i = 0; i < ncomponents; ++i)
    {
@@ -818,8 +629,9 @@ SCIP_RETCODE detectOrbitopes(
          presoldata->genconss[presoldata->ngenconss] = cons;
          ++presoldata->ngenconss;
          ++presoldata->norbitopes;
-         presoldata->componentblocked[i] = TRUE;
          presoldata->addedconss = TRUE;
+
+         SCIP_CALL( SCIPsetSymmetryComponentblocked(scip, i) );
       }
 
       /* free data structures */
@@ -844,7 +656,10 @@ SCIP_RETCODE detectOrbitopes(
 static
 SCIP_RETCODE addSymresackConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOL*          presol              /**< symmetry breaking presolver */
+   SCIP_PRESOL*          presol,             /**< symmetry breaking presolver */
+   int*                  components,         /**< array containing components of symmetry group */
+   int*                  componentbegins,    /**< array containing begin positions of components in components array */
+   int                   ncomponents         /**< number of components */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -854,7 +669,6 @@ SCIP_RETCODE addSymresackConss(
    int nperms;
    int nsymresackcons = 0;
    int npermvars;
-   int ncomponents;
    int i;
    int p;
 
@@ -869,7 +683,6 @@ SCIP_RETCODE addSymresackConss(
    permvars = presoldata->permvars;
    npermvars = presoldata->npermvars;
    conssaddlp = presoldata->conssaddlp;
-   ncomponents = presoldata->ncomponents;
 
    assert( nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
@@ -882,17 +695,17 @@ SCIP_RETCODE addSymresackConss(
       for (i = 0; i < ncomponents; ++i)
       {
          /* skip components that were treated by different symemtry handling techniques */
-         if ( presoldata->componentblocked[i] )
+         if ( SCIPgetSymmetryComponentblocked(scip, i) )
             continue;
 
          /* loop through perms in component i and add symresack constraints */
-         for (p = 0; p < presoldata->npermsincomponent[i]; ++p)
+         for (p = componentbegins[i]; p < componentbegins[i + 1]; ++p)
          {
             SCIP_CONS* cons;
-            int permidx = presoldata->components[i][p];
+            int permidx = components[p];
             char name[SCIP_MAXSTRLEN];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, p);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
             SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -941,7 +754,10 @@ SCIP_RETCODE addSymresackConss(
 static
 SCIP_RETCODE addSymmetryBreakingConstraints(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   int*                  components,         /**< array containing components of symmetry group */
+   int*                  componentbegins,    /**< array containing begin positions of components in components array */
+   int                   ncomponents         /**< number of components */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -958,7 +774,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 
    if ( presoldata->addsymresacks )
    {
-      SCIP_CALL( addSymresackConss(scip, presol) );
+      SCIP_CALL( addSymresackConss(scip, presol, components, componentbegins, ncomponents) );
    }
 
    return SCIP_OKAY;
@@ -1054,7 +870,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* add symmetry breaking constraints */
    assert( ! presoldata->addedconss || presoldata->norbitopes > 0 );
 
-   SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
+   SCIP_CALL( addSymmetryBreakingConstraints(scip, presol, components, componentbegins, ncomponents) );
 
    return SCIP_OKAY;
 }
@@ -1156,21 +972,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->orbitbegins = NULL;
    presoldata->orbits = NULL;
    presoldata->norbits = -1;
-
-   /* free components */
-   if ( presoldata->ncomponents > 0 )
-   {
-      SCIPfreeBlockMemoryArray(scip, &presoldata->componentblocked, presoldata->ncomponents);
-      for (i = 0; i < presoldata->ncomponents; ++i)
-         SCIPfreeBlockMemoryArray(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
-      SCIPfreeBlockMemoryArray(scip, &presoldata->components, presoldata->ncomponents);
-      SCIPfreeBlockMemoryArray(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
-   }
-
-   presoldata->componentblocked = NULL;
-   presoldata->components = NULL;
-   presoldata->npermsincomponent = NULL;
-   presoldata->ncomponents = -1;
 
    /* reset basic data */
    presoldata->addedconss = FALSE;
@@ -1344,10 +1145,6 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->norbits = -1;
    presoldata->orbits = NULL;
    presoldata->orbitbegins = NULL;
-   presoldata->ncomponents = -1;
-   presoldata->npermsincomponent = NULL;
-   presoldata->components = NULL;
-   presoldata->componentblocked = NULL;
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
