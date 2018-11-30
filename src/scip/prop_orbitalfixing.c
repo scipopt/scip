@@ -473,7 +473,7 @@ SCIP_RETCODE getSymmetries(
       int p;
 
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
-            &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL, NULL, NULL, NULL) );
+            &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* store restart level */
       propdata->lastrestart = SCIPgetNRuns(scip);

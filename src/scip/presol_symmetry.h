@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP_Bool*            binvaraffected,     /**< pointer to store whether binary variables are affected */
    int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
    int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
+   int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
 
