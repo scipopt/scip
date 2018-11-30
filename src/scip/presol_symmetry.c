@@ -1948,7 +1948,7 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
 
 
 /* block component of symmetry group to be considered by symmetry handling routines */
-SCIP_RETCODE SCIPsetSymemtryComponentblocked(
+SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to block */
    )
