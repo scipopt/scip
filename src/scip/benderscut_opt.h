@@ -87,12 +87,14 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_ROW*             row,                /**< linear row to add to */
-   SCIP_CONS*            cons,               /**< linear constraint to add to */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
-   SCIP_Real*            dirderiv            /**< storage to add directional derivative */
+   SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
+   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   int*                  nvars,              /**< the number of variables in the cut */
+   int*                  varssize            /**< the number of variables in the array */
    );
 
 /* @} */
