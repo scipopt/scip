@@ -3099,8 +3099,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL ) /*lint !e774*/
-         *cutoff = FALSE;
+      *cutoff = FALSE;
 
       if( conflict != NULL )
          *conflict = FALSE;

@@ -92,6 +92,7 @@ struct StoScenario
    const char*           stagename;          /**< the stage name */
    const char*           name;               /**< the scenario name. */
    SCIP_Real             probability;        /**< the probability for this scenario. */
+   SCIP_Real             lowerbound;         /**< the lower bound for this scenario */
    /* the following describes the modifications to the constraint matrix and rhs for each scenario. */
    const char**          rownames;           /**< the names of the rows with a changed value. */
    const char**          colnames;           /**< the names of the columns with a changed value. */
@@ -140,6 +141,7 @@ struct StoInput
    const char*           f3;
    const char*           f4;
    const char*           f5;
+   const char*           f6;
    char                  probname[STO_MAX_NAMELEN];
    char                  stochtype[STO_MAX_NAMELEN];
 };
@@ -169,6 +171,7 @@ SCIP_RETCODE createScenarioData(
    (*scenariodata)->stagename = NULL;
    (*scenariodata)->name = NULL;
    (*scenariodata)->probability = 1.0;
+   (*scenariodata)->lowerbound = -SCIPinfinity(scip);
    (*scenariodata)->nentries = 0;
    (*scenariodata)->entriessize = STO_DEFAULT_ENTRIESSIZE;
 
@@ -469,6 +472,35 @@ SCIP_Real getScenarioProbability(
    return scenario->probability;
 }
 
+/** sets the scenario lowerbound */
+static
+SCIP_RETCODE setScenarioLowerbound(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario,           /**< the scenario */
+   SCIP_Real             lowerbound          /**< the scenario lowerbound */
+   )
+{
+   assert(scip != NULL);
+   assert(scenario != NULL);
+
+   scenario->lowerbound = lowerbound;
+
+   return SCIP_OKAY;
+}
+
+/** returns the scenario lowerbound */
+static
+SCIP_Real getScenarioLowerbound(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario            /**< the scenario */
+   )
+{
+   assert(scip != NULL);
+   assert(scenario != NULL);
+
+   return scenario->lowerbound;
+}
+
 /** add scenario entry */
 static
 SCIP_RETCODE addScenarioEntry(
@@ -563,6 +595,7 @@ SCIP_RETCODE copyScenario(
    )
 {
    SCIP_Real probability;
+   SCIP_Real lowerbound;
    int i;
 
    assert(scip != NULL);
@@ -586,6 +619,9 @@ SCIP_RETCODE copyScenario(
    /* setting the scenario probability */
    probability = getScenarioProbability(scip, sourcescenario);
    SCIP_CALL( setScenarioProbability(scip, (*targetscenario), probability) );
+
+   lowerbound = getScenarioLowerbound(scip, sourcescenario);
+   SCIP_CALL( setScenarioLowerbound(scip, (*targetscenario), lowerbound) );
 
    return SCIP_OKAY;
 }
@@ -1017,6 +1053,7 @@ SCIP_RETCODE stoinputCreate(
    (*stoi)->f3          = NULL;
    (*stoi)->f4          = NULL;
    (*stoi)->f5          = NULL;
+   (*stoi)->f6          = NULL;
 
    return SCIP_OKAY;
 }
@@ -1117,6 +1154,17 @@ const char* stoinputField5(
    assert(stoi != NULL);
 
    return stoi->f5;
+}
+
+/** return the current value of field 6 */
+static
+const char* stoinputField6(
+   const STOINPUT*       stoi                /**< sto input structure */
+   )
+{
+   assert(stoi != NULL);
+
+   return stoi->f6;
 }
 
 /** returns if an error was detected */
@@ -1223,7 +1271,7 @@ SCIP_Bool stoinputReadLine(
 
    do
    {
-      stoi->f0 = stoi->f1 = stoi->f2 = stoi->f3 = stoi->f4 = stoi->f5 = 0;
+      stoi->f0 = stoi->f1 = stoi->f2 = stoi->f3 = stoi->f4 = stoi->f5 = stoi->f6 = 0;
       is_marker = FALSE;
 
       /* Read until we have not a comment line. */
@@ -1299,7 +1347,13 @@ SCIP_Bool stoinputReadLine(
          }
 
          if( (NULL == (stoi->f5 = SCIPstrtok(NULL, " ", &nexttok))) || (*stoi->f5 == '$') )
+         {
             stoi->f5 = 0;
+            break;
+         }
+
+         if( (NULL == (stoi->f6 = SCIPstrtok(NULL, " ", &nexttok))) || (*stoi->f6 == '$') )
+            stoi->f6 = 0;
       }
       while( FALSE );
 
@@ -1656,6 +1710,10 @@ SCIP_RETCODE readScenarios(
          }
          SCIP_CALL( setScenarioStageNum(scip, scenario, stagenum) );
          SCIP_CALL( setScenarioProbability(scip, scenario, atof(stoinputField4(stoi))) );
+         if( stoinputField6(stoi) != NULL )
+         {
+            SCIP_CALL( setScenarioLowerbound(scip, scenario, atof(stoinputField6(stoi))) );
+         }
 
          numscenarios++;
          addscenario = TRUE;
@@ -2186,6 +2244,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    )
 {
    SCIP* scenarioscip;
+   SCIP_BENDERS* benders;
    SCIP_HASHMAP* varmap;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
@@ -2274,7 +2333,17 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
    /* adding the Benders' decomposition */
    if( decomp && getScenarioNChildren(scenario) > 0 )
+   {
       SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubproblemArray(scenario), getScenarioNChildren(scenario)) );
+
+      /* getting the default Benders' decomposition */
+      benders = SCIPfindBenders(scenarioscip, "default");
+
+      /* updating the lower bounds for the subproblems */
+      for( i = 0; i < getScenarioNChildren(scenario); i++ )
+         SCIPbendersUpdateSubproblemLowerbound(benders, i,
+            getScenarioLowerbound(scenarioscip, getScenarioChild(scenario, i)));
+   }
 
    /* computing the probability for the scenario */
    probability = computeScenarioProbability(scenarioscip, scenario);
@@ -2297,72 +2366,77 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          getScenarioNum(scenarioscip, scenario));
       cons = SCIPfindCons(scenarioscip, name);
 
-      /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
-      if( cons == NULL )
+      if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 ||
+         strncmp(getScenarioEntryCol(scenario, i), rhs, 3) == 0 ||
+         strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
-         SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
-         return SCIP_READERROR;
-      }
-      else
-      {
-         if( strncmp(getScenarioEntryCol(scenario, i), RHS, 3) == 0 ||
-            strncmp(getScenarioEntryCol(scenario, i), rhs, 3) == 0 ||
-            strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
+         /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
+         if( cons == NULL )
          {
-            /* if the constraint is an equality constraint, then the LHS must also be changed */
-            if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
-            {
-               SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-               SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-            }
-            else if( SCIPisLT(scenarioscip, SCIPgetRhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
-               SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
-            else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
-               SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
          }
-         else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
-            strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
-            strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
-         {
-            /* finding the variable associated with the column */
-            getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
-               getScenarioNum(scenarioscip, scenario));
-            var = SCIPfindVar(scenarioscip, name);
 
-            /* changing the coefficient for the variable */
-            if( var == NULL )
-            {
-               SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               return SCIP_READERROR;
-            }
-            else
-            {
-               SCIP_CALL( SCIPchgVarObj(scenarioscip, var, getScenarioEntryValue(scenario, i)*probability) );
-            }
+         /* if the constraint is an equality constraint, then the LHS must also be changed */
+         if( SCIPgetLhsLinear(scenarioscip, cons) >= SCIPgetRhsLinear(scenarioscip, cons) )
+         {
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+         }
+         else if( SCIPisLT(scenarioscip, SCIPgetRhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+         else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+      }
+      else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), obj) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
+      {
+         /* finding the variable associated with the column */
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
+
+         /* changing the coefficient for the variable */
+         if( var == NULL )
+         {
+            SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
          }
          else
          {
-            /* finding the variable associated with the column */
-            getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
-               getScenarioNum(scenarioscip, scenario));
+            SCIP_CALL( SCIPchgVarObj(scenarioscip, var, getScenarioEntryValue(scenario, i)*probability) );
+         }
+      }
+      else
+      {
+         /* if the constraint is NULL, then it is not possible to make any changes to the scenario */
+         if( cons == NULL )
+         {
+            SCIPerrorMessage("There is no constraint <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
+         }
+
+         /* finding the variable associated with the column */
+         getScenarioEntityName(name, getScenarioEntryCol(scenario, i), getScenarioStageNum(scenarioscip, scenario),
+            getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
+
+         if( var == NULL )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", getScenarioEntryCol(scenario, i));
             var = SCIPfindVar(scenarioscip, name);
+         }
 
-            if( var == NULL )
-            {
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", getScenarioEntryCol(scenario, i));
-               var = SCIPfindVar(scenarioscip, name);
-            }
-
-            /* changing the coefficient for the variable */
-            if( var == NULL )
-            {
-               SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
-               return SCIP_READERROR;
-            }
-            else
-            {
-               SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
-            }
+         /* changing the coefficient for the variable */
+         if( var == NULL )
+         {
+            SCIPerrorMessage("There is no variable <%s> in the current scenario.\n", name);
+            return SCIP_READERROR;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
          }
       }
    }
@@ -2451,6 +2525,7 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_READERDATA*      readerdata          /**< the reader data */
    )
 {
+   SCIP_BENDERS* benders;
    int i;
 
    assert(scip != NULL);
@@ -2462,7 +2537,6 @@ SCIP_RETCODE buildDecompProblem(
     * to use the two-phase method, then the setting in cons_benderslp must be explicitly changed.
     */
    SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benders/active", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/benderslp/active", TRUE) );
 
    setScenarioScip(readerdata->scenariotree, scip);
 
@@ -2478,6 +2552,16 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubproblemArray(readerdata->scenariotree),
          getScenarioNChildren(readerdata->scenariotree)) );
 
+   /* getting the default Benders' decomposition */
+   benders = SCIPfindBenders(scip, "default");
+
+   /* updating the lower bounds for the subproblems */
+   for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
+   {
+      SCIPbendersUpdateSubproblemLowerbound(benders, i,
+         getScenarioLowerbound(scip, getScenarioChild(readerdata->scenariotree, i)));
+   }
+
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
 
@@ -2486,6 +2570,10 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
+
+   /* disabling aggregation since it can affect the mapping between the master and subproblem variables */
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotaggr", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotmultaggr", TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2578,7 +2666,7 @@ TERMINATE:
    stoinputFree(scip, &stoi);
    SCIPfclose(fp);
 
-   if( error )
+   if( error || retcode != SCIP_OKAY )
       return SCIP_READERROR;
    else
       return SCIP_OKAY;
