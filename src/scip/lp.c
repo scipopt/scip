@@ -5210,6 +5210,12 @@ SCIP_RETCODE SCIProwFree(
    assert((*row)->lppos == -1);
    assert((*row)->eventfilter != NULL);
 
+   /* release constraint that has been used for creating the row */
+   if( (*row)->cons != NULL )
+   {
+      SCIP_CALL( SCIPconsRelease(&(*row)->cons, blkmem, set) );
+   }
+
    /* remove column indices from corresponding rows */
    SCIP_CALL( rowUnlink(*row, set, lp) );
 
@@ -17159,6 +17165,9 @@ void SCIProwSetCons(
 {
    assert(row != NULL);
    assert(cons != NULL);
+
+   /* capture the constraint */
+   SCIPconsCapture(cons);
 
    row->cons = cons;
 }
