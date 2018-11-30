@@ -16632,7 +16632,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwIsModifiable
 #undef SCIProwIsRemovable
 #undef SCIProwGetOrigintype
-#undef SCIProwGetOriginCons
+#undef SCIProwGetOriginConshdlr
 #undef SCIProwGetOriginSepa
 #undef SCIProwIsInGlobalCutpool
 #undef SCIProwGetLPPos
@@ -17133,13 +17133,13 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
 }
 
 /** returns origin constraint handler that created the row (NULL if not available) */
-SCIP_CONSHDLR* SCIProwGetOriginCons(
+SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
    SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert( row != NULL );
 
-   if ( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS )
+   if ( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONSHDLR )
    {
       assert( row->origin != NULL );
       return (SCIP_CONSHDLR*) row->origin;

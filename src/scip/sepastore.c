@@ -831,7 +831,7 @@ SCIP_RETCODE sepastoreApplyCut(
          /* increase count of applied cuts for origins of row */
          switch ( cut->origintype )
          {
-         case SCIP_ROWORIGINTYPE_CONS:
+         case SCIP_ROWORIGINTYPE_CONSHDLR:
             assert( cut->origin != NULL );
             SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
             break;
