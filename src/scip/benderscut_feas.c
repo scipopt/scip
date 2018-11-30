@@ -54,33 +54,64 @@
  * Local methods
  */
 
-/** computing as standard Benders' feasibility cut from the dual solutions of the LP
- *
- *  NOTE: The cut must be created before being passed to this function
- */
+/** adds a variable and value to the constraint/row arrays */
+static
+SCIP_RETCODE addVariableToArray(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR*             addvar,             /**< the variable that will be added to the array */
+   SCIP_Real             addval,             /**< the value that will be added to the array */
+   int*                  nvars,              /**< the number of variables in the variable array */
+   int*                  varssize            /**< the length of the variable size */
+   )
+{
+   assert(masterprob != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(addvar != NULL);
+   assert(nvars != NULL);
+   assert(varssize != NULL);
+
+   if( *nvars >= *varssize )
+   {
+      *varssize = SCIPcalcMemGrowSize(masterprob, *varssize + 1);
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vars, *varssize) );
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vals, *varssize) );
+   }
+   assert(*nvars < *varssize);
+
+   vars[*nvars] = addvar;
+   vals[*nvars] = addval;
+   (*nvars)++;
+
+   return SCIP_OKAY;
+}
+
+/** computing as standard Benders' feasibility cut from the dual solutions of the LP */
 static
 SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
+   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   int*                  nvars,              /**< the number of variables in the cut */
+   int*                  varssize,           /**< the number of variables in the array */
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
-   SCIP_VAR** vars;
-   int nvars;
+   SCIP_VAR** subvars;
+   int nsubvars;
    int nrows;
    SCIP_Real dualsol;
-   SCIP_Real lhs;       /* the left hand side of the cut */
    SCIP_Real addval;    /* the value that must be added to the lhs */
-   SCIP_Real activity;
    int i;
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
-   assert(cut != NULL);
    assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE
       || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
 
@@ -102,40 +133,35 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       if( SCIPisDualfeasZero(subproblem, dualsol) )
          continue;
 
-      lhs = SCIPgetLhsLinear(masterprob, cut);
-
       if( dualsol > 0.0 )
          addval = dualsol*SCIProwGetLhs(lprow);
       else
          addval = dualsol*SCIProwGetRhs(lprow);
 
-      lhs += addval;
+      *lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+      if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
          || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
          (*success) = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
          return SCIP_OKAY;
       }
-
-      /* Update the lhs of the cut */
-      SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
    }
 
-   nvars = SCIPgetNVars(subproblem);
-   vars = SCIPgetVars(subproblem);
+   nsubvars = SCIPgetNVars(subproblem);
+   subvars = SCIPgetVars(subproblem);
 
    /* looping over all variables to update the coefficients in the computed cut. */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nsubvars; i++ )
    {
       SCIP_VAR* var;
       SCIP_VAR* mastervar;
 
-      var = vars[i];
+      var = subvars[i];
 
-      /* retreiving the master problem variable for the given subproblem variable. */
+      /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
       dualsol = SCIPgetVarFarkasCoef(subproblem, var);
@@ -151,54 +177,30 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       {
          SCIPdebugMsg(masterprob ,"Adding coeffs to feasibility cut: <%s> dualsol %g\n", SCIPvarGetName(mastervar), dualsol);
 
-         SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, dualsol) );
+         /* adding the variable to the storage */
+         SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, dualsol, nvars, varssize) );
       }
       else
       {
          addval = 0;
-
-         /* get current lhs of the subproblem cut */
-         lhs = SCIPgetLhsLinear(masterprob, cut);
 
          if( SCIPisPositive(subproblem, dualsol) )
             addval = dualsol*SCIPvarGetUbGlobal(var);
          else if( SCIPisNegative(subproblem, dualsol) )
             addval = dualsol*SCIPvarGetLbGlobal(var);
 
-         lhs -= addval;
+         *lhs -= addval;
 
          /* if the bound becomes infinite, then the cut generation terminates. */
-         if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+         if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
             || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
          {
             (*success) = FALSE;
             SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
             return SCIP_OKAY;
          }
-
-         /* Update lhs */
-         SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
       }
    }
-
-   assert(SCIPisInfinity(masterprob, SCIPgetRhsLinear(masterprob, cut)));
-
-   /* the activity of the cut should be less than the lhs. This will ensure that the evaluated solution will be cut off.
-    * It is possible that the activity is greater than the lhs. This could be caused by numerical difficulties. In this
-    * case, no cut will be generated.
-    */
-   lhs = SCIPgetLhsLinear(masterprob, cut);
-   activity = SCIPgetActivityLinear(masterprob, cut, sol);
-   if( SCIPisGE(masterprob, activity, lhs) )
-   {
-      (*success) = FALSE;
-      SCIPdebugMsg(masterprob ,"Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
-      return SCIP_OKAY;
-   }
-
-   assert(cut != NULL);
-
-   SCIPdebugPrintCons(masterprob, cut, NULL);
 
    (*success) = TRUE;
 
@@ -215,34 +217,35 @@ SCIP_RETCODE computeStandardFeasibilityCutNL(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
+   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   int*                  nvars,              /**< the number of variables in the cut */
+   int*                  varssize,           /**< the number of variables in the array */
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
    SCIP_EXPRINT* exprinterpreter;
-   SCIP_VAR** vars;
+   SCIP_VAR** subvars;
    int nrows;
-   int nvars;
+   int nsubvars;
+   SCIP_Real activity;
    SCIP_Real dirderiv;
    SCIP_Real dualsol;
-   SCIP_Real lhs;       /* the left hand side of the cut */
-   SCIP_Real activity;
    int i;
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
-   assert(cut != NULL);
    assert(SCIPisNLPConstructed(subproblem));
    assert(SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
 
    (*success) = FALSE;
 
-   nvars = SCIPgetNNLPVars(subproblem);
-   vars = SCIPgetNLPVars(subproblem);
+   nsubvars = SCIPgetNNLPVars(subproblem);
+   subvars = SCIPgetNLPVars(subproblem);
 
-   lhs = 0.0;
+   *lhs = 0.0;
    dirderiv = 0.0;
 
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
@@ -262,32 +265,33 @@ SCIP_RETCODE computeStandardFeasibilityCutNL(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, NULL, cut, nlrow, exprinterpreter, -dualsol, &dirderiv) );
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter, -dualsol,
+            &dirderiv, vars, vals, nvars, varssize) );
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
 
       if( dualsol > 0.0 )
       {
          assert(!SCIPisInfinity(subproblem, SCIPnlrowGetRhs(nlrow)));
-         lhs += dualsol * (activity - SCIPnlrowGetRhs(nlrow));
+         *lhs += dualsol * (activity - SCIPnlrowGetRhs(nlrow));
       }
       else
       {
          assert(!SCIPisInfinity(subproblem, -SCIPnlrowGetLhs(nlrow)));
-         lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
+         *lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
       }
    }
 
    SCIPexprintFree(&exprinterpreter);
 
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nsubvars; i++ )
    {
       SCIP_VAR* var;
       SCIP_VAR* mastervar;
       SCIP_Real coef;
 
-      var = vars[i];
+      var = subvars[i];
 
       /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
@@ -300,41 +304,22 @@ SCIP_RETCODE computeStandardFeasibilityCutNL(
 
       coef = -dualsol;
 
-      SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, coef) );
+      /* adding the variable to the storage */
+      SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
 
       dirderiv += coef * SCIPvarGetNLPSol(var);
    }
 
-   lhs += dirderiv;
+   *lhs += dirderiv;
 
    /* if the side became infinite or dirderiv was infinite, then the cut generation terminates. */
-   if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs)
+   if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
       || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
    {
       (*success) = FALSE;
       SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", lhs, dirderiv);
       return SCIP_OKAY;
    }
-
-   /* Update the lhs of the cut */
-   lhs += SCIPgetLhsLinear(masterprob, cut);
-   SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
-
-   /* the activity of the cut should be less than the lhs. This will ensure that the evaluated solution will be cut off.
-    * It is possible that the activity is greater than the lhs. This could be caused by numerical difficulties. In this
-    * case, no cut will be generated.
-    */
-   activity = SCIPgetActivityLinear(masterprob, cut, sol);
-   if( SCIPisGE(masterprob, activity, lhs) )
-   {
-      (*success) = FALSE;
-      SCIPdebugMsg(masterprob ,"Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
-      return SCIP_OKAY;
-   }
-
-   assert(cut != NULL);
-
-   SCIPdebugPrintCons(masterprob, cut, NULL);
 
    (*success) = TRUE;
 
@@ -354,6 +339,13 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    )
 {
    SCIP_CONS* cut;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real activity;
+   int nvars;
+   int varssize;
+   int nmastervars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool success;
 
@@ -362,17 +354,23 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(benders != NULL);
    assert(result != NULL);
 
+   /* allocating memory for the variable and values arrays */
+   nmastervars = SCIPgetNVars(masterprob) + SCIPgetNFixedVars(masterprob);
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vars, nmastervars) );
+   SCIP_CALL( SCIPallocClearBufferArray(masterprob, &vals, nmastervars) );
+   lhs = 0.0;
+   nvars = 0;
+   varssize = nmastervars;
+
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
-   /* creating the constraint for the cut */
-   SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
-
    if( SCIPisNLPConstructed(subproblem) )
    {
       /* computing the coefficients of the feasibility cut from the NLP */
-      SCIP_CALL( computeStandardFeasibilityCutNL(masterprob, subproblem, benders, sol, cut, &success) );
+      SCIP_CALL( computeStandardFeasibilityCutNL(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+            &success) );
    }
    else
    {
@@ -383,7 +381,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       }
 
       /* computing the coefficients of the feasibility cut from the LP */
-      SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut, &success) );
+      SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+            &success) );
    }
 
    /* if success is FALSE, then there was an error in generating the feasibility cut. No cut will be added to the master
@@ -396,13 +395,45 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
    else
    {
-      /* adding the constraint to the master problem */
-      SCIP_CALL( SCIPaddCons(masterprob, cut) );
+      /* creating a constraint with the variables and coefficients previously stored */
+      SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, nvars, vars, vals, lhs, SCIPinfinity(masterprob)) );
+      SCIP_CALL( SCIPsetConsDynamic(masterprob, cut, TRUE) );
+      SCIP_CALL( SCIPsetConsRemovable(masterprob, cut, TRUE) );
 
-      (*result) = SCIP_CONSADDED;
+      assert(SCIPisInfinity(masterprob, SCIPgetRhsLinear(masterprob, cut)));
+
+      /* the activity of the cut should be less than the lhs. This will ensure that the evaluated solution will be cut off.
+       * It is possible that the activity is greater than the lhs. This could be caused by numerical difficulties. In this
+       * case, no cut will be generated.
+       */
+      lhs = SCIPgetLhsLinear(masterprob, cut);
+      activity = SCIPgetActivityLinear(masterprob, cut, sol);
+      if( SCIPisGE(masterprob, activity, lhs) )
+      {
+         success = FALSE;
+         SCIPdebugMsg(masterprob ,"Invalid feasibility cut - activity is greater than lhs %g >= %g.\n", activity, lhs);
+#ifdef SCIP_DEBUG
+         SCIPABORT();
+#endif
+      }
+
+      assert(cut != NULL);
+
+      if( success )
+      {
+         /* adding the constraint to the master problem */
+         SCIP_CALL( SCIPaddCons(masterprob, cut) );
+
+         SCIPdebugPrintCons(masterprob, cut, NULL);
+
+         (*result) = SCIP_CONSADDED;
+      }
+
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
    }
 
-   SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
+   SCIPfreeBufferArray(masterprob, &vals);
+   SCIPfreeBufferArray(masterprob, &vars);
 
    return SCIP_OKAY;
 }
