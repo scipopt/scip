@@ -832,6 +832,15 @@ SCIP_RETCODE SCIPgetRowprepRowConshdlr(
 
 /** generates a SCIP_ROW from a rowprep */
 EXTERN
+SCIP_RETCODE SCIPgetRowprepRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONS*            cons                /**< constraint */
+);
+
+/** generates a SCIP_ROW from a rowprep */
+EXTERN
 SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
