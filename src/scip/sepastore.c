@@ -835,6 +835,10 @@ SCIP_RETCODE sepastoreApplyCut(
             assert( cut->origin != NULL );
             SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
             break;
+         case SCIP_ROWORIGINTYPE_CONS:
+            assert( cut->origin != NULL );
+            SCIPconshdlrIncNAppliedCuts(SCIPconsGetHdlr((SCIP_CONS*)cut->origin));
+            break;
          case SCIP_ROWORIGINTYPE_SEPA:
             assert( cut->origin != NULL );
             SCIPsepaIncNAppliedCuts((SCIP_SEPA*) cut->origin);

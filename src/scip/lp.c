@@ -17132,6 +17132,21 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
    return (SCIP_ROWORIGINTYPE) row->origintype;
 }
 
+/** returns origin constraint that created the row (NULL if not available) */
+SCIP_CONS* SCIProwGetOriginCons(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert( row != NULL );
+
+   if ( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS )
+   {
+      assert( row->origin != NULL );
+      return (SCIP_CONS*) row->origin;
+   }
+   return NULL;
+}
+
 /** returns origin constraint handler that created the row (NULL if not available) */
 SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
    SCIP_ROW*             row                 /**< LP row */
@@ -17143,6 +17158,11 @@ SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
    {
       assert( row->origin != NULL );
       return (SCIP_CONSHDLR*) row->origin;
+   }
+   else if( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS )
+   {
+      assert(row->origin != NULL);
+      return SCIPconsGetHdlr((SCIP_CONS*)row->origin);
    }
    return NULL;
 }
