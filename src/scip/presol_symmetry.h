@@ -66,6 +66,13 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
    );
 
+/* block component of symmetry group to be considered by symmetry handling routines */
+EXTERN
+SCIP_RETCODE SCIPblockSymmetryComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   i                   /**< index of component to block */
+   );
+
 #ifdef __cplusplus
 }
 #endif
