@@ -17165,6 +17165,7 @@ void SCIProwSetCons(
 {
    assert(row != NULL);
    assert(cons != NULL);
+   assert(row->cons == NULL);
 
    /* capture the constraint */
    SCIPconsCapture(cons);
