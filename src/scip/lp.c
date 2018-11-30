@@ -5142,6 +5142,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->minactivity = SCIP_INVALID;
    (*row)->maxactivity = SCIP_INVALID;
    (*row)->origin = origin;
+   (*row)->cons = NULL;
    (*row)->eventfilter = NULL;
    (*row)->index = stat->nrowidx;
    SCIPstatIncrement(stat, set, nrowidx);
@@ -17138,6 +17139,28 @@ SCIP_CONSHDLR* SCIProwGetOriginCons(
       return (SCIP_CONSHDLR*) row->origin;
    }
    return NULL;
+}
+
+/** returns the actual constraint that generated the row (NULL if not available) */
+SCIP_CONS* SCIProwGetCons(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cons;
+}
+
+/** set cons as the constraint that generated the row */
+void SCIProwSetCons(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(row != NULL);
+   assert(cons != NULL);
+
+   row->cons = cons;
 }
 
 /** returns origin separator that created the row (NULL if not available) */
