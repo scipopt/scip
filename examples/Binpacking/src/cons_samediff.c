@@ -278,7 +278,6 @@ SCIP_Bool consdataCheck(
          SCIPdebug( SCIPprintVar(scip, var, NULL) );
          return FALSE;
       }
-
    }
 
    return TRUE;

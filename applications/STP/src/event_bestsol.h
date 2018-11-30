@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_bestsol.h
+/**@file   STP/src/event_bestsol.h
  * @brief  eventhdlr for best solution found
  * @author Gerald Gamrath
  *

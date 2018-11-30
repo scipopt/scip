@@ -336,7 +336,7 @@ SCIP_DECL_PROBINITSOL(probinitsolBinpacking)
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
 static
 SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
-{
+{  /*lint --e{715}*/
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(probdata != NULL);
@@ -347,9 +347,8 @@ SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, -1) );
 
-
    return SCIP_OKAY;
-}/*lint !e715*/
+}
 
 /**@} */
 

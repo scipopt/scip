@@ -2335,13 +2335,43 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    }
    else
    {
-      /* if no point is suggested and the value in LP solution is not too big, try the LP or pseudo LP solution
-       * otherwise, if the value in the LP or pseudosolution is large (here 1e+12), use 0.0
-       * in both cases, project onto bounds of course
-       */
+      /* if no point is suggested, try the LP or pseudo solution */
       branchpoint = SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(tree));
+
       if( REALABS(branchpoint) > 1e+12 )
+      {
+         /* if the value in the LP or pseudosolution is large (here 1e+12), use 0.0 (will be projected onto bounds below) */
          branchpoint = 0.0;
+      }
+      else if( SCIPtreeHasCurrentNodeLP(tree) && set->branch_midpull > 0.0 && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) )
+      {
+         /* if the value is from the LP and midpull is activated, then push towards middle of domain */
+         SCIP_Real midpull = set->branch_midpull;
+         SCIP_Real glb;
+         SCIP_Real gub;
+         SCIP_Real reldomainwidth;
+
+         /* shrink midpull if width of local domain, relative to global domain, is small
+          * that is, if there has been already one or several branchings on this variable, then give more emphasis on LP solution
+          *
+          * do this only if the relative domain width is below the minreldomainwidth value
+          */
+         glb = SCIPvarGetLbGlobal(var);
+         gub = SCIPvarGetUbGlobal(var);
+         assert(glb < gub);
+
+         if( !SCIPsetIsInfinity(set, -glb) && !SCIPsetIsInfinity(set, gub) )
+            reldomainwidth = (ub - lb) / (gub - glb);
+         else
+            reldomainwidth = SCIPsetEpsilon(set);
+
+         if( reldomainwidth < set->branch_midpullreldomtrig )
+            midpull *= reldomainwidth;
+
+         branchpoint = midpull * (lb+ub) / 2.0 + (1.0 - midpull) * branchpoint;
+      }
+
+      /* make sure branchpoint is on interval, below we make sure that it is within bounds for continuous vars */
       branchpoint = MAX(lb, MIN(branchpoint, ub));
    }
 
@@ -2533,7 +2563,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }

@@ -2111,7 +2111,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       return SCIP_OKAY;
 
    /* the components constraint handler does kind of dual reductions */
-   if( !SCIPallowDualReds(scip) || !SCIPallowObjProp(scip) )
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    problem = NULL;
@@ -2281,7 +2281,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       return SCIP_OKAY;
 
    /* the components constraint handler does kind of dual reductions */
-   if( !SCIPallowDualReds(scip) || !SCIPallowObjProp(scip) )
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check for a reached timelimit */

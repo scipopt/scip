@@ -70,6 +70,8 @@
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+#define SCIP_DEFAULT_BRANCH_MIDPULL        0.75 /**< fraction by which to move branching point of a continuous variable towards the middle of the domain */
+#define SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG 0.5 /**< multiply midpull by relative domain width if the latter is below this value */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 #define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
@@ -279,8 +281,8 @@
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
-#define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
-#define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
+#define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 #define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
@@ -457,7 +459,7 @@
 
 /* Timing */
 
-#define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
+#define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_WALL  /**< default clock type for timing */
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
@@ -1010,7 +1012,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          SCIP_NLPI* nlpicopy;
 
-         SCIP_CALL( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy) );
+         SCIP_CALL_FINALLY( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(&nlpicopy) );
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
       }
    }
@@ -1189,6 +1191,16 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/clamp",
          "minimal relative distance of branching point to bounds when branching on a continuous variable",
          &(*set)->branch_clamp, FALSE, SCIP_DEFAULT_BRANCH_CLAMP, 0.0, 0.5,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "branching/midpull",
+         "fraction by which to move branching point of a continuous variable towards the middle of the domain; a value of 1.0 leads to branching always in the middle of the domain",
+         &(*set)->branch_midpull, FALSE, SCIP_DEFAULT_BRANCH_MIDPULL, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "branching/midpullreldomtrig",
+         "multiply midpull by relative domain width if the latter is below this value",
+         &(*set)->branch_midpullreldomtrig, FALSE, SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/lpgainnormalize",
@@ -1903,14 +1915,14 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowdualreds",
-            "should dual reductions in propagation methods and presolver be allowed?",
-            &(*set)->misc_allowdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWDUALREDS,
+            "misc/allowstrongdualreds",
+            "should strong dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowobjprop",
-            "should propagation to the current objective be allowed in propagation methods?",
-            &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            "misc/allowweakdualsreds",
+            "should weak dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/scaleobj",

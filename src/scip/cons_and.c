@@ -3436,6 +3436,7 @@ SCIP_RETCODE detectRedundantConstraints(
          if( redundant )
          {
             /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            /* coverity[swapped_arguments] */
             SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
 	    /* also take the check when upgrade flag over if necessary */
@@ -4049,9 +4050,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    int ncontvars;
    int v;
    int c;
-   unsigned int resid;
-   unsigned int varid;
-   unsigned int id = 1;
+   int resid;
+   int varid;
+   int id = 1;
 
    /* no AND-constraints available */
    if( nconss == 0 )
@@ -4107,12 +4108,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       activevar = SCIPvarGetProbvar(consdata->resvar);
 
       /* check if we already found this variables */
-      resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      resid = SCIPhashmapGetImageInt(hashmap, activevar);
+      assert(resid >= 0);
+
       if( resid == 0 )
       {
          resid = id;
          ++id;
-         SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+         SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activevar, resid) );
 
          /* write new gml node for new resultant */
          SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
@@ -4127,12 +4130,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
          /* check if we already found this variables */
-         varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+         varid = SCIPhashmapGetImageInt(hashmap, activeconsvars[v]);
          if( varid == 0 )
          {
             varid = id;
             ++id;
-            SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+            SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activeconsvars[v], varid) );
 
             /* write new gml node for new operand */
             SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
@@ -4151,12 +4154,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    {
       activevar = SCIPvarGetProbvar(vars[v]);
 
-      varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      varid = SCIPhashmapGetImageInt(hashmap, activevar);
+      assert(varid >= 0);
+
       if( varid == 0 )
       {
 	 varid = id;
 	 ++id;
-	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+	 SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activeconsvars[v], varid) );
 
 	 /* write new gml node for new operand */
 	 SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activevar), NULL, NULL, NULL);
@@ -4541,7 +4546,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    }
 
    /* perform dual presolving on AND-constraints */
-   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowDualReds(scip))
+   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowStrongDualReds(scip))
    {
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }

@@ -1398,7 +1398,7 @@ SCIP_RETCODE solveSubNLP(
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
 
-            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, resultsol) );
+            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, NULL) );
          }
          else
          {
@@ -2470,8 +2470,8 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* we do not have a sub-SCIP, so we also do not need a starting point */
-   if( heurdata->subscip == NULL )
+   /* if we do not have a sub-SCIP, but tried to set one up before or will never create a subSCIP, then do not need a starting point */
+   if( heurdata->subscip == NULL && (heurdata->triedsetupsubscip || !runHeuristic(scip) || SCIPheurGetFreq(heur) < 0) )
       return SCIP_OKAY;
 
    /* if the solution is the one we created (last), then it is useless to use it as starting point again

@@ -308,7 +308,7 @@ SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/* runs gas transportation example */
+/** runs gas transportation example */
 static
 SCIP_RETCODE runGastrans(void)
 {
@@ -354,10 +354,10 @@ SCIP_RETCODE runGastrans(void)
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
-   )  /*lint --e{715}*/
-{
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
+   )
+{  /*lint --e{715}*/
    SCIP_RETCODE retcode;
 
    retcode = runGastrans();

@@ -284,6 +284,7 @@ BEGIN {
    objectivelimit = +infty;
    firstpb = +infty;
    db = -infty;
+   objlimit = +infty;
    dbset = 0;
    dbforobjsense = -infty;
    simpiters = 0;
@@ -323,6 +324,7 @@ BEGIN {
    valgrinderror = 0;
    valgrindleaks = 0;
    bestsolfeas = 1;
+   infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
 }
@@ -604,10 +606,16 @@ BEGIN {
 }
 /problem is solved/ {
    timeout = 0;
+   if( $8 == "(objective" && $9 == "limit" && $10 == "reached)" )
+   {
+      infeasobjlimit = 1;
+   }
 }
 /best solution is not feasible in original problem/ {
    bestsolfeas = 0;
 }
+
+/^objective value limit set to/ {objlimit = $6; }
 
 /Check SOL:/ {
    intcheck = $4;
@@ -622,12 +630,26 @@ BEGIN {
    firstpb = $4;
 }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" || $4 == "infeasible\r" )
+   if( infeasobjlimit )
    {
-      pb = +infty;
-      db = +infty;
+      pb = objlimit;
+      db = objlimit;
+      feasible = 1;
+   }
+   else if( $4 == "infeasible" || $4 == "infeasible\r" ) {
+      if( ($5 == "(objective" && $6 == "limit" && $7 == "reached)") )
+      {
+	 pb = objlimit;
+	 db = objlimit;
+	 feasible = 1;
+      }
+      else
+      {
+	 pb = +infty;
+	 db = +infty;
+	 feasible = 0;
+      }
       dbset = 1;
-      feasible = 0;
    }
    else if( $4 == "-"  || $4 == "-\r")
    {

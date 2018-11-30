@@ -72,4 +72,9 @@
  * The pricer pricer_vrp.cpp shows how to perform column generation in SCIP and how to solve the above described pricing
  * problem which uses an implementation of a priority queue implemented in pqueue.h. In main_vrp.cpp we read the
  * instance, create all necessary data and set up SCIP.
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

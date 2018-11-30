@@ -51,7 +51,6 @@
 #include <string.h>
 
 /* event handler for synchronization */
-
 #define EVENTHDLR_NAME         "sync"
 #define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip sovlers"
 
@@ -88,8 +87,6 @@ SCIP_DECL_EVENTFREE(eventFreeSync)
 
    return SCIP_OKAY;
 }
-
-
 
 /** initialization method of event handler (called after problem was transformed) */
 static
@@ -208,7 +205,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    if( !commvarbnds )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
    return SCIP_OKAY;
 }
 
@@ -289,7 +286,7 @@ SCIP_RETCODE initConcsolver(
    return SCIP_OKAY;
 }
 
-/* creates an instance of a concurrent SCIP solver */
+/** creates an instance of a concurrent SCIP solver */
 static
 SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 {
@@ -518,6 +515,7 @@ static
 SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
 {
    SCIP_CONCSOLVERDATA* data;
+
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
@@ -723,6 +721,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    )
 {
    SCIP_CONCSOLVERTYPEDATA* data;
+
    assert(scip != NULL);
 
    /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.

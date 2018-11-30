@@ -29,6 +29,13 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 #ifdef __cplusplus
 
 
@@ -46,7 +53,7 @@ template<typename T1, typename T2> T1* docastcheck(T1* v1, void* v, T2* v2)
 {
    typedef typename std::remove_const<T1>::type t1;
    typedef typename std::remove_const<T2>::type t2;
-   static_assert(std::is_same<t1, t2>(), "need equal types");
+   static_assert(std::is_same<t1, t2>::value, "need equal types");
    return reinterpret_cast<T1*>(v);
 }
 #else

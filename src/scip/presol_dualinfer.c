@@ -1130,13 +1130,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {

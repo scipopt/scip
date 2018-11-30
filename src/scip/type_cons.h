@@ -466,7 +466,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  nconss - nusefulconss constraints.
  *
  *  @note if the constraint handler uses dual information in propagation it is nesassary to check via calling
- *        SCIPallowDualReds and SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp.,
+ *        SCIPallowWeakDualReds and SCIPallowStrongDualReds if dual reductions and propgation with the current cutoff bound, resp.,
  *        are allowed.
  *
  *  input:
@@ -516,8 +516,8 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        call
  *
- *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowDualReds
- *        if dual reductions are allowed.
+ *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowWeakDualReds
+ *        and SCIPallowStrongDualReds if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers

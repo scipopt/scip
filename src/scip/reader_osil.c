@@ -1186,6 +1186,7 @@ SCIP_RETCODE readQuadraticCoefs(
          /* replace linear constraint by quadratic constraint */
          cons = conss[considx];  /*lint !e613*/
 
+         /* coverity[negative_returns] */
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
             SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
             0, NULL, NULL, NULL,
@@ -2049,6 +2050,7 @@ SCIP_RETCODE readNonlinearExprs(
             SCIP_Real one;
 
             one = 1.0;
+            /* coverity[negative_returns] */
             SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
                   SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
                   1, &exprtree, &one,
@@ -2369,6 +2371,7 @@ SCIP_RETCODE readSOScons(
           case 2:
              SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
              break;
+          /* coverity[dead_error_begin] */
           default:
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
              SCIPABORT();

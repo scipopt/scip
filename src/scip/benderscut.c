@@ -94,8 +94,9 @@ SCIP_RETCODE SCIPbenderscutCopyInclude(
    return SCIP_OKAY;
 }
 
-/** creates a Benders' decomposition cut */
-SCIP_RETCODE SCIPbenderscutCreate(
+/** internal method for creating a Benders' decomposition structure */
+static
+SCIP_RETCODE doBenderscutCreate(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_BENDERSCUT**     benderscut,         /**< pointer to the Benders' decomposition cut data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -159,6 +160,39 @@ SCIP_RETCODE SCIPbenderscutCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
         "is this Benders' decomposition cut method used to generate cuts?", &(*benderscut)->enabled, FALSE,
         SCIP_DEFAULT_ENABLED, NULL, NULL) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
+/** creates a Benders' decomposition cut */
+SCIP_RETCODE SCIPbenderscutCreate(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSCUT**     benderscut,         /**< pointer to the Benders' decomposition cut data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of the Benders' decomposition cut */
+   const char*           desc,               /**< description of the Benders' decomposition cut */
+   int                   priority,           /**< priority of the the Benders' decomposition cut */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
+   SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of the Benders' decomposition cut or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXIT((*benderscutexit)),/**< deinitialize the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTINITSOL((*benderscutinitsol)),/**< solving process initialization method of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol)),/**< solving process deinitialization method of the Benders' decomposition cut */
+   SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< execution method of the Benders' decomposition cut */
+   SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' decomposition cut data */
+   )
+{
+   assert(benderscut != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+   assert(benderscutexec != NULL);
+
+   SCIP_CALL_FINALLY( doBenderscutCreate(benders, benderscut, set, messagehdlr, blkmem, name, desc, priority, islpcut,
+         benderscutcopy, benderscutfree, benderscutinit, benderscutexit, benderscutinitsol, benderscutexitsol,
+         benderscutexec, benderscutdata), (void)SCIPbenderscutFree(benderscut, set) );
 
    return SCIP_OKAY;
 }

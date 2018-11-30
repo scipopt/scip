@@ -19,7 +19,7 @@
  *
  * This file handles the main problem data used in that project. For more details see \ref SCFLP_PROBLEMDATA page.
  *
- * @page SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP - with and without Benders' decomposition"
+ * @page SCFLP_SOLVEPROB Solving the deterministic equivalent
  *
  * The probdata_scflp.c is used to store the global problem data and build the monolithic MIP and decomposed problems.
  * First, the structure of the problem data is describe. This is followed by a description of how to solve the problem
@@ -316,7 +316,6 @@ SCIP_RETCODE createMasterproblem(
 
    SCIP_CALL( SCIPaddCons(scip, (*sufficientcap)) );
 
-
    /* adding the facility variables */
    for( i = 0; i < nfacilities; i++ )
    {
@@ -592,7 +591,6 @@ SCIP_RETCODE probdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs[i], (*probdata)->nfacilities);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs, (*probdata)->ncustomers);
 
-
    for( i = (*probdata)->ncustomers - 1; i >= 0; i-- )
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands[i], (*probdata)->nscenarios);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ncustomers);
@@ -632,7 +630,6 @@ SCIP_RETCODE probdataFree(
          SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars[i], (*probdata)->nscenarios);
 
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars, (*probdata)->nfacilities);
-
 
       for( i = (*probdata)->nscenarios - 1; i >= 0 ; i-- )
          SCIP_CALL( SCIPfree(&(*probdata)->subproblems[i]) );
@@ -703,7 +700,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nscenarios,       /**< the number of Benders' decomposition scenarios */
+   int                   nscenarios,         /**< the number of Benders' decomposition scenarios */
    SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
    )
 {

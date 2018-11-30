@@ -55,7 +55,6 @@
 static
 SCIP_DECL_RELAXINITSOL(relaxInitsolNlp)
 {  /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 
@@ -64,7 +63,6 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolNlp)
 static
 SCIP_DECL_RELAXEXITSOL(relaxExitsolNlp)
 {  /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 
