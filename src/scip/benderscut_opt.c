@@ -509,6 +509,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    lhs = 0.0;
    rhs = SCIPinfinity(masterprob);
    nvars = 0;
+   varssize = nmastervars;
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
