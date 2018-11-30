@@ -783,7 +783,7 @@ void SCIPmarkColNotRemovableLocal(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcreateRowCons(
+SCIP_RETCODE SCIPcreateRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
@@ -856,7 +856,7 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 EXTERN
@@ -885,7 +885,7 @@ SCIP_RETCODE SCIPcreateRow(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcreateEmptyRowCons(
+SCIP_RETCODE SCIPcreateEmptyRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
@@ -949,7 +949,7 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateEmptyRowCons() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
 EXTERN

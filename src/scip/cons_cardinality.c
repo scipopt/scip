@@ -2054,7 +2054,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create upper bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardub#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
@@ -2097,7 +2097,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create lower bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardlb#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, nvars, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );

@@ -718,7 +718,7 @@ SCIP_RETCODE createRelaxation(
    for( i = 0; i < nvars; ++i )
    {
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i], SCIPconsGetHdlr(cons), rowname, 0.0, SCIPinfinity(scip),
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &consdata->rows[i], SCIPconsGetHdlr(cons), rowname, 0.0, SCIPinfinity(scip),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
@@ -726,7 +726,7 @@ SCIP_RETCODE createRelaxation(
 
    /* create additional row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[nvars], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &consdata->rows[nvars], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );

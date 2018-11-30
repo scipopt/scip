@@ -542,7 +542,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       /* creating an empty row or constraint for the Benders' cut */
       if( addcut )
       {
-         SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, lhs, rhs, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, lhs, rhs, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPaddVarsToRow(masterprob, row, nvars, vars, vals) );
       }
       else
