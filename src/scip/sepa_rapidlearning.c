@@ -16,6 +16,7 @@
 /**@file   sepa_rapidlearning.c
  * @brief  rapidlearning separator
  * @author Timo Berthold
+ * @author Jakob Witzig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,28 +38,25 @@
 #define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP?                 */
+#define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP? */
 #define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?
                                          *   apply only if conflicts and incumbent solution will be copied too
                                          */
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
 #define DEFAULT_REDUCEDINFER      FALSE /**< should the inference values only be used when rapid learning found other reductions? */
-#define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
-#define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP?                      */
+#define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP? */
+#define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP? */
 
-#define DEFAULT_CHECKLOCALEXEC     TRUE
-#define DEFAULT_CHECKDEGANERAGY   FALSE /**< should local LP degeneracy be checked? */
+#define DEFAULT_CHECKEXEC          TRUE /**< check whether rapid learning should be executed */
+#define DEFAULT_CHECKDEGANERAGY    TRUE /**< should local LP degeneracy be checked? */
 #define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
 #define DEFAULT_CHECKLEAVES       FALSE /**< should the ration of leaves proven to be infeasible and exceeding the
                                          *   cutoff bound be checked? */
-#define DEFAULT_CHECKLOCALOBJ     FALSE /**< should the local objection function be checked? */
+#define DEFAULT_CHECKOBJ          FALSE /**< should the local objection function be checked? */
 #define DEFAULT_CHECKNSOLS        FALSE /**< should the number of solutions found so far be checked? */
-#define DEFAULT_CHECKSBLPS        FALSE /**< should strong branching results be considered? */
-#define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local RL */
-#define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before RL is
+#define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
+#define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before rapid learning is
                                          *   executed locally based on the progress of the dualbound */
-#define DEFAULT_SBFRAC              1.0 /**< maximal fraction of strong branching LPs that were pruned or the
-                                         *   objetive value has not changed to allow local RL */
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
@@ -67,11 +65,10 @@
 #define DEFAULT_MAXNODES           5000 /**< maximum number of nodes considered in rapid learning run */
 
 #define DEFAULT_CONTVARS          FALSE /**< should rapid learning be applied when there are continuous variables? */
-#define DEFAULT_CONTVARSQUOT        0.3 /**< maximal portion of continuous variables to apply rapid learning       */
-#define DEFAULT_LPITERQUOT          0.2 /**< maximal fraction of LP iterations compared to node LP iterations      */
+#define DEFAULT_CONTVARSQUOT        0.3 /**< maximal portion of continuous variables to apply rapid learning */
+#define DEFAULT_LPITERQUOT          0.2 /**< maximal fraction of LP iterations compared to node LP iterations */
 #define DEFAULT_COPYCUTS           TRUE /**< should all active cuts from the cutpool of the
-                                         *   original scip be copied to constraints of the subscip
-                                         */
+                                         *   original scip be copied to constraints of the subscip */
 
 
 /*
@@ -81,50 +78,47 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations      */
-   SCIP_Real             sbfrac;             /**< fraction of strong branching LPs that were pruned or
-                                              *   the objetive value has not changed */
-   SCIP_Real             mininflpratio;
-   int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called   */
+   SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations */
+   SCIP_Real             mininflpratio;      /**< minimal threshold of inf/obj leaves to allow local rapid learning */
+   int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
    int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
    int                   maxnodes;           /**< maximum number of nodes considered in rapid learning run */
-   SCIP_Longint          nwaitingnodes;      /**< number of nodes that should be processed before RL is executed locally
+   SCIP_Longint          nwaitingnodes;      /**< number of nodes that should be processed before rapid learning is executed locally
                                               *   based on the progress of the dualbound */
-   SCIP_Bool             applybdchgs;        /**< should the found global bound deductions be applied in the original SCIP?   */
-   SCIP_Bool             applyconflicts;     /**< should the found conflicts be applied in the original SCIP?                 */
+   SCIP_Bool             applybdchgs;        /**< should the found global bound deductions be applied in the original SCIP? */
+   SCIP_Bool             applyconflicts;     /**< should the found conflicts be applied in the original SCIP? */
    SCIP_Bool             applyinfervals;     /**< should the inference values be used as initialization in the original SCIP? */
-   SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP?               */
-   SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP?                      */
-   SCIP_Bool             checkdegeneracy;
+   SCIP_Bool             applyprimalsol;     /**< should the incumbent solution be copied to the original SCIP? */
+   SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP? */
+   SCIP_Bool             checkdegeneracy;    /**< should local LP degeneracy be checked? */
    SCIP_Bool             checkdualbound;     /**< should the progress on the dual bound be checked? */
-   SCIP_Bool             checkleaves;
-   SCIP_Bool             checklocalexec;
-   SCIP_Bool             checklocalobj;      /**< should the local objective function be checked? */
+   SCIP_Bool             checkleaves;        /**< should the ration of leaves proven to be infeasible and exceeding the
+                                              *   cutoff bound be checked? */
+   SCIP_Bool             checkexec;          /**< check whether rapid learning should be executed */
+   SCIP_Bool             checkobj;           /**< should the (local) objective function be checked? */
    SCIP_Bool             checknsols;         /**< should number if solutions found so far be checked? */
-   SCIP_Bool             checksblps;         /**< should strong branching results be considered? */
    SCIP_Bool             contvars;           /**< should rapid learning be applied when there are continuous variables? */
-   SCIP_Real             contvarsquot;       /**< maximal portion of continuous variables to apply rapid learning       */
+   SCIP_Real             contvarsquot;       /**< maximal portion of continuous variables to apply rapid learning */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
-                                              *   subproblem?
-                                              */
+                                              *   subproblem? */
    SCIP_Bool             reducedinfer;       /**< should the inference values only be used when rapid learning found other reductions? */
 };
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< trysol heuristic structure                          */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_HEUR*            heur,               /**< trysol heuristic structure */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
-   SCIP_VAR** vars;                          /* the original problem's variables                */
+   SCIP_VAR** vars;                          /* the original problem's variables */
    int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
+   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
 
    assert( scip != NULL );
@@ -203,38 +197,38 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP*                 subscip,            /**< subSCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    int                   randseed,           /**< global seed shift used in the sub-SCIP */
+   SCIP_Bool             global,             /**< should rapid learning run on the global problem? */
    SCIP_RESULT*          result              /**< result pointer */
    )
 {
-   SCIP_VAR** vars;                          /* original problem's variables                   */
-   SCIP_VAR** subvars;                       /* subproblem's variables                         */
+   SCIP_VAR** vars;                          /* original problem's variables */
+   SCIP_VAR** subvars;                       /* subproblem's variables */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_HASHMAP* varmapbw = NULL;            /* mapping of sub-SCIP variables to SCIP variables */
 
    SCIP_CONSHDLR** conshdlrs = NULL;         /* array of constraint handler's that might that might obtain conflicts */
-   int* oldnconss = NULL;                    /* number of constraints without rapid learning conflicts               */
+   int* oldnconss = NULL;                    /* number of constraints without rapid learning conflicts */
 
-   SCIP_Longint nodelimit;                   /* node limit for the subproblem                  */
+   SCIP_Longint nodelimit;                   /* node limit for the subproblem */
 
-   int nconshdlrs;                           /* size of conshdlr and oldnconss array                      */
+   int nconshdlrs;                           /* size of conshdlr and oldnconss array */
    int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
-   int nvars;                                /* number of variables                                       */
-   int restartnum;                           /* maximal number of conflicts that should be created        */
-   int i;                                    /* counter                                                   */
+   int nvars;                                /* number of variables */
+   int restartnum;                           /* maximal number of conflicts that should be created */
+   int i;                                    /* counter */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
 
-   int nconflicts;                          /* statistic: number of conflicts applied         */
-   int nbdchgs;                             /* statistic: number of bound changes applied     */
-   int n1startinfers;                       /* statistic: number of one side infer values     */
-   int n2startinfers;                       /* statistic: number of both side infer values    */
+   int nconflicts;                           /* statistic: number of conflicts applied */
+   int nbdchgs;                              /* statistic: number of bound changes applied */
+   int n1startinfers;                        /* statistic: number of one side infer values */
+   int n2startinfers;                        /* statistic: number of both side infer values */
 
-   SCIP_Bool soladded = FALSE;              /* statistic: was a new incumbent found?          */
-   SCIP_Bool dualboundchg;                  /* statistic: was a new dual bound found?         */
-   SCIP_Bool disabledualreductions;         /* TRUE, if dual reductions in sub-SCIP are not valid for original SCIP,
-                                             * e.g., because a constraint could not be copied or a primal solution
-                                             * could not be copied back
-                                             */
+   SCIP_Bool soladded = FALSE;               /* statistic: was a new incumbent found? */
+   SCIP_Bool dualboundchg;                   /* statistic: was a new dual bound found? */
+   SCIP_Bool disabledualreductions;          /* TRUE, if dual reductions in sub-SCIP are not valid for original SCIP,
+                                              * e.g., because a constraint could not be copied or a primal solution
+                                              * could not be copied back */
    int initseed;
    int seedshift;
    SCIP_Bool valid;
@@ -247,12 +241,12 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    valid = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, global, FALSE, TRUE, &valid) );
 
    if( sepadata->copycuts )
    {
       /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, FALSE, NULL) );
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, global, NULL) );
    }
 
    for( i = 0; i < nvars; i++ )
@@ -270,7 +264,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
       /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
       * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
-      */
+     */
       if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
       {
          SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
@@ -293,11 +287,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIPhashmapFree(&varmapfw);
 
    /* This avoids dual presolving.
-   *
-   * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
-   * but no variables should be missing because we stop earlier anyway if pricers are present).
-   * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
-   */
+    *
+    * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
+    * but no variables should be missing because we stop earlier anyway if pricers are present).
+    * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+    */
    if( ! valid )
    {
       for( i = 0; i < nvars; i++ )
@@ -364,7 +358,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
  #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
  #else
    /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -404,7 +398,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
    * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
-   */
+  */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );
@@ -484,8 +478,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       int nsubsols;
 
       /* check, whether a solution was found;
-      * due to numerics, it might happen that not all solutions are feasible -> try all solutions until was declared to be feasible
-      */
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until was declared to be feasible
+       */
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       soladded = FALSE;
@@ -498,7 +492,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
 
          if( SCIPgetSubscipDepth(scip) == 0 )
-         printf(">> accepted RL solution\n");
+         printf(">> accepted rapid learning solution\n");
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
@@ -510,9 +504,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
    {
       /* we need to multiply the dualbound with the scaling factor and add the offset,
-      * because this information has been disregarded in the sub-SCIP
-      */
-      SCIPdebugMsg(scip, "Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
+       * because this information has been disregarded in the sub-SCIP
+       */
+      SCIPdebugMsg(scip, "Update old dualbound %g to new dualbound %g.\n",
+         SCIPgetDualbound(scip), SCIPretransformObj(scip, SCIPgetDualbound(subscip)));
 
       SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPretransformObj(scip, SCIPgetDualbound(subscip))) );
       dualboundchg = TRUE;
@@ -536,8 +531,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIP_CALL( SCIPgetIntParam(scip, "conflict/maxconss", &nmaxconfs) );
 
       /* loop over all constraint handlers that might contain conflict constraints
-      * @todo select promising constraints and not greedy
-      */
+       * @todo select promising constraints and not greedy
+       */
       for( i = 0; i < nconshdlrs && nconflicts < nmaxconfs; ++i)
       {
          /* copy constraints that have been created in FD run */
@@ -564,14 +559,15 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                /* @todo assert that flags are as they should be for conflicts */
                SCIP_CALL( SCIPgetConsCopy(subscip, scip, cons, &conscopy, conshdlrs[i], varmapbw, consmap, NULL,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), TRUE, FALSE, SCIPconsIsDynamic(cons),
+                     SCIPconsIsPropagated(cons), !global, FALSE, SCIPconsIsDynamic(cons),
                      SCIPconsIsRemovable(cons), FALSE, TRUE, &success) );
 
                if( success )
                {
                   nconflicts++;
-                  SCIP_CALL( SCIPaddCons(scip, conscopy) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &conscopy) );
+
+                  SCIP_CALL( SCIPaddConflict(scip, global ? NULL : SCIPgetCurrentNode(scip), conscopy, NULL,
+                     SCIP_CONFTYPE_UNKNOWN, FALSE) );
                }
                else
                {
@@ -586,6 +582,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    /* check, whether tighter global bounds were detected */
    nbdchgs = 0;
    if( sepadata->applybdchgs && !disabledualreductions )
+   {
       for( i = 0; i < nvars; ++i )
       {
          SCIP_Bool infeasible;
@@ -597,21 +594,39 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
          /* @todo handle infeasible pointer? can it be set to TRUE? */
-         SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-         if( tightened )
-            nbdchgs++;
+         if( global )
+         {
+            SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
 
-         SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-         if( tightened )
-            nbdchgs++;
+            if( tightened )
+               nbdchgs++;
+
+            SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+
+            if( tightened )
+               nbdchgs++;
+         }
+         else
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+
+            if( tightened )
+               nbdchgs++;
+
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+
+            if( tightened )
+               nbdchgs++;
+         }
       }
+   }
 
    n1startinfers = 0;
    n2startinfers = 0;
 
    /* install start values for inference branching */
    /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
-   if( sepadata->applyinfervals && SCIPgetDepth(scip) == 0 && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
+   if( sepadata->applyinfervals && global && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
    {
       for( i = 0; i < nvars; ++i )
       {
@@ -643,8 +658,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       }
    }
 
-   SCIPdebugMsg(scip, "Rapidlearning added %d conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
-      nconflicts, nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
+   SCIPdebugMsg(scip, "Rapidlearning added %d %s conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
+      nconflicts, global ? "global" : "local", nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
 
    SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
@@ -668,10 +683,13 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
    SCIP_CALL( SCIPfreeTransform(subscip) );
 
-   /* remove all locks that were added to avoid dual presolving */
-   for( i = 0; i < nvars; i++ )
+   if( !valid )
    {
-      SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
+      /* remove all locks that were added to avoid dual presolving */
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
+      }
    }
 
    /* free subproblem */
@@ -693,18 +711,15 @@ SCIP_Bool checkExec(
    assert(sepadata != NULL);
 
    /* return TRUE if local exec should not be checked */
-   if( !sepadata->checklocalexec )
+   if( !sepadata->checkexec )
       return TRUE;
 
    run = FALSE;
 
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
-   if( sepadata->checklocalobj && SCIPgetNObjVars(scip) == 0 )
+   if( sepadata->checkobj && SCIPgetNObjVars(scip) == 0 )
    {
-         SCIPdebugMsg(scip, "-> allow local RL due to global zero objective\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to global zero objective\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to global zero objective\n");
 
          run = TRUE;
    }
@@ -712,10 +727,7 @@ SCIP_Bool checkExec(
    /* check whether a solution was found */
    if( !run && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
    {
-      SCIPdebugMsg(scip, "-> allow local RL due to no solution found so far\n");
-
-      if( SCIPgetSubscipDepth(scip) == 0 )
-         printf("-> allow local RL due to no solution found so far\n");
+      SCIPdebugMsg(scip, "-> allow local rapid learning due to no solution found so far\n");
 
       run = TRUE;
    }
@@ -731,10 +743,7 @@ SCIP_Bool checkExec(
 
       if( SCIPisEQ(scip, rootdualbound, locdualbound) )
       {
-         SCIPdebugMsg(scip, "-> allow local RL due to equal dualbound\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to equal dualbound\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to equal dualbound\n");
 
          run = TRUE;
       }
@@ -747,41 +756,14 @@ SCIP_Bool checkExec(
 
       if( SCIPisLE(scip, sepadata->mininflpratio, ratio) )
       {
-         SCIPdebugMsg(scip, "-> allow local RL due to inf/obj LP ratio\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to inf/obj LP ratio\n");
-
-         run = TRUE;
-      }
-   }
-
-   /* check strong branching LPs */
-   if( !run && sepadata->checksblps )
-   {
-      int nsblps;
-      int nsbcutoffs;
-      int nsbeqobj;
-
-      nsblps = SCIPgetNStrongbranchs(scip);
-      nsbcutoffs = SCIPgetNStrongbranchCutoffs(scip);
-      nsbeqobj = SCIPgetNStrongbranchWithEQObjective(scip);
-
-      assert(nsblps >= nsbcutoffs + nsbeqobj);
-
-      if( nsblps > 0 && SCIPisLE(scip, sepadata->sbfrac * nsblps, nsbcutoffs + nsbeqobj) )
-      {
-         SCIPdebugMsg(scip, "-> allow local RL due to not enough progress in strong branching LPs\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to not enough progress in strong branching LPs\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to inf/obj LP ratio\n");
 
          run = TRUE;
       }
    }
 
    /* check whether all undecided integer variables have zero objective coefficient */
-   if( !run && sepadata->checklocalobj )
+   if( !run && sepadata->checkobj )
    {
       SCIP_Bool allzero;
       SCIP_VAR** vars;
@@ -809,10 +791,7 @@ SCIP_Bool checkExec(
 
       if( allzero )
       {
-         SCIPdebugMsg(scip, "-> allow local RL due to local zero objective\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to local zero objective\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to local zero objective\n");
 
          run = TRUE;
       }
@@ -834,10 +813,7 @@ SCIP_Bool checkExec(
 
       if( degeneracy >= 0.8 || varconsratio >= 2.0 )
       {
-         SCIPdebugMsg(scip, "-> allow local RL due to degeneracy\n");
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            printf("-> allow local RL due to degeneracy\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to degeneracy\n");
 
          run = TRUE;
       }
@@ -850,11 +826,12 @@ SCIP_Bool checkExec(
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 {/*lint --e{715}*/
-   SCIP* subscip;                            /* the subproblem created by rapid learning       */
-   SCIP_SEPADATA* sepadata;                  /* separator's private data                       */
-   int ndiscvars;
+   SCIP* subscip;
+   SCIP_SEPADATA* sepadata;
+   SCIP_Bool global;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
+   int ndiscvars;
 
    assert(sepa != NULL);
    assert(scip != NULL);
@@ -892,7 +869,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
+   global = (SCIPgetDepth == 0);
+
    /* check if rapid learning should applied locally */
+   /* @todo check whether we want to run at the root node again, e.g., inf/obj ratio is large enough */
    if( !checkExec(scip, sepadata) )
       return SCIP_OKAY;
 
@@ -913,7 +893,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, SCIPsepaGetNCalls(sepa)+1, result);
+   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, SCIPsepaGetNCalls(sepa)+1, global, result);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
@@ -985,21 +965,17 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "should the ration of leaves proven to be infeasible and exceeding the cutoff bound be checked?",
          &sepadata->checkleaves, TRUE, DEFAULT_CHECKLEAVES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalexec",
-         "",
-         &sepadata->checklocalexec, TRUE, DEFAULT_CHECKLOCALEXEC, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkexec",
+         "check whether rapid learning should be executed",
+         &sepadata->checkexec, TRUE, DEFAULT_CHECKEXEC, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checklocalobj",
-         "should the local objective function be checked?",
-         &sepadata->checklocalobj, TRUE, DEFAULT_CHECKLOCALOBJ, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkobj",
+         "should the (local) objective function be checked?",
+         &sepadata->checkobj, TRUE, DEFAULT_CHECKOBJ, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checknsols",
          "should the number of solutions found so far be checked?",
          &sepadata->checknsols, TRUE, DEFAULT_CHECKNSOLS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checksblps",
-         "should strong branching results be considered?",
-         &sepadata->checksblps, TRUE, DEFAULT_CHECKSBLPS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/contvars",
          "should rapid learning be applied when there are continuous variables?",
@@ -1014,12 +990,8 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/mininflpratio",
-         "minimal threshold of inf/obj leaves to allow local RL",
+         "minimal threshold of inf/obj leaves to allow local rapid learning",
          &sepadata->mininflpratio, TRUE, DEFAULT_MININFLPRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/sbfrac",
-         "maximal fraction of strong branching LPs that were pruned or the objetive value has not changed to allow local RL",
-         &sepadata->sbfrac, TRUE, DEFAULT_SBFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
@@ -1038,7 +1010,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "separating/" SEPA_NAME "/nwaitingnodes",
-         "number of nodes that should be processed before RL is executed locally based on the progress of the dualbound",
+         "number of nodes that should be processed before rapid learning is executed locally based on the progress of the dualbound",
          &sepadata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, LONG_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/copycuts",
