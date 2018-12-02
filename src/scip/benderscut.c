@@ -262,8 +262,6 @@ SCIP_RETCODE SCIPbenderscutExit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   int i;
-
    assert(benderscut != NULL);
    assert(set != NULL);
 

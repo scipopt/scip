@@ -577,7 +577,6 @@ struct SCIP_VarData
                                                *   master problem or subproblem variable. */
 };
 
-
 /** adds the auxiliary variables to the Benders' decomposition master problem */
 static
 SCIP_RETCODE addAuxiliaryVariablesToMaster(
@@ -660,7 +659,9 @@ SCIP_RETCODE assignAuxiliaryVariables(
    SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    SCIP_Bool shareauxvars;
+   int subscipdepth;
    int i;
+   int j;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -678,15 +679,33 @@ SCIP_RETCODE assignAuxiliaryVariables(
    if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
       shareauxvars = TRUE;
 
+   subscipdepth = SCIPgetSubscipDepth(scip);
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
-      if( shareauxvars )
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
-      else
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
+      char prefix[SCIP_MAXSTRLEN];
+      int len = 1;
 
-      /* finding the variable in the copied problem that has the same name as the auxiliary variable */
-      targetvar = SCIPfindVar(scip, varname);
+      j = 0;
+      targetvar = NULL;
+
+      /* the prefix is required for UG, since we don't know how many copies have been made. */
+      (void) SCIPsnprintf(prefix, SCIP_MAXSTRLEN, "");
+      while( targetvar == NULL && j <= subscipdepth )
+      {
+         if( shareauxvars )
+            (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s%s_%d_%s", prefix, AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
+         else
+            (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s%s_%d_%s", prefix, AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
+
+         /* finding the variable in the copied problem that has the same name as the auxiliary variable */
+         targetvar = SCIPfindVar(scip, varname);
+
+         (void) SCIPsnprintf(prefix, len, "t_%s", prefix);
+         len += 2;
+
+         j++;
+      }
       assert(targetvar != NULL);
 
       SCIPvarSetData(targetvar, vardata);
@@ -1384,6 +1403,16 @@ SCIP_RETCODE SCIPbendersInit(
 
    benders->initialized = TRUE;
 
+   /* if the Benders' decomposition is a copy, then the auxiliary variables already exist. So they are registered with
+    * the Benders' decomposition struct during the init stage. If the Benders' decomposition is not a copy, then the
+    * auxiliary variables need to be created, which occurs in the initpre stage
+    */
+   if( benders->iscopy )
+   {
+      /* the copied auxiliary variables must be assigned to the target Benders' decomposition */
+      SCIP_CALL( assignAuxiliaryVariables(set->scip, benders) );
+   }
+
    /* creates the subproblems and sets up the probing mode for LP subproblems. This function calls the benderscreatesub
     * callback. */
    SCIP_CALL( createSubproblems(benders, set) );
@@ -1545,7 +1574,6 @@ SCIP_RETCODE transferBendersCuts(
    int naddedcuts;
    int nvars;
    int i;
-   int j;
 
    assert(subscip != NULL);
    assert(benders != NULL);
@@ -1561,10 +1589,10 @@ SCIP_RETCODE transferBendersCuts(
    naddedcuts =  SCIPbendersGetNStoredCuts(benders);
 
    /* looping over all added cuts to construct the cut for the source scip */
-   for( j = 0; j < naddedcuts; j++ )
+   for( i = 0; i < naddedcuts; i++ )
    {
       /* collecting the variable information from the constraint */
-      SCIP_CALL( SCIPbendersGetStoredCutData(benders, j, &vars, &vals, &lhs, &rhs, &nvars) );
+      SCIP_CALL( SCIPbendersGetStoredCutData(benders, i, &vars, &vals, &lhs, &rhs, &nvars) );
 
       if( nvars > 0 )
       {
@@ -1717,6 +1745,10 @@ SCIP_RETCODE SCIPbendersInitpre(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /* if the Benders' decomposition is the original, then the auxiliary variables need to be created. If the Benders'
+    * decomposition is a copy, then the auxiliary variables already exist. The assignment of the auxiliary variables
+    * occurs in bendersInit
+    */
    if( !benders->iscopy )
    {
       /* check the subproblem independence. This check is only performed if the user has not implemented a solve
@@ -1727,11 +1759,6 @@ SCIP_RETCODE SCIPbendersInitpre(
 
       /* adding the auxiliary variables to the master problem */
       SCIP_CALL( addAuxiliaryVariablesToMaster(set->scip, benders) );
-   }
-   else
-   {
-      /* the copied auxiliary variables must be assigned to the target Benders' decomposition */
-      SCIP_CALL( assignAuxiliaryVariables(set->scip, benders) );
    }
 
    /* call presolving initialization method of Benders' decomposition */

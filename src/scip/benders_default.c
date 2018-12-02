@@ -72,6 +72,7 @@ struct SCIP_BendersData
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             created;            /**< flag to indicate that the Benders' decomposition Data was created */
    SCIP_Bool             subprobscopied;     /**< were the subproblems copied during the SCIP copy */
+   SCIP_Bool             mappingcreated;     /**< flag to indicate whether the variable mapping has been created */
 };
 
 
@@ -200,6 +201,8 @@ SCIP_RETCODE createVariableMappings(
       SCIP_CALL( SCIPhashmapInsertInt(bendersdata->mastervartosubindex, vars[i], i) );
    }
 
+   bendersdata->mappingcreated = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -293,7 +296,7 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
    assert(bendersdata != NULL);
 
-   if( bendersdata->created )
+   if( bendersdata->mappingcreated )
    {
       for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
          SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
@@ -302,7 +305,10 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
       /* free hash map */
       SCIPhashmapFree(&bendersdata->subvartomastervar);
       SCIPhashmapFree(&bendersdata->mastervartosubindex);
+   }
 
+   if( bendersdata->created )
+   {
       /* if the subproblems were copied, then the copy needs to be freed */
       if( bendersdata->subprobscopied )
       {
@@ -481,6 +487,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
    bendersdata->created = FALSE;
    bendersdata->subprobscopied = FALSE;
+   bendersdata->mappingcreated = FALSE;
 
    benders = NULL;
 
