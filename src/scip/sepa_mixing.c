@@ -419,8 +419,8 @@ SCIP_RETCODE separateCuts(
          cutnnz++;
       }
 
-      /* add the cut if the violtion is good enough */
-      if( SCIPisEfficacious(scip, activity) )
+      /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
+      if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
       {
          SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocallb, cutoff, ncuts) );
       }
@@ -564,9 +564,9 @@ VUB:
          cutnnz++;
       }
 
-      if( SCIPisEfficacious(scip, activity) )
+      /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
+      if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
       {
-         /* add the cut if the violtion is good enough */
          SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocalub, cutoff, ncuts) );
       }
 
