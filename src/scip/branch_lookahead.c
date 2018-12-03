@@ -1000,6 +1000,8 @@ typedef struct
                                               *   reductions was branched on */
    int                   nlperrorcalls;      /**< number of times an LP error occured and LAB branched without completely
                                               *   evaluating all candidates */
+   int                   nlimitcalls;        /**< number of times a time limit was reached and LAB branched without
+                                              *   completely evaluating all candidates */
    int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
    int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
@@ -1031,6 +1033,7 @@ void statisticsInit(
    statistics->nsinglecandidate = 0;
    statistics->noldcandidate = 0;
    statistics->nlperrorcalls = 0;
+   statistics->nlimitcalls = 0;
    statistics->ntotalresults = 0;
    statistics->nbinconst = 0;
    statistics->nbinconstvio = 0;
@@ -1193,6 +1196,8 @@ void statisticsPrint(
          statistics->noldcandidate);
       SCIPinfoMessage(scip, NULL, "An LP error led to branching before all candidates were evaluated <%i> times.\n",
          statistics->nlperrorcalls);
+      SCIPinfoMessage(scip, NULL, "A reached (time) limit led to branching before all candidates were evaluated <%i> times.\n",
+         statistics->nlimitcalls);
       SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
       SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n",
          statistics->ndomredcons);
@@ -5407,6 +5412,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
           */
          *result = SCIP_REDUCEDDOM;
       }
+#ifdef SCIP_STATISTIC
+      else if( status->limitreached )
+      {
+         ++branchruledata->statistics->nlimitcalls;
+      }
+#endif
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
 
@@ -5485,11 +5496,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       int i;
 
       sum = branchruledata->statistics->nsinglecandidate + branchruledata->statistics->noldcandidate +
-         branchruledata->statistics->nlperrorcalls;
+         branchruledata->statistics->nlperrorcalls + branchruledata->statistics->nlimitcalls;
 
       for( i = 0; i < branchruledata->statistics->maxnbestcands; i++ )
       {
          sum += branchruledata->statistics->chosenfsbcand[i];
+      }
+      if( sum != branchruledata->statistics->nresults[SCIP_BRANCHED] )
+      {
+         printf("branched = %d != sum = %d (%d/%d/%d/%d)\n",
+            branchruledata->statistics->nresults[SCIP_BRANCHED], sum,
+            branchruledata->statistics->nsinglecandidate, branchruledata->statistics->noldcandidate,
+            branchruledata->statistics->nlperrorcalls, branchruledata->statistics->nlimitcalls);
+         assert(SCIPisStopped(scip));
       }
       assert(sum == branchruledata->statistics->nresults[SCIP_BRANCHED]);
    }
