@@ -2968,7 +2968,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    )
 {
    SCIP* subproblem;
-   SCIP_SOL* bestsol;
    SCIP_RESULT result;
    SCIP_Real objective;
    SCIP_STATUS solvestatus = SCIP_STATUS_UNKNOWN;
@@ -3034,6 +3033,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       }
       else
       {
+         SCIP_SOL* bestsol;
+
          /* TODO get solvestatus set in here */
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, infeasible, type, FALSE) );
 
@@ -3058,9 +3059,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
        */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_CIP )
       {
-         if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
-            bestsol = NULL;
-
          /* TODO: Consider whether other solutions status should be handled */
          if( solvestatus == SCIP_STATUS_OPTIMAL )
             SCIPbendersSetSubproblemObjval(benders, probnumber, objective);
@@ -3552,6 +3550,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
             break;
          }
 
+         case SCIP_LPSOLSTAT_OBJLIMIT:
+         case SCIP_LPSOLSTAT_ITERLIMIT:
          default:
          {
             SCIPerrorMessage("Invalid status: %d. Solving the LP relaxation of Benders' decomposition subproblem %d.\n",
@@ -3580,7 +3580,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    )
-{
+{  /*lint --e{715}*/  /* type is not referenced, remove? */
    SCIP* subproblem;
    SCIP_SUBPROBPARAMS* origparams;
 

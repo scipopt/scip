@@ -282,7 +282,7 @@ SCIP_RETCODE computeStandardFeasibilityCutNL(
       }
    }
 
-   SCIPexprintFree(&exprinterpreter);
+   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
 
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
    for( i = 0; i < nsubvars; i++ )

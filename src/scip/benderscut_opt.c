@@ -333,6 +333,8 @@ SCIP_RETCODE computeStandardOptimalityCutNL(
    (*lhs) = SCIPgetNLPObjval(subproblem);
    assert(!SCIPisInfinity(subproblem, REALABS(*lhs)));
 
+   (*rhs) = SCIPinfinity(masterprob);
+
    dirderiv = 0.0;
 
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
@@ -356,7 +358,7 @@ SCIP_RETCODE computeStandardOptimalityCutNL(
             -dualsol, &dirderiv, vars, vals, nvars, varssize) );
    }
 
-   SCIPexprintFree(&exprinterpreter);
+   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
 
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
    for( i = 0; i < nsubvars; i++ )

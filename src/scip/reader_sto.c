@@ -2146,7 +2146,7 @@ SCIP_RETCODE addScenarioConsToProb(
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CONS* cons;
-      SCIP_VAR** consvars;
+      SCIP_VAR** consvars = NULL;
       int nconsvars;
       SCIP_Bool success;
 
@@ -2171,7 +2171,7 @@ SCIP_RETCODE addScenarioConsToProb(
             SCIPconsGetName(conss[i]));
 
          /* freeing buffer memory */
-         SCIPfreeBufferArray(scip, consvars);
+         SCIPfreeBufferArrayNull(scip, consvars);
 
          return SCIP_READERROR;
       }
