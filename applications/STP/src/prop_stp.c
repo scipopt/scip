@@ -536,7 +536,6 @@ SCIP_RETCODE reduceRedcostExtended(
              continue;
           }
 
-         // printf("fix with reduce_extendedEdge: %d \n", e);
           SCIP_CALL( fixedgevar(scip, vars[e], &extnfixed) );
        }
 
@@ -586,7 +585,7 @@ SCIP_RETCODE redbasedVarfixing(
    assert(vars != NULL);
    assert(!pcmw || g->extended);
 
-   printf("start redbasedVarfixing, fixings: %d \n", *nfixed);
+   SCIPdebugMessage("start redbasedVarfixing, fixings: %d \n", *nfixed);
 
    /* don't use it for pcmw! */
    offset = -1.0;
@@ -868,7 +867,6 @@ SCIP_RETCODE redbasedVarfixing(
 
       curr = curr->parent;
    }
-   //printf("source %d \n", g->source);
 
    /* 1-fixed edge to be deleted? */
    for( int e = 0; e < nedges; e++ )
@@ -919,7 +917,7 @@ SCIP_RETCODE redbasedVarfixing(
       }
    }
 
-   printf("reduction based fixings: %d \n", *nfixed);
+   SCIPdebugMessage("reduction based fixings: %d \n", *nfixed);
 
 TERMINATE:
    graph_path_exit(scip, propgraph);
@@ -1095,7 +1093,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( nfixed > 0 )
    {
-      printf("newly fixed by STP propagator: %d of (%d) \n", nfixed, propdata->nfixededges);
+      SCIPdebugMessage("newly fixed by STP propagator: %d of (%d) \n", nfixed, propdata->nfixededges);
 
       propdata->nfails = 0;
       propdata->nfixededges += nfixed;

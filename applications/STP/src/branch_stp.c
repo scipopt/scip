@@ -688,7 +688,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    /* get vertex to branch on */
    if( graph_pc_isPcMw(g) || branchruledata->branchtype == BRANCH_STP_ON_SOL )
    {
-      int todo; // check what is better degree or sol and for sol us extended local heuristic!
+      int todo; // check what is better degree or sol and for sol use extended local heuristic!
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
    }
 
@@ -720,7 +720,8 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
    GRAPH*                graph,              /**< graph to modify or NULL */
-   const char*           consname            /**< constraint name */
+   const char*           consname,           /**< constraint name */
+   SCIP_Bool             freeancestors       /**< free edge ancestors? */
 )
 {
 
@@ -772,13 +773,16 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          {
             assert(graph_pc_isPcMw(graph));
             graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert));
+#ifdef WITH_UG
+            printf("currently not supported, as ancestors will be killed; not sure, whether this is actually a problem");
+            return SCIP_ERROR;
+#endif
          }
          else
          {
-            graph_knot_del(scip, graph, vert, TRUE);
+            graph_knot_del(scip, graph, vert, freeancestors);
          }
       }
-
       if( vertexchgs != NULL )
          vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
    }
@@ -863,7 +867,7 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
       consname = (char*) SCIPconsGetName(parentcons);
 
-      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname) );
+      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname, TRUE) );
    }
 
    return SCIP_OKAY;
