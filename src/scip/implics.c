@@ -2601,8 +2601,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
    cliqueCheck(clique);
 
   FREEMEM:
-   SCIPsetFreeBufferArray(set, &clqvalues);
    SCIPsetFreeBufferArray(set, &clqvars);
+   SCIPsetFreeBufferArray(set, &clqvalues);
 
    return SCIP_OKAY;
 }
