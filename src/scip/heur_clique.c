@@ -1075,8 +1075,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* free conflict variables */
-   SCIPfreeBufferArrayNull(scip, &onefixvars);
    SCIPfreeBufferArrayNull(scip, &onefixvals);
+   SCIPfreeBufferArrayNull(scip, &onefixvars);
 
    /* freeing solution */
    if( sol != NULL )
