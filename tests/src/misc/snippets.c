@@ -39,16 +39,22 @@
 /** dialog data */
 struct SCIP_DialogData
 {
+   int some_dialog_data;
+   /* some data */
 };
 
 /** display column data */
 struct SCIP_DispData
 {
+   int some_disp_data;
+   /* some data */
 };
 
 /** statistics table data */
 struct SCIP_TableData
 {
+   int some_table_data;
+   /* some data */
 };
 
 /** methods **/
