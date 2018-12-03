@@ -684,6 +684,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
       char prefix[SCIP_MAXSTRLEN];
+      char tmpprefix[SCIP_MAXSTRLEN];
       int len = 1;
 
       j = 0;
@@ -701,7 +702,8 @@ SCIP_RETCODE assignAuxiliaryVariables(
          /* finding the variable in the copied problem that has the same name as the auxiliary variable */
          targetvar = SCIPfindVar(scip, varname);
 
-         (void) SCIPsnprintf(prefix, len, "t_%s", prefix);
+         (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
+         strcpy(prefix, tmpprefix);
          len += 2;
 
          j++;
@@ -846,6 +848,9 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
       /* storing whether the lnscheck should be performed */
       targetbenders->lnscheck = benders->lnscheck;
+
+      /* storing whether the parallel mode is used */
+      targetbenders->parallel = benders->parallel;
 
       /* calling the copy method for the Benders' cuts */
       SCIPbendersSortBenderscuts(benders);
@@ -3640,7 +3645,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
       SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
 #ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
+      //SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
 #endif
    }
 
