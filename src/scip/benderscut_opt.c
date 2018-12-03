@@ -773,7 +773,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_VAR* var;
    SCIP_VAR* mastervar;
    SCIP_Real coef;
-   SCIP_Bool addcut;
    int i;
 
    assert(masterprob != NULL);

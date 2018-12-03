@@ -2147,7 +2147,6 @@ SCIP_RETCODE addScenarioConsToProb(
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
-      SCIP_Real* consvals;
       int nconsvars;
       SCIP_Bool success;
 
