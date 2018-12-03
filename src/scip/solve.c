@@ -1183,7 +1183,7 @@ SCIP_RETCODE initLP(
    )
 {
    SCIP_VAR* var;
-   int ninitialvars = 0;
+   int oldnvars = 0;
    int v;
 
    assert(set != NULL);
@@ -1201,6 +1201,9 @@ SCIP_RETCODE initLP(
       assert(lp->nremovablecols == 0);
       assert(lp->nremovablerows == 0);
 
+      /* store number of variables for later */
+      oldnvars = transprob->nvars;
+
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
@@ -1214,7 +1217,6 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-            ++ninitialvars;
          }
 
          /* check for empty domains (necessary if no presolving was performed) */
@@ -1237,7 +1239,7 @@ SCIP_RETCODE initLP(
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
    /* putting all initial constraints into the LP might have added new variables */
-   if( root && !(*cutoff) && transprob->nvars > ninitialvars )
+   if( root && !(*cutoff) && transprob->nvars > oldnvars )
    {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
