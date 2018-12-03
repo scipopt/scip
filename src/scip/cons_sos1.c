@@ -73,7 +73,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
-#include "scip/misc.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -3856,7 +3855,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->implgraph, nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -5145,7 +5144,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
+                           SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5457,7 +5456,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
+            SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
          }
 
          vars = consdata->vars;
@@ -8769,7 +8768,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->conflictgraph, cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -9002,7 +9001,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
