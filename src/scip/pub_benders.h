@@ -274,8 +274,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_STATUS*          solvestatus,        /**< status of subproblem solve */
    SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 
