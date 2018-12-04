@@ -137,7 +137,7 @@ SCIP_RETCODE addVariableToArray(
 
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
-SCIP_RETCODE computeStandardOptimalityCut(
+SCIP_RETCODE computeStandardLPOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
@@ -280,7 +280,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
 /** computes a standard Benders' optimality cut from the dual solutions of the NLP */
 static
-SCIP_RETCODE computeStandardOptimalityCutNL(
+SCIP_RETCODE computeStandardNLPOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
@@ -519,13 +519,13 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    if( SCIPisNLPConstructed(subproblem) )
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardOptimalityCutNL(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
             &varssize, &checkobj, &success) );
    }
    else
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
             &varssize, &checkobj, &success) );
    }
 
@@ -677,10 +677,12 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
-   /* only generate optimality cuts if the subproblem is optimal */
-   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL ||
-    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && !SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
-    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(subproblem) && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT) )
+   /* only generate optimality cuts if the subproblem LP or NLP is optimal,
+    * since we use the dual solution of the LP/NLP to construct the optimality cut
+    */
+   if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
+      ((!SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
+       ( SCIPisNLPConstructed(subproblem) && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT)) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
