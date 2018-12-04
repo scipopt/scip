@@ -301,9 +301,7 @@ SCIP_RETCODE createOriginalproblem(
 
                   SCIP_CALL( SCIPaddVar(scip, sqrvar) );
 
-                  /* add constraint var^2 <= sqrvar
-                   * TODO try var^2 <= sqrvar * subfacilityvar[j]
-                   */
+                  /* add constraint var^2 <= sqrvar */
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
                   SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 1, &sqrvar, &minusone, 1, &var, &var,
                         &one, -SCIPinfinity(scip), 0.0) );
@@ -503,9 +501,7 @@ SCIP_RETCODE createSubproblems(
 
                   SCIP_CALL( SCIPaddVar(subproblems[k], sqrvar) );
 
-                  /* add constraint var^2 <= sqrvar
-                   * TODO try var^2 <= sqrvar * subfacilityvar[j]
-                   */
+                  /* add constraint var^2 <= sqrvar */
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
                   SCIP_CALL( SCIPcreateConsBasicQuadratic(subproblems[k], &cons, name, 1, &sqrvar, &minusone, 1, &var, &var, &one, -SCIPinfinity(subproblems[k]), 0.0) );
 
