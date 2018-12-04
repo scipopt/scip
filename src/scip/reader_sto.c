@@ -2176,6 +2176,7 @@ SCIP_RETCODE addScenarioConsToProb(
          return SCIP_READERROR;
       }
 
+      assert(consvars != NULL);
       for( j = 0; j < nconsvars; j++ )
       {
          SCIP_VAR* scenariovar;
