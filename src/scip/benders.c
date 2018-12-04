@@ -3494,19 +3494,30 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
       if( nlptermstat == SCIP_NLPTERMSTAT_OKAY && (nlpsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE) )
       {
+         /* trust infeasible only if terminated "okay" */
          (*solvestatus) = SCIP_STATUS_INFEASIBLE;
       }
-      else if( nlpsolstat != SCIP_NLPSOLSTAT_LOCOPT && nlpsolstat != SCIP_NLPSOLSTAT_GLOBOPT )
-      {
-         /* TODO handle SCIP_NLPSOLSTAT_UNBOUNDED, handle other termination status */
-         SCIPerrorMessage("Invalid solution status: %d. Termination status: %d. Solving the NLP relaxation of Benders' decomposition subproblem %d.\n",
-            nlpsolstat, nlptermstat, probnumber);
-         SCIPABORT();
-      }
-      else
+      else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT && nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
       {
          (*solvestatus) = SCIP_STATUS_OPTIMAL;
          (*objective) = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
+      }
+      else if( nlpsolstat == SCIP_NLPSOLSTAT_UNBOUNDED )
+      {
+         (*solvestatus) = SCIP_STATUS_UNBOUNDED;
+         SCIPerrorMessage("The NLP of Benders' decomposition subproblem %d is unbounded. This should not happen.\n",
+            probnumber);
+         SCIPABORT();
+      }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_TILIM )
+      {
+         (*solvestatus) = SCIP_STATUS_TIMELIMIT;
+      }
+      else
+      {
+         SCIPerrorMessage("Invalid solution status: %d. Termination status: %d. Solving the NLP relaxation of Benders' decomposition subproblem %d.\n",
+            nlpsolstat, nlptermstat, probnumber);
+         SCIPABORT();
       }
    }
    else
