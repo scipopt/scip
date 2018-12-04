@@ -5314,6 +5314,7 @@ SCIP_RETCODE makeCoverMinimal(
    )
 {
    SORTKEYPAIR** sortkeypairs;
+   SORTKEYPAIR** sortkeypairssorted;
    SCIP_Longint minweight;
    int nsortkeypairs;
    int minweightidx;
@@ -5331,9 +5332,11 @@ SCIP_RETCODE makeCoverMinimal(
    assert(*coverweight > 0);
    assert(*coverweight > capacity);
 
-   /* allocates temporary memory */
+   /* allocates temporary memory; we need two arrays for the keypairs in order to be able to free them in the correct
+    * order */
    nsortkeypairs = *ncovervars;
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairs, nsortkeypairs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairssorted, nsortkeypairs) );
 
    /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
     *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
@@ -5346,6 +5349,7 @@ SCIP_RETCODE makeCoverMinimal(
       for( j = 0; j < *ncovervars; j++ )
       {
          SCIP_CALL( SCIPallocBuffer(scip, &(sortkeypairs[j])) ); /*lint !e866 */
+         sortkeypairssorted[j] = sortkeypairs[j];
 
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -5356,12 +5360,13 @@ SCIP_RETCODE makeCoverMinimal(
       for( j = 0; j < *ncovervars; j++ )
       {
          SCIP_CALL( SCIPallocBuffer(scip, &(sortkeypairs[j])) ); /*lint !e866 */
+         sortkeypairssorted[j] = sortkeypairs[j];
 
          sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / ((SCIP_Real) weights[covervars[j]]);
          sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]);
       }
    }
-   SCIPsortPtrInt((void**)sortkeypairs, covervars, compSortkeypairs, *ncovervars);
+   SCIPsortPtrInt((void**)sortkeypairssorted, covervars, compSortkeypairs, *ncovervars);
 
    /* gets j' with a_j' = min{ a_j : j in C } */
    minweightidx = 0;
@@ -5430,6 +5435,7 @@ SCIP_RETCODE makeCoverMinimal(
    /* frees temporary memory */
    for( j = nsortkeypairs-1; j >= 0; j-- )
       SCIPfreeBuffer(scip, &(sortkeypairs[j])); /*lint !e866 */
+   SCIPfreeBufferArray(scip, &sortkeypairssorted);
    SCIPfreeBufferArray(scip, &sortkeypairs);
 
    return SCIP_OKAY;
@@ -9957,12 +9963,13 @@ SCIP_RETCODE tightenWeightsLift(
    }
 #endif
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, 2 * nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices, 2 * nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices2, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices3, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices2, 2 * nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices3, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices3, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices2, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices, 2 * nbinvars) );
+
    tmp2 = 0;
    tmp3 = 0;
 
@@ -10247,7 +10254,6 @@ SCIP_RETCODE tightenWeightsLift(
             cliqueused[tmpindices[tmp]] = FALSE;
       }
    }
-   SCIPfreeBufferArray(scip, &tmpindices);
 
    /* clear part of zeroweightsums */
    for( --tmp3; tmp3 >= 0; --tmp3)
@@ -10259,11 +10265,6 @@ SCIP_RETCODE tightenWeightsLift(
       zeroweightsums[tmpboolindices2[tmp2]][tmpindices2[tmp2]] = 0;
       firstidxs[tmpboolindices2[tmp2]][tmpindices2[tmp2]] = 0;
    }
-
-   SCIPfreeBufferArray(scip, &tmpindices2);
-   SCIPfreeBufferArray(scip, &tmpindices3);
-   SCIPfreeBufferArray(scip, &tmpboolindices2);
-   SCIPfreeBufferArray(scip, &tmpboolindices3);
 
    /* add all additional item weights */
    for( i = 0; i < naddvars; ++i )
@@ -10281,6 +10282,11 @@ SCIP_RETCODE tightenWeightsLift(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &addweights);
    SCIPfreeBufferArray(scip, &addvars);
+   SCIPfreeBufferArray(scip, &tmpindices);
+   SCIPfreeBufferArray(scip, &tmpindices2);
+   SCIPfreeBufferArray(scip, &tmpindices3);
+   SCIPfreeBufferArray(scip, &tmpboolindices2);
+   SCIPfreeBufferArray(scip, &tmpboolindices3);
    SCIPfreeBufferArray(scip, &nextidxs);
    SCIPfreeBufferArray(scip, &zeroitems);
    SCIPfreeBufferArray(scip, &liftcands[1]);

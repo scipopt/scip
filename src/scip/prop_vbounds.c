@@ -2904,13 +2904,11 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    }
 #endif
    SCIPfreeCleanBufferArray(scip, &nodeinfeasible);
-
+   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &cliquecurrentexit);
    SCIPfreeBufferArray(scip, &cliquefirstentry);
-
    SCIPfreeBufferArray(scip, &nodelowlink);
    SCIPfreeBufferArray(scip, &nodeindex);
-   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &infeasnodes);
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);
