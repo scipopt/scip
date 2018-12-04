@@ -43,12 +43,18 @@ Interface changes
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
+    SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
+- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+  SCIPaddBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData and
+  SCIPbendersGetStoredCutOrigData().
 
 ### Command line interface
 
@@ -64,6 +70,9 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- parameter "parallel" has been added to the Benders' decomposition framework to indicate whether the solver will be
+  used in a parallel environment. In benders_default.c, this parameter forces the subproblems to be copied when the
+  master SCIP is copied.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
 
