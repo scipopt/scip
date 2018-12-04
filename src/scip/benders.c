@@ -2965,7 +2965,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
-{
+{  /*lint --e{715}*/
    SCIP* subproblem;
    SCIP_RESULT result;
    SCIP_Real objective;
@@ -3497,7 +3497,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
          /* trust infeasible only if terminated "okay" */
          (*solvestatus) = SCIP_STATUS_INFEASIBLE;
       }
-      else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT && nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
+      else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
       {
          (*solvestatus) = SCIP_STATUS_OPTIMAL;
          (*objective) = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
