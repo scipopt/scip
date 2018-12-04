@@ -122,7 +122,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    for( i = 0; i < nrows; i++ )
    {
       SCIP_ROW* lprow;
-      addval = 0;
 
       lprow = SCIPgetLPRows(subproblem)[i];
       assert(lprow != NULL);

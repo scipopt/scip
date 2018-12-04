@@ -175,7 +175,6 @@ SCIP_RETCODE computeStandardOptimalityCut(
    for( i = 0; i < nrows; i++ )
    {
       SCIP_ROW* lprow;
-      addval = 0;
 
       lprow = SCIPgetLPRows(subproblem)[i];
       assert(lprow != NULL);
