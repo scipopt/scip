@@ -155,7 +155,7 @@
                                            *   removed afterwards? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
-#define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
 #define MAXSCALEDCOEFINTEGER        1e+05 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
