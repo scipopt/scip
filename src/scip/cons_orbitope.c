@@ -2785,7 +2785,7 @@ SCIP_RETCODE separateCoversOrbisack(
             coeffs2[i] = 1.0;
 
             /* add violated orbisack cover inequality */
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             for (k = 0; k <= i; ++k)
