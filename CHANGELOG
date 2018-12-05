@@ -22,11 +22,11 @@ Interface changes
 
 ### Deleted and changed API methods and macros
 
-- The proprocessor macro NO_CONFIG_HEADER now needs to be defined when
+- The preprocessor macro NO_CONFIG_HEADER now needs to be defined when
   including SCIP header files from a SCIP build or installation that
   has been build via the Makefile-only build system.
 
-- The following proprocessor macros have been renamed:
+- The following preprocessor macros have been renamed:
   WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
   to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
   to SCIP_NO_STRTOK_R, ROUNDING_FE to SCIP_ROUNDING_FE, ROUNDING_FP to
@@ -87,6 +87,8 @@ Fixed bugs
 - fixed bug when reading >= indicator constraints in MPS format
 - fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
 - fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
+- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables.
 
 Miscellaneous
 -------------
