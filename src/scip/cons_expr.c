@@ -4524,8 +4524,8 @@ SCIP_RETCODE initSepa(
             assert(underestimate || overestimate);
 
             /* call the separation initialization callback of the nonlinear handler */
-            SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-               overestimate, underestimate, infeasible) );
+            SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, conss[c], nlhdlr, expr,
+               expr->enfos[e]->nlhdlrexprdata, overestimate, underestimate, infeasible) );
             expr->enfos[e]->issepainit = TRUE;
 
             if( *infeasible )
@@ -4552,6 +4552,7 @@ static
 SCIP_RETCODE separatePointExprNlhdlr(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler data of expression */
@@ -4568,7 +4569,8 @@ SCIP_RETCODE separatePointExprNlhdlr(
    assert(result != NULL);
 
    /* call separation callback of the nlhdlr */
-   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, &ncuts) );
+   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+      mincutviolation, separated, result, &ncuts) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
@@ -4604,7 +4606,7 @@ SCIP_RETCODE separatePointExprNlhdlr(
          SCIP_ROW* row;
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "adding cut ");
@@ -4638,6 +4640,7 @@ static
 SCIP_RETCODE separatePointExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraints handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    unsigned int          soltag,             /**< tag of solution */
@@ -4719,7 +4722,7 @@ SCIP_RETCODE separatePointExpr(
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
-         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
+         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
             expr->enfos[e]->auxvalue, TRUE, mincutviolation, *separated, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
@@ -4741,7 +4744,7 @@ SCIP_RETCODE separatePointExpr(
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
-         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
+         SCIP_CALL( separatePointExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
             expr->enfos[e]->auxvalue, FALSE, mincutviolation, *separated, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
@@ -4835,7 +4838,8 @@ SCIP_RETCODE separatePoint(
          if( expr->auxvar == NULL )
             continue;
 
-         SCIP_CALL( separatePointExpr(scip, conshdlr, expr, sol, soltag, minviolation, mincutviolation, &separated, &infeasible, maxauxviolation) );
+         SCIP_CALL( separatePointExpr(scip, conshdlr, conss[c], expr, sol, soltag, minviolation, mincutviolation,
+            &separated, &infeasible, maxauxviolation) );
 
          if( infeasible )
          {
@@ -7669,7 +7673,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+      SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
 
       /* update statistics */
@@ -7711,7 +7715,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, expr, sol, overestimate, mincutviolation, result, ncuts) );
+      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
 
       /* update statistics */
@@ -11015,7 +11019,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr)
    }
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->initsepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, overestimate, underestimate, infeasible) );
+   SCIP_CALL( nlhdlr->initsepa(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, overestimate, underestimate, infeasible) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    ++nlhdlr->nsepacalls;
@@ -11068,7 +11072,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
+   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */

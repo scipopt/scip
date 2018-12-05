@@ -8149,7 +8149,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
 
    /* construct row name */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coverbig_%d", time);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -8237,7 +8237,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
    {
       /* construct row name */
       (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coversmall_%d", time);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -8503,7 +8503,7 @@ SCIP_RETCODE createCapacityRestriction(
    {
       SCIP_ROW* row;
 
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
       for( b = 0; b < nbinvars; ++b )
@@ -8978,13 +8978,13 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "lower(%d)", curtime);
 
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, (SCIP_Real) lhs, SCIPinfinity(scip),
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, (SCIP_Real) lhs, SCIPinfinity(scip),
             TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
    else
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "upper(%d)", curtime);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) lhs,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) lhs,
             TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
 

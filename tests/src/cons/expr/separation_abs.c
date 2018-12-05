@@ -27,6 +27,7 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    .description = "test separation for an absolute expression"
    )
 {
+   SCIP_CONS* cons;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_ROW* rowneg;
    SCIP_ROW* rowpos;
@@ -40,6 +41,7 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    secant = NULL;
 
    SCIP_CALL( SCIPcreateConsExprExprAbs(scip, conshdlr, &expr, xexpr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "abs", expr, -1.0, 1.0) );
 
    /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
    SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
@@ -47,7 +49,7 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    expr->auxvar = auxvar;
 
    /* compute all possible cuts */
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, TRUE, &rowneg, &rowpos, &secant) );
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, TRUE, TRUE, &rowneg, &rowpos, &secant) );
 
    /* check left tangent */
    cr_assert(rowneg != NULL);
@@ -108,6 +110,9 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseRow(scip, &rowneg) );
    SCIP_CALL( SCIPreleaseRow(scip, &rowpos) );
    SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+
+   /* release constraint */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

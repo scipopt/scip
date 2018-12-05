@@ -46,7 +46,7 @@ Test(separation, sum, .init = setup, .fini = teardown,
    cr_assert(rowprep != NULL);
 
    /* compute cut */
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
+   SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &cut, rowprep, conshdlr) );
    cr_assert(cut != NULL);
 
    cr_assert_eq(SCIProwGetNNonz(cut), 3);

@@ -1306,7 +1306,7 @@ SCIP_RETCODE generateRowSOS2(
    if ( ! SCIPisInfinity(scip, REALABS(lhs)) || ! SCIPisInfinity(scip, REALABS(rhs)) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos2bnd#%s", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, lhs, rhs, local, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, lhs, rhs, local, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nvars, vars, 1.0) );
       consdata->row = row;
 

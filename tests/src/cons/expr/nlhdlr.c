@@ -417,7 +417,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       SCIP_ROW* cut;
 
       SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &cut, rowprep, conshdlr) );
 
       assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= mincutviolation);
 
