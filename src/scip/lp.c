@@ -5142,7 +5142,6 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->minactivity = SCIP_INVALID;
    (*row)->maxactivity = SCIP_INVALID;
    (*row)->origin = origin;
-   (*row)->cons = NULL;
    (*row)->eventfilter = NULL;
    (*row)->index = stat->nrowidx;
    SCIPstatIncrement(stat, set, nrowidx);
@@ -5192,6 +5191,14 @@ SCIP_RETCODE SCIProwCreate(
    /* create event filter */
    SCIP_CALL( SCIPeventfilterCreate(&(*row)->eventfilter, blkmem) );
 
+   /* capture origin constraint if available */
+   if( origintype == SCIP_ROWORIGINTYPE_CONS )
+   {
+      SCIP_CONS* cons = (SCIP_CONS*) origin;
+      assert(cons != NULL);
+      SCIPconsCapture(cons);
+   }
+
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -5211,9 +5218,11 @@ SCIP_RETCODE SCIProwFree(
    assert((*row)->eventfilter != NULL);
 
    /* release constraint that has been used for creating the row */
-   if( (*row)->cons != NULL )
+   if( (*row)->origintype == SCIP_ROWORIGINTYPE_CONS )
    {
-      SCIP_CALL( SCIPconsRelease(&(*row)->cons, blkmem, set) );
+      SCIP_CONS* cons = (SCIP_CONS*) (*row)->origin;
+      assert(cons != NULL);
+      SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
    }
 
    /* remove column indices from corresponding rows */
@@ -17174,23 +17183,9 @@ SCIP_CONS* SCIProwGetCons(
 {
    assert(row != NULL);
 
-   return row->cons;
-}
-
-/** set cons as the constraint that generated the row */
-void SCIProwSetCons(
-   SCIP_ROW*             row,                /**< LP row */
-   SCIP_CONS*            cons                /**< constraint */
-   )
-{
-   assert(row != NULL);
-   assert(cons != NULL);
-   assert(row->cons == NULL);
-
-   /* capture the constraint */
-   SCIPconsCapture(cons);
-
-   row->cons = cons;
+   if( row->origintype == SCIP_ROWORIGINTYPE_CONS )
+      return (SCIP_CONS*)row->origin;
+   return NULL;
 }
 
 /** returns origin separator that created the row (NULL if not available) */
