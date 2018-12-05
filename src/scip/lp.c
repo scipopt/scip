@@ -5194,7 +5194,7 @@ SCIP_RETCODE SCIProwFree(
    assert((*row)->eventfilter != NULL);
 
    /* release constraint that has been used for creating the row */
-   if( (*row)->origintype == SCIP_ROWORIGINTYPE_CONS )
+   if( (SCIP_ROWORIGINTYPE) (*row)->origintype == SCIP_ROWORIGINTYPE_CONS )
    {
       SCIP_CONS* cons = (SCIP_CONS*) (*row)->origin;
       assert(cons != NULL);
@@ -17154,7 +17154,7 @@ SCIP_CONS* SCIProwGetCons(
 {
    assert(row != NULL);
 
-   if( row->origintype == SCIP_ROWORIGINTYPE_CONS )
+   if( (SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS )
       return (SCIP_CONS*)row->origin;
    return NULL;
 }
