@@ -432,11 +432,6 @@ SCIP_CONS* SCIProwGetOriginCons(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns the actual constraint that generated the row (NULL if not available) */
-SCIP_CONS* SCIProwGetCons(
-   SCIP_ROW*             row                 /**< LP row */
-   );
-
 /** returns origin separator that created the row (NULL if not available) */
 EXTERN
 SCIP_SEPA* SCIProwGetOriginSepa(
