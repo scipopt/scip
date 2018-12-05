@@ -1030,8 +1030,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 
                SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, cuts[i], conshdlr) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-               assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-               SCIProwSetCons(row, SCIPgetConsExprSepaCons(conshdlr));
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
 
@@ -1060,8 +1058,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 
                SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, cuts[i], conshdlr) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-               assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-               SCIProwSetCons(row, SCIPgetConsExprSepaCons(conshdlr));
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
 

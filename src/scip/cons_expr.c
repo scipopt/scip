@@ -213,9 +213,6 @@ struct SCIP_ConshdlrData
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
    SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
-
-   /* miscellaneous */
-   SCIP_CONS*               sepacons;        /**< temporary variable to set an expression constraint in a row */
 };
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -4491,7 +4488,6 @@ SCIP_RETCODE initSepa(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->sepacons == NULL);
 
    *infeasible = FALSE;
    for( c = 0; c < nconss && !*infeasible; ++c )
@@ -4506,9 +4502,6 @@ SCIP_RETCODE initSepa(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
-
-      /* set constraint that is used for separation */
-      conshdlrdata->sepacons = conss[c];
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
@@ -4549,7 +4542,6 @@ SCIP_RETCODE initSepa(
       }
    }
 
-   conshdlrdata->sepacons = NULL;
    SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -4589,7 +4581,6 @@ SCIP_RETCODE separatePointExprNlhdlr(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->sepacons != NULL);
 
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
@@ -4629,7 +4620,6 @@ SCIP_RETCODE separatePointExprNlhdlr(
 #endif
 
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-         SCIProwSetCons(row, conshdlrdata->sepacons);
 
          if( infeasible )
          {
@@ -4815,7 +4805,6 @@ SCIP_RETCODE separatePoint(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(conshdlrdata->sepacons == NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -4852,9 +4841,6 @@ SCIP_RETCODE separatePoint(
       }
       #endif
 
-      /* set constraint that is used for separation */
-      conshdlrdata->sepacons = conss[c];
-
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* it only makes sense to call the separation callback if there is a variable attached to the expression */
@@ -4881,7 +4867,6 @@ SCIP_RETCODE separatePoint(
    }
 
 TERMINATE:
-   conshdlrdata->sepacons = NULL;
    SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -7262,19 +7247,6 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    assert(conshdlr != NULL);
 
    return SCIPconshdlrGetData(conshdlr)->exprprodhdlr;
-}
-
-/** returns the constraint that is currently being separated */
-SCIP_CONS* SCIPgetConsExprSepaCons(
-   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   return conshdlrdata->sepacons;
 }
 
 /** gives the name of an expression handler */

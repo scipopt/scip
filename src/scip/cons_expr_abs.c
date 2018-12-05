@@ -344,23 +344,17 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    if( exprdata->rowneg != NULL )
    {
       SCIP_CALL( SCIPaddRow(scip, exprdata->rowneg, FALSE, infeasible) );
-      assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-      SCIProwSetCons(exprdata->rowneg, SCIPgetConsExprSepaCons(conshdlr));
    }
 
    if( !*infeasible && exprdata->rowpos != NULL )
    {
       SCIP_CALL( SCIPaddRow(scip, exprdata->rowpos, FALSE, infeasible) );
-      assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-      SCIProwSetCons(exprdata->rowpos, SCIPgetConsExprSepaCons(conshdlr));
    }
 
    /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
    if( !*infeasible && secant != NULL )
    {
       SCIP_CALL( SCIPaddRow(scip, secant, FALSE, infeasible) );
-      assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-      SCIProwSetCons(secant, SCIPgetConsExprSepaCons(conshdlr));
    }
 
    /* release secant */
@@ -455,8 +449,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       if( SCIPisGE(scip, violation, mincutviolation) )
       {
          SCIP_CALL( SCIPaddRow(scip, rows[i], FALSE, &infeasible) );
-         assert(SCIPgetConsExprSepaCons(conshdlr) != NULL);
-         SCIProwSetCons(rows[i], SCIPgetConsExprSepaCons(conshdlr));
 
          if( infeasible )
          {
