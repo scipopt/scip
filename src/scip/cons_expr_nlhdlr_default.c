@@ -197,7 +197,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       return SCIP_OKAY;
 
    /* call the separation initialization callback of the expression handler */
-   SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+   SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -224,7 +224,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    }
 
    /* call the separation callback of the expression handler */
-   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, mincutviolation, result, ncuts) );
+   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
 
    return SCIP_OKAY;
 }

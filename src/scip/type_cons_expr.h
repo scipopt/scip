@@ -419,6 +419,7 @@ typedef enum
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - expr            : expression
  *  - overestimate    : whether the expression needs to be overestimated
  *  - underestimate   : whether the expression needs to be underestimated
@@ -429,6 +430,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
@@ -450,6 +452,8 @@ typedef enum
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - cons : expression constraint
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
@@ -460,6 +464,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
@@ -783,6 +788,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - nlhdlr          : nonlinear handler
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
@@ -795,6 +801,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -837,6 +844,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : cons expr handler
+ *  - cons : expression constraint
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -851,6 +859,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
