@@ -4568,7 +4568,6 @@ SCIP_RETCODE separatePointExprNlhdlr(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    int ncuts;
 
    assert(result != NULL);
@@ -4580,9 +4579,6 @@ SCIP_RETCODE separatePointExprNlhdlr(
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
       return SCIP_OKAY;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* now call the estimator callback of the nlhdlr */
    if( SCIPhasConsExprNlhdlrEstimate(nlhdlr) )
@@ -4793,7 +4789,6 @@ SCIP_RETCODE separatePoint(
    SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
@@ -4805,9 +4800,6 @@ SCIP_RETCODE separatePoint(
    assert(nconss >= nusefulconss);
    assert(mincutviolation >= 0.0);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
