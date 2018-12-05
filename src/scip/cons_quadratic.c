@@ -16812,6 +16812,7 @@ SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    assert(scip != NULL);
    assert(row != NULL);
    assert(rowprep != NULL);
+   assert(conshdlr != NULL);
 
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, row, conshdlr, rowprep->name,
       rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
