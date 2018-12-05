@@ -2797,8 +2797,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
          assert( requiredsize <= ntrafolinvars );
       }
-      trafolhs -= constant;
-      traforhs -= constant;
+      if( !SCIPisInfinity(scip, -trafolhs) )
+         trafolhs -= constant;
+      if( !SCIPisInfinity(scip,  traforhs) )
+         traforhs -= constant;
 
       if ( ntrafolinvars == 0 )
       {
