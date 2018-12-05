@@ -288,7 +288,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataEntropy)
 /** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseEntropy)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
 
    assert(expr != NULL);

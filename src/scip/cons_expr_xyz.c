@@ -212,6 +212,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXyz)
    return SCIP_OKAY;
 }
 
+/** expression under/overestimation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+}
+
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
