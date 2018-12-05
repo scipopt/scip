@@ -399,7 +399,7 @@ SCIP_RETCODE initLP(
    tmpvars[0] = vars1[0];
    tmpvars[1] = vars2[0];
 
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), "orbisack0#0", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisack0#0", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[1], 1.0) );
 
@@ -440,7 +440,7 @@ SCIP_RETCODE addOrbisackCover(
 
    *infeasible = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
    for (i = 0; i < nrows; ++i)
    {
@@ -592,7 +592,7 @@ SCIP_RETCODE addOrbisackInequality(
 
    *infeasible = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), "orbisack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for (i = 0; i < nrows; ++i)
@@ -1876,7 +1876,7 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
          coeff2[i] = 1.0;
 
          /* add inequality */
-         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
          for (j = 0; j < nrows; ++j)
          {

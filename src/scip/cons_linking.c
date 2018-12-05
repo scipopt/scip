@@ -1623,7 +1623,7 @@ SCIP_RETCODE createRows(
    /* create the LP row which captures the linking between the integer and binary variables */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[link]", SCIPconsGetName(cons));
 
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &consdata->row1, SCIPconsGetHdlr(cons), rowname, 0.0, 0.0,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row1, cons, rowname, 0.0, 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    /* add integer variable to the row */
@@ -1641,7 +1641,7 @@ SCIP_RETCODE createRows(
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s[setppc]", SCIPconsGetName(cons));
    assert( consdata->nbinvars > 0 );
 
-   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &consdata->row2, SCIPconsGetHdlr(cons), rowname, 1.0, 1.0,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row2, cons, rowname, 1.0, 1.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row2, consdata->nbinvars, consdata->binvars, 1.0) );
