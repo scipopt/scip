@@ -862,6 +862,7 @@ typedef struct
    SCIP_Longint*         lastbranchnlps;     /**< The number of (non-probing) LPs that where solved when the var was last
                                               *   branched on. */
    SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
+   SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    SCIP_Real*            lastbranchlpobjval; /**< The lp objval at which var was last branched on. */
    BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
    BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
@@ -4854,6 +4855,7 @@ SCIP_RETCODE selectVarStart(
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%lld, cand <%s>\n",
             SCIPgetNNodeLPIterations(scip), SCIPvarGetName(decision->branchvar));
 
+         persistent->oldntotalnodes = SCIPgetNTotalNodes(scip);
          persistent->oldnnodelpiterations = SCIPgetNNodeLPIterations(scip);
          branchingDecisionCopy(decision, persistent->prevdecision);
       }
@@ -5011,10 +5013,14 @@ SCIP_Bool isUsePreviousResult(
    assert(scip != NULL);
    assert(persistent != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check is previous result should be used: valid=%d, iterations=%lld (old=%lld)\n",
-      branchingDecisionIsValid(persistent->prevdecision), SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check is previous result should be used: valid=%d, "\
+      "nodes=%lld (old=%lld), iterations=%lld (old=%lld)\n",
+      branchingDecisionIsValid(persistent->prevdecision),
+      SCIPgetNTotalNodes(scip), persistent->oldntotalnodes,
+      SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations);
 
    return branchingDecisionIsValid(persistent->prevdecision)
+      && (persistent->oldntotalnodes == SCIPgetNTotalNodes(scip))
       && (persistent->oldnnodelpiterations == SCIPgetNNodeLPIterations(scip));
 }
 
