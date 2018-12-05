@@ -12,6 +12,13 @@
 
 CB_BASENAME="clusterbench_${CB_ID}"
 
+# prepare database
+# last benchmarkrun is in database
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
+touch ${RBDB}
+# get the last clusterbench id, this has to happen here, before we write new ones
+OLDCB_ID=$(tail -n 1 ${RBDB}|cut -d ' ' -f 1)
+
 cd ${CB_OUTPUTDIR}
 
 for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
@@ -32,6 +39,12 @@ for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
   # upload to rubberband, and collect rubberbandid
   rbcli up ${QBASENAME}.* > ${OUTPUT}
   RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  # only save id if run by adm_timo
+  if [ "${USER}" == "adm_timo" ]; then
+    echo "${CB_ID} ${RBID} queue=${Q}" >> ${RBDB}
+  else
+    echo "Queue=${Q}: https://rubberband.zib.de/result/${RBID}"
+  fi
 
   # clean up
   rm ${OUTPUT}
@@ -41,18 +54,20 @@ done
 # and send an email
 # otherwise just print the rubberband url in slurmlog
 if [ "${USER}" == "adm_timo" ]; then
-  # last benchmarkrun is in database
-  RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
-  touch ${RBDB}
-  LASTRUN=`tail ${RBDB} -n 1`
+  MAILTEXT="The results of the clusterbenchmark are ready."
 
-  # construct rubberband link and mailtext
-  RBSTR="${RBID}?compare=${LASTRUN}"
-
-  # save comma seperated string of ids in database
-  echo ${RBID} >> ${RBDB}
-
-  MAILTEXT="The results of the clusterbenchmark are ready. Take a look at https://rubberband.zib.de/result/${RBSTR}"
+  # add a comparison for all queues
+  for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
+    LASTWEEK=$(grep -e ${OLDCB_ID} ${RBDB}|grep queue=$Q |cut -d ' ' -f 2)
+    THISWEEK=$(grep -e ${CB_ID} ${RBDB}|grep queue=$Q |cut -d ' ' -f 2)
+    if [ "${LASTWEEK}" != "" ]; then
+      if [ "${THISWEEK}" != "" ]; then
+        # construct rubberband link and mailtext
+        MAILTEXT="${MAILTEXT}
+Compare queue ${Q}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}"
+      fi
+    fi
+  done
 
   # send email with cluster results
   EMAILFROM="adm_timo <timo-admin@zib.de>"
@@ -60,7 +75,5 @@ if [ "${USER}" == "adm_timo" ]; then
 
   SUBJECT="CLUSTERBENCHMARK"
   echo -e "${MAILTEXT}" | mailx -s "${SUBJECT}" -r "${EMAILFROM}" ${EMAILTO}
-else
-  echo "Finished, have a look at https://rubberband.zib.de/result/${RBID}"
 fi
 
