@@ -4471,7 +4471,6 @@ SCIP_RETCODE initSepa(
    SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
@@ -4485,9 +4484,6 @@ SCIP_RETCODE initSepa(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *infeasible = FALSE;
    for( c = 0; c < nconss && !*infeasible; ++c )
