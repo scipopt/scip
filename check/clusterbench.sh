@@ -78,7 +78,7 @@ for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
   # execute the testing script on all nodes
   for n in ${nodes[*]}; do
     # OUTPUTDIR is needed in jenkins_failcheck_benchmark.sh
-    export OUTPUTDIR="${CB_OUTPUTDIR}/${Q}_${n}"
+    export OUTPUTDIR="${CB_OUTPUTDIR}/${Q}/${n}"
     export CB_QUEUENODE=${n}
 
     echo "     CLUSTERNODES=${n}"
