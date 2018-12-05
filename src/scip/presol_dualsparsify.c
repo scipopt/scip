@@ -575,13 +575,27 @@ SCIP_RETCODE aggregation(
    /* TODO: we need to consider the infinite bounds here */
    if( weight1 > 0 )
    {
-      newlb = weight1*SCIPmatrixGetColLb(matrix, colidx1) + SCIPmatrixGetColLb(matrix, colidx2);
-      newub = weight1*SCIPmatrixGetColUb(matrix, colidx1) + SCIPmatrixGetColUb(matrix, colidx2);
+      if(SCIPisInfinity(scip, -SCIPmatrixGetColLb(matrix, colidx1)) || SCIPisInfinity(scip, -SCIPmatrixGetColLb(matrix, colidx2)))
+         newlb = -SCIPinfinity(scip);
+      else
+         newlb = weight1*SCIPmatrixGetColLb(matrix, colidx1) + SCIPmatrixGetColLb(matrix, colidx2);
+
+      if(SCIPisInfinity(scip, SCIPmatrixGetColUb(matrix, colidx1)) || SCIPisInfinity(scip, SCIPmatrixGetColUb(matrix, colidx2)))
+         newub = SCIPinfinity(scip);
+      else
+         newub = weight1*SCIPmatrixGetColUb(matrix, colidx1) + SCIPmatrixGetColUb(matrix, colidx2);
    }
    else
    {
-      newlb = weight1*SCIPmatrixGetColUb(matrix, colidx1) + SCIPmatrixGetColLb(matrix, colidx2);
-      newub = weight1*SCIPmatrixGetColLb(matrix, colidx1) + SCIPmatrixGetColUb(matrix, colidx2);
+      if(SCIPisInfinity(scip, SCIPmatrixGetColUb(matrix, colidx1)) || SCIPisInfinity(scip, -SCIPmatrixGetColLb(matrix, colidx2)))
+         newlb = -SCIPinfinity(scip);
+      else
+         newlb = weight1*SCIPmatrixGetColUb(matrix, colidx1) + SCIPmatrixGetColLb(matrix, colidx2);
+
+      if(SCIPisInfinity(scip, SCIPmatrixGetColLb(matrix, colidx1)) || SCIPisInfinity(scip, SCIPmatrixGetColUb(matrix, colidx2)))
+         newub = SCIPinfinity(scip);
+      else
+         newub = weight1*SCIPmatrixGetColLb(matrix, colidx1) + SCIPmatrixGetColUb(matrix, colidx2);
    }
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, SCIP_VARTYPE_CONTINUOUS,
