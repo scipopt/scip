@@ -675,7 +675,6 @@ SCIP_RETCODE cancelCol(
    nnz2 = 0;
    *nratios = 0;
    *success = FALSE;
-   //printf("%d, %d\n", varlen1, varlen2);
    while(i < varlen1 && j < varlen2)
    {
       if(inds1[i] == inds2[j])
@@ -760,29 +759,43 @@ SCIP_RETCODE cancelCol(
       tmp_sign = nnz1 < nnz2 ? TRUE : FALSE;
       if( nmaxratio >= tmp + presoldata->minacceptcancelnnzs )
       {
-         *success = TRUE;
-
-         if( tmp_sign && 1.0/maxratio > MINSCALE )
+         if( tmp_sign )
          {
-            /* aggregate variable one */
-            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, isimpliedfree1, 1.0/maxratio) );
+            if( (REALABS(1.0/maxratio) > MINSCALE) && (REALABS(1.0/maxratio) < MAXSCALE) )
+            {
+               *success = TRUE;
 
-            if( !isimpliedfree1 )
-               *naddconss += 1;
+               SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
+                     SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
 
-            *ncanceled = *ncanceled + nmaxratio - nnz1;
-            *nchgcoefs = *nchgcoefs + varlen2;
+               /* aggregate variable one */
+               SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, isimpliedfree1, 1.0/maxratio) );
+
+               if( !isimpliedfree1 )
+                  *naddconss += 1;
+
+               *ncanceled = *ncanceled + nmaxratio - nnz1;
+               *nchgcoefs = *nchgcoefs + varlen2;
+            }
          }
-         else if( maxratio < MAXSCALE )
+         else
          {
-            /* aggregate variable two */
-            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, isimpliedfree2, maxratio) );
+            if( (REALABS(maxratio) > MINSCALE) && (REALABS(maxratio) < MAXSCALE) )
+            {
+               *success = TRUE;
 
-            if( !isimpliedfree2 )
-               *naddconss += 1;
+               SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
+                     SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
 
-            *ncanceled = *ncanceled + nmaxratio - nnz2;
-            *nchgcoefs = *nchgcoefs + varlen1;
+               /* aggregate variable two */
+               SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, isimpliedfree2, maxratio) );
+
+               if( !isimpliedfree2 )
+                  *naddconss += 1;
+
+               *ncanceled = *ncanceled + nmaxratio - nnz2;
+               *nchgcoefs = *nchgcoefs + varlen1;
+            }
          }
       }
    }
@@ -908,7 +921,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             if( ubimplied && lbimplied )
             {
                processedvarsisfree[nprocessedvarsidx] = TRUE;
-       //        printf("chencccccccccccc\n");
+               SCIPdebugMsg(scip, "variable %s is implied free variable\n");
             }
             nprocessedvarsidx++;
          }
