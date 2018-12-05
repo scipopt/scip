@@ -89,6 +89,7 @@ Fixed bugs
 - fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
 - ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
   special case of an implication between two binary variables.
+- fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 
 Miscellaneous
 -------------
