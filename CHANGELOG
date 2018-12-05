@@ -93,6 +93,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+- do not scale linear constraints to integral coefficients if they contain continuous variables
 
 Known bugs
 ----------
