@@ -162,12 +162,6 @@ SCIP_Bool SCIPbendersShareAuxVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** returns whether parallelisation will be used. This indicates that thread safe operations must be performed. */
-EXTERN
-SCIP_Bool SCIPbendersGetParallel(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   );
-
 /** returns the auxiliary variable for the given subproblem */
 EXTERN
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(

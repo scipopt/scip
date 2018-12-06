@@ -395,6 +395,7 @@ SCIP_RETCODE SCIPcopyBenders(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; if NULL the transfer of cuts is not possible */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    )
 {
@@ -420,7 +421,8 @@ SCIP_RETCODE SCIPcopyBenders(
       for( p = sourcescip->set->nbenders - 1; p >= 0; --p )
       {
          copybendersvalid = FALSE;
-         SCIP_CALL( SCIPbendersCopyInclude(sourcescip->set->benders[p], sourcescip->set, targetscip->set, varmap, &copybendersvalid) );
+         SCIP_CALL( SCIPbendersCopyInclude(sourcescip->set->benders[p], sourcescip->set, targetscip->set, varmap,
+               copysubproblems, &copybendersvalid) );
          *valid = *valid && copybendersvalid;
       }
    }
@@ -2527,7 +2529,7 @@ SCIP_RETCODE doCopy(
    localvalid = localvalid && consscopyvalid;
 
    /* copy the Benders' decomposition plugins explicitly, because it requires the variable mapping hash map */
-   SCIP_CALL( SCIPcopyBenders(sourcescip, targetscip, localvarmap, &benderscopyvalid) );
+   SCIP_CALL( SCIPcopyBenders(sourcescip, targetscip, localvarmap, copysubproblems, &benderscopyvalid) );
 
    SCIPdebugMsg(sourcescip, "Copying Benders' decomposition plugins was%s valid.\n", benderscopyvalid ? "" : " not");
 

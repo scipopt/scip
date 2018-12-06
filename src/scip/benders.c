@@ -49,7 +49,6 @@
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 #define SCIP_DEFAULT_AUXVARSIMPLINT        TRUE  /** set the auxiliary variables as implint if the subproblem objective is integer */
-#define SCIP_DEFAULT_PARALLEL             FALSE  /** is Benders' decomposition used within a parallel solver */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -818,6 +817,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; if NULL, then the transfer of cuts is not possible */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
@@ -834,7 +834,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    if( benders->benderscopy != NULL && targetset->benders_copybenders && SCIPbendersIsActive(benders) )
    {
       SCIPsetDebugMsg(targetset, "including Benders' decomposition %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
-      SCIP_CALL( benders->benderscopy(targetset->scip, benders) );
+      SCIP_CALL( benders->benderscopy(targetset->scip, benders, copysubproblems) );
 
       /* copying the Benders' cuts */
       targetbenders = SCIPsetFindBenders(targetset, SCIPbendersGetName(benders));
@@ -848,8 +848,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* storing whether the lnscheck should be performed */
       targetbenders->lnscheck = benders->lnscheck;
 
-      /* storing whether the parallel mode is used */
-      targetbenders->parallel = benders->parallel;
+      /* storing whether the subproblems were copied with the Benders' copy */
+      targetbenders->copysubproblems = copysubproblems;
 
       /* calling the copy method for the Benders' cuts */
       SCIPbendersSortBenderscuts(benders);
@@ -1009,11 +1009,6 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
          &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/parallel", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "is Benders' decomposition used within a parallel solver?",
-         &(*benders)->parallel, FALSE, SCIP_DEFAULT_PARALLEL, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1283,10 +1278,10 @@ SCIP_RETCODE createSubproblems(
        * This only occurs if the Benders' decomposition is not a copy. It is assumed that the correct objective
        * coefficients are given during the first subproblem creation.
        *
-       * If the parallel parameter is set, then the master variables will be checked to ensure that they have a zero
+       * If the subproblems were copied, then the master variables will be checked to ensure that they have a zero
        * objective value.
        */
-      if( !benders->iscopy || benders->parallel )
+      if( !benders->iscopy || benders->copysubproblems )
       {
          SCIP_Bool objchanged = FALSE;
 
@@ -1337,11 +1332,11 @@ SCIP_RETCODE createSubproblems(
 
          SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
 
-         /* because the subproblems could be reused in the copy, the event handler is not created again. If the parallel
-          * parameter is set to TRUE, then it is assumed that the subproblems are not reused.
+         /* because the subproblems could be reused in the copy, the event handler is not created again. If the
+          * copysubproblems is TRUE, then it is assumed that the subproblems are not reused.
           * NOTE: This currently works with the benders_default implementation. It may not be very general. */
          if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
-            && (!benders->iscopy || benders->parallel) )
+            && (!benders->iscopy || benders->copysubproblems) )
          {
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
@@ -4437,16 +4432,6 @@ SCIP_Bool SCIPbendersShareAuxVars(
    assert(benders != NULL);
 
    return benders->shareauxvars;
-}
-
-/** returns whether parallelisation will be used. This indicates that thread safe operations must be performed. */
-SCIP_Bool SCIPbendersGetParallel(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   )
-{
-   assert(benders != NULL);
-
-   return benders->parallel;
 }
 
 /** adds a subproblem to the Benders' decomposition data */

@@ -240,8 +240,8 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
       SCIP** subproblems;
       int i;
 
-      /* if Benders' decomposition will be used in a parallel application, then the subproblems need to be copied. */
-      if( SCIPbendersGetParallel(benders) )
+      /* copying the subproblems if the copysubproblems flag was set to TRUE */
+      if( copysubproblems )
       {
          /* allocating memory for the subproblems array */
          SCIP_CALL( SCIPallocBufferArray(scip, &subproblems, bendersdata->nsubproblems) );
@@ -266,7 +266,7 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
       SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, bendersdata->nsubproblems) );
 
       /* freeing the buffer memory for the subproblems */
-      if( SCIPbendersGetParallel(benders) )
+      if( copysubproblems )
       {
          SCIP_BENDERS* targetbenders;
          SCIP_BENDERSDATA* targetbendersdata;

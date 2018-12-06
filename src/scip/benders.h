@@ -51,6 +51,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; must not be NULL */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
