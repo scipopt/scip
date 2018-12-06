@@ -318,30 +318,45 @@ typedef struct
    int                   boundssize;         /**< size of bounds arrays */
 } BRANCHINGDECISION;
 
-/** Allocates a branching decision in the buffer and initiates it with default values. */
+/** initialize a branching decsion with default values */
+static
+void branchingDecisionInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BRANCHINGDECISION*    decision            /**< the decision to initialize */
+   )
+{
+   assert(scip != NULL);
+   assert(decision != NULL);
+
+   decision->branchvar = NULL;
+   decision->branchval = SCIP_INVALID;
+   decision->downlowerbounds = NULL;
+   decision->downupperbounds = NULL;
+   decision->uplowerbounds = NULL;
+   decision->upupperbounds = NULL;
+   decision->downdb = -SCIPinfinity(scip);
+   decision->downdbvalid = FALSE;
+   decision->updb = -SCIPinfinity(scip);
+   decision->updbvalid = FALSE;
+   decision->boundsvalid = FALSE;
+   decision->proveddb = -SCIPinfinity(scip);
+   decision->boundssize = 0;
+}
+
+
+/** allocates a branching decision in the buffer and initializes it with default values. */
 static
 SCIP_RETCODE branchingDecisionCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   BRANCHINGDECISION**   decision            /**< pointer to the decision to allocate and initiate */
+   BRANCHINGDECISION**   decision            /**< pointer to the decision to allocate and initialize */
    )
 {
    assert(scip != NULL);
    assert(decision != NULL);
 
    SCIP_CALL( SCIPallocBuffer(scip, decision) );
-   (*decision)->branchvar = NULL;
-   (*decision)->branchval = SCIP_INVALID;
-   (*decision)->downlowerbounds = NULL;
-   (*decision)->downupperbounds = NULL;
-   (*decision)->uplowerbounds = NULL;
-   (*decision)->upupperbounds = NULL;
-   (*decision)->downdb = -SCIPinfinity(scip);
-   (*decision)->downdbvalid = FALSE;
-   (*decision)->updb = -SCIPinfinity(scip);
-   (*decision)->updbvalid = FALSE;
-   (*decision)->boundsvalid = FALSE;
-   (*decision)->proveddb = -SCIPinfinity(scip);
-   (*decision)->boundssize = 0;
+
+   branchingDecisionInit(scip, *decision);
 
    return SCIP_OKAY;
 }
@@ -369,6 +384,13 @@ void branchingDecisionCopy(
    targetdecision->updb = sourcedecision->updb;
    targetdecision->updbvalid = sourcedecision->updbvalid;
    targetdecision->proveddb = sourcedecision->proveddb;
+
+   assert(targetdecision->downlowerbounds == NULL);
+   assert(targetdecision->downupperbounds == NULL);
+   assert(targetdecision->uplowerbounds == NULL);
+   assert(targetdecision->upupperbounds == NULL);
+   assert(targetdecision->boundsvalid == FALSE);
+   assert(targetdecision->boundssize == 0);
 }
 
 /** Checks whether the given branching decision can be used to branch on. */
@@ -3442,11 +3464,11 @@ SCIP_Real calculateScaledCutoffScore(
    BRANCHINGRESULTDATA*  upbranchingresult   /**< branching result of the up branch */
    )
 {
-   int nlowestlevelcutoffs;
    SCIP_Real bestdowngain;
    SCIP_Real bestupgain;
    SCIP_Real totaldowngains;
    SCIP_Real totalupgains;
+   int nlowestlevelcutoffs;
    int ntotaldowngains;
    int ntotalupgains;
 
@@ -5007,10 +5029,15 @@ SCIP_RETCODE selectVarStart(
 static
 SCIP_Bool isUsePreviousResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   PERSISTENTDATA*       persistent          /**< container to store data over multiple calls to the branching rule */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
+   PERSISTENTDATA* persistent;
+
    assert(scip != NULL);
+   assert(branchruledata != NULL);
+
+   persistent = branchruledata->persistent;
    assert(persistent != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check is previous result should be used: valid=%d, "\
@@ -5036,25 +5063,27 @@ SCIP_Bool isUsePreviousResult(
 static
 SCIP_RETCODE usePreviousResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   BRANCHINGDECISION*    decision,           /**< decision to branch on */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
    SCIP_RESULT*          result              /**< the pointer to the branching result */
    )
 {
    assert(scip != NULL);
-   assert(decision != NULL);
+   assert(branchruledata != NULL);
    assert(result != NULL);
+   assert(branchruledata->persistent != NULL);
+   assert(branchruledata->persistent->prevdecision != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Branching based on previous solution.\n");
 
    /* execute the actual branching */
-   SCIP_CALL( branchOnVar(scip, decision) );
+   SCIP_CALL( branchOnVar(scip, branchruledata->persistent->prevdecision) );
    *result = SCIP_BRANCHED;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Branched based on previous solution. Variable <%s>\n",
-      SCIPvarGetName(decision->branchvar));
+      SCIPvarGetName(branchruledata->persistent->prevdecision->branchvar));
 
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
-   decision->branchvar = NULL;
+   branchruledata->persistent->prevdecision->branchvar = NULL;
 
    return SCIP_OKAY;
 }
@@ -5086,6 +5115,8 @@ SCIP_RETCODE freePersistent(
       SCIPfreeBlockMemory(scip, &persistent->lastbranchdownres[i]); /*lint !e866*/
       SCIPfreeBlockMemory(scip, &persistent->lastbranchupres[i]); /*lint !e866*/
    }
+
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent->prevdecision);
 
    assert(persistent->lastbranchlpobjval != NULL);
    assert(persistent->lastbranchdownres != NULL);
@@ -5140,9 +5171,10 @@ SCIP_RETCODE initBranchruleData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
-
-   branchruledata->persistent->prevdecision->branchvar = NULL;
    branchruledata->persistent->nvars = nvars;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->prevdecision) );
+   branchingDecisionInit(scip, branchruledata->persistent->prevdecision);
 
    for( i = 0; i < nvars; i++ )
    {
@@ -5187,12 +5219,10 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    assert(branchruledata != NULL);
    assert(branchruledata->config != NULL);
    assert(branchruledata->persistent != NULL);
-   assert(branchruledata->persistent->prevdecision != NULL);
 
-   SCIPfreeMemory(scip, &branchruledata->persistent->prevdecision);
-   SCIPfreeMemory(scip, &branchruledata->persistent);
-   SCIPfreeMemory(scip, &branchruledata->config);
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
+   SCIPfreeBlockMemory(scip, &branchruledata->config);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -5334,11 +5364,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_CALL( initBranchruleData(scip, branchruledata) );
 
    if( config->storeunviolatedsol
-      && isUsePreviousResult(scip, branchruledata->persistent) )
+      && isUsePreviousResult(scip, branchruledata) )
    {
       /* in case we stopped the previous run without a branching decision, we have stored the decision and execute it
        * now */
-      SCIP_CALL( usePreviousResult(scip, branchruledata->persistent->prevdecision, result) );
+      SCIP_CALL( usePreviousResult(scip, branchruledata, result) );
 
 #ifdef SCIP_STATISTIC
       branchruledata->statistics->noldcandidate++;
@@ -5542,12 +5572,11 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_BRANCHRULE* branchrule;
 
    /* create lookahead branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->config) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->config) );
 
    /* needs to be allocated here, such that the previous decision can be filled and reset over multiple runs */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent) );
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->prevdecision) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
    branchruledata->isinitialized = FALSE;
 
    /* include branching rule */
