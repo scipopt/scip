@@ -80,7 +80,7 @@ BEGIN {
 
    infinity = 1e+20;
    mintime = 0.5;
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
 
    nruns = 0;

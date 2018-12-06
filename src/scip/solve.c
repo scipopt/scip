@@ -1183,6 +1183,7 @@ SCIP_RETCODE initLP(
    )
 {
    SCIP_VAR* var;
+   int oldnvars = 0;
    int v;
 
    assert(set != NULL);
@@ -1199,6 +1200,9 @@ SCIP_RETCODE initLP(
       assert(SCIPlpGetNRows(lp) == 0);
       assert(lp->nremovablecols == 0);
       assert(lp->nremovablerows == 0);
+
+      /* store number of variables for later */
+      oldnvars = transprob->nvars;
 
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
@@ -1233,6 +1237,39 @@ SCIP_RETCODE initLP(
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
+
+   /* putting all initial constraints into the LP might have added new variables */
+   if( root && !(*cutoff) && transprob->nvars > oldnvars )
+   {
+      /* inform pricing storage, that LP is now filled with initial data */
+      SCIPpricestoreStartInitialLP(pricestore);
+
+      /* check all initial variables */
+      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      {
+         var = transprob->vars[v];
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         if( SCIPvarIsInitial(var) )
+         {
+            SCIP_COL* col;
+
+            col = SCIPvarGetCol(var);
+            if( col == NULL || ! SCIPcolIsInLP(col) )
+            {
+               SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
+            }
+         }
+
+         /* check for empty domains (necessary if no presolving was performed) */
+         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            *cutoff = TRUE;
+      }
+      SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
+
+      /* inform pricing storage, that initial LP setup is now finished */
+      SCIPpricestoreEndInitialLP(pricestore);
+   }
 
    return SCIP_OKAY;
 }
