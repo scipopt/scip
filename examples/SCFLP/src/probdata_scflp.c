@@ -124,7 +124,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-#define DEFAULT_SCALINGFACTOR    10000.0
+#define DEFAULT_SCALINGFACTOR    5000.0
 
 /** @brief Problem data which is accessible in all places
  *
