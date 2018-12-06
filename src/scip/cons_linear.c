@@ -4171,7 +4171,6 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4211,8 +4210,6 @@ SCIP_RETCODE normalizeCons(
    /* get coefficient arrays */
    vals = consdata->vals;
    nvars = consdata->nvars;
-   vars = consdata->vars;
-   assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
    if( nvars == 0 )
@@ -4221,7 +4218,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* get maximal and minimal absolute coefficient */
@@ -4273,9 +4269,7 @@ SCIP_RETCODE normalizeCons(
          /* get new consdata information, because scaleCons() might have deleted variables */
          vals = consdata->vals;
          nvars = consdata->nvars;
-         vars = consdata->vars;
 
-         assert(nvars == 0 || vars != NULL);
          assert(nvars == 0 || vals != NULL);
       }
    }
@@ -4287,7 +4281,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
