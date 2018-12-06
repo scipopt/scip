@@ -425,7 +425,7 @@ void getVarLowerBoundOfRow(
    assert(rowlb != NULL);
    assert(lbfound != NULL);
 
-   *rowlb = SCIPinfinity(scip);
+   *rowlb = -SCIPinfinity(scip);
    *lbfound = FALSE;
 
    getMinMaxActivityResiduals(scip, matrix, col, row, val, &minresactivity, &maxresactivity,
@@ -516,7 +516,7 @@ SCIP_Bool isLowerBoundImplied(
    assert(matrix != NULL);
 
    lbimplied = FALSE;
-   impliedlb = SCIPinfinity(scip);
+   impliedlb = -SCIPinfinity(scip);
 
    colpnt = SCIPmatrixGetColIdxPtr(matrix, col);
    colend = colpnt + SCIPmatrixGetColNNonzs(matrix, col);
@@ -527,15 +527,15 @@ SCIP_Bool isLowerBoundImplied(
       SCIP_Real rowlb;
       SCIP_Bool lbfound;
 
-      getVarUpperBoundOfRow(scip, matrix, col, *colpnt, *valpnt, &rowlb, &lbfound);
+      getVarLowerBoundOfRow(scip, matrix, col, *colpnt, *valpnt, &rowlb, &lbfound);
 
-      if( lbfound && (rowlb < impliedlb) )
+      if( lbfound && (rowlb > impliedlb) )
          impliedlb = rowlb;
    }
 
-   varlb = SCIPmatrixGetColUb(matrix, col);
+   varlb = SCIPmatrixGetColLb(matrix, col);
 
-   if( !SCIPisInfinity(scip, varlb) && SCIPisFeasGE(scip, impliedlb, varlb) )
+   if( !SCIPisInfinity(scip, -varlb) && SCIPisFeasGE(scip, impliedlb, varlb) )
       lbimplied = TRUE;
 
    return lbimplied;
@@ -585,6 +585,7 @@ SCIP_RETCODE aggregation(
       else
          newub = weight1*SCIPmatrixGetColUb(matrix, colidx1) + SCIPmatrixGetColUb(matrix, colidx2);
    }
+
    else
    {
       if(SCIPisInfinity(scip, SCIPmatrixGetColUb(matrix, colidx1)) || SCIPisInfinity(scip, -SCIPmatrixGetColLb(matrix, colidx2)))
@@ -610,7 +611,7 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPmultiaggregateVar(scip, aggregatedvar, 2, vars, coefs, 0.0, &infeasible, &aggregated) );
    assert(!infeasible);
    assert(aggregated);
- 
+
    if( !isimpliedfree )
    {
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
@@ -915,13 +916,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             processedvarssign[nprocessedvarsidx] = TRUE;
             processedvarsisfree[nprocessedvarsidx] = FALSE;
 
-            ubimplied = isUpperBoundImplied(scip, matrix, i);
             lbimplied = isLowerBoundImplied(scip, matrix, i);
+            ubimplied = isUpperBoundImplied(scip, matrix, i);
 
-            if( ubimplied && lbimplied )
+            if( lbimplied && ubimplied )
             {
                processedvarsisfree[nprocessedvarsidx] = TRUE;
-               SCIPdebugMsg(scip, "variable %s is implied free variable\n");
+               SCIPdebugMsg(scip, "variable %s is implied free variable\n", SCIPmatrixGetColName(matrix, i));
             }
             nprocessedvarsidx++;
          }
@@ -934,7 +935,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, processedvarsidx[i]));
       }
 
-      SCIPsortIntInt(processedvarsnnz, processedvarsidx, nprocessedvarsidx);
+      SCIPsortIntIntInt(processedvarsnnz, processedvarsidx, processedvarsisfree, nprocessedvarsidx);
 
       /* compare every pair of variables if the number of considered variables is small enough */
       if( nprocessedvarsidx > presoldata->maxcompareeverypair )
