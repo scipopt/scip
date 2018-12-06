@@ -4299,39 +4299,15 @@ SCIP_RETCODE normalizeCons(
    epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
-   maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
 
    if( !consdata->hasnonbinvalid )
       consdataCheckNonbinvar(consdata);
 
    /* if all variables are of integral type we will allow a greater multiplier */
    if( !consdata->hascontvar )
-   {
-      if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER / MAX(maxabsval, 1.0))); /*lint !e835*/
    else
-   {
-      SCIP_Bool foundcont;
-
-      foundcont = FALSE;
-
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            foundcont = TRUE;
-            break;
-         }
-      }
-
-      if( !foundcont )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEF / MAX(maxabsval, 1.0))); /*lint !e835*/
 
    /*
     * multiplication with +1 or -1
