@@ -166,7 +166,7 @@ SCIP_RETCODE SCIPcopyBenders(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables; must not be NULL */
+                                              *   target variables; if NULL the transfer of cuts is not possible */
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    );
 

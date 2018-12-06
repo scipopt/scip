@@ -817,7 +817,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables; must not be NULL */
+                                              *   target variables; if NULL, then the transfer of cuts is not possible */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
@@ -826,7 +826,6 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
    assert(benders != NULL);
    assert(targetset != NULL);
-   assert(varmap != NULL);
    assert(valid != NULL);
    assert(targetset->scip != NULL);
 
@@ -863,7 +862,13 @@ SCIP_RETCODE SCIPbendersCopyInclude(
        * required. This variable mapping is used to transfer the cuts generated in the target SCIP to the source SCIP.
        * The variable map is stored in the target Benders' decomposition. This will be freed when the sub-SCIP is freed.
        */
-      SCIP_CALL( createMasterVarMapping(targetbenders, sourceset, varmap) );
+      if( varmap != NULL )
+      {
+         SCIP_CALL( createMasterVarMapping(targetbenders, sourceset, varmap) );
+      }
+
+      assert((varmap != NULL && targetbenders->mastervarsmap != NULL)
+         || (varmap == NULL && targetbenders->mastervarsmap == NULL));
    }
 
    /* if the Benders' decomposition is active, then copy is not valid. */
@@ -1114,10 +1119,10 @@ SCIP_RETCODE SCIPbendersFree(
       SCIP_CALL( (*benders)->bendersfree(set->scip, *benders) );
    }
 
-   /* if the Benders' decomposition is a copy, then the variable map between the source and the target SCIP needs to be
-    * freed.
+   /* if the Benders' decomposition is a copy and a varmap has been passed to SCIP_BENDERS, then the variable map
+    * between the source and the target SCIP needs to be freed.
     */
-   if( (*benders)->iscopy )
+   if( (*benders)->iscopy && (*benders)->mastervarsmap != NULL )
    {
       SCIP_CALL( releaseVarMappingHashmapVars((*benders)->sourcescip, (*benders)) );
       SCIPhashmapFree(&(*benders)->mastervarsmap);
@@ -1586,8 +1591,10 @@ SCIP_RETCODE transferBendersCuts(
    /* retrieving the source Benders' decomposition structure */
    sourcebenders = SCIPfindBenders(sourcescip, SCIPbendersGetName(benders));
 
-   /* exit if the cuts should not be transferred from the sub SCIP to the source SCIP. */
-   if( !sourcebenders->transfercuts )
+   /* exit if the cuts should not be transferred from the sub SCIP to the source SCIP or the mastervarsmap hash map has
+    * not been created.
+    */
+   if( !sourcebenders->transfercuts || benders->mastervarsmap == NULL )
       return SCIP_OKAY;
 
    /* retreiving the number of stored Benders' cuts */
