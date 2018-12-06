@@ -49,6 +49,7 @@ Interface changes
 - Benders' decomposition
   + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
     argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP() and SCIPbendersSolveSubproblemCIP() changed
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
