@@ -14,7 +14,6 @@ set(quadinstances
     "cap41\;+2.58782e+05"
     "cap42\;+3.23782e+05"
     "cap43\;+3.88782e+05"
-    "cap44\;+4.86282e+05"
 )
 
 add_test(NAME examples-scflp-build
