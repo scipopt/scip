@@ -2415,6 +2415,7 @@ SCIP_RETCODE doCopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not, or NULL */
    )
@@ -2626,6 +2627,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2646,7 +2648,7 @@ SCIP_RETCODE SCIPcopy(
 
    /* copy source SCIP data into target SCIP data structure */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysubproblems, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -2718,6 +2720,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2735,7 +2738,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
 
    /* copy the source problem data */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysubproblems, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -2790,6 +2793,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2810,7 +2814,7 @@ SCIP_RETCODE SCIPcopyOrig(
    SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyOrig", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysubproblems, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -2875,6 +2879,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2893,7 +2898,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
 
    /* copy the source problem data */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysubproblems, passmessagehdlr, valid) );
 
    SCIP_CALL( SCIPsyncstoreRelease(&targetscip->syncstore) );
    targetscip->syncstore = sourcescip->syncstore;

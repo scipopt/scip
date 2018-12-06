@@ -951,6 +951,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1023,6 +1024,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1077,6 +1079,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1142,6 +1145,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );

@@ -897,7 +897,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_locks", FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_locks", FALSE, FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
