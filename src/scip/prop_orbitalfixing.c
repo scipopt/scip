@@ -776,7 +776,13 @@ SCIP_RETCODE computeBranchingVariables(
 
                   branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
                   assert( branchvaridx < nvars );
-                  b1[branchvaridx] = TRUE;
+
+                  /* the variable might already be fixed to 1 */
+                  if ( ! bg1[branchvaridx] )
+                  {
+                     bg1[branchvaridx] = TRUE;
+                     bg1list[(*nbg1)++] = branchvaridx;
+                  }
                }
             }
          }
