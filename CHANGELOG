@@ -62,7 +62,8 @@ Interface changes
     SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
   + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
     argument for the subproblem solving method.
-  + arguments of functions SCIPbendersSolveSubproblemLP() and SCIPbendersSolveSubproblemCIP() changed
+  + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
+  - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
@@ -74,7 +75,7 @@ Interface changes
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
 - methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
-  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData and
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 
 ### Command line interface
