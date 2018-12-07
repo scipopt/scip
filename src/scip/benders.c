@@ -690,7 +690,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
       targetvar = NULL;
 
       /* the prefix is required for UG, since we don't know how many copies have been made. */
-      (void) SCIPsnprintf(prefix, SCIP_MAXSTRLEN, "");
+      prefix[0] = '\n';
       while( targetvar == NULL && j <= subscipdepth )
       {
          if( shareauxvars )
