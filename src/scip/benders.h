@@ -208,7 +208,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );

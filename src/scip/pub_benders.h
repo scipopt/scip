@@ -31,6 +31,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "scip/type_stat.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -263,7 +264,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   SCIP_STATUS*          solvestatus,        /**< status of subproblem solve */
+   SCIP_Real*            objective           /**< optimal value of subproblem, if solved to optimality */
    );
 
 /** solves the Benders' decomposition subproblem */
@@ -272,8 +274,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_STATUS*          solvestatus,        /**< status of subproblem solve */
    SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 

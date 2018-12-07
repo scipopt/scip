@@ -13,6 +13,9 @@ Features
 - extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
   scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
 
+- extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
+  when the subproblem is nonlinear. Currently, it is assumed that the NLP is convex.
+
 Performance improvements
 ------------------------
 
@@ -54,6 +57,10 @@ Interface changes
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
+    argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP() and SCIPbendersSolveSubproblemCIP() changed
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
