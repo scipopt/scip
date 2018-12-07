@@ -3150,8 +3150,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       {
          assert(!(*lperror));
 
-        ++scip->stat->nsbcutoffs;
-
          *value = SCIPinfinity(scip);
 
          if( valid != NULL )
@@ -3169,8 +3167,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          {
          case SCIP_LPSOLSTAT_OPTIMAL:
          {
-            SCIP_Real oldlpobjval = *value;
-
             *value = SCIPgetLPObjval(scip);
             assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
@@ -3178,9 +3174,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
             if( valid != NULL )
                *valid = TRUE;
-
-            if( SCIPisEQ(scip, oldlpobjval, *value) )
-               ++scip->stat->nsbeqobjective;
 
             /* check the strong branching LP solution for feasibility */
             SCIP_CALL( SCIPtryStrongbranchLPSol(scip, foundsol, cutoff) );

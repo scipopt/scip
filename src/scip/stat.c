@@ -287,8 +287,6 @@ void SCIPstatReset(
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
-   stat->nsbcutoffs = 0;
-   stat->nsbeqobjective = 0;
    stat->nnumtroublelpmsgs = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;

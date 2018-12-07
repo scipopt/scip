@@ -678,32 +678,6 @@ SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets total number of cutoffs detected so far in strong branching
- *
- *  @return the total number of cutoffs detected so far in strong branching
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-SCIP_Longint SCIPgetNStrongbranchCutoffs(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets total number of strong branching LPs where the LP objective has not changed
- *
- *  @return the total number of strong branching LPs where the LP objective has not changed
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-SCIP_Longint SCIPgetNStrongbranchWithEQObjective(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets number of pricing rounds performed so far at the current node
  *
  *  @return the number of pricing rounds performed so far at the current node

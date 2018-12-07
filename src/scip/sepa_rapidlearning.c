@@ -869,7 +869,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
-   global = (SCIPgetDepth == 0);
+   global = (SCIPgetDepth(scip) == 0);
 
    /* check if rapid learning should applied locally */
    /* @todo check whether we want to run at the root node again, e.g., inf/obj ratio is large enough */

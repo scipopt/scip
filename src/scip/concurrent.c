@@ -862,8 +862,6 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->ndivinglps = source->stat->ndivinglps;
    target->stat->ndivesetlps = source->stat->ndivesetlps;
    target->stat->nsbdivinglps = source->stat->nsbdivinglps;
-   target->stat->nsbcutoffs = source->stat->nsbcutoffs;
-   target->stat->nsbeqobjective = source->stat->nsbeqobjective;
    target->stat->nstrongbranchs = source->stat->nstrongbranchs;
    target->stat->nrootstrongbranchs = source->stat->nrootstrongbranchs;
    target->stat->nconflictlps = source->stat->nconflictlps;
