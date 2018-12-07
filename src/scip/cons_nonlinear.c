@@ -5951,6 +5951,13 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          }
 
          SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->exprtrees[i], INTERVALINFTY, &nonlinactivity) );
+         if( SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) )
+         {
+            SCIPdebugMsg(scip, "Eval expr via exprtree on local bounds lead to infeasibility due to domain violation.\n");
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
          SCIPintervalMulScalar(INTERVALINFTY, &nonlinactivity, nonlinactivity, consdata->nonlincoefs[i]);
 
          if( !SCIPisInfinity(scip, -lhs) )

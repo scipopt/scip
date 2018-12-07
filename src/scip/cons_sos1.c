@@ -73,7 +73,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
-#include "scip/misc.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -2731,9 +2730,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       SCIP_DIGRAPH* conflictgraphlin;
       int** cliquecovers = NULL;           /* clique covers of indices of variables in linear constraint */
       int* cliquecoversizes = NULL;        /* size of each cover */
-      int ncliquecovers;
+      SCIP_VAR* sosvar = NULL;
       SCIP_Real* cliquecovervals = NULL;
+      SCIP_Real constant;
       int* varincover = NULL;              /* varincover[i] = cover of SOS1 index i */
+      int ncliquecovers;
+      int requiredsize;
 
       int v;
       int i;
@@ -2743,116 +2745,62 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       if ( c < nlinearconss )
       {
          SCIP_VAR** origlinvars;
-         int noriglinvars;
          SCIP_Real* origlinvals;
-         SCIP_Real origrhs;
-         SCIP_Real origlhs;
-         SCIP_Real constant;
-         int requiredsize;
 
          /* get data of linear constraint */
-         noriglinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         ntrafolinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         if ( ntrafolinvars < 1 )
+            continue;
+
          origlinvars = SCIPgetVarsLinear(scip, linearconss[c]);
          origlinvals = SCIPgetValsLinear(scip, linearconss[c]);
-         origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
-         origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
-
-         if ( noriglinvars < 1 )
-            continue;
          assert( origlinvars != NULL );
          assert( origlinvals != NULL );
 
          /* copy variables and coefficients of linear constraint */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, noriglinvars) );
-         ntrafolinvars = noriglinvars;
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, ntrafolinvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, ntrafolinvars) );
 
-         /* transform linear constraint */
-         constant = 0.0;
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, noriglinvars, &constant, &requiredsize, TRUE) );
-         if( requiredsize > ntrafolinvars )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize) );
-
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
-            assert( requiredsize <= ntrafolinvars );
-         }
-         trafolhs = origlhs - constant;
-         traforhs = origrhs - constant;
+         trafolhs = SCIPgetLhsLinear(scip, linearconss[c]);
+         traforhs = SCIPgetRhsLinear(scip, linearconss[c]);
       }
       else
       {
-         SCIP_VAR* var;
+         sosvar = SCIPnodeGetVarSOS1(conflictgraph, c - nlinearconss);
 
-         var = SCIPnodeGetVarSOS1(conflictgraph, c-nlinearconss);
-
-         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_Real constant;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            constant = SCIPvarGetAggrConstant(var);
-            trafolinvars[0] = SCIPvarGetAggrVar(var);
-            trafolinvals[0] = SCIPvarGetAggrScalar(var);
-            trafolinvars[1] = var;
-            trafolinvals[1] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = 2;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            SCIP_Real* scalars;
-            SCIP_VAR** agrvars;
-            SCIP_Real constant;
-            int nagrvars;
-
-            nagrvars = SCIPvarGetMultaggrNVars(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, nagrvars+1) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, nagrvars+1) );
-
-            agrvars = SCIPvarGetMultaggrVars(var);
-            scalars = SCIPvarGetMultaggrScalars(var);
-            constant = SCIPvarGetMultaggrConstant(var);
-
-            for (v = 0; v < nagrvars; ++v)
-            {
-               trafolinvars[v] = agrvars[v];
-               trafolinvals[v] = scalars[v];
-            }
-            trafolinvars[nagrvars] = var;
-            trafolinvals[nagrvars] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = nagrvars + 1;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
-         {
-            SCIP_VAR* negvar;
-            SCIP_Real negcons;
-
-            /* get negation variable and negation offset */
-            negvar = SCIPvarGetNegationVar(var);
-            negcons = SCIPvarGetNegationConstant(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            trafolinvars[0] = negvar;
-            trafolinvars[1] = var;
-            trafolinvals[0] = 1.0;
-            trafolinvals[1] = 1.0;
-            trafolhs = negcons;
-            traforhs = negcons;
-            ntrafolinvars = 2;
-         }
-         else
+         if ( SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_AGGREGATED
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_MULTAGGR
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_NEGATED )
             continue;
+
+         /* store variable so it will be transformed to active variables below */
+         ntrafolinvars = 1;
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, ntrafolinvars + 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, ntrafolinvars + 1) );
+
+         trafolinvars[0] = sosvar;
+         trafolinvals[0] = 1.0;
+
+         trafolhs = 0.0;
+         traforhs = 0.0;
       }
+      assert( ntrafolinvars >= 1 );
+
+      /* transform linear constraint */
+      constant = 0.0;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize, TRUE) );
+      if( requiredsize > ntrafolinvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize + 1) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert( requiredsize <= ntrafolinvars );
+      }
+      if( !SCIPisInfinity(scip, -trafolhs) )
+         trafolhs -= constant;
+      if( !SCIPisInfinity(scip,  traforhs) )
+         traforhs -= constant;
 
       if ( ntrafolinvars == 0 )
       {
@@ -2861,22 +2809,27 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          continue;
       }
 
+      /* possibly add sos1 variable to create aggregation/multiaggregation/negation equality */
+      if ( sosvar != NULL )
+      {
+         trafolinvals[ntrafolinvars] = -1.0;
+         trafolinvars[ntrafolinvars] = sosvar;
+         ++ntrafolinvars;
+      }
+
       /* compute lower and upper bounds of each term a_i * x_i of transformed constraint */
       for (v = 0; v < ntrafolinvars; ++v)
       {
-         SCIP_Real lb = SCIPvarGetLbLocal(trafolinvars[v]);
-         SCIP_Real ub = SCIPvarGetUbLocal(trafolinvars[v]);
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         lb = SCIPvarGetLbLocal(trafolinvars[v]);
+         ub = SCIPvarGetUbLocal(trafolinvars[v]);
 
          if ( trafolinvals[v] < 0.0 )
-         {
-            SCIP_Real temp;
+            SCIPswapReals(&lb, &ub);
 
-            temp = lb;
-            lb = ub;
-            ub = temp;
-         }
-
-         assert(!SCIPisInfinity(scip, REALABS(trafolinvals[v])));
+         assert( ! SCIPisInfinity(scip, REALABS(trafolinvals[v])) );
 
          if ( SCIPisInfinity(scip, REALABS(lb)) || SCIPisInfinity(scip, REALABS(lb * trafolinvals[v])) )
             trafolbs[v] = -SCIPinfinity(scip);
@@ -3856,7 +3809,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->implgraph, nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -5145,7 +5098,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
+                           SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5457,7 +5410,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
+            SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
          }
 
          vars = consdata->vars;
@@ -8769,7 +8722,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->conflictgraph, cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -9002,7 +8955,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */

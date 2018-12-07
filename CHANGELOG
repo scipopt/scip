@@ -1,15 +1,20 @@
-@page RN70 Release notes for SCIP 7.0
+@page RNNEXT Release notes for SCIP NEXT
 
-@section RN700 SCIP 7.0.0
+@section RNNEXT SCIP NEXT
 *************************
 
 Features
 --------
 
+- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart.
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
 - extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
   scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
+- extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
+  when the subproblem is nonlinear. Currently, it is assumed that the NLP is convex.
 
 Performance improvements
 ------------------------
@@ -24,6 +29,15 @@ Performance improvements
 - consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
   up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
   with Benders' decomposition.
+
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
+
 
 Examples and applications
 -------------------------
@@ -43,6 +57,10 @@ Interface changes
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
+    argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP() and SCIPbendersSolveSubproblemCIP() changed
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
@@ -56,6 +74,7 @@ Interface changes
 
 ### Changed parameters
 
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
@@ -108,6 +127,8 @@ Build system
 Fixed bugs
 ----------
 
+- fix and improve memory handling in symmetry computation
+
 Miscellaneous
 -------------
 
@@ -122,20 +143,10 @@ Known bugs
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
-  restart or not. Previously one could just turn off symmetry computation after a restart.
 - when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
 Performance improvements
 ------------------------
-
-- improved performance of orbital fixing in several ways:
-  store permutations in transposed form to improve cache efficency;
-  reverse order to speed up filtering of permutations;
-  handle variables globally fixed to 1 in list;
-  use event handler to catch global fixings;
-  speed up orbit computations;
-  change handling of restarts;
 
 Examples and applications
 -------------------------
@@ -145,7 +156,19 @@ Interface changes
 
 ### New and changed callbacks
 
-### Deleted and changed API methods
+### Deleted and changed API methods and macros
+
+- The preprocessor macro NO_CONFIG_HEADER now needs to be defined when
+  including SCIP header files from a SCIP build or installation that
+  has been build via the Makefile-only build system.
+
+- The following preprocessor macros have been renamed:
+  WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
+  to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
+  to SCIP_NO_STRTOK_R, ROUNDING_FE to SCIP_ROUNDING_FE, ROUNDING_FP to
+  SCIP_ROUNDING_FP, ROUNDING_MS to SCIP_ROUNDING_MS. Note, however, that
+  the names of macros NO_RAND_R and NO_STRERROR_R have not been changed
+  so far.
 
 ### New API functions
 
@@ -157,7 +180,6 @@ Interface changes
 
 ### Changed parameters
 
-- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - default clock type for timing is now wallclock
 
 ### New parameters
@@ -190,12 +212,20 @@ Fixed bugs
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
-- fix and improve memory handling in symmetry computation
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
 - fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
 - fixed update of constraint violations in solution repair in cons_bivariate, cons_quadratic, and cons_nonlinear
 - print error message and terminate if matrix entries of a column are not consecutive in mps format
+- fixed incorrect handling of fixed variables when transfer of cuts from LNS heuristic for Benders' decomposition
+- fix returning local infeasible status by Ipopt interface if Ipopt finds problem locally infeasible
+- skip attempt to apply fixings in linear constraint handler during solving stage as LP rows cannot change anymore
+- fixed bug when reading >= indicator constraints in MPS format
+- fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
+- fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
+- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables.
+- fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 
 Miscellaneous
 -------------

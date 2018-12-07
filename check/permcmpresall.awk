@@ -104,7 +104,7 @@ BEGIN {
    printdifftime=0;     # additional column with the difference of maximum time and minimum time
 
    infinity = 1e+20;
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
    mintime = 0.5;
    wintolerance = 1.1;

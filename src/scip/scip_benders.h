@@ -550,7 +550,6 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
@@ -855,26 +854,6 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
-/** adds the generated constraint to the Benders' decomposition cut storage
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_RETCODE SCIPstoreBenderscutCons(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
-   );
-
 /** adds the generated cuts to the Benders' cut storage
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -892,7 +871,11 @@ EXTERN
 SCIP_RETCODE SCIPstoreBenderscutCut(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
+   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             rhs,                /**< the right hand side of the cut */
+   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
 /* @} */

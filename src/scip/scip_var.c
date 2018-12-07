@@ -3099,8 +3099,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL ) /*lint !e774*/
-         *cutoff = FALSE;
+      *cutoff = FALSE;
 
       if( conflict != NULL )
          *conflict = FALSE;
@@ -6714,18 +6713,25 @@ SCIP_RETCODE SCIPaddVarImplication(
    /* transform implication containing two binary variables to clique */
    if( SCIPvarIsBinary(implvar) )
    {
-      SCIP_VAR* vars[2];
-      SCIP_Bool vals[2];
-
       assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
       assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
 
-      vars[0] = var;
-      vars[1] = implvar;
-      vals[0] = varfixing;
-      vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+      /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
+         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
+               )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
 
-      SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+      }
 
       return SCIP_OKAY;
    }
