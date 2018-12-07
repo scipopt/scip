@@ -36,8 +36,6 @@
 
 #include "scip/struct_benderscut.h"
 
-#define BENDERSCUT_ARRAYSIZE        10    /**< the initial size of the added constraints/cuts arrays */
-
 /* default parameter settings for the Benders' decomposition cuts */
 #define SCIP_DEFAULT_ENABLED        TRUE
 
