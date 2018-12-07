@@ -10560,10 +10560,10 @@ SCIP_Real SCIPcomputeGap(
 }
 
 /*
- *Union-Find data structure
+ * disjoint set (union-find) data structure
  */
 
-/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+/** creates a disjoint set (union find) structure \p djset for \p ncomponents many components (of size one) */
 SCIP_RETCODE SCIPdisjointsetCreate(
    SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -10586,12 +10586,13 @@ SCIP_RETCODE SCIPdisjointsetCreate(
    return SCIP_OKAY;
 }
 
-/** clears the disjoint set (union find) structure \p uf */
+/** clears the disjoint set (union find) structure \p djset */
 void SCIPdisjointsetClear(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    )
 {
    int i;
+
    djset->componentcount = djset->size;
 
    /* reset all components to be unconnected */
@@ -10601,7 +10602,6 @@ void SCIPdisjointsetClear(
       djset->sizes[i] = 1;
    }
 }
-
 
 /** finds and returns the component identifier of this \p element */
 int SCIPdisjointsetFind(

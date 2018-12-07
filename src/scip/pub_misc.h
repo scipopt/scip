@@ -1671,10 +1671,10 @@ void SCIPbtSetRoot(
  */
 
 /*
- * Disjoined Set data structure
+ * disjoint set data structure
  */
 
-/** clears the disjoint set (union find) structure \p uf */
+/** clears the disjoint set (union find) structure \p djset */
 EXTERN
 void SCIPdisjointsetClear(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */

@@ -20,7 +20,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "nlpi/exprinterpret.h"
+#include "nlpi/pub_expr.h"
 #include "scip/benderscut_feas.h"
+#include "scip/benderscut_opt.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_benderscut.h"
 #include "scip/pub_benders.h"
@@ -28,6 +31,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/pub_nlp.h"
 #include "scip/pub_var.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_cons.h"
@@ -35,6 +39,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_solvingstats.h"
@@ -85,7 +90,7 @@ SCIP_RETCODE addVariableToArray(
 
 /** computing as standard Benders' feasibility cut from the dual solutions of the LP */
 static
-SCIP_RETCODE computeStandardFeasibilityCut(
+SCIP_RETCODE computeStandardLPFeasibilityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
@@ -107,8 +112,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
-   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE
-      || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
+   assert(SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
 
    (*success) = FALSE;
 
@@ -117,7 +121,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    for( i = 0; i < nrows; i++ )
    {
       SCIP_ROW* lprow;
-      addval = 0;
 
       lprow = SCIPgetLPRows(subproblem)[i];
       assert(lprow != NULL);
@@ -202,6 +205,125 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    return SCIP_OKAY;
 }
 
+
+/** computing as standard Benders' feasibility cut from the dual solutions of the NLP
+ *
+ *  NOTE: The cut must be created before being passed to this function
+ */
+static
+SCIP_RETCODE computeStandardNLPFeasibilityCut(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   int*                  nvars,              /**< the number of variables in the cut */
+   int*                  varssize,           /**< the number of variables in the array */
+   SCIP_Bool*            success             /**< was the cut generation successful? */
+   )
+{
+   SCIP_EXPRINT* exprinterpreter;
+   SCIP_VAR** subvars;
+   int nrows;
+   int nsubvars;
+   SCIP_Real activity;
+   SCIP_Real dirderiv;
+   SCIP_Real dualsol;
+   int i;
+
+   assert(masterprob != NULL);
+   assert(subproblem != NULL);
+   assert(benders != NULL);
+   assert(SCIPisNLPConstructed(subproblem));
+   assert(SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
+
+   (*success) = FALSE;
+
+   nsubvars = SCIPgetNNLPVars(subproblem);
+   subvars = SCIPgetNLPVars(subproblem);
+
+   *lhs = 0.0;
+   dirderiv = 0.0;
+
+   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
+
+   /* looping over all NLP rows and setting the corresponding coefficients of the cut */
+   nrows = SCIPgetNNLPNlRows(subproblem);
+   for( i = 0; i < nrows; i++ )
+   {
+      SCIP_NLROW* nlrow;
+
+      nlrow = SCIPgetNLPNlRows(subproblem)[i];
+      assert(nlrow != NULL);
+
+      dualsol = SCIPnlrowGetDualsol(nlrow);
+      assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
+
+      if( SCIPisZero(subproblem, dualsol) )
+         continue;
+
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter, -dualsol,
+            &dirderiv, vars, vals, nvars, varssize) );
+
+      SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
+
+      if( dualsol > 0.0 )
+      {
+         assert(!SCIPisInfinity(subproblem, SCIPnlrowGetRhs(nlrow)));
+         *lhs += dualsol * (activity - SCIPnlrowGetRhs(nlrow));
+      }
+      else
+      {
+         assert(!SCIPisInfinity(subproblem, -SCIPnlrowGetLhs(nlrow)));
+         *lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
+      }
+   }
+
+   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
+
+   /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
+   for( i = 0; i < nsubvars; i++ )
+   {
+      SCIP_VAR* var;
+      SCIP_VAR* mastervar;
+      SCIP_Real coef;
+
+      var = subvars[i];
+
+      /* retrieving the master problem variable for the given subproblem variable. */
+      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
+
+      dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
+
+      /* checking whether the subproblem variable has a corresponding master variable. */
+      if( mastervar == NULL || dualsol == 0.0 )
+         continue;
+
+      coef = -dualsol;
+
+      /* adding the variable to the storage */
+      SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
+
+      dirderiv += coef * SCIPvarGetNLPSol(var);
+   }
+
+   *lhs += dirderiv;
+
+   /* if the side became infinite or dirderiv was infinite, then the cut generation terminates. */
+   if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
+      || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
+   {
+      (*success) = FALSE;
+      SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", lhs, dirderiv);
+      return SCIP_OKAY;
+   }
+
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** generates and applies Benders' cuts */
 static
 SCIP_RETCODE generateAndApplyBendersCuts(
@@ -242,15 +364,24 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
-   if( SCIPgetNLPIterations(subproblem) == 0 )
+   if( SCIPisNLPConstructed(subproblem) )
    {
-      SCIPverbMessage(masterprob, SCIP_VERBLEVEL_FULL, NULL, "There were no iterations in pricing problem %d. "
-        "A Benders' decomposition feasibility cut will be generated from the presolved LP data.\n", probnumber);
+      /* computing the coefficients of the feasibility cut from the NLP */
+      SCIP_CALL( computeStandardNLPFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+            &success) );
    }
+   else
+   {
+      if( SCIPgetNLPIterations(subproblem) == 0 )
+      {
+         SCIPverbMessage(masterprob, SCIP_VERBLEVEL_FULL, NULL, "There were no iterations in pricing problem %d. "
+           "A Benders' decomposition feasibility cut will be generated from the presolved LP data.\n", probnumber);
+      }
 
-   /* computing the coefficients of the feasibility cut from the LP */
-   SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
-         &success) );
+      /* computing the coefficients of the feasibility cut from the LP */
+      SCIP_CALL( computeStandardLPFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+            &success) );
+   }
 
    /* if success is FALSE, then there was an error in generating the feasibility cut. No cut will be added to the master
     * problem. Otherwise, the constraint is added to the master problem.
@@ -294,9 +425,6 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          SCIPdebugPrintCons(masterprob, cut, NULL);
 
          (*result) = SCIP_CONSADDED;
-
-         /* storing the data that is used to create the cut */
-         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, SCIPinfinity(masterprob), nvars) );
       }
 
       SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
@@ -326,9 +454,12 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
-   /* only generate feasibility cuts if the subproblem is infeasible */
-   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE ||
-      (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) )
+   /* only generate feasibility cuts if the subproblem LP or NLP is infeasible,
+    * since we use the farkas proof from the LP or the dual solution of the NLP to construct the feasibility cut
+    */
+   if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
+      ((!SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) ||
+       ( SCIPisNLPConstructed(subproblem) && (SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE))) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,

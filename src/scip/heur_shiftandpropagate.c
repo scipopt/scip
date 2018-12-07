@@ -769,11 +769,12 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatbegin));
+      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
+
 
      (*matrix)->nrows = 0;
      (*matrix)->ncols = 0;
@@ -1581,9 +1582,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
 
-   /* the column positions are not needed anymore */
-   SCIPfreeBufferArray(scip, &colposs);
-
    /* could not initialize matrix */
    if( !initialized || infeasible )
    {
@@ -2315,8 +2313,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       );
 
    SCIP_CALL( SCIPendProbing(scip) );
-   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    freeMatrix(scip, &matrix);
+   SCIPfreeBufferArray(scip, &colposs);
+   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    eventhdlrdata->matrix = NULL;
 
    return SCIP_OKAY;
