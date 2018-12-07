@@ -524,9 +524,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    bendersdata = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
-   bendersdata->created = FALSE;
-   bendersdata->subprobscopied = FALSE;
-   bendersdata->mappingcreated = FALSE;
+   BMSclearMemory(bendersdata);
 
    benders = NULL;
 
