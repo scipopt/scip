@@ -559,8 +559,6 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
 
-   SCIPfreeBufferArray(scip, &activeperms);
-
    if ( norbits > 0 )
    {
       int nfixedzero = 0;
@@ -577,6 +575,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
+   SCIPfreeBufferArray(scip, &activeperms);
 
    return SCIP_OKAY;
 }
