@@ -302,16 +302,10 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
    assert(bendersdata != NULL);
 
-   if( bendersdata->mappingcreated )
-   {
-      for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
-         SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
-      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars, bendersdata->nsubproblems);
-
-      /* free hash map */
-      SCIPhashmapFree(&bendersdata->subvartomastervar);
-      SCIPhashmapFree(&bendersdata->mastervartosubindex);
-   }
+   /* should have been freed in bendersExitDefault (if mappingcreated), or not been created at the first place */
+   assert(bendersdata->subproblemvars == NULL);
+   assert(bendersdata->subvartomastervar == NULL);
+   assert(bendersdata->mastervartosubindex == NULL);
 
    if( bendersdata->created )
    {
