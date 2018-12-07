@@ -719,7 +719,7 @@ SCIP_RETCODE level2dataCreate(
    assert(scip != NULL);
    assert(data != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, data) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, data) );
 
    (*data)->level2map = NULL;
    (*data)->level2results = NULL;
@@ -754,10 +754,10 @@ void level2dataFree(
 
    if( (*data)->level2results != NULL )
    {
-      SCIPfreeMemoryArray(scip, &(*data)->level2results);
+      SCIPfreeBlockMemoryArray(scip, &(*data)->level2results, (*data)->level2resultssize);
    }
 
-   SCIPfreeMemory(scip, data);
+   SCIPfreeBlockMemory(scip, data);
 }
 
 /** ensures that level2results can store at least one more element */
@@ -772,10 +772,10 @@ SCIP_RETCODE level2dataEnsureSize(
 
    if( data->nlevel2results >= data->level2resultssize )
    {
-      data->level2resultssize = 2 * data->level2resultssize;
-      data->level2resultssize = MAX(4, data->level2resultssize);
+      int newsize = SCIPcalcMemGrowSize(scip, data->level2resultssize + 1);
 
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &data->level2results, data->level2resultssize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &data->level2results, data->level2resultssize, newsize) );
+      data->level2resultssize = newsize;
    }
 
    return SCIP_OKAY;
@@ -869,6 +869,7 @@ SCIP_RETCODE level2dataStoreResult(
 
    data->level2results[data->nlevel2results] = result;
    ++data->nlevel2results;
+   assert(data->nlevel2results <= data->level2resultssize);
 
    return SCIP_OKAY;
 }
@@ -883,11 +884,11 @@ typedef struct
                                               *   var). */
    SCIP_Longint*         lastbranchnlps;     /**< The number of (non-probing) LPs that where solved when the var was last
                                               *   branched on. */
-   SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
-   SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    SCIP_Real*            lastbranchlpobjval; /**< The lp objval at which var was last branched on. */
    BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
    BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
+   SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
+   SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
    int                   nvars;              /**< The number of variables that can be stored in the arrays. */
 } PERSISTENTDATA;
@@ -3212,6 +3213,7 @@ SCIP_RETCODE getOldBranching(
    )
 {
    int varindex;
+   SCIP_Real down, up;
 
    assert(scip != NULL);
    assert(persistent != NULL);
@@ -3225,9 +3227,11 @@ SCIP_RETCODE getOldBranching(
    branchingResultDataCopy(persistent->lastbranchdownres[varindex], downbranchingresult);
    branchingResultDataCopy(persistent->lastbranchupres[varindex], upbranchingresult);
 
-   SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchvar, &downbranchingresult->dualbound, &upbranchingresult->dualbound,
+   SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchvar, &down, &up,
          NULL, NULL, NULL, oldlpobjval) );
 
+   assert(down == downbranchingresult->dualbound);
+   assert(up == upbranchingresult->dualbound);
    downbranchingresult->dualboundvalid = FALSE;
    upbranchingresult->dualboundvalid = FALSE;
    downbranchingresult->cutoff = FALSE;
@@ -3959,6 +3963,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
       if( SCIPgetProbingDepth(scip) == 0 )
       {
+         assert(SCIPvarGetProbindex(branchvar) >= 0);
          level2data->branchvar1 = SCIPvarGetProbindex(branchvar);
          level2data->branchdir1 = !downbranching;
          level2data->branchval1 = newbound;
@@ -3968,6 +3973,7 @@ SCIP_RETCODE executeBranchingRecursive(
          LEVEL2RESULT* result;
 
          assert(SCIPgetProbingDepth(scip) == 1);
+         assert(SCIPvarGetProbindex(branchvar) >= 0);
 
          level2data->branchvar2 = SCIPvarGetProbindex(branchvar);
          level2data->branchdir2 = !downbranching;
@@ -5130,6 +5136,8 @@ SCIP_RETCODE freePersistent(
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchnlps, nvars);
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchid, nvars);
 
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
+
    branchruledata->isinitialized = FALSE;
 
    return SCIP_OKAY;
@@ -5147,7 +5155,7 @@ SCIP_RETCODE initBranchruleData(
 
    assert(scip != NULL);
    assert(branchruledata != NULL);
-   assert(branchruledata->persistent != NULL);
+   assert((branchruledata->persistent != NULL) == branchruledata->isinitialized);
 
    /* the branching rule data is already initialized and no new variables have been added in the meantime */
    if( branchruledata->isinitialized &&
@@ -5158,6 +5166,8 @@ SCIP_RETCODE initBranchruleData(
    {
       SCIP_CALL( freePersistent(scip, branchruledata) );
    }
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
 
    /* The variables given by the SCIPgetVars() array are sorted with the binaries at first and the integer variables
     * directly afterwards. With the SCIPvarGetProbindex() method we can access the index of a given variable in the
@@ -5172,6 +5182,9 @@ SCIP_RETCODE initBranchruleData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
    branchruledata->persistent->nvars = nvars;
+   branchruledata->persistent->restartindex = 0;
+   branchruledata->persistent->oldntotalnodes = -1;
+   branchruledata->persistent->oldnnodelpiterations = -1;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->prevdecision) );
    branchingDecisionInit(scip, branchruledata->persistent->prevdecision);
@@ -5218,9 +5231,8 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->config != NULL);
-   assert(branchruledata->persistent != NULL);
+   assert(branchruledata->persistent == NULL);
 
-   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
    SCIPfreeBlockMemory(scip, &branchruledata->config);
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -5241,9 +5253,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-   assert(branchruledata->persistent != NULL);
-
-   branchruledata->persistent->restartindex = 0;
+   assert(branchruledata->persistent == NULL);
 
 #ifdef SCIP_STATISTIC
    {
@@ -5575,8 +5585,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->config) );
 
-   /* needs to be allocated here, such that the previous decision can be filled and reset over multiple runs */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
+   branchruledata->persistent = NULL;
    branchruledata->isinitialized = FALSE;
 
    /* include branching rule */
