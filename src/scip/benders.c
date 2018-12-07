@@ -3647,7 +3647,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
       SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
 #ifdef SCIP_MOREDEBUG
-      //SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
 #endif
    }
 
