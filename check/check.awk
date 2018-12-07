@@ -144,7 +144,7 @@ function isStatusFail(thisstatus)
 }
 
 BEGIN {
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
    sblpgeomshift = 0.0;
    pavshift = 0.0;
