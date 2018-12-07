@@ -49,11 +49,15 @@ Interface changes
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
 
+- new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
+  SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
+  parallel. Setting this argument to TRUE has a performance cost.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
 - methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
-  SCIPaddBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData and
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData and
   SCIPbendersGetStoredCutOrigData().
 
 ### Command line interface
