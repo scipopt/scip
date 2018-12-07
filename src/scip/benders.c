@@ -1591,7 +1591,7 @@ SCIP_RETCODE transferBendersCuts(
    if( !sourcebenders->transfercuts || benders->mastervarsmap == NULL )
       return SCIP_OKAY;
 
-   /* retreiving the number of stored Benders' cuts */
+   /* retrieving the number of stored Benders' cuts */
    naddedcuts =  SCIPbendersGetNStoredCuts(benders);
 
    /* looping over all added cuts to construct the cut for the source scip */
