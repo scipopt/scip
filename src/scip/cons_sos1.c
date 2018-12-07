@@ -2804,8 +2804,8 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
       if ( ntrafolinvars == 0 )
       {
-         SCIPfreeBufferArray(scip, &trafolinvars);
          SCIPfreeBufferArray(scip, &trafolinvals);
+         SCIPfreeBufferArray(scip, &trafolinvars);
          continue;
       }
 
@@ -3326,12 +3326,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
    } /* end for every linear constraint */
 
    /* free buffer arrays */
-   SCIPfreeBufferArrayNull(scip, &sos1linvars);
    SCIPfreeBufferArrayNull(scip, &trafolbs);
    SCIPfreeBufferArrayNull(scip, &trafoubs);
    SCIPfreeBufferArrayNull(scip, &coveredvars);
    SCIPfreeBufferArrayNull(scip, &varindincons);
    SCIPfreeBufferArrayNull(scip, &implnodes);
+   SCIPfreeBufferArrayNull(scip, &sos1linvars);
 
    return SCIP_OKAY;
 }
@@ -9852,8 +9852,8 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }
