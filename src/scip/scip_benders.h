@@ -879,7 +879,7 @@ SCIP_RETCODE SCIPstoreBendersCut(
    int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
-/** adds the Benders' decomposition cuts in storage to the input SCIP instance
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
  *
  *  When calling the function, the user must be sure that the variables are associated with the input SCIP instance.
  *  The main use of this method is to transfer Benders' cuts between solvers in ParaSCIP.
@@ -895,7 +895,7 @@ SCIP_RETCODE SCIPstoreBendersCut(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPaddBendersStoredCuts(
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );

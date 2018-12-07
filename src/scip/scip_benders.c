@@ -1368,7 +1368,7 @@ SCIP_RETCODE SCIPstoreBendersCut(
 
 /** creates a constraint in the input SCIP instance that corresponds to the given vars and vals arrays */
 static
-SCIP_RETCODE createAndAddStoredBendersCut(
+SCIP_RETCODE createAndApplyStoredBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_VAR**            vars,               /**< the variables from the source constraint */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the source constriant */
@@ -1399,7 +1399,7 @@ SCIP_RETCODE createAndAddStoredBendersCut(
    return SCIP_OKAY;
 }
 
-/** adds the Benders' decomposition cuts in storage to the input SCIP instance
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1412,7 +1412,7 @@ SCIP_RETCODE createAndAddStoredBendersCut(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPaddBendersStoredCuts(
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
@@ -1439,8 +1439,8 @@ SCIP_RETCODE SCIPaddBendersStoredCuts(
 
       if( nvars > 0 )
       {
-         /* create and add the cut to be transferred from the sub SCIP to the source SCIP */
-         SCIP_CALL( createAndAddStoredBendersCut(scip, vars, vals, lhs, rhs, nvars, i) );
+         /* create and apply the cut to be transferred from the sub SCIP to the source SCIP */
+         SCIP_CALL( createAndApplyStoredBendersCut(scip, vars, vals, lhs, rhs, nvars, i) );
       }
    }
 
