@@ -6496,13 +6496,13 @@
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
  * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
- * decomposition. Such problems are given by
+ * decomposition. In a purely mixed-integer linear setting, such problems are given by
  *
  * \f[
  *  \begin{array}[t]{rllclcl}
  *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *    \text{subject to} & \displaystyle & Ax & & & = & b \\
  *         & \\
  *         & \displaystyle & Tx & + & Hy & = & h \\
  *         & \\
@@ -6522,7 +6522,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *    \text{subject to} & \displaystyle & Hy  = h - T\bar{x} \\
  *         & \\
  *         & & y \in \mathbb{R}^{m} \\
  *  \end{array}
@@ -6555,7 +6555,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & c^{T}x + \varphi \\
  *         & \\
- *    subject \ to & \displaystyle & Ax = b \\
+ *    \text{subject to} & \displaystyle & Ax = b \\
  *         & \\
  *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
  *         & \\
@@ -6568,7 +6568,23 @@
  *
  * @section BENDERFRAMEWORK Overview
  *
- * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented.
+ *
+ * The current framework can be used to handle a Benders Decomposition of CIPs of the form
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *    \text{subject to} & \displaystyle & g(x & , & y) & \in & [\ell,u] \\
+ *         & & x & & & \in & X \\
+ *         & & & & y & \in & Y \\
+ *  \end{array}
+ * \f]
+ * when either
+ * - the subproblem is convex: \f$g_i(x,y)\f$ convex on \f$X\times Y\f$ if \f$u_i<\infty\f$, \f$g_i(x,y)\f$ concave on \f$X\times Y\f$ if \f$\ell_i>-\infty\f$, and \f$Y=\mathbb{R}^m\f$, or
+ * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
+ *
+ * This framework can be used in four different
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
