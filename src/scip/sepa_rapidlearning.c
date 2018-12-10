@@ -492,7 +492,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
 
          if( SCIPgetSubscipDepth(scip) == 0 )
-         printf(">> accepted rapid learning solution\n");
+            SCIPdebugMsg(scip, ">> accepted rapid learning solution\n");
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
@@ -529,6 +529,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), hashtablesize) );
 
       SCIP_CALL( SCIPgetIntParam(scip, "conflict/maxconss", &nmaxconfs) );
+      if( global )
+         nmaxconfs *= 20;
 
       /* loop over all constraint handlers that might contain conflict constraints
        * @todo select promising constraints and not greedy
