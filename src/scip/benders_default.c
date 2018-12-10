@@ -306,7 +306,6 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
    assert(bendersdata->subproblemvars == NULL);
    assert(bendersdata->subvartomastervar == NULL);
    assert(bendersdata->mastervartosubindex == NULL);
-
    if( bendersdata->created )
    {
       /* if the subproblems were copied, then the copy needs to be freed */

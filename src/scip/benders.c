@@ -1585,9 +1585,7 @@ SCIP_RETCODE transferBendersCuts(
    /* retrieving the source Benders' decomposition structure */
    sourcebenders = SCIPfindBenders(sourcescip, SCIPbendersGetName(benders));
 
-   /* exit if the cuts should not be transferred from the sub SCIP to the source SCIP or the mastervarsmap hash map has
-    * not been created.
-    */
+   /* exit if the cuts should not be transferred from the sub SCIP to the source SCIP. */
    if( !sourcebenders->transfercuts || benders->mastervarsmap == NULL )
       return SCIP_OKAY;
 
@@ -1637,8 +1635,10 @@ SCIP_RETCODE SCIPbendersExit(
       SCIP_CALL( benders->bendersexit(set->scip, benders) );
    }
 
-   /* if the Benders' decomposition is a copy, then the generated cuts will be transferred to the source scip */
-   if( benders->iscopy )
+   /* if the Benders' decomposition is a copy, then is a variable mapping was provided, then the generated cuts will
+    * be transferred to the source scip
+    */
+   if( benders->iscopy && benders->mastervarsmap != NULL )
    {
       SCIP_CALL( transferBendersCuts(benders->sourcescip, set->scip, benders) );
    }
@@ -2423,7 +2423,7 @@ SCIP_RETCODE generateBendersCuts(
    onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set));
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
-   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
+   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )// && type != SCIP_BENDERSENFOTYPE_CHECK )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
       i = benders->firstchecked;
