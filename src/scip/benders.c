@@ -2426,7 +2426,7 @@ SCIP_RETCODE generateBendersCuts(
    onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set));
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
-   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED )// && type != SCIP_BENDERSENFOTYPE_CHECK )
+   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
       i = benders->firstchecked;
