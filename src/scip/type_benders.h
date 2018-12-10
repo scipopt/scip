@@ -70,9 +70,9 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition itself
- *  - copysubproblems : must the subproblems be copied with the Benders' decomposition copy
+ *  - threadsafe      : must the Benders' decomposition copy be thread safe
  */
-#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool copysubproblems)
+#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool threadsafe)
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting)
  *

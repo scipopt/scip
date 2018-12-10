@@ -556,8 +556,11 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodesolved)
    /* getting the Benders' decomposition data structure */
    benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
 
-   /* The event is only caught if there is an active Benders' decomposition */
-   if( SCIPbendersIsActive(benders) && !SCIPbendersOnlyCheckConvexRelax(benders, SCIPgetSubscipsOff(scip)) )
+   /* The event is only caught if there is an active Benders' decomposition, the integer subproblem are solved and
+    * the Benders' decomposition has not been copied in thread safe mode
+    */
+   if( SCIPbendersIsActive(benders) && !SCIPbendersOnlyCheckConvexRelax(benders, SCIPgetSubscipsOff(scip))
+      && !benders->threadsafe )
    {
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
    }
@@ -817,7 +820,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; if NULL, then the transfer of cuts is not possible */
-   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
+   SCIP_Bool             threadsafe,         /**< must the Benders' decomposition copy be thread safe */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
@@ -834,7 +837,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    if( benders->benderscopy != NULL && targetset->benders_copybenders && SCIPbendersIsActive(benders) )
    {
       SCIPsetDebugMsg(targetset, "including Benders' decomposition %s in subscip %p\n", SCIPbendersGetName(benders), (void*)targetset->scip);
-      SCIP_CALL( benders->benderscopy(targetset->scip, benders, copysubproblems) );
+      SCIP_CALL( benders->benderscopy(targetset->scip, benders, threadsafe) );
 
       /* copying the Benders' cuts */
       targetbenders = SCIPsetFindBenders(targetset, SCIPbendersGetName(benders));
@@ -848,8 +851,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* storing whether the lnscheck should be performed */
       targetbenders->lnscheck = benders->lnscheck;
 
-      /* storing whether the subproblems were copied with the Benders' copy */
-      targetbenders->copysubproblems = copysubproblems;
+      /* storing whether the Benders' copy required thread safety */
+      targetbenders->threadsafe = threadsafe;
 
       /* calling the copy method for the Benders' cuts */
       SCIPbendersSortBenderscuts(benders);
@@ -1280,7 +1283,7 @@ SCIP_RETCODE createSubproblems(
        * If the subproblems were copied, then the master variables will be checked to ensure that they have a zero
        * objective value.
        */
-      if( !benders->iscopy || benders->copysubproblems )
+      if( !benders->iscopy || benders->threadsafe )
       {
          SCIP_Bool objchanged = FALSE;
 
@@ -1332,10 +1335,10 @@ SCIP_RETCODE createSubproblems(
          SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
 
          /* because the subproblems could be reused in the copy, the event handler is not created again. If the
-          * copysubproblems is TRUE, then it is assumed that the subproblems are not reused.
+          * threadsafe is TRUE, then it is assumed that the subproblems are not reused.
           * NOTE: This currently works with the benders_default implementation. It may not be very general. */
          if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
-            && (!benders->iscopy || benders->copysubproblems) )
+            && (!benders->iscopy || benders->threadsafe) )
          {
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
             SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
