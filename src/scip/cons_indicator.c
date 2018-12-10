@@ -6785,8 +6785,8 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 
          if( lincons == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin_%s> or <%s>.\n",
-               name, binvarname, binvarname);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+               name, posstr+8, posstr+9, posstr+16);
             *success = FALSE;
             return SCIP_OKAY;
          }
