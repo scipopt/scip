@@ -364,7 +364,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
-   if( SCIPisNLPConstructed(subproblem) )
+   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
    {
       /* computing the coefficients of the feasibility cut from the NLP */
       SCIP_CALL( computeStandardNLPFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
@@ -445,6 +445,7 @@ static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
 {  /*lint --e{715}*/
    SCIP* subproblem;
+   SCIP_Bool nlprelaxation;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -454,12 +455,15 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
+   nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem);
+
    /* only generate feasibility cuts if the subproblem LP or NLP is infeasible,
     * since we use the farkas proof from the LP or the dual solution of the NLP to construct the feasibility cut
     */
    if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
-      ((!SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) ||
-       ( SCIPisNLPConstructed(subproblem) && (SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE))) )
+      ((!nlprelaxation && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) ||
+       (nlprelaxation && (SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE))) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
