@@ -361,7 +361,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
+   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol)*(int)SCIPgetObjsense(scip), eventhdlrdata->upperbound) )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
@@ -2569,7 +2569,8 @@ SCIP_RETCODE SCIPbendersExec(
     * the Benders' decomposition subproblems.
     * TODO: Add a parameter to control this behaviour.
     */
-   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip), SCIPgetSolOrigObj(set->scip, sol)) )
+   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip)*(int)SCIPgetObjsense(set->scip),
+         SCIPgetSolOrigObj(set->scip, sol)*(int)SCIPgetObjsense(set->scip)) )
    {
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -3030,7 +3031,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
       {
          if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, NULL));
+            SCIPbendersSetSubproblemObjval(benders, probnumber,
+               SCIPgetSolOrigObj(subproblem, NULL)*(int)SCIPgetObjsense(subproblem));
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -3058,11 +3060,13 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       {
          /* TODO: Consider whether other solutions status should be handled */
          if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
+            SCIPbendersSetSubproblemObjval(benders, probnumber,
+               SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(subproblem));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_USERINTERRUPT || SCIPgetStatus(subproblem) == SCIP_STATUS_BESTSOLLIMIT )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPgetSolOrigObj(subproblem, bestsol));
+            SCIPbendersSetSubproblemObjval(benders, probnumber,
+               SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(subproblem));
          else if( SCIPgetStatus(subproblem) == SCIP_STATUS_MEMLIMIT
             || SCIPgetStatus(subproblem) == SCIP_STATUS_TIMELIMIT )
          {
@@ -3258,7 +3262,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, infeasible, type, solvecip) );
 
          if( objective != NULL )
-            (*objective) = SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem));
+            (*objective) = SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem))*(int)SCIPgetObjsense(subproblem);
       }
       else
       {
@@ -3287,7 +3291,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
             SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, infeasible) );
 
             if( objective != NULL )
-               (*objective) = SCIPgetSolOrigObj(subproblem, NULL);
+               (*objective) = SCIPgetSolOrigObj(subproblem, NULL)*(int)SCIPgetObjsense(subproblem);
          }
          else
          {
