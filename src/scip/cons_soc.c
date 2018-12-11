@@ -5033,9 +5033,9 @@ SCIP_DECL_CONSPARSE(consParseSOC)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
    }
 
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &offsets);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
