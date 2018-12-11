@@ -4837,7 +4837,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    }
    SCIPfreeBufferArray(scip, &fzninput.constants);
 
-   for( i = FZN_MAX_PUSHEDTOKENS -1; i >= 0; --i )
+   for( i = FZN_MAX_PUSHEDTOKENS - 1; i >= 0; --i ) /*lint !e778*/
    {
       SCIPfreeBufferArrayNull(scip, &fzninput.pushedtokens[i]);
    }
