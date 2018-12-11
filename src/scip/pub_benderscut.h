@@ -109,24 +109,6 @@ SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
-/** returns the number of cuts that have been added for storage */
-EXTERN
-int SCIPbenderscutGetNAddedCuts(
-   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
-   );
-
-/** returns the data for the cuts that have been added by the Benders' cut plugin */
-EXTERN
-SCIP_RETCODE SCIPbenderscutGetAddedCutData(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   int                   cutidx,             /**< the index for the cut data that is requested */
-   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
-   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
-   SCIP_Real*            lhs,                /**< the left hand side of the cut */
-   SCIP_Real*            rhs,                /**< the right hand side of the cut */
-   int*                  nvars               /**< the number of variables with non-zero coefficients in the cut */
-   );
-
 /** returns whether the Benders' cut uses the LP information */
 EXTERN
 SCIP_Bool SCIPbenderscutIsLPCut(

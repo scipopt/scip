@@ -616,7 +616,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          }
 
          /* storing the data that is used to create the cut */
-         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, vars, vals, lhs, rhs, nvars) );
+         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, rhs, nvars) );
       }
 
       /* releasing the row or constraint */

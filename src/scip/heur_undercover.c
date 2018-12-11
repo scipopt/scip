@@ -2226,7 +2226,7 @@ SCIP_RETCODE solveSubproblem(
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars,
-         heurdata->globalbounds, FALSE, TRUE, validsolved) );
+         heurdata->globalbounds, FALSE, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {

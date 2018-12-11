@@ -134,6 +134,9 @@ SCIP_RETCODE SCIPcopyPlugins(
 /** copies all Benders' decomposition plugins
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note the 'threadsafe' parameter must be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -166,7 +169,9 @@ SCIP_RETCODE SCIPcopyBenders(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables; must not be NULL */
+                                              *   target variables; if NULL the transfer of cuts is not possible */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    );
 
@@ -910,6 +915,9 @@ void SCIPsetSubscipDepth(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -950,6 +958,8 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -979,6 +989,9 @@ SCIP_RETCODE SCIPcopy(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1022,6 +1035,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1037,6 +1052,9 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1076,6 +1094,8 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1099,6 +1119,9 @@ SCIP_RETCODE SCIPcopyOrig(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1141,6 +1164,8 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
