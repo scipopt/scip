@@ -73,10 +73,11 @@
 #define MINSCALE                    0.001    /**< minimal allowed scale for cancelling non-zeros */
 
 
-#define DEFAULT_MINACCEPTCANCELNNZS     5    /**< minimal cancel nonzeros when accepting to aggregate variables */
+#define DEFAULT_MINACCEPTCANCELNNZS    10    /**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
 #define DEFAULT_MINCONSIDEREDNNZS      10    /**< minimal number of considered non-zeros within one column */
 #define DEFAULT_MAXCOMPAREDEVERYPAIR  200    /**< maximal number on the implementaion of doing reduction on every pair of variables */
-
+#define DEFAULT_MAX_FILLINRATE       0.05    /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
+#define DEFAULT_MAX_FILLINRATE_FREE   0.1    /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
 
 /*
  * Data structures
@@ -102,9 +103,11 @@ struct SCIP_PresolData
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
    int                   naggregated;
 
-   int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate variables */
+   int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
    int                   minconsiderednnzs;  /**< minimal number of considered non-zeros within one column */
    int                   maxcompareeverypair;/**< maximal number on the implementaion of doing reduction on every pair of variables */
+   SCIP_Real             maxfillinrate;      /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
+   SCIP_Real             maxfillinratefree;  /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
 };
 
 /*
@@ -722,7 +725,14 @@ SCIP_RETCODE cancelCol(
       int ncurratio;
       int tmp;
       SCIP_Bool tmp_sign;
+      int maxfillin1;
+      int maxfillin2;
+      int mincancel1;
+      int mincancel2;
+      SCIP_Bool isaccepted1;
+      SCIP_Bool isaccepted2;
 
+      SCIP_Bool isexecute;
 
       nmaxratio = 0;
 
@@ -756,47 +766,77 @@ SCIP_RETCODE cancelCol(
          nmaxratio = ncurratio;
       }
 
-      tmp = nnz1 < nnz2 ? nnz1 : nnz2;
-      tmp_sign = nnz1 < nnz2 ? TRUE : FALSE;
-      if( nmaxratio >= tmp + presoldata->minacceptcancelnnzs )
+      maxfillin1 = isimpliedfree1 ? floor(presoldata->maxfillinratefree*nmaxratio) : floor(presoldata->maxfillinrate*nmaxratio);
+      maxfillin2 = isimpliedfree2 ? floor(presoldata->maxfillinratefree*nmaxratio) : floor(presoldata->maxfillinrate*nmaxratio);
+      mincancel1 = isimpliedfree1 ? 0 : presoldata->minacceptcancelnnzs;
+      mincancel2 = isimpliedfree2 ? 0 : presoldata->minacceptcancelnnzs;
+      isaccepted1 = (maxfillin1 >= nnz1) && (nmaxratio >= nnz1 + mincancel1) && (REALABS(1.0/maxratio) > MINSCALE)
+         && (REALABS(1.0/maxratio) < MAXSCALE);
+      isaccepted2 = (maxfillin2 >= nnz2) && (nmaxratio >= nnz2 + mincancel2) && (REALABS(maxratio) > MINSCALE)
+         && (REALABS(maxratio) < MAXSCALE);
+      isexecute = TRUE;
+ 
+      if( isaccepted1 && isaccepted2 )
       {
-         if( tmp_sign )
+         if((isimpliedfree1 && isimpliedfree2) || (!isimpliedfree1 && !isimpliedfree2))
          {
-            if( (REALABS(1.0/maxratio) > MINSCALE) && (REALABS(1.0/maxratio) < MAXSCALE) )
-            {
-               *success = TRUE;
-
-               SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
-                     SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
-
-               /* aggregate variable one */
-               SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, isimpliedfree1, 1.0/maxratio) );
-
-               if( !isimpliedfree1 )
-                  *naddconss += 1;
-
-               *ncanceled = *ncanceled + nmaxratio - nnz1;
-               *nchgcoefs = *nchgcoefs + varlen2;
-            }
+            tmp_sign = nnz1 < nnz2 ? TRUE : FALSE;
+         }
+         else if( isimpliedfree1 )
+         {
+            tmp_sign = TRUE;
          }
          else
          {
-            if( (REALABS(maxratio) > MINSCALE) && (REALABS(maxratio) < MAXSCALE) )
-            {
-               *success = TRUE;
+            tmp_sign = FALSE;
+         }
+      }
+      else if( isaccepted1 )
+      {
+         tmp_sign = TRUE;
+      }
+      else if( isaccepted2 )
+      {
+         tmp_sign = FALSE;
+      }
+      else
+      {
+         isexecute = FALSE;
+      }
 
-               SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
-                     SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
+      if( isexecute )
+      {
+         if( tmp_sign )
+         {
+            *success = TRUE;
 
-               /* aggregate variable two */
-               SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, isimpliedfree2, maxratio) );
+            SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
+                  SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
 
-               if( !isimpliedfree2 )
-                  *naddconss += 1;
+            /* aggregate variable one */
+            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx2, colidx1, isimpliedfree1, 1.0/maxratio) );
 
-               *ncanceled = *ncanceled + nmaxratio - nnz2;
-               *nchgcoefs = *nchgcoefs + varlen1;
-            }
+            if( !isimpliedfree1 )
+               *naddconss += 1;
+
+            *ncanceled = *ncanceled + nmaxratio - nnz1;
+            *nchgcoefs = *nchgcoefs + varlen2;
+         }
+         else
+         {
+            *success = TRUE;
+
+            SCIPdebugMsg(scip, "use dualsparsify method on varaibles %s and %s\n",
+                  SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
+
+            /* aggregate variable two */
+            SCIP_CALL( aggregation(scip, presoldata, matrix, colidx1, colidx2, isimpliedfree2, maxratio) );
+
+            if( !isimpliedfree2 )
+               *naddconss += 1;
+
+            *ncanceled = *ncanceled + nmaxratio - nnz2;
+            *nchgcoefs = *nchgcoefs + varlen1;
          }
       }
    }
@@ -1092,6 +1132,16 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "presolving/dualsparsify/maxcompareeverypair",
          "maximal number on the implementaion of doing reduction on every pair of variables",
          &presoldata->maxcompareeverypair, FALSE, DEFAULT_MAXCOMPAREDEVERYPAIR, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/dualsparsify/maxfillinrate",
+         "cancel the variable if nfillins/ncancels is less than or equal this rate",
+         &presoldata->maxfillinrate, TRUE, DEFAULT_MAX_FILLINRATE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/dualsparsify/maxfillinratefree",
+         "cancel the free variable if nfillins/ncancels is less than or equal this rate",
+         &presoldata->maxfillinratefree, TRUE, DEFAULT_MAX_FILLINRATE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 #if 0
          "maximal fillin for continuous variables (-1: unlimited)",
          &presoldata->maxcontfillin, FALSE, DEFAULT_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
