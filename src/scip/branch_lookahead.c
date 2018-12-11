@@ -3202,7 +3202,7 @@ SCIP_Bool isUseOldBranching(
 
    assert(SCIPgetVarStrongbranchNode(scip, branchvar) ==  persistent->lastbranchid[SCIPvarGetProbindex(branchvar)] &&
       (SCIPgetVarStrongbranchNode(scip, branchvar) != SCIPgetNNodes(scip) ||
-         SCIPgetVarStrongbranchLPAge(scip, branchvar) == SCIPgetNLPs(scip) - persistent->lastbranchid[SCIPvarGetProbindex(branchvar)]));
+         SCIPgetVarStrongbranchLPAge(scip, branchvar) == SCIPgetNLPs(scip) - persistent->lastbranchnlps[SCIPvarGetProbindex(branchvar)]));
 
    /* an old branching can be reused, if we are still at the same node and just a few LPs were solved in between */
    return SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip)
@@ -3295,7 +3295,7 @@ SCIP_RETCODE updateOldBranching(
    branchingResultDataCopy(upbranchingresult, persistent->lastbranchupres[varindex]);
 
    persistent->lastbranchid[varindex] = SCIPgetNNodes(scip);
-   persistent->lastbranchnlps[varindex] = SCIPgetNNodeLPs(scip);
+   persistent->lastbranchnlps[varindex] = SCIPgetNLPs(scip);
 
    return SCIP_OKAY;
 }
