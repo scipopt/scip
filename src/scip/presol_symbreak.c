@@ -797,6 +797,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( presol != NULL );
    assert( scip != NULL );
 
+   ncomponents = 0;
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
