@@ -62,7 +62,7 @@ endforeach()
 #
 # add a test for every quadratic instance
 #
-if(DEFINED ${IPOPT})
+if(${IPOPT_FOUND})
    foreach(instance ${quadinstances})
        list(GET instance 0 basename)
        list(GET instance 1 optval)
