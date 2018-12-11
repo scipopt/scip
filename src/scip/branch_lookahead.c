@@ -878,8 +878,10 @@ SCIP_RETCODE level2dataStoreResult(
 /** The data that is preserved over multiple runs of the branching rule. */
 typedef struct
 {
-   BRANCHINGDECISION*    prevdecision;       /**< The previous decision that gets used for the case that in the previous run
+   BRANCHINGDECISION*    olddecision;        /**< The previous decision that gets used for the case that in the previous run
                                               *   only non-violating implied binary constraints were added.*/
+   SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
+   SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    SCIP_Longint*         lastbranchid;       /**< The node id at which the var was last branched on (for a given branching
                                               *   var). */
    SCIP_Longint*         lastbranchnlps;     /**< The number of (non-probing) LPs that where solved when the var was last
@@ -887,8 +889,6 @@ typedef struct
    SCIP_Real*            lastbranchlpobjval; /**< The lp objval at which var was last branched on. */
    BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
    BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
-   SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
-   SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
    int                   nvars;              /**< The number of variables that can be stored in the arrays. */
 } PERSISTENTDATA;
@@ -3188,6 +3188,7 @@ SCIP_Bool isBranchFurtherLoopDecrement(
 static
 SCIP_Bool isUseOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rule */
    CONFIGURATION*        config,             /**< the configuration of the branching rule */
    SCIP_VAR*             branchvar           /**< variable to check */
    )
@@ -3195,6 +3196,13 @@ SCIP_Bool isUseOldBranching(
    assert(scip != NULL);
    assert(config != NULL);
    assert(branchvar != NULL);
+
+   assert(SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip) ||
+      SCIPgetVarStrongbranchLPAge(scip, branchvar) >= config->reevalage);
+
+   assert(SCIPgetVarStrongbranchNode(scip, branchvar) ==  persistent->lastbranchid[SCIPvarGetProbindex(branchvar)] &&
+      (SCIPgetVarStrongbranchNode(scip, branchvar) != SCIPgetNNodes(scip) ||
+         SCIPgetVarStrongbranchLPAge(scip, branchvar) == SCIPgetNLPs(scip) - persistent->lastbranchid[SCIPvarGetProbindex(branchvar)]));
 
    /* an old branching can be reused, if we are still at the same node and just a few LPs were solved in between */
    return SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip)
@@ -3205,7 +3213,7 @@ SCIP_Bool isUseOldBranching(
 static
 SCIP_RETCODE getOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rulel */
+   PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rule */
    SCIP_VAR*             branchvar,          /**< variable to get previous results for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< pointer to store the previous down result in */
    BRANCHINGRESULTDATA*  upbranchingresult,  /**< pointer to store the previous up result in */
@@ -4365,7 +4373,7 @@ SCIP_RETCODE selectVarRecursive(
       branchingResultDataInit(scip, upbranchingresult);
 
       /* use old lookahead branching result, if last call on this variable is not too long ago */
-      if( persistent != NULL && isUseOldBranching(scip, config, branchvar) )
+      if( persistent != NULL && isUseOldBranching(scip, persistent, config, branchvar) && !config->inscoring )
       {
          SCIP_CALL( getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult,
                &oldlpobjval) );
@@ -4459,7 +4467,7 @@ SCIP_RETCODE selectVarRecursive(
          }
 
          /* store results of branching call */
-         if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff )
+         if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff && !config->inscoring )
          {
             SCIP_CALL( updateOldBranching(scip, persistent, branchvar, branchval, downbranchingresult, upbranchingresult,
                   lpobjval) );
@@ -4885,7 +4893,7 @@ SCIP_RETCODE selectVarStart(
 
          persistent->oldntotalnodes = SCIPgetNTotalNodes(scip);
          persistent->oldnnodelpiterations = SCIPgetNNodeLPIterations(scip);
-         branchingDecisionCopy(decision, persistent->prevdecision);
+         branchingDecisionCopy(decision, persistent->olddecision);
       }
 
 #ifdef SCIP_STATISTIC
@@ -5048,11 +5056,11 @@ SCIP_Bool isUsePreviousResult(
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check is previous result should be used: valid=%d, "\
       "nodes=%lld (old=%lld), iterations=%lld (old=%lld)\n",
-      branchingDecisionIsValid(persistent->prevdecision),
+      branchingDecisionIsValid(persistent->olddecision),
       SCIPgetNTotalNodes(scip), persistent->oldntotalnodes,
       SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations);
 
-   return branchingDecisionIsValid(persistent->prevdecision)
+   return branchingDecisionIsValid(persistent->olddecision)
       && (persistent->oldntotalnodes == SCIPgetNTotalNodes(scip))
       && (persistent->oldnnodelpiterations == SCIPgetNNodeLPIterations(scip));
 }
@@ -5077,19 +5085,19 @@ SCIP_RETCODE usePreviousResult(
    assert(branchruledata != NULL);
    assert(result != NULL);
    assert(branchruledata->persistent != NULL);
-   assert(branchruledata->persistent->prevdecision != NULL);
+   assert(branchruledata->persistent->olddecision != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Branching based on previous solution.\n");
 
    /* execute the actual branching */
-   SCIP_CALL( branchOnVar(scip, branchruledata->persistent->prevdecision) );
+   SCIP_CALL( branchOnVar(scip, branchruledata->persistent->olddecision) );
    *result = SCIP_BRANCHED;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Branched based on previous solution. Variable <%s>\n",
-      SCIPvarGetName(branchruledata->persistent->prevdecision->branchvar));
+      SCIPvarGetName(branchruledata->persistent->olddecision->branchvar));
 
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
-   branchruledata->persistent->prevdecision->branchvar = NULL;
+   branchruledata->persistent->olddecision->branchvar = NULL;
 
    return SCIP_OKAY;
 }
@@ -5122,7 +5130,7 @@ SCIP_RETCODE freePersistent(
       SCIPfreeBlockMemory(scip, &persistent->lastbranchupres[i]); /*lint !e866*/
    }
 
-   SCIPfreeBlockMemory(scip, &branchruledata->persistent->prevdecision);
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent->olddecision);
 
    assert(persistent->lastbranchlpobjval != NULL);
    assert(persistent->lastbranchdownres != NULL);
@@ -5186,8 +5194,8 @@ SCIP_RETCODE initBranchruleData(
    branchruledata->persistent->oldntotalnodes = -1;
    branchruledata->persistent->oldnnodelpiterations = -1;
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->prevdecision) );
-   branchingDecisionInit(scip, branchruledata->persistent->prevdecision);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->olddecision) );
+   branchingDecisionInit(scip, branchruledata->persistent->olddecision);
 
    for( i = 0; i < nvars; i++ )
    {
