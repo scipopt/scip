@@ -93,7 +93,9 @@
 #define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /**< If only non violating constraints are added, should the branching
                                                     *   decision be stored till the next call? */
 #define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching
-                                                    *   results are recalculated. */
+                                                    *   result is recalculated. */
+#define DEFAULT_REEVALAGEFSB                 10LL  /**< Max number of LPs solved after which a previous FSB scoring
+                                                    *   result is recalculated. */
 #define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
 #define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
                                                     *   collected and added? */
@@ -898,6 +900,8 @@ typedef struct
 {
    SCIP_Longint          reevalage;          /**< The number of "normal" (not probing) lps that may have been solved before
                                               *   we stop using old data and start recalculating new first level data. */
+   SCIP_Longint          reevalagefsb;       /**< The number of "normal" (not probing) lps that may have been solved before
+                                              *   we stop using old FSB data and start recalculating new first level data. */
    int                   maxnviolatedcons;   /**< The number of constraints (domain reductions and binary constraints) we
                                               *   want to gather before restarting the run. Set to -1 for an unbounded
                                               *   number of constraints. */
@@ -1011,6 +1015,8 @@ typedef struct
                                               *   progingdepth. */
    int*                  noldbranchused;     /**< The number of times old branching data is used (see the reevalage
                                               *   parameter in the CONFIGURATION struct) */
+   int*                  noldbranchusedfsb;  /**< The number of times old FSB scoring data is used (see the reevalagefsb
+                                              *   parameter in the CONFIGURATION struct) */
    int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
                                               *   chosen by the following LAB */
    int*                  stopafterfsb;       /**< If abbreviated, this is the number of times the rule was stopped after
@@ -1077,6 +1083,7 @@ void statisticsInit(
    for( i = 0; i < statistics->recursiondepth; i++ )
    {
       statistics->noldbranchused[i] = 0;
+      statistics->noldbranchusedfsb[i] = 0;
       statistics->npropdomred[i] = 0;
       statistics->nfullcutoffs[i] = 0;
       statistics->nlpssolved[i] = 0;
@@ -1123,6 +1130,7 @@ SCIP_RETCODE statisticsAllocate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterationsfsb, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchusedfsb, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->chosenfsbcand, maxncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->domredafterfsb, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->cutoffafterfsb, recursiondepth) );
@@ -1149,6 +1157,7 @@ void statisticsFree(
    SCIPfreeBufferArray(scip, &(*statistics)->cutoffafterfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->domredafterfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->chosenfsbcand);
+   SCIPfreeBufferArray(scip, &(*statistics)->noldbranchusedfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
    SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpiterationsfsb);
@@ -1210,8 +1219,8 @@ void statisticsPrint(
             statistics->nlpiterationsfsb[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of"
             " propagation.\n", i, statistics->npropdomred[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n",
-            i, statistics->noldbranchused[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, old LAB branching results were used in <%i> cases, old FSB scores in <%d> cases.\n",
+            i, statistics->noldbranchused[i], statistics->noldbranchusedfsb[i]);
       }
 
       SCIPinfoMessage(scip, NULL, "One single branching candidate was given <%i> times.\n",
@@ -3184,7 +3193,7 @@ SCIP_Bool isBranchFurtherLoopDecrement(
    return branchfurther;
 }
 
-/** Determines whether previous branching results of a variable can be reused */
+/** determines whether the previous LAB result of a variable should be reused */
 static
 SCIP_Bool isUseOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3197,32 +3206,31 @@ SCIP_Bool isUseOldBranching(
    assert(config != NULL);
    assert(branchvar != NULL);
 
-   assert(SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip) ||
-      SCIPgetVarStrongbranchLPAge(scip, branchvar) >= config->reevalage);
-
-   assert(SCIPgetVarStrongbranchNode(scip, branchvar) ==  persistent->lastbranchid[SCIPvarGetProbindex(branchvar)] &&
-      (SCIPgetVarStrongbranchNode(scip, branchvar) != SCIPgetNNodes(scip) ||
-         SCIPgetVarStrongbranchLPAge(scip, branchvar) == SCIPgetNLPs(scip) - persistent->lastbranchnlps[SCIPvarGetProbindex(branchvar)]));
-
    /* an old branching can be reused, if we are still at the same node and just a few LPs were solved in between */
-   return SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip)
-      && SCIPgetVarStrongbranchLPAge(scip, branchvar) < config->reevalage;
+   if( config->inscoring )
+   {
+       return SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip)
+          && SCIPgetVarStrongbranchLPAge(scip, branchvar) < config->reevalagefsb;
+   }
+   else
+   {
+      return persistent->lastbranchid[SCIPvarGetProbindex(branchvar)] == SCIPgetNNodes(scip)
+         && SCIPgetNLPs(scip) - persistent->lastbranchnlps[SCIPvarGetProbindex(branchvar)] < config->reevalage;
+   }
 }
 
-/** Retrieves previous branching results for the given variable */
+/** retrieves previous LAB result for the given variable */
 static
 SCIP_RETCODE getOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rule */
+   CONFIGURATION*        config,             /**< the configuration of the branching rule */
    SCIP_VAR*             branchvar,          /**< variable to get previous results for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< pointer to store the previous down result in */
    BRANCHINGRESULTDATA*  upbranchingresult,  /**< pointer to store the previous up result in */
    SCIP_Real*            oldlpobjval         /**< pointer to store the previous base lp objval in */
    )
 {
-   int varindex;
-   SCIP_Real down, up;
-
    assert(scip != NULL);
    assert(persistent != NULL);
    assert(branchvar != NULL);
@@ -3230,20 +3238,21 @@ SCIP_RETCODE getOldBranching(
    assert(upbranchingresult != NULL);
    assert(oldlpobjval != NULL);
 
-   varindex = SCIPvarGetProbindex(branchvar);
+   if( config->inscoring )
+   {
+      SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchvar, &downbranchingresult->dualbound, &upbranchingresult->dualbound,
+            &downbranchingresult->dualboundvalid, &upbranchingresult->dualboundvalid, NULL, oldlpobjval) );
+      downbranchingresult->objval = downbranchingresult->dualbound;
+      upbranchingresult->objval = upbranchingresult->dualbound;
+   }
+   else
+   {
+      int varindex = SCIPvarGetProbindex(branchvar);
 
-   branchingResultDataCopy(persistent->lastbranchdownres[varindex], downbranchingresult);
-   branchingResultDataCopy(persistent->lastbranchupres[varindex], upbranchingresult);
-
-   SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchvar, &down, &up,
-         NULL, NULL, NULL, oldlpobjval) );
-
-   assert(down == downbranchingresult->dualbound);
-   assert(up == upbranchingresult->dualbound);
-   downbranchingresult->dualboundvalid = FALSE;
-   upbranchingresult->dualboundvalid = FALSE;
-   downbranchingresult->cutoff = FALSE;
-   upbranchingresult->cutoff = FALSE;
+      branchingResultDataCopy(persistent->lastbranchdownres[varindex], downbranchingresult);
+      branchingResultDataCopy(persistent->lastbranchupres[varindex], upbranchingresult);
+      *oldlpobjval = persistent->lastbranchlpobjval[varindex];
+   }
 
 #ifdef SCIP_DEBUG
    {
@@ -3255,19 +3264,20 @@ SCIP_RETCODE getOldBranching(
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead branching on variable <%s> already performed (lpage=%"
          SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n", SCIPvarGetName(branchvar),
-         SCIPgetVarStrongbranchLPAge(scip, branchvar), downbranchingresult->dualbound, downgain,
-         upbranchingresult->dualbound, upgain);
+         SCIPgetNLPs(scip) - persistent->lastbranchnlps[SCIPvarGetProbindex(branchvar)],
+         downbranchingresult->dualbound, downgain, upbranchingresult->dualbound, upgain);
    }
 #endif
 
    return SCIP_OKAY;
 }
 
-/** Stores the data for use in a later call to the branching rule */
+/** stores the LAB result for use in a later call to the branching rule */
 static
 SCIP_RETCODE updateOldBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    PERSISTENTDATA*       persistent,         /**< data storage over multiple calls to the rule */
+   CONFIGURATION*        config,             /**< the configuration of the branching rule */
    SCIP_VAR*             branchvar,          /**< variable to store previous results for */
    SCIP_Real             branchval,          /**< the value of branchvar */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< down branching result to store */
@@ -3275,8 +3285,6 @@ SCIP_RETCODE updateOldBranching(
    SCIP_Real             lpobjval            /**< base lp obj val */
    )
 {
-   SCIP_Longint niterations;
-   int varindex;
 
    assert(scip != NULL);
    assert(persistent != NULL);
@@ -3284,18 +3292,24 @@ SCIP_RETCODE updateOldBranching(
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
 
-   niterations = downbranchingresult->niterations + upbranchingresult->niterations;
-   varindex = SCIPvarGetProbindex(branchvar);
+   if( config->inscoring )
+   {
+      SCIP_Longint niterations = downbranchingresult->niterations + upbranchingresult->niterations;
 
-   SCIP_CALL( SCIPsetVarStrongbranchData(scip, branchvar, lpobjval, branchval, downbranchingresult->dualbound,
-         upbranchingresult->dualbound, downbranchingresult->dualboundvalid, upbranchingresult->dualboundvalid, niterations,
-         INT_MAX) );
+      SCIP_CALL( SCIPsetVarStrongbranchData(scip, branchvar, lpobjval, branchval, downbranchingresult->dualbound,
+            upbranchingresult->dualbound, downbranchingresult->dualboundvalid, upbranchingresult->dualboundvalid, niterations,
+            INT_MAX) );
+   }
+   else
+   {
+      int varindex = SCIPvarGetProbindex(branchvar);
 
-   branchingResultDataCopy(downbranchingresult, persistent->lastbranchdownres[varindex]);
-   branchingResultDataCopy(upbranchingresult, persistent->lastbranchupres[varindex]);
-
-   persistent->lastbranchid[varindex] = SCIPgetNNodes(scip);
-   persistent->lastbranchnlps[varindex] = SCIPgetNLPs(scip);
+      branchingResultDataCopy(downbranchingresult, persistent->lastbranchdownres[varindex]);
+      branchingResultDataCopy(upbranchingresult, persistent->lastbranchupres[varindex]);
+      persistent->lastbranchlpobjval[varindex] = SCIPgetNNodes(scip);
+      persistent->lastbranchid[varindex] = lpobjval;
+      persistent->lastbranchnlps[varindex] = SCIPgetNLPs(scip);
+   }
 
    return SCIP_OKAY;
 }
@@ -4276,7 +4290,7 @@ SCIP_RETCODE selectVarRecursive(
    probingdepth = SCIPgetProbingDepth(scip);
    assert(probingdepth >= 0 && probingdepth < config->recursiondepth);
 
-   if( persistent != NULL && (!config->abbreviated || (config->inscoring && probingdepth == 0)) )
+   if( persistent != NULL && (!config->abbreviated || config->inscoring) && probingdepth == 0 )
       start = persistent->restartindex;
 
    /* init default decision */
@@ -4373,13 +4387,16 @@ SCIP_RETCODE selectVarRecursive(
       branchingResultDataInit(scip, upbranchingresult);
 
       /* use old lookahead branching result, if last call on this variable is not too long ago */
-      if( persistent != NULL && isUseOldBranching(scip, persistent, config, branchvar) && !config->inscoring )
+      if( persistent != NULL && (config->inscoring || probingdepth == 0) && isUseOldBranching(scip, persistent, config, branchvar) )
       {
-         SCIP_CALL( getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult,
+         SCIP_CALL( getOldBranching(scip, persistent, config, branchvar, downbranchingresult, upbranchingresult,
                &oldlpobjval) );
          useoldbranching = TRUE;
 #ifdef SCIP_STATISTIC
-         statistics->noldbranchused[probingdepth]++;
+         if( config->inscoring )
+            statistics->noldbranchusedfsb[probingdepth]++;
+         else
+            statistics->noldbranchused[probingdepth]++;
 #endif
       }
       else
@@ -4467,10 +4484,10 @@ SCIP_RETCODE selectVarRecursive(
          }
 
          /* store results of branching call */
-         if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff && !config->inscoring )
+         if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff && (config->inscoring || probingdepth == 0) )
          {
-            SCIP_CALL( updateOldBranching(scip, persistent, branchvar, branchval, downbranchingresult, upbranchingresult,
-                  lpobjval) );
+            SCIP_CALL( updateOldBranching(scip, persistent, config, branchvar, branchval, downbranchingresult,
+                  upbranchingresult, lpobjval) );
          }
 
          /* merge domain changes from the two child nodes */
@@ -4712,7 +4729,7 @@ SCIP_RETCODE selectVarRecursive(
    branchingResultDataFree(scip, &upbranchingresult);
    branchingResultDataFree(scip, &downbranchingresult);
 
-   if( persistent != NULL && (!config->abbreviated || (config->inscoring && probingdepth == 0)) )
+   if( persistent != NULL && (!config->abbreviated || config->inscoring) && probingdepth == 0 )
    {
       persistent->restartindex = c;
    }
@@ -5285,6 +5302,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nduplicatelps, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchusedfsb, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->chosenfsbcand, maxncands) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->domredafterfsb, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->cutoffafterfsb, recursiondepth) );
@@ -5322,6 +5340,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
    SCIPfreeMemoryArray(scip, &statistics->cutoffafterfsb);
    SCIPfreeMemoryArray(scip, &statistics->domredafterfsb);
    SCIPfreeMemoryArray(scip, &statistics->chosenfsbcand);
+   SCIPfreeMemoryArray(scip, &statistics->noldbranchusedfsb);
    SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
    SCIPfreeMemoryArray(scip, &statistics->npropdomred);
    SCIPfreeMemoryArray(scip, &statistics->nlpiterationsfsb);
@@ -5637,6 +5656,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/reevalage",
          "max number of LPs solved after which a previous prob branching results are recalculated",
          &branchruledata->config->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "branching/lookahead/reevalagefsb",
+         "max number of LPs solved after which a previous FSB scoring results are recalculated",
+         &branchruledata->config->reevalagefsb, TRUE, DEFAULT_REEVALAGEFSB, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/recursiondepth",
          "the max depth of LAB.",
          &branchruledata->config->recursiondepth, TRUE, DEFAULT_RECURSIONDEPTH, 1, INT_MAX, NULL, NULL) );
