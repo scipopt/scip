@@ -16,6 +16,11 @@ Features
 - extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
   when the subproblem is nonlinear. Currently, it is assumed that the NLP is convex.
 
+- extended Benders framework to create copies of Benders decompositions that can be used in a multithreading environment
+
+- additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
+  instances, e.g., when used in UG
+
 Performance improvements
 ------------------------
 
@@ -58,15 +63,25 @@ Interface changes
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
+  + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
+    SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
   + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
     argument for the subproblem solving method.
-  + arguments of functions SCIPbendersSolveSubproblemLP() and SCIPbendersSolveSubproblemCIP() changed
+  + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
+  - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+
+- new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
+  SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
+  parallel. Setting this argument to TRUE has a performance cost.
 
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
+- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
+  SCIPbendersGetStoredCutOrigData().
 
 ### Command line interface
 

@@ -1157,6 +1157,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
+   (*set)->subscipsoff = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -5744,6 +5745,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
+#undef SCIPsetGetSubscipsOff
 
 /** returns value treated as infinity */
 SCIP_Real SCIPsetInfinity(
@@ -6988,6 +6990,16 @@ SCIP_Bool SCIPsetIsSumRelGE(
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
+}
+
+/** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
+SCIP_Bool SCIPsetGetSubscipsOff(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->subscipsoff;
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

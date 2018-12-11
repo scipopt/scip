@@ -218,7 +218,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     valid = FALSE;
 
     /* copy the subproblem */
-    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, FALSE,
+          TRUE, &valid) );
 
     if( sepadata->copycuts )
     {

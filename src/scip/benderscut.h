@@ -163,18 +163,6 @@ void SCIPbenderscutSetExitsol(
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of the Benders' decomposition cut */
    );
 
-/** adds the data for the generated cuts to the Benders' cut storage */
-extern
-SCIP_RETCODE SCIPbenderscutStoreCut(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
-   SCIP_Real             lhs,                /**< the left hand side of the cut */
-   SCIP_Real             rhs,                /**< the right hand side of the cut */
-   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
-   );
-
 #ifdef __cplusplus
 }
 #endif

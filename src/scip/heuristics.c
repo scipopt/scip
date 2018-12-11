@@ -938,7 +938,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    else
    {
       SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars,
-            TRUE, FALSE, TRUE, valid) );
+            TRUE, FALSE, FALSE, TRUE, valid) );
 
       if( copycuts )
       {

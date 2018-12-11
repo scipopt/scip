@@ -4626,13 +4626,15 @@ SCIP_RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row != NULL && !SCIProwIsModifiable(consdata->row) )
-      return SCIP_OKAY;
-
    if( !consdata->removedfixings )
    {
       SCIP_Real lhssubtrahend;
       SCIP_Real rhssubtrahend;
+
+      /* if an unmodifiable row has been added to the LP, then we cannot apply fixing anymore (cannot change a row)
+       * this should not happen, as applyFixings is called in addRelaxation() before creating and adding a row
+       */
+      assert(consdata->row == NULL || !SCIProwIsInLP(consdata->row) || SCIProwIsModifiable(consdata->row));
 
       lhssubtrahend = 0.0;
       rhssubtrahend = 0.0;
@@ -7453,6 +7455,16 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->row == NULL )
    {
+      if( !SCIPconsIsModifiable(cons) )
+      {
+         /* replace all fixed variables by active counterparts, as we have no chance to do this anymore after the row has been added to the LP
+          * removing this here will make test cons/linear/fixedvar.c fail (as of 2018-12-03)
+          */
+         SCIP_CALL( applyFixings(scip, cons, cutoff) );
+         if( *cutoff )
+            return SCIP_OKAY;
+      }
+
       /* convert consdata object into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }

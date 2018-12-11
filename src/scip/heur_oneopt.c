@@ -307,7 +307,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    /* copy complete SCIP instance */
    *valid = FALSE;
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, FALSE, TRUE, valid) );
    SCIP_CALL( SCIPtransformProb(subscip) );
 
    /* get variable image */

@@ -190,12 +190,16 @@ SCIP_RETCODE freeScenarioTree(
    STOSCENARIO**         scenariotree        /**< the scenario tree */
    )
 {
+   int nchildren;
    int i;
 
    assert(scip != NULL);
 
    SCIPdebugMessage("Freeing scenario <%s> in stage <%s>\n", (*scenariotree)->name,
       (*scenariotree)->stagename);
+
+   /* storing the number of children before starting the recursive freeing */
+   nchildren = (*scenariotree)->nchildren;
 
    while( (*scenariotree)->nchildren > 0 )
    {
@@ -217,11 +221,13 @@ SCIP_RETCODE freeScenarioTree(
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
 
+   /* freeing the subproblem SCIP instances */
    for( i = (*scenariotree)->nsubproblems - 1; i >= 0; i-- )
       SCIP_CALL( SCIPfree(&(*scenariotree)->subproblems[i]) );
 
-   if( (*scenariotree)->nsubproblems > 0 )
-      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
+   /* freeing the array that stores the subproblems */
+   if( nchildren > 0 )
+      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, nchildren);
 
    SCIPfreeBlockMemory(scip, scenariotree);
 
@@ -2301,7 +2307,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
-         SCIP_CALL( createScenarioSubproblemArray(scenarioscip, scenario) );
+         SCIP_CALL( createScenarioSubproblemArray(scip, scenario) );
    }
    else
       scenarioscip = scip;

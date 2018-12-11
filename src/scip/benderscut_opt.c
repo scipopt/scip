@@ -516,7 +516,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
-   if( SCIPisNLPConstructed(subproblem) )
+   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
    {
       /* computing the coefficients of the optimality cut */
       SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
@@ -616,7 +616,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          }
 
          /* storing the data that is used to create the cut */
-         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, vars, vals, lhs, rhs, nvars) );
+         SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, rhs, nvars) );
       }
 
       /* releasing the row or constraint */
@@ -668,6 +668,7 @@ static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 {  /*lint --e{715}*/
    SCIP* subproblem;
+   SCIP_Bool nlprelaxation;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -677,12 +678,15 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
+   nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem);
+
    /* only generate optimality cuts if the subproblem LP or NLP is optimal,
     * since we use the dual solution of the LP/NLP to construct the optimality cut
     */
    if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
-      ((!SCIPisNLPConstructed(subproblem) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
-       ( SCIPisNLPConstructed(subproblem) && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT)) )
+      ((!nlprelaxation && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
+       (nlprelaxation && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT)) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
@@ -691,7 +695,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
        * resolved and the generation of the cut is reattempted. For NLPs, we do not have such a polishing yet.
        */
-      if( (*result) == SCIP_DIDNOTFIND && !SCIPisNLPConstructed(subproblem) )
+      if( (*result) == SCIP_DIDNOTFIND && !nlprelaxation )
       {
          SCIP_Bool success;
 
