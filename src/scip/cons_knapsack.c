@@ -1312,7 +1312,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    greedysolvalue = 0.0;
 
    /* determine greedy solution */
-   for( j = 0; j < nmyitems && myweights[j] + greedysolweight <= capacity; ++j )
+   for( j = 0; j < greedymedianpos; ++j )
    {
       assert(myweights[j] <= capacity);
 
