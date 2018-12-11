@@ -1660,11 +1660,12 @@ SCIP_RETCODE sortGenVBounds(
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
-   SCIPfreeBufferArray(scip, &(genvboundssorted));
 
    /* free strong component arrays */
    SCIPfreeBufferArray(scip, &strongcompstartidx);
    SCIPfreeBufferArray(scip, &strongcomponents);
+
+   SCIPfreeBufferArray(scip, &(genvboundssorted));
 
    /* free digraph */
    SCIPdigraphFree(&graph);
