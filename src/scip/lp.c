@@ -3122,6 +3122,7 @@ SCIP_RETCODE lpSetConditionLimit(
 }
 
 /** sets the MARKOWITZ setting of the LP solver */
+static
 SCIP_RETCODE lpSetMarkowitz(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             threshhold,         /**< new MARKOWITZ value */
