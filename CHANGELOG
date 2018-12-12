@@ -98,6 +98,8 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- added parameter benders/default/cutcheck to enable the generation of Benders' decomposition cuts during solution
+  checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
 

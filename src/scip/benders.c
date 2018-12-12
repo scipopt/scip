@@ -49,6 +49,7 @@
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 #define SCIP_DEFAULT_AUXVARSIMPLINT        TRUE  /** set the auxiliary variables as implint if the subproblem objective is integer */
+#define SCIP_DEFAULT_CUTCHECK              TRUE  /** should cuts be generated during the checking of solutions? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1012,6 +1013,11 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
          &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutcheck", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "should Benders' cuts be generated while checking solutions?",
+         &(*benders)->cutcheck, FALSE, SCIP_DEFAULT_CUTCHECK, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2426,7 +2432,8 @@ SCIP_RETCODE generateBendersCuts(
    onlyconvexcheck = SCIPbendersOnlyCheckConvexRelax(benders, SCIPsetGetSubscipsOff(set));
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
-   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED && type != SCIP_BENDERSENFOTYPE_CHECK )
+   if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED
+      && (benders->cutcheck || type != SCIP_BENDERSENFOTYPE_CHECK) )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
       i = benders->firstchecked;
