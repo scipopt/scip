@@ -9284,7 +9284,7 @@ SCIP_RETCODE SCIPlpCreate(
    if( !success )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: markowitz threshhold not available -- SCIP parameter lp/conditionlimit has no effect\n",
+         "LP Solver <%s>: markowitz threshhold not available -- SCIP parameter lp/minmarkowitz has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
