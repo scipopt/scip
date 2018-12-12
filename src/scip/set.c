@@ -224,6 +224,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+#define SCIP_DEFAULT_LP_MARKOWITZ          0.01 /**< minimal Markowitz threshold to control sparsity/stability in LU factorization stable */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
@@ -1690,6 +1691,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/conditionlimit",
          "maximum condition number of LP basis counted as stable (-1.0: no limit)",
          &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/minmarkowitz",
+         "minimal Markowitz threshold to control sparsity/stability in LU factorization stable",
+         &(*set)->lp_markowitz, TRUE, SCIP_DEFAULT_LP_MARKOWITZ, 1e-4, 0.9999,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkprimfeas",

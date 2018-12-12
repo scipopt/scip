@@ -4397,6 +4397,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4452,6 +4457,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->conditionlimit = dval;
       lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.999 )
+         dval = 0.999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
