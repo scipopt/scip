@@ -76,6 +76,8 @@ Interface changes
   SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
   parallel. Setting this argument to TRUE has a performance cost.
 
+- new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
