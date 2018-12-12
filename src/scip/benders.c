@@ -37,6 +37,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_abspower.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -1251,6 +1252,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
    SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
    SCIP_CONSHDLR* conshdlr_quadratic = NULL;
+   SCIP_CONSHDLR* conshdlr_abspower = NULL;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1279,6 +1281,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    {
       conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
       conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
+      conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
    }
 
    for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
@@ -1343,9 +1346,26 @@ SCIP_RETCODE checkSubproblemConvexity(
          }
       }
 
+      if( conshdlr == conshdlr_abspower )
+      {
+         if( SCIPisConvexAbspower(subproblem, cons) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
       /* skip bivariate constraints: they are typically nonconvex
-       * TODO soc constraints? it would depend how these are represented in the NLP eventually, which could be nonconvex
-       * TODO abspower constraints
+       * skip soc constraints: it would depend how these are represented in the NLP eventually, which could be nonconvex
        */
 
 #ifdef SCIP_MOREDEBUG

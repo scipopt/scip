@@ -7466,3 +7466,38 @@ SCIP_Real SCIPgetViolationAbspower(
 
    return x_val - proj_val;
 }
+
+/** returns whether constraint is convex w.r.t. global bounds
+ *
+ * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
+ */
+SCIP_Bool SCIPisConvexAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< absolute power constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   xlb = SCIPvarGetLbGlobal(consdata->x);
+   xub = SCIPvarGetLbGlobal(consdata->x);
+
+   /* if mixed sign, then cannot be convex */
+   if( SCIPisNegative(scip, xlb + consdata->xoffset) && SCIPisPositive(scip, xub + consdata->xoffset) )
+      return FALSE;
+
+   /* if not negative, then constraint function is like x^n, n > 1, x >= 0, i.e., convex, thus need no lhs to be convex */
+   if( !SCIPisNegative(scip, xlb + consdata->xoffset) )
+      return SCIPisInfinity(scip, -consdata->lhs);
+
+   /* if not positive, then constraint function is like -|x|^n, n > 0, x <= 0, i.e., concave, thus need no rhs to be convex */
+   return SCIPisInfinity(scip, consdata->rhs);
+}

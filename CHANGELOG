@@ -82,6 +82,7 @@ Interface changes
 - methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
+- added SCIPisConvexAbspower()
 
 ### Command line interface
 
