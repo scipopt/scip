@@ -2108,7 +2108,8 @@ void* SCIPgetNlpiOracleIpopt(
  */
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   const char*           optionsstring,      /**< string with options as in Ipopt options file */
+   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    )
 {
    SCIP_NLPIDATA* data;
@@ -2118,7 +2119,10 @@ void SCIPsetModifiedDefaultSettingsIpopt(
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   data->defoptions = optionsstring;
+   if( append )
+      data->defoptions += optionsstring;
+   else
+      data->defoptions = optionsstring;
 }
 
 /** Method to return some info about the nlp */
