@@ -292,8 +292,9 @@ void setup_sepadata(void)
 static
 void test_setup(void)
 {
-   SCIP_CALL( SCIPcreate(&scip) );
    SCIP_VAR* auxx;
+
+   SCIP_CALL( SCIPcreate(&scip) );
 
    /* include NLPI's */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
