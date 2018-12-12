@@ -57,10 +57,26 @@ export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
 # Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=`date +%u`
+DAY_OF_WEEK=$(date +%u)
 
 # create required directory
 mkdir -p settings
+
+#######################
+### Update Branches ###
+#######################
+
+BRANCHNAME=${GITBRANCH}
+if [ "${GITBRANCH}" == "bugfix" ]; then
+  BRANCHNAME="v60-bugfix"
+fi
+if [ "${DAY_OF_WEEK}" == "6" ]; then
+  git co master
+  git co performance-${GITBRANCH}
+  git merge ${BRANCHNAME}
+  git push
+  git co master
+fi
 
 ####################################
 ### jobs configuration variables ###
@@ -76,7 +92,7 @@ mkdir -p settings
 # FORMAT:
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
-RANDOMSEED=`date +%Y%m%d`
+RANDOMSEED=$(date +%Y%m%d)
 
 # use associative arrays, this requires bash4
 # declaration
