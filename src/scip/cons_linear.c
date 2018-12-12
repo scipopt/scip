@@ -730,6 +730,8 @@ SCIP_RETCODE consCatchEvent(
          | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
 
+   consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
+
    return SCIP_OKAY;
 }
 /**! [SnippetDebugAssertions] */
