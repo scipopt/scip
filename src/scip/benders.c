@@ -35,6 +35,8 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -1236,25 +1238,19 @@ SCIP_RETCODE checkSubproblemConvexity(
    )
 {
    SCIP* subproblem;
-   SCIP_CONS** conss;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS* cons;
    int nvars;
    int nbinvars;
    int nintvars;
    int nimplintvars;
-   int nconss;
    int i;
    int j;
-   SCIP_Bool isnlp;
    SCIP_Bool isconvex;
-
-#define NNONLINEARCONS 5
-   static const char* const nonlinearcons[NNONLINEARCONS] = {
-      "nonlinear",
-      "quadratic",
-      "bivariate",
-      "abspower",
-      "soc"
-   };
+#define NLINEARCONSHDLRS 5
+   SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
+   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
+   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1262,47 +1258,110 @@ SCIP_RETCODE checkSubproblemConvexity(
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
-   isnlp = FALSE;
-   isconvex = TRUE;
+   isconvex = FALSE;
 
    /* getting the number of integer and binary variables to determine the problem type */
    SCIP_CALL( SCIPgetVarsData(subproblem, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
 
    /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
-      isconvex = FALSE;
+      goto TERMINATE;
 
-   conss = SCIPgetOrigConss(subproblem);
-   nconss = SCIPgetNOrigConss(subproblem);
+   /* get pointers to linear constraints handlers, so can avoid string comparisons */
+   linearconshdlrs[0] = SCIPfindConshdlr(subproblem, "knapsack");
+   linearconshdlrs[1] = SCIPfindConshdlr(subproblem, "linear");
+   linearconshdlrs[2] = SCIPfindConshdlr(subproblem, "logicor");
+   linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
+   linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
 
-   /* checking all constraints in the subproblem whether they are non-linear constraints. If there exists a non-linear
-    * constraint then the subproblem is marked as a NLP
-    */
-   for( int i = 0; i < nconss && !isnlp; i++ )
+   /* get pointers to interesting nonlinear constraint handlers, if we also have an NLP solver to solve NLPs */
+   if( SCIPgetNNlpis(subproblem) > 0 )
    {
-      SCIP_CONSHDLR* conshdlr;
-
-      conshdlr = SCIPconsGetHdlr(conss[i]);
-
-      for( int j = 0; j < NNONLINEARCONS; j++ )
-      {
-         /* if the constraint is a non-linear constraint, then the problem is an NLP */
-         if( strcmp(SCIPconshdlrGetName(conshdlr), nonlinearcons[j]) == 0 )
-         {
-            isnlp = TRUE;
-            break;
-         }
-      }
+      conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
+      conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
    }
 
-   /* if the subproblem is an NLP, but there is no NLP solver, then the subproblem will be marked as non-convex. This
-    * implies that cuts need to be generated from the CIP
-    */
-   if( isnlp && SCIPgetNNlpis(subproblem) == 0 )
-      isconvex = FALSE;
+   for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
+   {
+      cons = SCIPgetOrigConss(subproblem)[i];
+      conshdlr = SCIPconsGetHdlr(cons);
 
+      for( j = 0; j < NLINEARCONSHDLRS; ++j )
+         if( conshdlr == linearconshdlrs[j] )
+            break;
+
+      /* if linear constraint, then we are good */
+      if( j < NLINEARCONSHDLRS )
+      {
+#ifdef SCIP_MOREDEBUG
+         SCIPdebugMsg(subproblem, "subproblem <%s>: constraint <%s> is linear\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+         continue;
+      }
+
+      /* if cons_nonlinear, then check whether convex */
+      if( conshdlr == conshdlr_nonlinear )
+      {
+         SCIP_EXPRCURV curvature;
+
+         SCIP_CALL( SCIPgetCurvatureNonlinear(subproblem, cons, TRUE, &curvature) );
+         if( ((SCIPisInfinity(subproblem, -SCIPgetLhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
+             ((SCIPisInfinity(subproblem,  SCIPgetRhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX)) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
+      if( conshdlr == conshdlr_quadratic )
+      {
+         SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons) );
+
+         if( (SCIPisInfinity(subproblem, -SCIPgetLhsQuadratic(subproblem, cons)) || SCIPisConcaveQuadratic(subproblem, cons)) &&
+             (SCIPisInfinity(subproblem,  SCIPgetRhsQuadratic(subproblem, cons)) || SCIPisConvexQuadratic(subproblem, cons)) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
+      /* skip bivariate constraints: they are typically nonconvex
+       * TODO soc constraints? it would depend how these are represented in the NLP eventually, which could be nonconvex
+       * TODO abspower constraints
+       */
+
+#ifdef SCIP_MOREDEBUG
+      SCIPdebugMsg(subproblem, "subproblem <%s>: potentially nonconvex constraint <%s>\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+      goto TERMINATE;
+   }
+
+   /* if we made it until here, then all constraints are known and convex */
+   isconvex = TRUE;
+
+TERMINATE:
    /* setting the flag for the convexity of the subproblem */
    SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
+
+   SCIPdebugMsg(subproblem, "subproblem <%s> has been found %sconvex\n", SCIPgetProbName(subproblem), isconvex ? "" : "not");
 
    return SCIP_OKAY;
 }
