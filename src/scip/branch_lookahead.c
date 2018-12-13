@@ -110,9 +110,7 @@
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
 #define DEFAULT_SCORINGFUNCTION              'd'   /**< default scoring function to be used */
-#define DEFAULT_MINWEIGHT                    4.0   /**< default value for the min weight to get a weighted score of two
-                                                    *   child gains (taken from the paper) */
-#define DEFAULT_MAXWEIGHT                    1.0   /**< default value for the max weight to get a weighted score of two
+#define DEFAULT_MINWEIGHT                    0.8   /**< default value for the weight of the minimum in the convex combination of two
                                                     *   child gains (taken from the paper) */
 
 #ifdef SCIP_DEBUG
@@ -1038,7 +1036,6 @@ typedef struct
                                               *   (-1: unlimited) */
    char                  scoringfunction;    /**< selected scoring function */
    SCIP_Real             minweight;          /**< weight of the min gain of two child problems */
-   SCIP_Real             maxweight;          /**< weight of the max gain of two child problems */
 } CONFIGURATION;
 
 
@@ -3523,7 +3520,7 @@ SCIP_Real calculateWeightedGain(
    if( upbranchingresult->cutoff )
       upgain = downgain;
 
-   return config->minweight*MIN(downgain, upgain) + config->maxweight*MAX(downgain, upgain);
+   return config->minweight*MIN(downgain, upgain) + (1.0 - config->minweight)*MAX(downgain, upgain);
 }
 
 /** calculates the score as mentioned in the lookahead branching paper by Glankwamdee and Linderoth;
@@ -5752,12 +5749,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfs", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
-         "if scoringfunction is 's', this value is used to weight the min of the gains of two child problems",
+         "if scoringfunction is 's', this value is used to weight the min of the gains of two child problems in the convex combination",
          &branchruledata->config->minweight, TRUE, DEFAULT_MINWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-        "branching/lookahead/maxweight",
-        "if scoringfunction is 's', this value is used to weight the max of the gains of two child problems",
-         &branchruledata->config->maxweight, TRUE, DEFAULT_MAXWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
