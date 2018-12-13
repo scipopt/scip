@@ -4484,14 +4484,14 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
          nlidxs, exprtrees,
          names) );
 
-   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
+      if( nlidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &nlidxs[c]);
       if( linidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &linidxs[c]);
       if( quadelems[c] != NULL )
          SCIPsetFreeBufferArray(set, &quadelems[c]);
-      if( nlidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &nlidxs[c]);
    }
 
 #if ADDNAMESTONLPI
@@ -4592,8 +4592,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lbs);
    SCIPsetFreeBufferArray(set, &ubs);
+   SCIPsetFreeBufferArray(set, &lbs);
 
    nlp->nunflushedvaradd = 0;
 
