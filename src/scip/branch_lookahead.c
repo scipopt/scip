@@ -573,6 +573,7 @@ typedef struct
    SCIP_Real             bestgain;           /**< best gain (w.r.t. to the base lp) on the lowest level below this child */
    SCIP_Real             totalgains;         /**< sum over all gains that are valid in both children */
    int                   ntotalgains;        /**< number of gains summed in totalgains */
+   int                   ndeepestnodes;      /**< number of nodes processed in the deepest level */
 } BRANCHINGRESULTDATA;
 
 /** Allocates a branching result in the buffer. */
@@ -609,6 +610,7 @@ void branchingResultDataInit(
    resultdata->bestgain = 0.;
    resultdata->totalgains = 0.;
    resultdata->ntotalgains = 0;
+   resultdata->ndeepestnodes = 0;
 }
 
 /** Copies the data from the source to the target. */
@@ -630,6 +632,7 @@ void branchingResultDataCopy(
    targetdata->bestgain = sourcedata->bestgain;
    targetdata->totalgains = sourcedata->totalgains;
    targetdata->ntotalgains = sourcedata->ntotalgains;
+   targetdata->ndeepestnodes = sourcedata->ndeepestnodes;
 }
 
 /** Frees the allocated buffer memory of the branching result. */
@@ -2097,7 +2100,8 @@ SCIP_RETCODE selectVarRecursive(
    int*                  ndeepestcutoffs,    /**< pointer to store the total number of cutoffs on the deepest level */
    SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates */
    SCIP_Real*            totalgains,         /**< pointer to store the sum over all gains that are valid in both children */
-   int*                  ntotalgains         /**< pointer to store the number of gains summed in totalgains */
+   int*                  ntotalgains,        /**< pointer to store the number of gains summed in totalgains */
+   int*                  ndeepestnodes       /**< pointer to store the number of nodes processed in the deepest level */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -3385,18 +3389,18 @@ SCIP_RETCODE getFSBResult(
    oldscoringfunction = config->scoringfunction;
 
    /* use the default scoring function */
-   if( config->scoringfunction == 's' )
+   if( config->scoringfunction == 's' || config->scoringfunction == 'w' )
       config->scoringfunction = 'f';
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, NULL, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
-         lpobjval, NULL, NULL, NULL, NULL, NULL,
+         lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
          statistics, localstats) );
 #else
    SCIP_CALL( selectVarRecursive(scip, status, NULL, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
-         lpobjval, NULL, NULL, NULL, NULL, NULL) );
+         lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
    /* inform configuration that we leave scoring mode now */
@@ -3555,6 +3559,39 @@ SCIP_Real calculateScaledCutoffScore(
    return bestdowngain + bestupgain + (totaldowngains/ntotaldowngains + totalupgains/ntotalupgains)*nlowestlevelcutoffs;
 }
 
+/** calculates the score as mentioned in the lookahead branching paper by Glankwamdee and Linderoth;
+ *  their score scales the number of cutoffs on the last layer of a 2-level temporary branching tree with the average gain of
+ *  every last level problem; together with the best gain for each branch of a variable we get the final score
+ */
+static
+SCIP_Real calculateWeightedCutoffScore(
+   CONFIGURATION*        config,             /**< LAB configuration */
+   BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
+   BRANCHINGRESULTDATA*  upbranchingresult   /**< branching result of the up branch */
+   )
+{
+   SCIP_Real bestdowngain;
+   SCIP_Real bestupgain;
+   SCIP_Real totaldowngains;
+   SCIP_Real totalupgains;
+   int nlowestlevelcutoffs;
+   int ntotaldowngains;
+   int ntotalupgains;
+
+   assert(downbranchingresult != NULL);
+   assert(upbranchingresult != NULL);
+
+   nlowestlevelcutoffs = downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+   bestdowngain = downbranchingresult->bestgain;
+   bestupgain = upbranchingresult->bestgain;
+   totaldowngains = downbranchingresult->totalgains;
+   totalupgains = upbranchingresult->totalgains;
+   ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
+   ntotalupgains = MAX(1, upbranchingresult->ntotalgains);
+
+   return config->minweight*MIN(bestdowngain, bestupgain) + (1.0 - config->minweight)*MAX(bestdowngain, bestupgain) + (totaldowngains/ntotaldowngains + totalupgains/ntotalupgains)*nlowestlevelcutoffs;
+}
+
 /** scoring method that selects an actual scoring method based on the user configuration */
 static
 SCIP_Real calculateScore(
@@ -3578,6 +3615,9 @@ SCIP_Real calculateScore(
    {
    case 's':
       score = calculateScaledCutoffScore(downbranchingresult, upbranchingresult);
+      break;
+   case 'w':
+      score = calculateWeightedCutoffScore(config, downbranchingresult, upbranchingresult);
       break;
    case 'f':
       score = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
@@ -4194,13 +4234,17 @@ SCIP_RETCODE executeBranchingRecursive(
                      binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
+                     &branchingresult->ndeepestnodes,
                      statistics, deeperlocalstats) );
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
-                     &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains) );
+                     &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
+                     &branchingresult->ndeepestnodes) );
 #endif
+
+               assert(deeperstatus->cutoff || branchingresult->ndeepestnodes == 8 || branchingresult->ndeepestnodes == 2 * candidatelist->ncandidates);
 
                /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
                 * node has more/tighter constraints and as such cannot be better than the base LP. */
@@ -4245,10 +4289,15 @@ SCIP_RETCODE executeBranchingRecursive(
          SCIP_CALL( candidateListFree(scip, &candidatelist) );
       }
    }
-   else if( branchingresult->cutoff && recursiondepth == 1 && !config->inscoring )
+
+   if( recursiondepth == 1 && !config->inscoring )
    {
+      branchingresult->ndeepestnodes++;
       /* this is a cutoff on the lowest tree level */
-      branchingresult->ndeepestcutoffs++;
+      if( branchingresult->cutoff )
+      {
+         branchingresult->ndeepestcutoffs++;
+      }
    }
 
    if( binconsdata != NULL && varisbinary )
@@ -4294,8 +4343,9 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates; or NULL */
    SCIP_Real*            totalgains,         /**< pointer to store the sum over all gains that are valid in both children;
                                               *   or NULL, if bestgain == NULL */
-   int*                  ntotalgains         /**< pointer to store the number of gains summed in totalgains;
+   int*                  ntotalgains,        /**< pointer to store the number of gains summed in totalgains;
                                               *   or NULL, if bestgain == NULL */
+   int*                  ndeepestnodes       /**< pointer to store the number of nodes processed in the deepest level */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -4504,21 +4554,19 @@ SCIP_RETCODE selectVarRecursive(
          if( niterations != NULL )
             *niterations += downbranchingresult->niterations + upbranchingresult->niterations;
 
-         if( ndeepestcutoffs != NULL )
-            *ndeepestcutoffs += downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
-
          if( bestgain != NULL && !config->inscoring && SCIPgetProbingDepth(scip) == 1 )
          {
             SCIP_Real weightedgain;
 
             assert(totalgains != NULL);
             assert(ntotalgains != NULL);
+            assert(ndeepestnodes != NULL);
+
+            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
+            *bestgain = MAX(*bestgain, weightedgain);
 
             if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
             {
-               weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
-               *bestgain = MAX(*bestgain, weightedgain);
-
                (*totalgains) += weightedgain;
                (*ntotalgains)++;
             }
@@ -4543,6 +4591,13 @@ SCIP_RETCODE selectVarRecursive(
                applySingleDeeperDomainReductions(scip, baselpsol, domainreductions, updomainreductions);
          }
       }
+
+      if( ndeepestcutoffs != NULL )
+         *ndeepestcutoffs += downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+
+      if( ndeepestnodes != NULL )
+         *ndeepestnodes += downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes;
+
 
       if( !status->lperror && !status->limitreached )
       {
@@ -4931,11 +4986,11 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL,
+            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
             statistics, localstats) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL) );
+            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
       if( level2data != NULL )
@@ -5746,7 +5801,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringfunction",
          "scoring function to be used: 'd'efault, 'f'ullstrong branching or 's'caled cutoff score",
-         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfs", NULL, NULL) );
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfsw", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
          "if scoringfunction is 's', this value is used to weight the min of the gains of two child problems in the convex combination",
