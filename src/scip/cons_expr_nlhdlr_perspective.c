@@ -18,7 +18,6 @@
  * @author Ksenia Bestuzheva
  */
 
-#define SCIP_DEBUG 1
 
 #include <string.h>
 
@@ -242,8 +241,9 @@ SCIP_RETCODE addGradientLinearisation(
    SCIP_ROWPREP*         rowprep,    /**< a rowprep where the linearization is stored */
    SCIP_CONSEXPR_EXPR*   expr,       /**< expression to be linearized */
    SCIP_Real             coef,       /**< coefficient of expr in the original expression */
-   SCIP_SOL*             sol         /**< solution to be separated */
-   )
+   SCIP_SOL*             sol,        /**< solution to be separated */
+   SCIP_Bool*            success     /**< indicates whether the linearization could be computed */
+)
 {
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Real constant = 0;
@@ -253,7 +253,7 @@ SCIP_RETCODE addGradientLinearisation(
    assert(conshdlr != NULL);
    assert(rowprep != NULL);
    assert(expr != NULL);
-   assert(sol != NULL);
+   assert(success != NULL);
 
    /* compute gradient */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
@@ -261,6 +261,7 @@ SCIP_RETCODE addGradientLinearisation(
    /* gradient evaluation error -> skip */
    if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
    {
+      *success = FALSE;
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
       return SCIP_OKAY;
    }
@@ -271,6 +272,7 @@ SCIP_RETCODE addGradientLinearisation(
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(constant)) )
    {
+      *success = FALSE;
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", constant, (void*)expr);
       return SCIP_OKAY;
    }
@@ -301,6 +303,7 @@ SCIP_RETCODE addGradientLinearisation(
       /* evaluation error or too large values -> skip */
       if( SCIPisInfinity(scip, REALABS(derivative * val)) )
       {
+         *success = FALSE;
          SCIPdebugMsg(scip, "evaluation error / too large values (%g %g) for %s in %p\n", derivative, val,
                       SCIPvarGetName(var), (void*)expr);
          for( v = 0; v < nvars; ++v )
@@ -339,7 +342,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
    SCIP_ROWPREP*                   rowprep,    /**< a rowprep where the linearization is stored */
    SCIP_CONSEXPR_EXPR*             expr,       /**< expression to be linearized */
    SCIP_VAR*                       bvar,       /**< binary variable */
-   SCIP_SOL*                       sol         /**< solution to be separated */
+   SCIP_SOL*                       sol,        /**< solution to be separated */
+   SCIP_Bool*                      success     /**< indicates whether the linearization could be computed */
    )
 {
    SCIP_SOL* sol0;
@@ -355,6 +359,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
    assert(rowprep != NULL);
    assert(expr != NULL);
    assert(bvar != NULL);
+   assert(success != NULL);
 
    /* add the cut: auxvar >= (x - x0) \nabla f(sol) + (f(sol) - f(x0) - (sol - x0) \nabla f(sol)) z + f(x0),
     * where x is semicontinuous, z is binary and x0 is the value of x when z = 0
@@ -392,6 +397,14 @@ SCIP_RETCODE addPerspectiveLinearisation(
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(fval0)) )
    {
+      *success = FALSE;
+      for(v = 0; v < nvars; ++v)
+      {
+         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval0, (void*)expr);
       return SCIP_OKAY;
    }
@@ -403,6 +416,14 @@ SCIP_RETCODE addPerspectiveLinearisation(
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(fval)) )
    {
+      *success = FALSE;
+      for(v = 0; v < nvars; ++v)
+      {
+         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval, (void*)expr);
       return SCIP_OKAY;
    }
@@ -417,6 +438,14 @@ SCIP_RETCODE addPerspectiveLinearisation(
    /* gradient evaluation error -> skip */
    if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
    {
+      *success = FALSE;
+      for(v = 0; v < nvars; ++v)
+      {
+         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
       return SCIP_OKAY;
    }
@@ -863,6 +892,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       return SCIP_OKAY;
    }
 
+   SCIPinfoMessage(scip, NULL, "sepa method of perspective nonlinear handler will generate a cut ");
+
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
@@ -874,7 +905,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    /* handle convex terms */
    for( i = 0; i < nlhdlrexprdata->nconvterms; ++i )
    {
-      SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol) );
+      SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol, &success) );
    }
 
    /* handle on/off terms */
@@ -884,14 +915,15 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       if( entry == NULL )
          continue;
       pexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetImage(entry);
-      SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, SCIPhashmapEntryGetOrigin(entry), sol) );
+      SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, SCIPhashmapEntryGetOrigin(entry), sol, &success) );
    }
 
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
    rowprep->local = FALSE;
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+   if( success )
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
 
    /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
    if( success )
