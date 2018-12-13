@@ -21,6 +21,8 @@ Features
 - additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
   instances, e.g., when used in UG
 
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
 Performance improvements
 ------------------------
 
@@ -78,6 +80,11 @@ Interface changes
 
 - new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
 
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -85,6 +92,7 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 
 ### Command line interface
 
