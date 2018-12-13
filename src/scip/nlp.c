@@ -4497,15 +4497,15 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lhss);
-   SCIPsetFreeBufferArray(set, &rhss);
-   SCIPsetFreeBufferArray(set, &nlinvars);
-   SCIPsetFreeBufferArray(set, &linidxs);
-   SCIPsetFreeBufferArray(set, &lincoefs);
-   SCIPsetFreeBufferArray(set, &nquadelems);
-   SCIPsetFreeBufferArray(set, &quadelems);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &nlidxs);
+   SCIPsetFreeBufferArray(set, &quadelems);
+   SCIPsetFreeBufferArray(set, &nquadelems);
+   SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linidxs);
+   SCIPsetFreeBufferArray(set, &nlinvars);
+   SCIPsetFreeBufferArray(set, &rhss);
+   SCIPsetFreeBufferArray(set, &lhss);
 
    nlp->nunflushednlrowadd = 0;
 
@@ -4653,8 +4653,8 @@ SCIP_RETCODE nlpFlushObjective(
          NULL, NULL,
          0.0) );
 
-   SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linindices);
 
    nlp->objflushed = TRUE;
 

@@ -3920,13 +3920,13 @@ GENERALUPG:
 #endif
 
  cleanup:
+   SCIPfreeBufferArrayNull(scip, &eigvals);
+   SCIPfreeBufferArrayNull(scip, &quadvars);
+   SCIPfreeBufferArrayNull(scip, &bp);
+   SCIPfreeBufferArrayNull(scip, &a);
    SCIPfreeBufferArray(scip, &lhsoffsets);
    SCIPfreeBufferArray(scip, &lhscoefs);
    SCIPfreeBufferArray(scip, &lhsvars);
-   SCIPfreeBufferArrayNull(scip, &a);
-   SCIPfreeBufferArrayNull(scip, &bp);
-   SCIPfreeBufferArrayNull(scip, &quadvars);
-   SCIPfreeBufferArrayNull(scip, &eigvals);
 
    return SCIP_OKAY;
 } /*lint !e715*/
