@@ -74,6 +74,7 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/decomp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
     scip/event_softtimelimit.c
@@ -501,6 +502,7 @@ set(scipheaders
     scip/cuts.h
     scip/dbldblarith.h
     scip/debug.h
+    scip/decomp.h
     scip/def.h
     scip/dialog_default.h
     scip/dialog.h
@@ -773,6 +775,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
+    scip/struct_decomp.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -825,6 +828,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
+    scip/type_decomp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
