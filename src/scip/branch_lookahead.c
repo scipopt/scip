@@ -188,13 +188,12 @@ SCIP_RETCODE warmStartInfoCreate(
    return SCIP_OKAY;
 }
 
-/** Checks that the warm start info can be read into the lp solver. */
+/** checks that the warm start info can be read into the lp solver. */
 static
-SCIP_Bool warmStartInfoIsReadable(
+SCIP_Bool warmStartInfoIsAvailable(
    WARMSTARTINFO*        warmstartinfo       /**< the warm start info to check (may be NULL) */
    )
 {
-   /* the lpinorms may be NULL */
    return warmstartinfo != NULL && warmstartinfo->lpistate != NULL;
 }
 
@@ -217,13 +216,11 @@ SCIP_RETCODE warmStartInfoFree(
    if( (*warmstartinfo)->lpistate != NULL )
    {
       SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &(*warmstartinfo)->lpistate) );
-      (*warmstartinfo)->lpistate = NULL;
    }
 
    if( (*warmstartinfo)->lpinorms != NULL )
    {
       SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &(*warmstartinfo)->lpinorms) );
-      (*warmstartinfo)->lpinorms = NULL;
    }
 
    SCIPfreeBlockMemory(scip, warmstartinfo);
@@ -245,8 +242,7 @@ typedef struct
 static
 SCIP_RETCODE candidateCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   CANDIDATE**           candidate,          /**< the candidate to allocate and initialize */
-   SCIP_Bool             storelpi            /**< should the candidate be able to store its lpi information? */
+   CANDIDATE**           candidate           /**< the candidate to allocate and initialize */
    )
 {
    assert(scip != NULL);
@@ -254,21 +250,39 @@ SCIP_RETCODE candidateCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, candidate) );
 
-   if( storelpi )
-   {
-      SCIP_CALL( warmStartInfoCreate(scip, &(*candidate)->downwarmstartinfo) );
-      SCIP_CALL( warmStartInfoCreate(scip, &(*candidate)->upwarmstartinfo) );
-   }
-   else
-   {
-      (*candidate)->downwarmstartinfo = NULL;
-      (*candidate)->upwarmstartinfo = NULL;
-   }
-
+   (*candidate)->downwarmstartinfo = NULL;
+   (*candidate)->upwarmstartinfo = NULL;
    (*candidate)->branchvar = NULL;
 
    return SCIP_OKAY;
 }
+
+/** free the warm starting information for the given candidate */
+static
+SCIP_RETCODE candidateFreeWarmStartInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CANDIDATE*            candidate           /**< the candidate to free the warm starting information for */
+   )
+{
+   assert(scip != NULL);
+   assert(candidate != NULL);
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing warmstart info of candidate <%s>(%u/%u)...\n",
+      SCIPvarGetName(candidate->branchvar),
+      candidate->upwarmstartinfo != NULL, candidate->downwarmstartinfo != NULL);
+
+   if( candidate->upwarmstartinfo != NULL )
+   {
+      SCIP_CALL( warmStartInfoFree(scip, &candidate->upwarmstartinfo) );
+   }
+   if( candidate->downwarmstartinfo != NULL )
+   {
+      SCIP_CALL( warmStartInfoFree(scip, &candidate->downwarmstartinfo) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** Frees the allocated buffer memory of the candidate and clears the contained lpi memories. */
 static
@@ -285,18 +299,108 @@ SCIP_RETCODE candidateFree(
       (*candidate)->upwarmstartinfo != NULL, (*candidate)->downwarmstartinfo != NULL);
 
    /* if a candidate is freed, we no longer need the content of the warm start info */
-   if( (*candidate)->upwarmstartinfo != NULL )
-   {
-      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->upwarmstartinfo) );
-   }
-   if( (*candidate)->downwarmstartinfo != NULL )
-   {
-      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->downwarmstartinfo) );
-   }
+   SCIP_CALL( candidateFreeWarmStartInfo(scip, *candidate) );
 
    SCIPfreeBlockMemory(scip, candidate);
    return SCIP_OKAY;
 }
+
+/** Store the current lp solution in the warm start info for further usage. */
+static
+SCIP_RETCODE candidateStoreWarmStartInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CANDIDATE*            candidate,          /**< the branching candidate */
+   SCIP_Bool             down                /**< is the info for down branching? */
+   )
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+   WARMSTARTINFO* warmstartinfo;
+
+   assert(scip != NULL);
+   assert(candidate != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   if( down )
+   {
+      if( candidate->downwarmstartinfo == NULL )
+      {
+         SCIP_CALL( warmStartInfoCreate(scip, &candidate->downwarmstartinfo) );
+      }
+      warmstartinfo = candidate->downwarmstartinfo;
+   }
+   else
+   {
+      if( candidate->upwarmstartinfo == NULL )
+      {
+         SCIP_CALL( warmStartInfoCreate(scip, &candidate->upwarmstartinfo) );
+      }
+      warmstartinfo = candidate->upwarmstartinfo;
+   }
+
+   SCIP_CALL( SCIPlpiGetState(lpi, blkmem, &warmstartinfo->lpistate) );
+
+   SCIP_CALL( SCIPlpiGetNorms(lpi, blkmem, &warmstartinfo->lpinorms) );
+
+   warmstartinfo->primalfeas = SCIPlpiIsPrimalFeasible(lpi);
+   warmstartinfo->dualfeas = SCIPlpiIsDualFeasible(lpi);
+
+   assert(warmstartinfo->lpistate != NULL);
+   /* warmstartinfo->lpinorms may be NULL */
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the candidate has stored warm starting information for the given direction */
+static
+SCIP_RETCODE candidateHasWarmStartInfo(
+   CANDIDATE*            candidate,          /**< the branching candidate */
+   SCIP_Bool             down                /**< is the info for down branching? */
+   )
+{
+   assert(candidate != NULL);
+
+   return warmStartInfoIsAvailable(down ? candidate->downwarmstartinfo : candidate->upwarmstartinfo);
+}
+
+
+/** loads the warm starting information of the candidate for the given direction */
+static
+SCIP_RETCODE candidateLoadWarmStartInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CANDIDATE*            candidate,          /**< the branching candidate */
+   SCIP_Bool             down                /**< is the info for down branching? */
+   )
+{
+   WARMSTARTINFO* warmstartinfo;
+
+   assert(scip != NULL);
+   assert(candidate != NULL);
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "loading basis...\n");
+
+   if( down )
+      warmstartinfo = candidate->downwarmstartinfo;
+   else
+      warmstartinfo = candidate->upwarmstartinfo;
+
+
+   /* As we solved the very same LP some time earlier and stored the state (the basis) and the norms, we can now set those in
+    * the LP solver, such that the solution does not (in best case) need any further calculation.
+    * Some iterations may occur, as the conflict analysis may have added some constraints in the meantime. */
+   SCIP_CALL( SCIPsetProbingLPState(scip, &(warmstartinfo->lpistate), &(warmstartinfo->lpinorms), warmstartinfo->primalfeas,
+         warmstartinfo->dualfeas) );
+
+   /* The state and norms will be freed later by the SCIP framework. Therefore they are set to NULL to enforce that we won't
+    * free them on our own. */
+   assert(warmstartinfo->lpistate == NULL);
+   assert(warmstartinfo->lpinorms == NULL);
+
+   return SCIP_OKAY;
+}
+
 
 /** Holds the information needed for branching on a variable. */
 typedef struct
@@ -1553,12 +1657,11 @@ SCIP_RETCODE candidateListCreate(
    return SCIP_OKAY;
 }
 
-/** Allocates the given list and fills it with all fractional candidates of the current LP solution. */
+/** allocates the given list and fills it with all fractional candidates of the current LP solution. */
 static
 SCIP_RETCODE candidateListGetAllFractionalCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
-   CANDIDATELIST**       candidatelist,      /**< the list to allocate and fill */
-   SCIP_Bool             storewarmstartinfo  /**< should warm start info of the LP be stored in the candidates? */
+   CANDIDATELIST**       candidatelist       /**< the list to allocate and fill */
    )
 {
    SCIP_VAR** lpcands;
@@ -1583,7 +1686,7 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
    {
       CANDIDATE* candidate;
 
-      SCIP_CALL( candidateCreate(scip, &candidate, storewarmstartinfo) );
+      SCIP_CALL( candidateCreate(scip, &candidate) );
       assert(candidate != NULL);
 
       candidate->branchvar = lpcands[i];
@@ -1591,12 +1694,15 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
       candidate->fracval = lpcandsfrac[i];
 
       (*candidatelist)->candidates[i] = candidate;
+
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "created candidate <%s>...\n",
+         (candidate) != NULL ? SCIPvarGetName((candidate)->branchvar) : "none");
    }
 
    return SCIP_OKAY;
 }
 
-/** Frees the allocated buffer memory of the candidate list and frees the contained candidates. */
+/** frees the allocated buffer memory of the candidate list and frees the contained candidates. */
 static
 SCIP_RETCODE candidateListFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1627,7 +1733,7 @@ SCIP_RETCODE candidateListFree(
    return SCIP_OKAY;
 }
 
-/** Keeps only the first candidates and frees the remaining ones */
+/** keeps only the first candidates and frees the remaining ones */
 static
 SCIP_RETCODE candidateListKeep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1944,12 +2050,7 @@ SCIP_RETCODE scoreContainerSetScore(
    /* remove the warm start info from the dropped candidate */
    if( droppedcandidate != NULL )
    {
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing warmstart info of candidate <%s>(%u/%u)...\n",
-         SCIPvarGetName(droppedcandidate->branchvar),
-         droppedcandidate->upwarmstartinfo != NULL, droppedcandidate->downwarmstartinfo != NULL);
-
-      SCIP_CALL( warmStartInfoFree(scip, &droppedcandidate->downwarmstartinfo) );
-      SCIP_CALL( warmStartInfoFree(scip, &droppedcandidate->upwarmstartinfo) );
+      SCIP_CALL( candidateFreeWarmStartInfo(scip, droppedcandidate) );
    }
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stored score <%g> for var <%s>.\n", score, SCIPvarGetName(cand->branchvar));
@@ -2574,64 +2675,6 @@ SCIP_RETCODE branchOnVar(
    return SCIP_OKAY;
 }
 
-/** Store the current lp solution in the warm start info for further usage. */
-static
-SCIP_RETCODE storeWarmStartInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   WARMSTARTINFO*        warmstartinfo       /**< the warm start info in which the data should be stored */
-   )
-{
-   SCIP_LPI* lpi;
-   BMS_BLKMEM* blkmem;
-
-   assert(scip != NULL);
-   assert(warmstartinfo != NULL);
-   assert(warmstartinfo->lpistate == NULL);
-   assert(warmstartinfo->lpinorms == NULL);
-
-   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-   blkmem = SCIPblkmem(scip);
-
-   SCIP_CALL( SCIPlpiGetState(lpi, blkmem, &warmstartinfo->lpistate) );
-
-   SCIP_CALL( SCIPlpiGetNorms(lpi, blkmem, &warmstartinfo->lpinorms) );
-
-   warmstartinfo->primalfeas = SCIPlpiIsPrimalFeasible(lpi);
-   warmstartinfo->dualfeas = SCIPlpiIsDualFeasible(lpi);
-
-   assert(warmstartinfo->lpistate != NULL);
-   /* warmstartinfo->lpinorms may be NULL */
-
-   return SCIP_OKAY;
-}
-
-/** Sets the lp state and norms of the current node to the values stored in the warm start info. */
-static
-SCIP_RETCODE restoreFromWarmStartInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   WARMSTARTINFO*        warmstartinfo       /**< the warm start info containing the stored data */
-   )
-{
-   assert(scip != NULL);
-   assert(warmstartinfo != NULL);
-   assert(warmstartinfo->lpistate != NULL);
-
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "loading basis...\n");
-
-   /* As we solved the very same LP some time earlier and stored the state (the basis) and the norms, we can now set those in
-    * the LP solver, such that the solution does not (in best case) need any further calculation.
-    * Some iterations may occur, as the conflict analysis may have added some constraints in the meantime. */
-   SCIP_CALL( SCIPsetProbingLPState(scip, &(warmstartinfo->lpistate), &(warmstartinfo->lpinorms), warmstartinfo->primalfeas,
-         warmstartinfo->dualfeas) );
-
-   /* The state and norms will be freed later by the SCIP framework. Therefore they are set to NULL to enforce that we won't
-    * free them on our own. */
-   assert(warmstartinfo->lpistate == NULL);
-   assert(warmstartinfo->lpinorms == NULL);
-
-   return SCIP_OKAY;
-}
-
 /** Get the number of iterations the last LP needed */
 static
 SCIP_RETCODE getNIterationsLastLP(
@@ -2741,14 +2784,6 @@ SCIP_RETCODE executeBranching(
           * oldLowerBound <= newUpperBound < oldUpperBound */
          SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
       }
-
-      if( warmStartInfoIsReadable(candidate->downwarmstartinfo) )
-      {
-         /* restore the stored LP data (e.g., the basis) from a previous run */
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for down branch of variable <%s>\n",
-            SCIPvarGetName(branchvar));
-         SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->downwarmstartinfo) );
-      }
    }
    else
    {
@@ -2761,15 +2796,16 @@ SCIP_RETCODE executeBranching(
           */
          SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
       }
-
-      if( warmStartInfoIsReadable(candidate->upwarmstartinfo) )
-      {
-         /* restore the stored LP data (e.g., the basis) from a previous run */
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for up branch of variable <%s>\n",
-            SCIPvarGetName(branchvar));
-         SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->upwarmstartinfo) );
-      }
    }
+
+   /* restore the stored LP data (e.g., the basis) from a filtering run */
+   if( candidateHasWarmStartInfo(candidate, downbranching) )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for %s branch of variable <%s>\n",
+         downbranching ? "down" : "up", SCIPvarGetName(branchvar));
+      SCIP_CALL( candidateLoadWarmStartInfo(scip, candidate, downbranching) );
+   }
+
 
    /* apply domain propagation */
    if( config->propagate )
@@ -3336,6 +3372,8 @@ SCIP_RETCODE getFSBResult(
 #endif
    )
 {
+   char oldscoringfunction;
+
    assert(scip != NULL);
    assert(config != NULL);
    assert(candidatelist != NULL);
@@ -3347,8 +3385,11 @@ SCIP_RETCODE getFSBResult(
    /* inform configuration that we are in scoring mode now */
    config->inscoring = TRUE;
 
+   oldscoringfunction = config->scoringfunction;
+
    /* use the default scoring function */
-   //config->scoringfunction = 'd';
+   if( config->scoringfunction == 's' )
+      config->scoringfunction = 'f';
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, NULL, config, baselpsol, domainreductions,
@@ -3363,6 +3404,8 @@ SCIP_RETCODE getFSBResult(
 
    /* inform configuration that we leave scoring mode now */
    config->inscoring = FALSE;
+
+   config->scoringfunction = oldscoringfunction;
 
    return SCIP_OKAY;
 }
@@ -3414,8 +3457,8 @@ SCIP_Real calculateScoreFromResult(
    )
 {
    SCIP_Real score;
-   SCIP_Real downgain = 0.0;
-   SCIP_Real upgain = 0.0;
+   SCIP_Real downgain = SCIPsumepsilon(scip);
+   SCIP_Real upgain = SCIPsumepsilon(scip);
 
    assert(scip != NULL);
    assert(branchvar != NULL);
@@ -3426,18 +3469,21 @@ SCIP_Real calculateScoreFromResult(
     * by bounding it by zero we are safe from numerical troubles
     */
    if( !downbranchingresult->cutoff )
-      downgain = MAX(0, downbranchingresult->dualbound - lpobjval);
+      downgain = MAX(downgain, downbranchingresult->dualbound - lpobjval);
    if( !upbranchingresult->cutoff )
-      upgain = MAX(0, upbranchingresult->dualbound - lpobjval);
+      upgain = MAX(downgain, upbranchingresult->dualbound - lpobjval);
+
+   downgain = 100.0 * downgain;
+   upgain = 100.0 * upgain;
 
    /* in case a child is infeasible and therefore cutoff we take the gain of the other child to receive a somewhat
     * realistic gain for the infeasible child;
     * if both children are infeasible we just reset the initial zero values again
     */
    if( downbranchingresult->cutoff )
-      downgain = upgain;
+      downgain = 2 * upgain;
    if( upbranchingresult->cutoff )
-      upgain = downgain;
+      upgain = 2 * downgain;
 
    score = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
@@ -4081,15 +4127,13 @@ SCIP_RETCODE executeBranchingRecursive(
    {
       SCIP_Real localgain;
 
+      /* store the warm start information in the candidate, so that it can be reused in a later branching */
       if( config->reusebasis && config->inscoring )
       {
-         /* store the warm start information in the candidate, so that it can be reused in a later branching */
-         WARMSTARTINFO* warmstartinfo = downbranching ? candidate->downwarmstartinfo : candidate->upwarmstartinfo;
-
-         LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Storing warm start information for %sbranching on var <%s>\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Storing warm start information for %s branching on var <%s>\n",
             downbranching ? "down" : "up", SCIPvarGetName(branchvar));
 
-         SCIP_CALL( storeWarmStartInfo(scip, warmstartinfo) );
+         SCIP_CALL( candidateStoreWarmStartInfo(scip, candidate, downbranching) );
       }
 
       localgain = MAX(0, branchingresult->objval - localbaselpsolval);
@@ -4108,7 +4152,7 @@ SCIP_RETCODE executeBranchingRecursive(
       {
          CANDIDATELIST* candidatelist;
 
-         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &candidatelist, config->abbreviated && config->reusebasis) );
+         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &candidatelist) );
          assert(candidatelist != NULL);
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%sbranching has <%i> candidates.\n", downbranching ? "Down" : "Up",
@@ -4204,7 +4248,7 @@ SCIP_RETCODE executeBranchingRecursive(
          SCIP_CALL( candidateListFree(scip, &candidatelist) );
       }
    }
-   else if( branchingresult->cutoff && recursiondepth == 1 ) /* ????????? what if we are in scoring? */
+   else if( branchingresult->cutoff && recursiondepth == 1 && !config->inscoring )
    {
       /* this is a cutoff on the lowest tree level */
       branchingresult->ndeepestcutoffs++;
@@ -4466,18 +4510,18 @@ SCIP_RETCODE selectVarRecursive(
          if( ndeepestcutoffs != NULL )
             *ndeepestcutoffs += downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
 
-         if( bestgain != NULL && SCIPgetProbingDepth(scip) == 1 )
+         if( bestgain != NULL && !config->inscoring && SCIPgetProbingDepth(scip) == 1 )
          {
             SCIP_Real weightedgain;
 
             assert(totalgains != NULL);
             assert(ntotalgains != NULL);
 
-            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
-            *bestgain = MAX(*bestgain, weightedgain);
-
             if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
             {
+               weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
+               *bestgain = MAX(*bestgain, weightedgain);
+
                (*totalgains) += weightedgain;
                (*ntotalgains)++;
             }
@@ -4638,7 +4682,7 @@ SCIP_RETCODE selectVarRecursive(
                SCIPvarGetName(decision->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
          }
 
-         if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
+         //if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
          {
 #ifdef SCIP_DEBUG
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%g, downgain=%g->%g, upgain=%g->%g,"
@@ -5433,7 +5477,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          SCIP_CALL( scoreContainerCreate(scip, &scorecontainer, config) );
       }
 
-      SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &candidatelist, config->abbreviated && config->reusebasis) );
+      SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &candidatelist) );
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The base lp has <%i> variables with fractional value.\n",
          candidatelist->ncandidates);

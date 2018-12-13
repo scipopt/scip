@@ -102,34 +102,34 @@ SCIP_RETCODE fromCommandLine(
     * Solution Output *
     *******************/
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/outputorigsol", &outputorigsol) );
-   if ( outputorigsol )
-   {
-      SCIP_SOL* bestsol;
+   // SCIP_CALL( SCIPgetBoolParam(scip, "misc/outputorigsol", &outputorigsol) );
+   // if ( outputorigsol )
+   // {
+   //    SCIP_SOL* bestsol;
 
-      SCIPinfoMessage(scip, NULL, "\nprimal solution (original space):\n");
-      SCIPinfoMessage(scip, NULL, "=================================\n\n");
+   //    SCIPinfoMessage(scip, NULL, "\nprimal solution (original space):\n");
+   //    SCIPinfoMessage(scip, NULL, "=================================\n\n");
 
-      bestsol = SCIPgetBestSol(scip);
-      if ( bestsol == NULL )
-         SCIPinfoMessage(scip, NULL, "no solution available\n");
-      else
-      {
-         SCIP_SOL* origsol;
+   //    bestsol = SCIPgetBestSol(scip);
+   //    if ( bestsol == NULL )
+   //       SCIPinfoMessage(scip, NULL, "no solution available\n");
+   //    else
+   //    {
+   //       SCIP_SOL* origsol;
 
-         SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
-         SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
-         SCIP_CALL( SCIPfreeSol(scip, &origsol) );
-      }
-   }
-   else
-   {
-      SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
-      SCIPinfoMessage(scip, NULL, "====================================\n\n");
+   //       SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
+   //       SCIP_CALL( SCIPretransformSol(scip, origsol) );
+   //       SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
+   //       SCIP_CALL( SCIPfreeSol(scip, &origsol) );
+   //    }
+   // }
+   // else
+   // {
+   //    SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
+   //    SCIPinfoMessage(scip, NULL, "====================================\n\n");
 
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-   }
+   //    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   // }
 
    /**************
     * Statistics *
