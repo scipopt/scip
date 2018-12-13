@@ -74,6 +74,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
+#  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 #    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"

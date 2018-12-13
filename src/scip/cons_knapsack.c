@@ -10999,12 +10999,10 @@ SCIP_RETCODE addNegatedCliques(
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &poscliquevars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &gainweights, nvars) );
-   BMSclearMemoryArray(gainweights, nvars);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &gainweights, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &gaincliquepartition, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxweights, nnegcliques) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliqueused, nnegcliques) );
-   BMSclearMemoryArray(cliqueused, nnegcliques);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cliqueused, nnegcliques) );
 
    nnegcliques = 0;
    minactduetonegcliques = 0;
@@ -11119,8 +11117,8 @@ SCIP_RETCODE addNegatedCliques(
  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &cliqueused);
-   SCIPfreeBufferArray(scip, &gaincliquepartition);
    SCIPfreeBufferArray(scip, &maxweights);
+   SCIPfreeBufferArray(scip, &gaincliquepartition);
    SCIPfreeBufferArray(scip, &gainweights);
    SCIPfreeBufferArray(scip, &cliquevars);
    SCIPfreeBufferArray(scip, &poscliquevars);

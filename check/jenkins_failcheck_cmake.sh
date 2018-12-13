@@ -184,99 +184,103 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   NEWTIMESTAMP=`date '+%F-%H-%M'`
 fi
 
+SEED=0
 PERM=0
-while [ $PERM -le $PERMUTE ]; do
-  # get ending given by permutation
-  if [ "${PERM}" == "0" ]; then
-      PERM_ENDING="."
-  else
-      PERM_ENDING="-p${PERM}."
+while [ ${SEED} -le ${SEEDS} ]; do
+  # get ending given by seed
+  if [ "${SEED}" != "0" ]; then
+    SEED_ENDING="-s${SEED}"
   fi
+  while [ ${PERM} -le ${PERMUTE} ]; do
+    # get ending given by permutation
+    if [ "${PERM}" != "0" ]; then
+      PERM_ENDING="-p${PERM}"
+    fi
 
-  # we use a name that is unique per test sent to the cluster (a jenkins job
-  # can have several tests sent to the cluster, that is why the jenkins job
-  # name (i.e, the directory name) is not enough)
-  DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${PERM_ENDING}txt"
-  TMPDATABASE="$DATABASE.tmp"
-  STILLFAILING="${DATABASE}_SF.tmp"
-  OUTPUT="${DATABASE}_output.tmp"
-  touch ${STILLFAILING}
+    # we use a name that is unique per test sent to the cluster (a jenkins job
+    # can have several tests sent to the cluster, that is why the jenkins job
+    # name (i.e, the directory name) is not enough)
+    DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
+    TMPDATABASE="${DATABASE}.tmp"
+    STILLFAILING="${DATABASE}_SF.tmp"
+    OUTPUT="${DATABASE}_output.tmp"
+    touch ${STILLFAILING}
 
-  SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [MODE: $MODE]"
+    SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
 
-  AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v MODE=$MODE"
-  echo $AWKARGS
+    AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
+    echo $AWKARGS
 
-  # the first time, the file might not exists so we create it
-  # Even more, we have to write something to it, since otherwise
-  # the awk scripts below won't work (NR and FNR will not be different)
-  echo "Preparing database."
-  if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
-    echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
-  fi
+    # the first time, the file might not exists so we create it
+    # Even more, we have to write something to it, since otherwise
+    # the awk scripts below won't work (NR and FNR will not be different)
+    echo "Preparing database."
+    if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
+      echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
+    fi
 
-  EMAILFROM="adm_timo <timo-admin@zib.de>"
-  EMAILTO="adm_timo <timo-admin@zib.de>"
+    EMAILFROM="adm_timo <timo-admin@zib.de>"
+    EMAILTO="adm_timo <timo-admin@zib.de>"
 
-  #################
-  # FIND evalfile #
-  #################
+    #################
+    # FIND evalfile #
+    #################
 
-  # SCIP check files are in check/${OUTPUTDIR}
-  BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTINGS}${PERM_ENDING}"
-  EVALFILE=`ls ${BASEFILE}*eval`
+    # SCIP check files are in check/${OUTPUTDIR}
+    BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTINGS}${SEED_ENDING}${PERM_ENDING}."
+    EVALFILE=`ls ${BASEFILE}*eval`
 
-  # at this point we have exactly one evalfile
-  BASENAME=${EVALFILE%.*} # remove extension
-  WORKINGDIR=`pwd -P`
+    # at this point we have exactly one evalfile
+    BASENAME=${EVALFILE%.*} # remove extension
+    WORKINGDIR=`pwd -P`
 
-  # Store paths of err out res and set file
-  ERRFILE="${WORKINGDIR}/${BASENAME}.err"
-  OUTFILE="${WORKINGDIR}/${BASENAME}.out"
-  RESFILE="${WORKINGDIR}/${BASENAME}.res"
-  SETFILE="${WORKINGDIR}/${BASENAME}.set"
-  EVALFILE="${WORKINGDIR}/${BASENAME}.eval"
+    # Store paths of err out res and set file
+    ERRFILE="${WORKINGDIR}/${BASENAME}.err"
+    OUTFILE="${WORKINGDIR}/${BASENAME}.out"
+    RESFILE="${WORKINGDIR}/${BASENAME}.res"
+    SETFILE="${WORKINGDIR}/${BASENAME}.set"
+    EVALFILE="${WORKINGDIR}/${BASENAME}.eval"
 
-  ############################################
-  # Process evalfile and upload to ruberband #
-  ############################################
+    ############################################
+    # Process evalfile and upload to ruberband #
+    ############################################
 
-  # evaluate the run and upload it to rubberband
-  echo "Evaluating the run and uploading it to rubberband."
-  cd check/
-  PERF_MAIL=""
-  if [ "${PERFORMANCE}" == "performance" ]; then
-    ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
-    NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
-    echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
-  else
-    ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
-  fi
-  cat ${OUTPUT}
-  rm ${OUTPUT}
-  cd ..
+    # evaluate the run and upload it to rubberband
+    echo "Evaluating the run and uploading it to rubberband."
+    cd check/
+    PERF_MAIL=""
+    if [ "${PERFORMANCE}" == "performance" ]; then
+      ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
+      NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+      echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED}" >> $RBDB
+    else
+      ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
+    fi
+    cat ${OUTPUT}
+    rm ${OUTPUT}
+    cd ..
 
-  # check for fixed instances
-  echo "Checking for fixed instances."
-  RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
-  echo "Temporary database: $TMPDATABASE\n"
-  mv $TMPDATABASE $DATABASE
+    # check for fixed instances
+    echo "Checking for fixed instances."
+    RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
+    echo "Temporary database: $TMPDATABASE\n"
+    mv $TMPDATABASE $DATABASE
 
 
-  ###################
-  # Check for fails #
-  ###################
+    ###################
+    # Check for fails #
+    ###################
 
-  # if there are fails; process them and send email when there are new ones
-  NFAILS=`grep -c fail $RESFILE`
-  if [ $NFAILS -gt 0 ]; then
-    echo "Detected ${NFAILS} fails."
-    ## read all known bugs
-    ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
-    STILLFAILINGDB=`cat ${STILLFAILING}`
+    # if there are fails; process them and send email when there are new ones
+    NFAILS=`grep -c fail $RESFILE`
+    if [ $NFAILS -gt 0 ]; then
+      echo "Detected ${NFAILS} fails."
+      ## read all known bugs
+      ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
+      STILLFAILINGDB=`cat ${STILLFAILING}`
 
-    # check if there are new fails!
-    if [ -n "$ERRORINSTANCES" ]; then
+      # check if there are new fails!
+      if [ -n "$ERRORINSTANCES" ]; then
         ###################
         ## Process fails ##
         ###################
@@ -285,8 +289,8 @@ while [ $PERM -le $PERMUTE ]; do
         SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
 
         if [ "${PERFORMANCE}" != "performance" ]; then
-            # Get assertions and instance where they were generated
-            ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+          # Get assertions and instance where they were generated
+          ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
         fi
 
         ###############
@@ -295,62 +299,64 @@ while [ $PERM -le $PERMUTE ]; do
         echo "Found new errors, sending emails."
         SUBJECT="FAIL ${SUBJECTINFO}"
         echo -e "There are newly failed instances.
-The instances run with the following SCIP version and setting file:
+        The instances run with the following SCIP version and setting file:
 
-\`\`\`
-BRANCH: $GITBRANCH
+        \`\`\`
+        BRANCH: $GITBRANCH
 
-SCIP HEADER:
-${SCIP_HEADER}
+        SCIP HEADER:
+        ${SCIP_HEADER}
 
-SETTINGS FILE:
-${SETFILE}
-\`\`\`
+        SETTINGS FILE:
+        ${SETFILE}
+        \`\`\`
 
-Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
-${ERRORS_INFO}
+        Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
+        ${ERRORS_INFO}
 
-Here is the complete list of new fails:
-${ERRORINSTANCES}
+        Here is the complete list of new fails:
+        ${ERRORINSTANCES}
 
-The following instances are still failing:
-${STILLFAILINGDB}
+        The following instances are still failing:
+        ${STILLFAILINGDB}
 
-Finally, the err, out and res file can be found here:
-$ERRFILE
-$OUTFILE
-$RESFILE
+        Finally, the err, out and res file can be found here:
+        $ERRFILE
+        $OUTFILE
+        $RESFILE
 
-Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-    else
+        Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+      else
         echo "No new errors, sending no emails."
+      fi
+    else
+      echo "No fails detected."
     fi
-  else
-    echo "No fails detected."
-  fi
 
-  # send email if there are fixed instances
-  if [ -n "$RESOLVEDINSTANCES" ]; then
-     #########################
-     # RESOLVED ERRORS EMAIL #
-     #########################
-     SUBJECT="FIX ${SUBJECTINFO}"
-     echo -e "Congratulations, see bottom for fixed instances!
+    # send email if there are fixed instances
+    if [ -n "$RESOLVEDINSTANCES" ]; then
+      #########################
+      # RESOLVED ERRORS EMAIL #
+      #########################
+      SUBJECT="FIX ${SUBJECTINFO}"
+      echo -e "Congratulations, see bottom for fixed instances!
 
-  The following instances are still failing:
-  ${STILLFAILINGDB}
+      The following instances are still failing:
+      ${STILLFAILINGDB}
 
-  The err, out and res file can be found here:
-  $ERRFILE
-  $OUTFILE
-  $RESFILE
+      The err, out and res file can be found here:
+      $ERRFILE
+      $OUTFILE
+      $RESFILE
 
-  The following errors have been fixed:
-  ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-  fi
-  rm ${STILLFAILING}
+      The following errors have been fixed:
+      ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    fi
+    rm ${STILLFAILING}
 
-  PERM=$((PERM + 1))
+    PERM=$((PERM + 1))
+  done
+  SEED=$((SEED + 1))
 done
 
 # construct the rubberband link

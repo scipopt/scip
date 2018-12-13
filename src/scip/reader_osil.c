@@ -2544,20 +2544,20 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( start != NULL )
       xmlFreeNode(start);
 
+   /* free constraints */
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
+   }
+   SCIPfreeBufferArrayNull(scip, &constypes);
+   SCIPfreeBufferArrayNull(scip, &conss);
+
    /* free variables */
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );  /*lint !e613*/
    }
    SCIPfreeBufferArrayNull(scip, &vars);
-
-   /* free constraints */
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
-   }
-   SCIPfreeBufferArrayNull(scip, &conss);
-   SCIPfreeBufferArrayNull(scip, &constypes);
 
    if( objcons != NULL )
    {

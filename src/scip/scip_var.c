@@ -1186,14 +1186,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
+      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialvars);
-   SCIPfreeBufferArray(scip, monomialexps);
    SCIPfreeBufferArray(scip, monomialcoefs);
    SCIPfreeBufferArray(scip, monomialnvars);
+   SCIPfreeBufferArray(scip, monomialexps);
+   SCIPfreeBufferArray(scip, monomialvars);
 }
 
 /** increases usage counter of variable

@@ -1136,10 +1136,11 @@ SCIP_RETCODE readPolynomial(
    SCIPdebugMsgPrint(scip, "\n");
 
  TERMINATE_READPOLYNOMIAL:
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &monomials);
-   SCIPfreeBufferArray(scip, &exponents);
    SCIPfreeBufferArray(scip, &varidxs);
+   SCIPfreeBufferArray(scip, &exponents);
+   SCIPfreeBufferArray(scip, &monomials);
+   SCIPfreeBufferArray(scip, &vars);
+
    SCIPhashmapFree(&varhash);
 
    return SCIP_OKAY;
@@ -1618,11 +1619,11 @@ SCIP_RETCODE readConstraints(
       }
 
       /* free memory */
-      SCIPfreeBufferArray(scip, &linvars);
-      SCIPfreeBufferArray(scip, &lincoefs);
-      SCIPfreeBufferArray(scip, &quadvars1);
-      SCIPfreeBufferArray(scip, &quadvars2);
       SCIPfreeBufferArray(scip, &quadcoefs);
+      SCIPfreeBufferArray(scip, &quadvars2);
+      SCIPfreeBufferArray(scip, &quadvars1);
+      SCIPfreeBufferArray(scip, &lincoefs);
+      SCIPfreeBufferArray(scip, &linvars);
    }
 
    if( retcode == SCIP_OKAY )

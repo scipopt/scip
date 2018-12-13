@@ -365,7 +365,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
+   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol)*(int)SCIPgetObjsense(scip), eventhdlrdata->upperbound) )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
@@ -2661,7 +2661,8 @@ SCIP_RETCODE SCIPbendersExec(
     * the Benders' decomposition subproblems.
     * TODO: Add a parameter to control this behaviour.
     */
-   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip), SCIPgetSolOrigObj(set->scip, sol)) )
+   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip)*(int)SCIPgetObjsense(set->scip),
+         SCIPgetSolOrigObj(set->scip, sol)*(int)SCIPgetObjsense(set->scip)) )
    {
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -3118,7 +3119,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
          bestsol = SCIPgetBestSol(subproblem);
          if( bestsol != NULL )
-            objective = SCIPgetSolOrigObj(subproblem, bestsol);
+            objective = SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(set->scip);
          else
             objective = SCIPsetInfinity(set);
       }
@@ -3338,7 +3339,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          if( solvestatus == SCIP_STATUS_INFEASIBLE )
             (*infeasible) = TRUE;
          if( objective != NULL )
-            (*objective) = SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem));
+            (*objective) = SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem))*(int)SCIPgetObjsense(subproblem);
       }
       else
       {
@@ -3618,7 +3619,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
          case SCIP_LPSOLSTAT_OPTIMAL :
          {
             (*solvestatus) = SCIP_STATUS_OPTIMAL;
-            (*objective) = SCIPgetSolOrigObj(subproblem, NULL);
+            (*objective) = SCIPgetSolOrigObj(subproblem, NULL)*(int)SCIPgetObjsense(scip);
             break;
          }
 
