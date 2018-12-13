@@ -314,7 +314,7 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_Real feas;
    int nlrowsidx[] = {0, 1};
    int nnlrowsidx = 2;
-   SCIP_NLROW* nlrows[] = {nlrow1, nlrow2};
+   SCIP_NLROW* nlrows[2];
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -323,6 +323,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    /* create the nl rows */
    createNlRow1(convexsides[0]);
    createNlRow2(convexsides[1]);
+   nlrows[0] = nlrow1;
+   nlrows[1] = nlrow2;
+
 
    /** first point active only on nlrow1 **/
    /* set interior point */
