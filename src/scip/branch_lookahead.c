@@ -1710,16 +1710,16 @@ SCIP_RETCODE candidateListFree(
 
    assert(scip != NULL);
    assert(candidatelist != NULL);
-   assert((*candidatelist)->ncandidates > 0 || ((*candidatelist)->ncandidates && (*candidatelist)->candidates == NULL));
+   assert((*candidatelist)->ncandidates > 0 || (*candidatelist)->candidates == NULL);
 
    if( (*candidatelist)->candidates != NULL )
    {
-      for( i = (*candidatelist)->ncandidates-1; i >= 0; i-- )
+      for( i = (*candidatelist)->ncandidates - 1; i >= 0; i-- )
       {
          CANDIDATE* cand = (*candidatelist)->candidates[i];
          if( cand != NULL )
          {
-            SCIP_CALL(candidateFree(scip, &cand));
+            SCIP_CALL( candidateFree(scip, &cand) );
          }
       }
 
