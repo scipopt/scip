@@ -1230,7 +1230,17 @@ SCIP_RETCODE initialiseLPSubproblem(
    return SCIP_OKAY;
 }
 
-/** checks whether the convex relaxation of the subproblem is sufficient to solve the original problem to optimality */
+/** checks whether the convex relaxation of the subproblem is sufficient to solve the original problem to optimality
+ *
+ * We check whether we can conclude that the CIP is actually an LP or a convex NLP.
+ * To do this, we check that all variables are of continuous type and that every constraint is either handled by known
+ * linear constraint handler (knapsack, linear, logicor, setppc, varbound) or a known nonlinear constraint handler
+ * (nonlinear, quadratic, abspower). In the latter case, we also check whether the nonlinear constraint is convex.
+ * Further, nonlinear constraints are only considered if an NLP solver interface is available, i.e., and NLP could
+ * be solved.
+ * If constraints are present that cannot be identified as linear or convex nonlinear, then we assume that the
+ * problem is not convex, thus solving its LP or NLP relaxation will not be sufficient.
+ */
 static
 SCIP_RETCODE checkSubproblemConvexity(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -1276,7 +1286,13 @@ SCIP_RETCODE checkSubproblemConvexity(
    linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
    linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
 
-   /* get pointers to interesting nonlinear constraint handlers, if we also have an NLP solver to solve NLPs */
+   /* Get pointers to interesting nonlinear constraint handlers, if we also have an NLP solver to solve NLPs.
+    * If there is no NLP solver, but there are (convex) nonlinear constraints, then the LP relaxation of subproblems
+    * will (currently) not be sufficient to solve subproblems to optimality. Thus, we also take the presence of convex
+    * nonlinear constraints as signal for having to solve the CIP eventually, thus, by abuse of notation,
+    * return not-convex here. In summary, we do not need to have a special look onto non-linear constraints
+    * if no NLP solver is present, and can treat them as any other constraint that is not of linear type.
+    */
    if( SCIPgetNNlpis(subproblem) > 0 )
    {
       conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
@@ -1302,7 +1318,7 @@ SCIP_RETCODE checkSubproblemConvexity(
          continue;
       }
 
-      /* if cons_nonlinear, then check whether convex */
+      /* if cons_nonlinear (and conshdlr_nonlinear != NULL), then check whether convex */
       if( conshdlr == conshdlr_nonlinear )
       {
          SCIP_EXPRCURV curvature;
@@ -1325,6 +1341,7 @@ SCIP_RETCODE checkSubproblemConvexity(
          }
       }
 
+      /* if cons_quadratic (and conshdlr_quadratic != NULL), then check whether convex */
       if( conshdlr == conshdlr_quadratic )
       {
          SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons) );
@@ -1346,6 +1363,7 @@ SCIP_RETCODE checkSubproblemConvexity(
          }
       }
 
+      /* if cons_abspower (and conshdlr_abspower != NULL), then check whether convex */
       if( conshdlr == conshdlr_abspower )
       {
          if( SCIPisConvexAbspower(subproblem, cons) )
