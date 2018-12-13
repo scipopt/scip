@@ -14,7 +14,7 @@ Features
   scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
 
 - extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
-  when the subproblem is nonlinear. Currently, it is assumed that the NLP is convex.
+  when the subproblem is convex nonlinear.
 
 - extended Benders framework to create copies of Benders decompositions that can be used in a multithreading environment
 
@@ -84,6 +84,7 @@ Interface changes
 - methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
+- added SCIPisConvexAbspower()
 
 ### Command line interface
 

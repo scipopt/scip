@@ -35,6 +35,9 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_abspower.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -1233,6 +1236,180 @@ SCIP_RETCODE initialiseLPSubproblem(
    return SCIP_OKAY;
 }
 
+/** checks whether the convex relaxation of the subproblem is sufficient to solve the original problem to optimality
+ *
+ * We check whether we can conclude that the CIP is actually an LP or a convex NLP.
+ * To do this, we check that all variables are of continuous type and that every constraint is either handled by known
+ * linear constraint handler (knapsack, linear, logicor, setppc, varbound) or a known nonlinear constraint handler
+ * (nonlinear, quadratic, abspower). In the latter case, we also check whether the nonlinear constraint is convex.
+ * Further, nonlinear constraints are only considered if an NLP solver interface is available, i.e., and NLP could
+ * be solved.
+ * If constraints are present that cannot be identified as linear or convex nonlinear, then we assume that the
+ * problem is not convex, thus solving its LP or NLP relaxation will not be sufficient.
+ */
+static
+SCIP_RETCODE checkSubproblemConvexity(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS* cons;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nimplintvars;
+   int i;
+   int j;
+   SCIP_Bool isconvex;
+#define NLINEARCONSHDLRS 5
+   SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
+   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
+   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
+   SCIP_CONSHDLR* conshdlr_abspower = NULL;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   isconvex = FALSE;
+
+   /* getting the number of integer and binary variables to determine the problem type */
+   SCIP_CALL( SCIPgetVarsData(subproblem, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
+
+   /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
+   if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
+      goto TERMINATE;
+
+   /* get pointers to linear constraints handlers, so can avoid string comparisons */
+   linearconshdlrs[0] = SCIPfindConshdlr(subproblem, "knapsack");
+   linearconshdlrs[1] = SCIPfindConshdlr(subproblem, "linear");
+   linearconshdlrs[2] = SCIPfindConshdlr(subproblem, "logicor");
+   linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
+   linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
+
+   /* Get pointers to interesting nonlinear constraint handlers, if we also have an NLP solver to solve NLPs.
+    * If there is no NLP solver, but there are (convex) nonlinear constraints, then the LP relaxation of subproblems
+    * will (currently) not be sufficient to solve subproblems to optimality. Thus, we also take the presence of convex
+    * nonlinear constraints as signal for having to solve the CIP eventually, thus, by abuse of notation,
+    * return not-convex here. In summary, we do not need to have a special look onto non-linear constraints
+    * if no NLP solver is present, and can treat them as any other constraint that is not of linear type.
+    */
+   if( SCIPgetNNlpis(subproblem) > 0 )
+   {
+      conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
+      conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
+      conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+   }
+
+   for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
+   {
+      cons = SCIPgetOrigConss(subproblem)[i];
+      conshdlr = SCIPconsGetHdlr(cons);
+
+      for( j = 0; j < NLINEARCONSHDLRS; ++j )
+         if( conshdlr == linearconshdlrs[j] )
+            break;
+
+      /* if linear constraint, then we are good */
+      if( j < NLINEARCONSHDLRS )
+      {
+#ifdef SCIP_MOREDEBUG
+         SCIPdebugMsg(subproblem, "subproblem <%s>: constraint <%s> is linear\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+         continue;
+      }
+
+      /* if cons_nonlinear (and conshdlr_nonlinear != NULL), then check whether convex */
+      if( conshdlr == conshdlr_nonlinear )
+      {
+         SCIP_EXPRCURV curvature;
+
+         SCIP_CALL( SCIPgetCurvatureNonlinear(subproblem, cons, TRUE, &curvature) );
+         if( ((SCIPisInfinity(subproblem, -SCIPgetLhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
+             ((SCIPisInfinity(subproblem,  SCIPgetRhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX)) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: nonlinear constraint <%s> is not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
+      /* if cons_quadratic (and conshdlr_quadratic != NULL), then check whether convex */
+      if( conshdlr == conshdlr_quadratic )
+      {
+         SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons) );
+
+         if( (SCIPisInfinity(subproblem, -SCIPgetLhsQuadratic(subproblem, cons)) || SCIPisConcaveQuadratic(subproblem, cons)) &&
+             (SCIPisInfinity(subproblem,  SCIPgetRhsQuadratic(subproblem, cons)) || SCIPisConvexQuadratic(subproblem, cons)) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
+      /* if cons_abspower (and conshdlr_abspower != NULL), then check whether convex */
+      if( conshdlr == conshdlr_abspower )
+      {
+         if( SCIPisConvexAbspower(subproblem, cons) )
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            continue;
+         }
+         else
+         {
+#ifdef SCIP_MOREDEBUG
+            SCIPdebugMsg(subproblem, "subproblem <%s>: abspower constraint <%s> not convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+            goto TERMINATE;
+         }
+      }
+
+      /* skip bivariate constraints: they are typically nonconvex
+       * skip soc constraints: it would depend how these are represented in the NLP eventually, which could be nonconvex
+       */
+
+#ifdef SCIP_MOREDEBUG
+      SCIPdebugMsg(subproblem, "subproblem <%s>: potentially nonconvex constraint <%s>\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));
+#endif
+      goto TERMINATE;
+   }
+
+   /* if we made it until here, then all constraints are known and convex */
+   isconvex = TRUE;
+
+TERMINATE:
+   /* setting the flag for the convexity of the subproblem */
+   SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
+
+   SCIPdebugMsg(subproblem, "subproblem <%s> has been found %sconvex\n", SCIPgetProbName(subproblem), isconvex ? "" : "not");
+
+   return SCIP_OKAY;
+}
+
 /** creates the subproblems and registers it with the Benders' decomposition struct */
 static
 SCIP_RETCODE createSubproblems(
@@ -1245,9 +1422,6 @@ SCIP_RETCODE createSubproblems(
    SCIP_VAR* mastervar;
    SCIP_VAR** vars;
    int nvars;
-   int nbinvars;
-   int nintvars;
-   int nimplintvars;
    int nsubproblems;
    int i;
    int j;
@@ -1277,7 +1451,7 @@ SCIP_RETCODE createSubproblems(
       SCIP_CALL( SCIPsetIntParam(subproblem, "limits/maxorigsol", 0) );
 
       /* getting the number of integer and binary variables to determine the problem type */
-      SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
+      SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
       /* The objective function coefficients of the master problem are set to zero. This is necessary for the Benders'
        * decomposition algorithm, since the cut methods and the objective function check assumes that the objective
@@ -1319,12 +1493,16 @@ SCIP_RETCODE createSubproblems(
          }
       }
 
-      /* if there are no binary and integer variables, then the subproblem is an LP.
-       * In this case, the SCIP instance is put into probing mode via the use of an event handler. */
-      if( nbinvars == 0 && nintvars == 0 && nimplintvars == 0 )
-      {
-         SCIPbendersSetSubproblemIsConvex(benders, i, TRUE);
+      /* checking the convexity of the subproblem. The convexity of the subproblem indicates whether the convex
+       * relaxation is a valid relaxation for the problem
+       */
+      SCIP_CALL( checkSubproblemConvexity(benders, set, i) );
 
+      /* after checking the subproblem for convexity, if the subproblem is convex, then the problem is entered into
+       * probing mode. Otherwise, it is initialised as a CIP
+       */
+      if( SCIPbendersSubproblemIsConvex(benders, i) )
+      {
          /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
           * internally. To be more efficient the subproblem is put into probing mode. */
          if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
@@ -1337,8 +1515,6 @@ SCIP_RETCODE createSubproblems(
       {
          SCIP_EVENTHDLRDATA* eventhdlrdata_mipnodefocus;
          SCIP_EVENTHDLRDATA* eventhdlrdata_upperbound;
-
-         SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
 
          /* because the subproblems could be reused in the copy, the event handler is not created again. If the
           * threadsafe is TRUE, then it is assumed that the subproblems are not reused.
@@ -3724,7 +3900,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
       /* setting the subproblem parameters */
       SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
-#ifdef SCIP_MOREDEBUG
+#ifdef SCIP_EVENMOREDEBUG
       SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
 #endif
    }
@@ -4701,12 +4877,20 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
             i++;
       }
 
-      /* if all of the integer variables have been changed to continuous, then the subproblem must now be an LP. In this
-       * case, the subproblem is initialised and then put into probing mode */
+      /* if all of the integer variables have been changed to continuous, then the subproblem could now be a convex
+       * problem. This must be checked and if TRUE, then the LP subproblem is initialised and then put into probing
+       * mode
+       */
       if( chgvarscount > 0 && chgvarscount == origintvars )
       {
-         SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber) );
-         SCIPbendersSetSubproblemIsConvex(benders, probnumber, TRUE);
+         /* checking the convexity of the subproblem */
+         SCIP_CALL( checkSubproblemConvexity(benders, set, probnumber) );
+
+         /* if the subproblem is convex, then it is initialised and put into probing mode */
+         if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+         {
+            SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber) );
+         }
       }
 
       SCIP_CALL( SCIPbendersSetMastervarsCont(benders, probnumber, TRUE) );
