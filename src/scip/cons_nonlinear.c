@@ -3196,7 +3196,7 @@ SCIP_RETCODE reformulate(
                SCIP_CALL( SCIPallocBufferArray(scip, &monomialnodes, nmonomials) );
 
                /* allocate memory */
-               SCIP_CALL( SCIPallocCleanBufferArray(scip, &lincoefs, nchildren) );
+               SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nchildren) );
                SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
                SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
 
@@ -3289,7 +3289,7 @@ SCIP_RETCODE reformulate(
                /* release memory */
                SCIPfreeBufferArray(scip, &childrennew);
                SCIPfreeBufferArray(scip, &quadelems);
-               SCIPfreeCleanBufferArray(scip, &lincoefs);
+               SCIPfreeBufferArray(scip, &lincoefs);
 
                assert(nmonomialnodes > 0);
                if( nmonomialnodes > 1 )
