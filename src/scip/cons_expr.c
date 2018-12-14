@@ -6829,7 +6829,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsExpr)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   
+
    /* store variable expressions if not done so far */
    SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
 
