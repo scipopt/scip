@@ -3196,7 +3196,7 @@ SCIP_RETCODE reformulate(
                SCIP_CALL( SCIPallocBufferArray(scip, &monomialnodes, nmonomials) );
 
                /* allocate memory */
-               SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nchildren) );
+               SCIP_CALL( SCIPallocCleanBufferArray(scip, &lincoefs, nchildren) );
                SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
                SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
 
@@ -3215,11 +3215,7 @@ SCIP_RETCODE reformulate(
                   if( nfactors == 1 && exponents[0] == 1.0 )
                   {
                      /* linear monomial */
-                     if( !foundlincoefs )
-                     {
-                        BMSclearMemoryArray(lincoefs, nchildren);
-                        foundlincoefs = TRUE;
-                     }
+                     foundlincoefs = TRUE;
                      assert(0 <= childidxs[0] && childidxs[0] < nchildren);
                      assert(lincoefs[childidxs[0]] == 0.0); /* monomials should have been merged */
                      lincoefs[childidxs[0]] = coef;
@@ -3291,9 +3287,9 @@ SCIP_RETCODE reformulate(
                assert(constant == 0.0); /* the constant should have been used somewhere */
 
                /* release memory */
-               SCIPfreeBufferArrayNull(scip, &childrennew);
-               SCIPfreeBufferArrayNull(scip, &quadelems);
-               SCIPfreeBufferArrayNull(scip, &lincoefs);
+               SCIPfreeBufferArray(scip, &childrennew);
+               SCIPfreeBufferArray(scip, &quadelems);
+               SCIPfreeCleanBufferArray(scip, &lincoefs);
 
                assert(nmonomialnodes > 0);
                if( nmonomialnodes > 1 )
