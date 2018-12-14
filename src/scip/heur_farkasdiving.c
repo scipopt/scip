@@ -563,7 +563,6 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          "scale score by [f]ractionality or [i]mpact on farkasproof",
          &heurdata->scaletype, TRUE, DEFAULT_SCALETYPE, "fi", NULL, NULL) );
 
-
    return SCIP_OKAY;
 }
 

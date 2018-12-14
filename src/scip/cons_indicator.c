@@ -2051,6 +2051,7 @@ SCIP_RETCODE addAltLPColumn(
    SCIP_CALL( SCIPallocBufferArray(scip, &newrowsslack, 2 * nvars) );
 
    /* store index of column in constraint */
+   /* coverity[var_deref_model] */
    SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &ncols) );
    *colindex = ncols;
 
@@ -6778,10 +6779,17 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 
       if ( lincons == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin_%s> or <%s>.\n",
-            name, binvarname, binvarname);
-         *success = FALSE;
-         return SCIP_OKAY;
+         /* if not found - check without indrhs or indlhs */
+         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+         lincons = SCIPfindCons(scip, binvarname);
+
+         if( lincons == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+               name, posstr+8, posstr+9, posstr+16);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
       }
    }
 

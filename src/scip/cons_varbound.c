@@ -822,6 +822,7 @@ SCIP_RETCODE analyzeConflict(
              * @note it does not matter if we deceed the current local upper bound, because SCIPaddConflictRelaxedUb()
              *       is correcting the bound afterwards
              */
+            /* coverity[copy_paste_error] */
             relaxedub = inferbd - 2*SCIPfeastol(scip) * MAX(1, abscoef);
          }
 
@@ -891,6 +892,7 @@ SCIP_RETCODE analyzeConflict(
              * @note it does not matter if we exceed the current local lower bound, because SCIPaddConflictRelaxedLb()
              *       is correcting the bound afterwards
              */
+            /* coverity[copy_paste_error] */
             relaxedlb = inferbd + 2*SCIPfeastol(scip) * MAX(1, abscoef);
          }
 

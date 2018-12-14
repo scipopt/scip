@@ -153,7 +153,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
    SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
-      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol),
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol)*(int)SCIPgetObjsense(subproblem),
       cutconstant);
 
    nvars = SCIPgetNVars(masterprob);
@@ -330,7 +330,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    {
       (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
-         SCIPgetSolOrigObj(masterprob, NULL));
+         SCIPgetSolOrigObj(masterprob, NULL)*(int)SCIPgetObjsense(masterprob));
       return SCIP_OKAY;
    }
 
@@ -434,9 +434,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
             SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
          }
 
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
          SCIPinfoMessage(masterprob, NULL, ";\n");
@@ -447,9 +444,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       else
       {
          SCIP_CALL( SCIPaddCons(masterprob, cons) );
-
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 

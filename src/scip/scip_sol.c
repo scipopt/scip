@@ -768,7 +768,7 @@ SCIP_RETCODE setupAndSolveFiniteSolSubscip(
 
    /* copy the original problem to the sub-SCIP */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
-   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, FALSE, TRUE, &valid) );
 
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
@@ -2703,6 +2703,7 @@ SCIP_RETCODE readSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
@@ -2864,6 +2865,7 @@ SCIP_RETCODE readXmlSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {

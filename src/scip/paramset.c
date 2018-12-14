@@ -1262,6 +1262,7 @@ SCIP_RETCODE paramParseInt(
    assert(set != NULL);
    assert(valuestr != NULL);
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%d", &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE) );
@@ -1291,6 +1292,7 @@ SCIP_RETCODE paramParseLongint(
    assert(set != NULL);
    assert(valuestr != NULL);
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, value, FALSE, TRUE) );
@@ -1320,6 +1322,7 @@ SCIP_RETCODE paramParseReal(
    assert(set != NULL);
    assert(valuestr != NULL);
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE) );
@@ -1349,6 +1352,7 @@ SCIP_RETCODE paramParseChar(
    assert(set != NULL);
    assert(valuestr != NULL);
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%c", &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetChar(param, set, messagehdlr, value, FALSE, TRUE) );
@@ -3993,6 +3997,9 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
    }
+
+   /* marking that the sub-SCIPs have been deactivated */
+   set->subscipsoff = TRUE;
 
    return SCIP_OKAY;
 }

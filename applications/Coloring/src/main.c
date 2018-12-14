@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.c
+/**@file   Coloring/src/main.c
  * @brief  Main file for C compilation
  * @author Gerald Gamrath
  */

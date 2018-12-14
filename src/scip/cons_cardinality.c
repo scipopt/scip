@@ -568,6 +568,7 @@ SCIP_RETCODE addVarCardinality(
    /* move other variables, if necessary */
    for( pos = consdata->nvars; pos >= 1; --pos )
    {
+      /* coverity[var_deref_model] */
       if( consdata->weights[pos-1] > weight )
       {
          consdata->vars[pos] = consdata->vars[pos-1];
@@ -2091,6 +2092,7 @@ SCIP_RETCODE generateRowCardinality(
       assert(cardval >= 0);
 
       /* if cut is meaningful */
+      /* coverity[copy_paste_error] */
       if( cnt > cardval )
       {
          /* create lower bound inequality if at least two of the bounds are finite and nonzero */

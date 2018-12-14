@@ -163,22 +163,6 @@ void SCIPbenderscutSetExitsol(
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of the Benders' decomposition cut */
    );
 
-/** adds the generated constraint to the Benders cut storage */
-extern
-SCIP_RETCODE SCIPbenderscutStoreCons(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
-   );
-
-/** adds the generated cuts to the Benders' cut storage */
-extern
-SCIP_RETCODE SCIPbenderscutStoreCut(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
-   );
-
 #ifdef __cplusplus
 }
 #endif

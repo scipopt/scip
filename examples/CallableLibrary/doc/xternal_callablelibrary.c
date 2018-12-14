@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page CALLABLELIBRARY_MAIN Callable Library Example
+/**@page CALLABLELIBRARY_MAIN Callable Library
  * @author   Stefan Vigerske
  *
  * This example illustrates how to setup nonlinear constraints when using SCIP as callable library.
@@ -31,4 +31,9 @@
  * - circle.c shows how to setup second-order-cone constraints
  * - brachistochrone.c shows how to setup nonlinear constraints
  * - circlepacking.c shows how to setup quadratic constraints
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

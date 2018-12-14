@@ -166,4 +166,9 @@
  * }
  * \endcode
  *
+ * Installation
+ * ============
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
+ *
  */

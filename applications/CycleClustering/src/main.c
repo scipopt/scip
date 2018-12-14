@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.c
+/**@file   CycleClustering/src/main.c
  * @brief  Main file for C compilation
  * @author Leon Eifler
  */

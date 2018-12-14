@@ -1373,7 +1373,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    {
       if( paramvalue )
       {
-	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps at ones does not make sense.\n");
+	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps simultaneously does not make sense.\n");
       }
    }
    *result = SCIP_DIDNOTFIND;

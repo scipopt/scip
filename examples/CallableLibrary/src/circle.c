@@ -97,7 +97,7 @@ SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/* runs circle enclosing example */
+/** runs circle enclosing example */
 static
 SCIP_RETCODE runCircle(void)
 {
@@ -140,10 +140,10 @@ SCIP_RETCODE runCircle(void)
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
-   )  /*lint --e{715}*/
-{
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
+   )
+{  /*lint --e{715}*/
    SCIP_RETCODE retcode;
 
    retcode = runCircle();

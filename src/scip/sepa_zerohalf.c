@@ -1825,8 +1825,8 @@ SCIP_RETCODE generateZerohalfCut(
    }
 
   TERMINATE:
-   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
    return SCIP_OKAY;

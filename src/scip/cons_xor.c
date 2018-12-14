@@ -3720,6 +3720,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* delete cons0 and update flags of cons1 s.t. nonredundant information doesn't get lost */
+         /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          (*ndelconss)++;

@@ -685,7 +685,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
 {  /*lint --e{715}*/
-
    /** @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the
     *        way branching is performed. Therefore, the Farkas pricing is not implemented.
     *        1. In case of Ryan/Foster branching, the two items are selected in a way such that the sum of the LP values

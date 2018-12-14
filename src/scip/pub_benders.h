@@ -31,6 +31,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "scip/type_stat.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,7 +135,8 @@ SCIP_Bool SCIPbendersIsActive(
  *  that all subproblems are convex relaxations.
  */
 SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    );
 
 /** Are Benders' cuts generated from the LP solutions? */
@@ -187,6 +189,40 @@ EXTERN
 SCIP_Real SCIPbendersGetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/** returns the number of cuts that have been added for storage */
+EXTERN
+int SCIPbendersGetNStoredCuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition cut */
+   );
+
+/** returns the data for the cuts that have been added by the Benders' cut plugin */
+EXTERN
+SCIP_RETCODE SCIPbendersGetStoredCutData(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
+   int                   cutidx,             /**< the index for the cut data that is requested */
+   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   SCIP_Real*            rhs,                /**< the right hand side of the cut */
+   int*                  nvars               /**< the number of variables with non-zero coefficients in the cut */
+   );
+
+/** returns the original problem data for the cuts that have been added by the Benders' cut plugin. The stored
+ *  variables and values will populate the input vars and vals arrays. Thus, memory must be allocated for the vars and
+ *  vals arrays
+ */
+EXTERN
+SCIP_RETCODE SCIPbendersGetStoredCutOrigData(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
+   int                   cutidx,             /**< the index for the cut data that is requested */
+   SCIP_VAR***           vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real**           vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real*            lhs,                /**< the left hand side of the cut */
+   SCIP_Real*            rhs,                /**< the right hand side of the cut */
+   int*                  nvars,              /**< the number of variables with non-zero coefficients in the cut */
+   int                   varssize            /**< the available slots in the array */
    );
 
 /*
@@ -263,7 +299,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   SCIP_STATUS*          solvestatus,        /**< status of subproblem solve */
+   SCIP_Real*            objective           /**< optimal value of subproblem, if solved to optimality */
    );
 
 /** solves the Benders' decomposition subproblem */
@@ -272,8 +309,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_STATUS*          solvestatus,        /**< status of subproblem solve */
    SCIP_Bool             solvecip            /**< directly solve the CIP subproblem */
    );
 
