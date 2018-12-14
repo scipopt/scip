@@ -4827,14 +4827,14 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    *success = TRUE;
 
 TERMINATE:
-   SCIPfreeBufferArray(scip, &obj);
-   SCIPfreeBufferArray(scip, &lb);
-   SCIPfreeBufferArray(scip, &ub);
-   SCIPfreeBufferArray(scip, &lhs);
-   SCIPfreeBufferArray(scip, &rhs);
-   SCIPfreeBufferArray(scip, &beg);
-   SCIPfreeBufferArray(scip, &ind);
    SCIPfreeBufferArray(scip, &val);
+   SCIPfreeBufferArray(scip, &ind);
+   SCIPfreeBufferArray(scip, &beg);
+   SCIPfreeBufferArray(scip, &rhs);
+   SCIPfreeBufferArray(scip, &lhs);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
 
    return SCIP_OKAY;
 }
