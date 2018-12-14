@@ -3175,6 +3175,7 @@ SCIP_RETCODE reformulate(
                int nmonomialnodes;
                SCIP_EXPRGRAPHNODE** childrennew;
                SCIP_EXPRGRAPHNODE** monomialnodes;
+               SCIP_Bool foundlincoefs;
                int m;
 
                /* @todo if a monomial is a factor of another monomial, then we could (and should?) replace it there by the node we create for it here -> ex7_2_1
@@ -3185,18 +3186,19 @@ SCIP_RETCODE reformulate(
                constant = SCIPexprgraphGetNodePolynomialConstant(node);
 
                /* coefficients from linear monomials */
-               lincoefs = NULL;
+               foundlincoefs = FALSE;
 
                /* quadratic elements */
                nquadelems = 0;
-               quadelems = NULL;
 
                /* expression graph nodes representing single higher-degree monomials, and single node with linear and/or quadratic monomials */
                nmonomialnodes = 0;
                SCIP_CALL( SCIPallocBufferArray(scip, &monomialnodes, nmonomials) );
 
-               /* children of new monomial nodes that are setup */
-               childrennew = NULL;
+               /* allocate memory */
+               SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nchildren) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
 
                for( m = 0; m < nmonomials; ++m )
                {
@@ -3213,10 +3215,10 @@ SCIP_RETCODE reformulate(
                   if( nfactors == 1 && exponents[0] == 1.0 )
                   {
                      /* linear monomial */
-                     if( lincoefs == NULL )
+                     if( !foundlincoefs )
                      {
-                        SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nchildren) );
                         BMSclearMemoryArray(lincoefs, nchildren);
+                        foundlincoefs = TRUE;
                      }
                      assert(0 <= childidxs[0] && childidxs[0] < nchildren);
                      assert(lincoefs[childidxs[0]] == 0.0); /* monomials should have been merged */
@@ -3225,10 +3227,6 @@ SCIP_RETCODE reformulate(
                   else if( nfactors == 1 && exponents[0] == 2.0 )
                   {
                      /* square monomial */
-                     if( quadelems == NULL )
-                     {
-                        SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
-                     }
                      quadelems[nquadelems].idx1 = childidxs[0];
                      quadelems[nquadelems].idx2 = childidxs[0];
                      quadelems[nquadelems].coef = coef;
@@ -3237,10 +3235,6 @@ SCIP_RETCODE reformulate(
                   else if( nfactors == 2 && exponents[0] == 1.0 && exponents[1] == 1.0 )
                   {
                      /* bilinear monomial */
-                     if( quadelems == NULL )
-                     {
-                        SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nmonomials) );
-                     }
                      if( childidxs[0] < childidxs[1] )
                      {
                         quadelems[nquadelems].idx1 = childidxs[0];
@@ -3264,10 +3258,6 @@ SCIP_RETCODE reformulate(
                      SCIP_CALL( SCIPexprgraphCreateNodePolynomial(SCIPblkmem(scip), &monomialnodes[nmonomialnodes], 1, &monomialnew, constant, FALSE) );
                      constant = 0.0;
 
-                     if( childrennew == NULL )
-                     {
-                        SCIP_CALL( SCIPallocBufferArray(scip, &childrennew, nchildren) );
-                     }
                      assert(nfactors <= nchildren);
                      for( f = 0; f < nfactors; ++f )
                         childrennew[f] = children[childidxs[f]];  /*lint !e613*/
@@ -3280,7 +3270,7 @@ SCIP_RETCODE reformulate(
                   }
                }
                /* should have had at least one linear, quadratic, or general monomial */
-               assert(lincoefs != NULL || nquadelems > 0 || nmonomialnodes > 0);
+               assert(foundlincoefs || nquadelems > 0 || nmonomialnodes > 0);
 
                if( nquadelems > 0 )
                {
@@ -3290,7 +3280,7 @@ SCIP_RETCODE reformulate(
                   SCIP_CALL( SCIPexprgraphAddNode(exprgraph, monomialnodes[nmonomialnodes], SCIPexprgraphGetNodeDepth(node), nchildren, children) );
                   ++nmonomialnodes;
                }
-               else if( lincoefs != NULL )
+               else if( foundlincoefs )
                {
                   /* create additional node for linear part, simplifier should take care of removing unused children later */
                   SCIP_CALL( SCIPexprgraphCreateNodeLinear(SCIPblkmem(scip), &monomialnodes[nmonomialnodes], nchildren, lincoefs, constant) );
@@ -3300,9 +3290,10 @@ SCIP_RETCODE reformulate(
                }
                assert(constant == 0.0); /* the constant should have been used somewhere */
 
-               SCIPfreeBufferArrayNull(scip, &lincoefs);
-               SCIPfreeBufferArrayNull(scip, &quadelems);
+               /* release memory */
                SCIPfreeBufferArrayNull(scip, &childrennew);
+               SCIPfreeBufferArrayNull(scip, &quadelems);
+               SCIPfreeBufferArrayNull(scip, &lincoefs);
 
                assert(nmonomialnodes > 0);
                if( nmonomialnodes > 1 )
@@ -4827,14 +4818,14 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    *success = TRUE;
 
 TERMINATE:
-   SCIPfreeBufferArray(scip, &obj);
-   SCIPfreeBufferArray(scip, &lb);
-   SCIPfreeBufferArray(scip, &ub);
-   SCIPfreeBufferArray(scip, &lhs);
-   SCIPfreeBufferArray(scip, &rhs);
-   SCIPfreeBufferArray(scip, &beg);
-   SCIPfreeBufferArray(scip, &ind);
    SCIPfreeBufferArray(scip, &val);
+   SCIPfreeBufferArray(scip, &ind);
+   SCIPfreeBufferArray(scip, &beg);
+   SCIPfreeBufferArray(scip, &rhs);
+   SCIPfreeBufferArray(scip, &lhs);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
 
    return SCIP_OKAY;
 }
@@ -5321,9 +5312,9 @@ SCIP_RETCODE addIntervalGradientEstimator(
    SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, coefs) );
 
  INTGRADESTIMATOR_CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &box);
-   SCIPfreeBufferArrayNull(scip, &intgrad);
    SCIPfreeBufferArrayNull(scip, &coefs);
+   SCIPfreeBufferArrayNull(scip, &intgrad);
+   SCIPfreeBufferArrayNull(scip, &box);
 
    return SCIP_OKAY;
 }
