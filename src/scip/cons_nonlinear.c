@@ -1776,8 +1776,8 @@ SCIP_RETCODE removeFixedNonlinearVariables(
       i = 0;
    }
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    conshdlrdata->isremovedfixings = TRUE;
 
@@ -1923,8 +1923,8 @@ TERMINATE:
       SCIP_CALL( addLinearCoef(scip, cons, linvars[i], lincoefs[i]) );
    }
 
-   SCIPfreeBufferArray(scip, &linvars);
    SCIPfreeBufferArray(scip, &lincoefs);
+   SCIPfreeBufferArray(scip, &linvars);
 
    /* @todo linear variables that are also children of exprgraphnode could be moved into the expression graph for certain nonlinear operators (quadratic, polynomial), since that may allow better bound tightening */
 
@@ -7389,8 +7389,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
          SCIP_CALL( consdataSetExprtrees(scip, consdata, nexprtrees, exprtrees, coefs, FALSE) );
 
-         SCIPfreeBufferArray(scip, &exprtrees);
          SCIPfreeBufferArray(scip, &coefs);
+         SCIPfreeBufferArray(scip, &exprtrees);
 
          assert(consdata->nexprtrees > 0 );
 #ifndef NDEBUG
@@ -7708,7 +7708,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
       /* @todo could add more linearizations for convex or multivariate concave inequ. */
 
-      for( j = 0; j < consdata->nexprtrees; ++j )
+      for( j = consdata->nexprtrees - 1; j >= 0; --j )
       {
          SCIPfreeBufferArray(scip, &x[j]);
       }
@@ -8798,7 +8798,6 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
       targetconsdata->iscurvchecked = consdata->iscurvchecked && global; /* if the copy is local, then curvature may change (get stronger) */
    }
 
-   SCIPfreeBufferArrayNull(sourcescip, &linvars);
    if( exprtrees != NULL )
    {
       for( j = 0; j < nexprtrees; ++j )
@@ -8810,6 +8809,7 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
       }
       SCIPfreeBufferArray(sourcescip, &exprtrees);
    }
+   SCIPfreeBufferArrayNull(sourcescip, &linvars);
 
    return SCIP_OKAY;
 }
