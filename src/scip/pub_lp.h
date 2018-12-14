@@ -509,6 +509,7 @@ void SCIProwChgRank(
 #define SCIProwIsRemovable(row)         (row)->removable
 #define SCIProwGetOrigintype(row)       (row)->origintype
 #define SCIProwGetOriginCons(row)       ((SCIP_CONS*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
+#define SCIProwGetCons(row)             (row)->cons
 #define SCIProwGetOriginSepa(row)       ((SCIP_SEPA*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA ? (row)->origin : NULL))
 #define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos
