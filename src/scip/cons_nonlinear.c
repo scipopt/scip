@@ -5321,9 +5321,9 @@ SCIP_RETCODE addIntervalGradientEstimator(
    SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, nvars, vars, coefs) );
 
  INTGRADESTIMATOR_CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &box);
-   SCIPfreeBufferArrayNull(scip, &intgrad);
    SCIPfreeBufferArrayNull(scip, &coefs);
+   SCIPfreeBufferArrayNull(scip, &intgrad);
+   SCIPfreeBufferArrayNull(scip, &box);
 
    return SCIP_OKAY;
 }
