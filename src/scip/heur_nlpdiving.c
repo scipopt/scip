@@ -2663,16 +2663,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    else
       assert(varincover == NULL);
 
-   /* free array of cover variables */
-   if( heurdata->prefercover || heurdata->solvesubmip )
-   {
-      assert(covervars != NULL || !covercomputed);
-      if( covervars != NULL )
-         SCIPfreeBufferArray(scip, &covervars);
-   }
-   else
-      assert(covervars == NULL);
-
    /* free NLP start solution */
    if( nlpstartsol != NULL )
    {
@@ -2697,14 +2687,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       assert(pseudocandsnlpsol != NULL);
       assert(pseudocandsnlpsol != NULL);
-      SCIPfreeBufferArray(scip, &pseudocandslpsol);
       SCIPfreeBufferArray(scip, &pseudocandsnlpsol);
+      SCIPfreeBufferArray(scip, &pseudocandslpsol);
    }
    else
    {
       assert(pseudocandsnlpsol == NULL);
       assert(pseudocandsnlpsol == NULL);
    }
+
+   /* free array of cover variables */
+   if( heurdata->prefercover || heurdata->solvesubmip )
+   {
+      assert(covervars != NULL || !covercomputed);
+      if( covervars != NULL )
+         SCIPfreeBufferArray(scip, &covervars);
+   }
+   else
+      assert(covervars == NULL);
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;

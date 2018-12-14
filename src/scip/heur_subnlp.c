@@ -1682,9 +1682,9 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-      SCIPfreeBufferArray(scip, &consvars);
-      SCIPfreeBufferArray(scip, &boundtypes);
       SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* add and release constraint if created successfully */

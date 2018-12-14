@@ -4055,8 +4055,11 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
 
-      /* compute mapping of variable indices quadratic term -> NLPI */
+      /* allocate memory */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &quadvarsidx, nlrow->nquadvars) );
+
+      /* compute mapping of variable indices quadratic term -> NLPI */
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          var = nlrow->quadvars[i];
@@ -4068,7 +4071,6 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       }
 
       /* compute quad elements using NLPI indices */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       for( i = 0; i < nlrow->nquadelems; ++i )
       {
          assert(nlrow->quadelems[i].idx1 >= 0);
@@ -4488,10 +4490,10 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    {
       if( nlidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &nlidxs[c]);
-      if( linidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &linidxs[c]);
       if( quadelems[c] != NULL )
          SCIPsetFreeBufferArray(set, &quadelems[c]);
+      if( linidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &linidxs[c]);
    }
 
 #if ADDNAMESTONLPI
