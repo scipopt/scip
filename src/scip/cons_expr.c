@@ -3997,14 +3997,15 @@ SCIP_RETCODE createNlRow(
          int* varsusage;
          int* reindexvars;
 
+         /* allocate memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &reindexvars, consdata->nvarexprs) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &varsusage, consdata->nvarexprs) );
+
          /* get count how often variables are used in expr */
-         SCIP_CALL( SCIPallocBufferArray(scip, &varsusage, consdata->nvarexprs) );
-         BMSclearMemoryArray(varsusage, consdata->nvarexprs);
          SCIPexprGetVarsUsage(classicexpr, varsusage);
 
          /* sort out unused variables and collect and reindex remaining variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &reindexvars, consdata->nvarexprs) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &nlvars, consdata->nvarexprs) );
          nnlvars = 0;
          for( i = 0; i < consdata->nvarexprs; ++i )
          {

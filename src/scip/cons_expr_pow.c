@@ -1144,8 +1144,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
          {
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expandedchildren[i]) );
          }
-         SCIPfreeBufferArray(scip, &coefs);
          SCIPfreeBufferArray(scip, &expandedchildren);
+         SCIPfreeBufferArray(scip, &coefs);
 
          return SCIP_OKAY;
       }

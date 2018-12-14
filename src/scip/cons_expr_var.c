@@ -118,8 +118,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
