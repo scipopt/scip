@@ -5416,8 +5416,8 @@ SCIP_RETCODE checkFactorable(
    }
 
  CLEANUP:
-   SCIPfreeBufferArray(scip, &a);
    SCIPfreeBufferArray(scip, &eigvals);
+   SCIPfreeBufferArray(scip, &a);
 
    return SCIP_OKAY;
 }

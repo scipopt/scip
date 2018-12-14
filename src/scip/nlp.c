@@ -4484,28 +4484,28 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
          nlidxs, exprtrees,
          names) );
 
-   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
+      if( nlidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &nlidxs[c]);
       if( linidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &linidxs[c]);
       if( quadelems[c] != NULL )
          SCIPsetFreeBufferArray(set, &quadelems[c]);
-      if( nlidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &nlidxs[c]);
    }
 
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lhss);
-   SCIPsetFreeBufferArray(set, &rhss);
-   SCIPsetFreeBufferArray(set, &nlinvars);
-   SCIPsetFreeBufferArray(set, &linidxs);
-   SCIPsetFreeBufferArray(set, &lincoefs);
-   SCIPsetFreeBufferArray(set, &nquadelems);
-   SCIPsetFreeBufferArray(set, &quadelems);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &nlidxs);
+   SCIPsetFreeBufferArray(set, &quadelems);
+   SCIPsetFreeBufferArray(set, &nquadelems);
+   SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linidxs);
+   SCIPsetFreeBufferArray(set, &nlinvars);
+   SCIPsetFreeBufferArray(set, &rhss);
+   SCIPsetFreeBufferArray(set, &lhss);
 
    nlp->nunflushednlrowadd = 0;
 
@@ -4592,8 +4592,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lbs);
    SCIPsetFreeBufferArray(set, &ubs);
+   SCIPsetFreeBufferArray(set, &lbs);
 
    nlp->nunflushedvaradd = 0;
 
@@ -4653,8 +4653,8 @@ SCIP_RETCODE nlpFlushObjective(
          NULL, NULL,
          0.0) );
 
-   SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linindices);
 
    nlp->objflushed = TRUE;
 

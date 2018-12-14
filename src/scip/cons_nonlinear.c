@@ -7708,7 +7708,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
       /* @todo could add more linearizations for convex or multivariate concave inequ. */
 
-      for( j = 0; j < consdata->nexprtrees; ++j )
+      for( j = consdata->nexprtrees - 1; j >= 0; --j )
       {
          SCIPfreeBufferArray(scip, &x[j]);
       }
