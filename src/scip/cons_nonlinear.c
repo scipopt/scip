@@ -3271,7 +3271,7 @@ SCIP_RETCODE reformulate(
                if( nquadelems > 0 )
                {
                   /* create and add additional node for quadratic and linear part, simplifier should take care of removing unused children later */
-                  SCIP_CALL( SCIPexprgraphCreateNodeQuadratic(SCIPblkmem(scip), &monomialnodes[nmonomialnodes], nchildren, lincoefs, nquadelems, quadelems, constant) );
+                  SCIP_CALL( SCIPexprgraphCreateNodeQuadratic(SCIPblkmem(scip), &monomialnodes[nmonomialnodes], nchildren, foundlincoefs ? lincoefs : NULL, nquadelems, quadelems, constant) );
                   constant = 0.0;
                   SCIP_CALL( SCIPexprgraphAddNode(exprgraph, monomialnodes[nmonomialnodes], SCIPexprgraphGetNodeDepth(node), nchildren, children) );
                   ++nmonomialnodes;
