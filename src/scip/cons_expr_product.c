@@ -887,9 +887,9 @@ SCIP_RETCODE mergeProductExprlist(
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "val") != 0);
       assert(previous == NULL || previous->next == current);
 
-      /* in general the base of an expression is itself if type(expr) != pow, otherwise it is child of pow */
-      /* TODO: better documentation
-       *       clean code */
+      /* we are going to multiply the two exprs: current and tomergenode; to multiply them we interpret them as
+       * base^exponent; the base of an expr is the expr itself if type(expr) != pow, otherwise it is the child of pow
+       */
       if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "pow") == 0 )
       {
          base1 = SCIPgetConsExprExprChildren(current->expr)[0];
@@ -911,7 +911,10 @@ SCIP_RETCODE mergeProductExprlist(
          expo2 = 1.0;
       }
 
-      /* if both bases are the same: have to build simplifiy(base^(expo1 + expo2)) */
+      /* if both bases are the same then add to unsimplifiedchildren the resulting expr of simplifiy(base^(expo1 + expo2));
+       * the reason is that simplifiy(base^(expo1 + expo2)) might be a product and so cannot go to finalchildren;
+       * after multiplying, current has to be removed from finalchildren
+       */
       if( SCIPcompareConsExprExprs(base1, base2) == 0 )
       {
          SCIP_CONSEXPR_EXPR* power;
@@ -931,7 +934,7 @@ SCIP_RETCODE mergeProductExprlist(
          tomergenode = tomergenode->next;
          insertFirstList(aux, unsimplifiedchildren);
 
-         /* destroy current */
+         /* remove current */
          if( current == *finalchildren )
          {
             assert(previous == NULL);
@@ -951,7 +954,8 @@ SCIP_RETCODE mergeProductExprlist(
          continue;
       }
 
-      /* bases are not the same, then expressions cannot be the same */
+      /* bases are not the same, then expressions cannot be the same; therefore we need to insert tomergenode in
+       * finalchildren; for this, we need to take care of the order  */
       compareres = SCIPcompareConsExprExprs(current->expr, tomergenode->expr);
       if( compareres == -1 )
       {
