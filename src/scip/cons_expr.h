@@ -753,7 +753,6 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
    void*                   intevalvardata    /**< data to be passed to intevalvar call */
    );

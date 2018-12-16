@@ -122,13 +122,10 @@ struct SCIP_ConsExpr_Expr
                                             *  the tag allows us to decide whether the expression depends on the
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */
 
-   /* interval-evaluation */
-   unsigned int            intevaltag;    /**< tag of domains for which tag for which the expression has been evaluated last, or 0 */
-   SCIP_INTERVAL           interval;      /**< interval from the last interval evaluation */
-
-   /* propagation */
+   /* domain propagation */
+   SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
+   unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
-   SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
    /* expression iterators data */
    SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPRITERATOR_MAXNACTIVE];  /**< data for expression iterators */

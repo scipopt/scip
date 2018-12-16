@@ -201,7 +201,8 @@ struct SCIP_ConshdlrData
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
-   unsigned int             lastintevaltag;  /**< last interval evaluation tag used */
+   unsigned int             curboundstag;    /**< tag indicating current variable bounds */
+   unsigned int             lastboundrelax;  /**< tag when bounds where most recently relaxed */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
 
@@ -276,7 +277,7 @@ SCIP_RETCODE createExpr(
    (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->activity);
 
    if( nchildren > 0 )
    {
@@ -951,13 +952,14 @@ SCIP_RETCODE forwardPropExpr(
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable, or NULL */
    void*                   intevalvardata,   /**< data to be passed to intevalvar call */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   SCIP_QUEUE*             reversepropqueue, /**< queue to add candidates for reverse propagation, or NULL */
    SCIP_Bool*              infeasible,       /**< buffer to store whether the problem is infeasible (NULL if not needed) */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool aborted;
 
    assert(scip != NULL);
@@ -968,8 +970,11 @@ SCIP_RETCODE forwardPropExpr(
    if( ntightenings != NULL )
       *ntightenings = 0;
 
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
    /* if value is up-to-date, then nothing to do */
-   if( boxtag != 0 && rootexpr->intevaltag == boxtag && !rootexpr->hastightened )
+   if( rootexpr->activitytag == conshdlrdata->curboundstag )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
@@ -982,17 +987,19 @@ SCIP_RETCODE forwardPropExpr(
       {
          case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
+            /* skip child if it has been evaluated already and current expr is not tightened */
             SCIP_CONSEXPR_EXPR* child;
 
             child = SCIPexpriteratorGetChildExprDFS(it);
-            if( boxtag != 0 && boxtag == child->intevaltag && !expr->hastightened )
+            if( conshdlrdata->curboundstag == child->activitytag )
             {
-               /* skip child if it has been evaluated already and current expr is not tightened */
-               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->interval) )
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->activity) )
                {
                   aborted = TRUE;
                   break;
                }
+
+               /* TODO check whether to add child to reversepropqueue? */
 
                expr = SCIPexpriteratorSkipDFS(it);
                continue;
@@ -1003,56 +1010,15 @@ SCIP_RETCODE forwardPropExpr(
 
          case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
-            SCIP_Bool intersect;
             SCIP_INTERVAL interval;
 
-            /* reset interval of the expression if using boxtag = 0 or we did not visit this expression so
-             * far, i.e., expr->intevaltag != boxtag
-             */
-            if( boxtag == 0 || expr->intevaltag != boxtag )
+            /* we should not have entered this expression if its activity was already uptodate */
+            assert(expr->activitytag < conshdlrdata->curboundstag);
+
+            if( expr->activitytag >= conshdlrdata->lastboundrelax )
             {
-               expr->intevaltag = boxtag;
-               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
-               expr->hastightened = FALSE;
-               intersect = FALSE;
-            }
-            else
-            {
-               assert(expr->intevaltag == boxtag);
-
-               /* the interval of the expression is valid, but did not change since the last call -> done with this expression */
-               if( !expr->hastightened )
-                  break;
-
-               /* intersect result with existing interval */
-               intersect = TRUE;
-            }
-
-            if( intersect )
-            {
-               /* start with interval that is stored in expression */
-               interval = expr->interval;
-
-               /* intersect with the interval of the auxiliary variable, if available */
-               if( expr->auxvar != NULL )
-               {
-                  SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
-                  SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
-                  /* TODO use intevalvar? */
-                  SCIP_Real inf = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
-                  SCIP_Real sup = SCIPisInfinity(scip, ub) ? SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
-                  SCIP_INTERVAL auxinterval;
-
-                  SCIPintervalSetBounds(&auxinterval, inf, sup);
-                  SCIPintervalIntersect(&interval, interval, auxinterval);
-
-                  /* check whether resulting interval is already empty */
-                  if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
-                  {
-                     aborted = TRUE;
-                     break;
-                  }
-               }
+               /* start with existing activity of expression, if it is still valid (though not necessarily tight) */
+               interval = expr->activity;
             }
             else
             {
@@ -1060,6 +1026,7 @@ SCIP_RETCODE forwardPropExpr(
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
             }
 
+            /* run interval eval of nonlinear handlers or expression handler */
             if( expr->nenfos > 0 )
             {
                SCIP_CONSEXPR_NLHDLR* nlhdlr;
@@ -1091,49 +1058,68 @@ SCIP_RETCODE forwardPropExpr(
             }
             else
             {
+               SCIP_INTERVAL exprhdlrinterval = interval;
+
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &interval, intevalvar, intevalvardata) );
+               /* TODO always do this?, or only if non of the nlhdlr implemented inteval? */
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG
-               SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", interval.inf, interval.sup);
+               SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", exprhdlrinterval.inf, exprhdlrinterval.sup);
                SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
-               SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
+               SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", interval.inf, interval.sup, expr->exprhdlr->name);
 #endif
+
+               /* intersect with interval */
+               SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
             }
 
-            if( intersect )
+            if( expr->auxvar != NULL )
             {
-               /* make sure resulting interval is subset of expr->interval, if intersect is true
-                * even though we passed expr->interval as input to the inteval callbacks,
-                * these callbacks might not have taken it into account (most do not, actually)
+               SCIP_INTERVAL auxvarbounds;
+               SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
+               SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
+               /* TODO use intevalvar */
+               lb = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
+               ub = SCIPisInfinity(scip,  ub) ?  SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
+
+               SCIPintervalSetBounds(&auxvarbounds, lb, ub);
+
+               /* it would be odd if the domain of an auxiliary variable were empty */
+               assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
+
+               /* if bounds on auxiliary variable allow a further tightening, then reversepropagation
+                * might provide tighter bounds for children, thus add this expression to the reversepropqueue
+                * TODO we might want to require a mimimal tightening?
+                * TODO another case when to queue an expression for reversepropagation is when the domain of this
+                * expression would induce bound changes, i.e., sqrt(x) -> x >= 0
                 */
-               SCIPintervalIntersect(&interval, interval, expr->interval);
+               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, auxvarbounds) && !expr->inqueue )
+               {
+                  SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+                  expr->inqueue = TRUE;
+               }
+               SCIPintervalIntersect(&interval, interval, auxvarbounds);
             }
 
             /* check whether the resulting interval is empty */
             if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
             {
-               SCIPintervalSetEmpty(&expr->interval);
                aborted = TRUE;
-               break;
             }
-
-            if( tightenauxvars )
+            else if( tightenauxvars )
             {
-               /* tighten bounds of expression interval and the auxiliary variable */
+               /* update expression activity and tighten bounds of auxiliary variable, if any */
                SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &aborted, ntightenings) );
-
-               if( aborted )
-               {
-                  SCIPintervalSetEmpty(&expr->interval);
-                  break;
-               }
             }
             else
             {
-               /* update expression interval */
-               SCIPintervalSetBounds(&expr->interval, interval.inf, interval.sup);
+               /* update expression activity only */
+               expr->activity = interval;
             }
+
+            /* remember that activity is uptodate now */
+            expr->activitytag = conshdlrdata->curboundstag;
 
             break;
          }
@@ -1150,8 +1136,8 @@ SCIP_RETCODE forwardPropExpr(
    /* evaluation leads to an empty interval -> detected infeasibility */
    if( aborted )
    {
-      SCIPintervalSetEmpty(&rootexpr->interval);
-      rootexpr->intevaltag = boxtag;
+      SCIPintervalSetEmpty(&rootexpr->activity);
+      rootexpr->activitytag = conshdlrdata->curboundstag;
 
       if( infeasible != NULL)
          *infeasible = TRUE;
@@ -1164,6 +1150,9 @@ SCIP_RETCODE forwardPropExpr(
 
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
+ *
+ *  If queue is given and the computed activity in an expression is found to be larger than an auxiliary variables bounds,
+ *  then the expression is added to the queue for reverse propagation.
  */
 static
 SCIP_RETCODE forwardPropCons(
@@ -1171,7 +1160,7 @@ SCIP_RETCODE forwardPropCons(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
+   SCIP_QUEUE*             reversepropqueue, /**< queue to add candidates for reverse propagation, or NULL */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
@@ -1217,11 +1206,13 @@ SCIP_RETCODE forwardPropCons(
    /* use 0 tag to recompute intervals
     * we cannot trust variable bounds from SCIP, so relax them a little bit (a.k.a. epsilon)
     */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), boxtag, infeasible, ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), reversepropqueue, infeasible, ntightenings) );
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
    if( !(*infeasible) )
    {
+      /* TODO since the auxvar bounds are initially set to [lhs,rhs], isn't all this redundant? */
+
       /* relax sides by SCIPepsilon() and handle infinite sides */
       SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
       SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
@@ -1240,6 +1231,7 @@ SCIP_RETCODE forwardPropCons(
 
          SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip),
             SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
+
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
@@ -1257,65 +1249,22 @@ SCIP_RETCODE forwardPropCons(
    return SCIP_OKAY;
 }
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
-/** propagates bounds for each sub-expression of a given set of constraints by starting from the root expressions; the
- *  expression will be traversed in breadth first search by using a queue
- *
- *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
- *  forwardPropCons() before calling this function
- */
 static
-SCIP_RETCODE reversePropConss(
+SCIP_RETCODE reversePropQueue(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS**             conss,            /**< constraints to propagate */
-   int                     nconss,           /**< total number of constraints to propagate */
+   SCIP_QUEUE*             queue,            /**< queue of expression to propagate */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool               allexprs,         /**< whether reverseprop should be called for all expressions, regardless of whether their interval was tightened */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_QUEUE* queue;
-   int i;
-
-   assert(scip != NULL);
-   assert(conss != NULL);
-   assert(nconss >= 0);
+   assert(queue != NULL);
    assert(infeasible != NULL);
    assert(ntightenings != NULL);
 
    *infeasible = FALSE;
    *ntightenings = 0;
-
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
-   /* create queue */
-   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2.0) );
-
-   /* add root expressions to the queue */
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss[i] != NULL);
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      /* propagate active, non-deleted, propagation-enabled constraints only */
-      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
-         continue;
-
-      /* skip expressions that could not have been tightened, unless allexprs is set */
-      if( !consdata->expr->hastightened && !allexprs )
-         continue;
-
-      /* add expressions which are not in the queue so far */
-      if( !consdata->expr->inqueue && SCIPgetConsExprExprNChildren(consdata->expr) > 0 )
-      {
-         SCIP_CALL( SCIPqueueInsert(queue, (void*) consdata->expr) );
-         consdata->expr->inqueue = TRUE;
-      }
-   }
 
    /* main loop that calls reverse propagation for expressions on the queue
     * when reverseprop finds a tightening for an expression, then that expression is added to the queue (within the reverseprop call)
@@ -1376,6 +1325,8 @@ SCIP_RETCODE reversePropConss(
        * SCIPtightenConsExprExpr only adds children to the queue which have reverseprop capability
        */
       if( allexprs )
+      {
+         int i;
          for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
          {
             SCIP_CONSEXPR_EXPR* child;
@@ -1388,6 +1339,7 @@ SCIP_RETCODE reversePropConss(
                child->inqueue = TRUE;
             }
          }
+      }
 
       /* stop propagation if the problem is infeasible */
       if( *infeasible )
@@ -1404,6 +1356,66 @@ SCIP_RETCODE reversePropConss(
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
    }
+
+   return SCIP_OKAY;
+}
+
+
+/* export this function here, so it can be used by unittests but is not really part of the API */
+/** propagates bounds for each sub-expression of a given set of constraints by starting from the root expressions; the
+ *  expression will be traversed in breadth first search by using a queue
+ *
+ *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
+ *  forwardPropCons() before calling this function
+ */
+static
+SCIP_RETCODE reversePropConss(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS**             conss,            /**< constraints to propagate */
+   int                     nconss,           /**< total number of constraints to propagate */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool               allexprs,         /**< whether reverseprop should be called for all expressions, regardless of whether their interval was tightened */
+   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_QUEUE* queue;
+   int i;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(nconss > 0);
+   assert(infeasible != NULL);
+   assert(ntightenings != NULL);
+
+   /* create queue */
+   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2.0) );
+
+   /* add root expressions to the queue */
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      /* propagate active, non-deleted, propagation-enabled constraints only */
+      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
+         continue;
+
+      /* skip expressions that could not have been tightened, unless allexprs is set */
+//      if( !consdata->expr->hastightened && !allexprs )
+//         continue;
+
+      /* add expressions which are not in the queue so far */
+      if( !consdata->expr->inqueue && SCIPgetConsExprExprNChildren(consdata->expr) > 0 )
+      {
+         SCIP_CALL( SCIPqueueInsert(queue, (void*) consdata->expr) );
+         consdata->expr->inqueue = TRUE;
+      }
+   }
+
+   SCIP_CALL( reversePropQueue(scip, queue, force, allexprs, infeasible, ntightenings) );
 
    /* free the queue */
    SCIPqueueFree(&queue);
@@ -1477,17 +1489,29 @@ SCIP_RETCODE propConss(
    roundnr = 0;
    cutoff = FALSE;
 
-   /* increase lastinteval tag */
-   ++(conshdlrdata->lastintevaltag);
-   assert(conshdlrdata->lastintevaltag > 0);
+   /* increase curboundstag
+    * TODO this should happen in var eventhandler
+    */
+   ++conshdlrdata->curboundstag;
+   assert(conshdlrdata->curboundstag > 0);
+
+   /* assume bounds were relaxed
+    * TODO this should be set in var eventhandler
+    */
+   conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
    /* main propagation loop */
    do
    {
+      SCIP_QUEUE* queue;
+
       SCIPdebugMsg(scip, "start propagation round %d\n", roundnr);
 
-      /* apply forward propagation; recompute expression intervals if it is called for the first time (this also marks
-       * all expressions as non-tightened)
+      /* create queue */
+      SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2.0) );
+
+      /* apply forward propagation (update expression activities)
+       * and add promising root expressions into queue for reversepropagation
        */
       for( i = 0; i < nconss; ++i )
       {
@@ -1512,8 +1536,8 @@ SCIP_RETCODE propConss(
          redundant = FALSE;
          ntightenings = 0;
 
-         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, conshdlrdata->lastintevaltag, &cutoff,
-            &redundant, &ntightenings) );
+         /* update acitivities in expression and collect initial candidates for reverse propagation */
+         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, queue, &cutoff, &redundant, &ntightenings) );
          assert(ntightenings >= 0);
          *nchgbds += ntightenings;
 
@@ -1532,15 +1556,17 @@ SCIP_RETCODE propConss(
          consdata->ispropagated = TRUE;
       }
 
-      /* apply backward propagation; mark constraint as propagated */
+      /* apply backward propagation */
       /* TODO during presolve, maybe we want to run reverseprop for ALL expressions once, if roundnr==0 ? */
-      SCIP_CALL( reversePropConss(scip, conss, nconss, force, FALSE, &cutoff, &ntightenings) );
+      SCIP_CALL( reversePropQueue(scip, queue, force, FALSE, &cutoff, &ntightenings) );
 
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
 
       if( nchgbds != NULL )
          *nchgbds += ntightenings;
+
+      SCIPqueueFree(&queue);
 
       if( cutoff )
       {
@@ -1600,9 +1626,15 @@ SCIP_RETCODE checkRedundancyConss(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* increase lastinteval tag */
-   ++(conshdlrdata->lastintevaltag);
-   assert(conshdlrdata->lastintevaltag > 0);
+   /* increase curboundstag
+    * TODO this should also happen in var eventhandler
+    * we might still do this here to trigger a reeval of all bounds, since we relax variable bounds differently
+    */
+   ++conshdlrdata->curboundstag;
+   assert(conshdlrdata->curboundstag > 0);
+
+   /* pretend bounds were relaxed, so old activities are no longer used, since we relax variable bounds differently */
+   conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
    SCIPdebugMsg(scip, "checking %d constraints for redundancy\n", nconss);
 
@@ -1688,7 +1720,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, conshdlrdata->lastintevaltag, cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, NULL, cutoff, NULL) );
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
@@ -1697,8 +1729,8 @@ SCIP_RETCODE checkRedundancyConss(
          return SCIP_OKAY;
       }
 
-      assert(consdata->expr->intevaltag == conshdlrdata->lastintevaltag);
-      activity = consdata->expr->interval;
+      assert(consdata->expr->activitytag == conshdlrdata->curboundstag);
+      activity = consdata->expr->activity;
 
       /* relax sides by feastol
        * we could accept every solution that violates constraints up to feastol as redundant, so this is the most permissive we can be
@@ -1719,6 +1751,10 @@ SCIP_RETCODE checkRedundancyConss(
 
       SCIPdebugMsg(scip, " -> not redundant: activity [%g,%g] not within sides [%g,%g]\n", activity.inf, activity.sup, consdata->lhs, consdata->rhs);
    }
+
+   /* make sure bounds are reevaluated again, since we relaxed bounds in a different way */
+   ++conshdlrdata->curboundstag;
+   conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
    return SCIP_OKAY;
 }
@@ -1832,11 +1868,11 @@ SCIP_RETCODE detectNlhdlr(
           * we do this here, because we want to call reverseprop after detect (if called from initlp),
           * but some nlhdlr (i.e., quadratic) require that its inteval has been called before
           */
-         interval = expr->interval;
+         interval = expr->activity;
          SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &interval, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr)) );
          SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
          /* tighten bounds of expression interval and the auxiliary variable */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, expr->interval, TRUE, NULL, infeasible, &ntightenings) );
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, TRUE, NULL, infeasible, &ntightenings) );
       }
    }
 
@@ -1904,9 +1940,16 @@ SCIP_RETCODE detectNlhdlrs(
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      /* increase lastinteval tag */
-      ++(conshdlrdata->lastintevaltag);
-      assert(conshdlrdata->lastintevaltag > 0);
+      /* increase curboundstag
+       * TODO this should happen in var eventhandler
+       */
+      ++(conshdlrdata->curboundstag);
+      assert(conshdlrdata->curboundstag > 0);
+
+      /* assume bounds were relaxed
+       * TODO this should be set in var eventhandler
+       */
+      conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
    }
 
    *infeasible = FALSE;
@@ -1924,7 +1967,7 @@ SCIP_RETCODE detectNlhdlrs(
           * we do this here to have bounds for the auxiliary variables and for a reverseprop call at the end
           * we don't do auxiliary variables if in presolve, so do only in solving
           */
-         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], FALSE, conshdlrdata->lastintevaltag, infeasible, &redundant, &ntightenings) );
+         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], FALSE, NULL, infeasible, &redundant, &ntightenings) );
          if( *infeasible )
          {
             SCIPdebugMsg(scip, "infeasibility detected in forward prop of constraint <%s>\n", SCIPconsGetName(conss[i]));
@@ -2040,6 +2083,7 @@ SCIP_RETCODE detectNlhdlrs(
        * for example, sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
        * Also we do this already here because LP solving and separation will be called next, which could already profit
        * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
+       * TODO reconsider how to do this, i.e., call only reversePropQueue, with queue initialized above?, or call propConss?
        */
       SCIP_CALL( reversePropConss(scip, conss, nconss, FALSE, TRUE, infeasible, &ntightenings) );
    }
@@ -2482,7 +2526,8 @@ SCIP_RETCODE addLocks(
    /* call interval evaluation when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, SCIPconsGetHdlr(cons), consdata->expr, 0, NULL, NULL) );
+      /* TODO should not need this but assume that activities will be updated if needed and requested */
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, SCIPconsGetHdlr(cons), consdata->expr, NULL, NULL) );
    }
 
    /* remember locks */
@@ -9282,13 +9327,13 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
 
       if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
       {
-         /* print interval value */
-         SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
+         /* print activity */
+         SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->activity.inf, expr->activity.sup);
 
          if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
          {
-            /* print also interval eval tag */
-            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
+            /* print also activity eval tag */
+            SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->activitytag);
          }
          SCIPinfoMessage(scip, dotdata->file, "\\n");
       }
@@ -9827,23 +9872,26 @@ SCIP_Real SCIPgetConsExprExprDerivative(
  * then subexpressions are always reevaluated.
  * The tag is stored together with the interval and can be received via
  * SCIPgetConsExprExprEvalIntervalTag().
+ *
+ * TODO remove? remove intevalvar argument?
  */
 SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
    void*                   intevalvardata    /**< data to be passed to intevalvar call */
    )
 {
    assert(expr != NULL);
 
-   SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, boxtag, NULL, NULL) );
+   SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
 
+// TODO rename to SCIPgetConsExprExprActivity
+// TODO change to function that might reevaluate activity if not uptodate?
 /** returns the interval from the last interval evaluation of an expression (interval can be empty) */
 SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
@@ -9851,9 +9899,10 @@ SCIP_INTERVAL SCIPgetConsExprExprInterval(
 {
    assert(expr != NULL);
 
-   return expr->interval;
+   return expr->activity;
 }
 
+// TODO rename to SCIPsetConsExprExprActivity, or remove?
 /** sets the evaluation interval */
 void SCIPsetConsExprExprEvalInterval(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
@@ -9863,18 +9912,19 @@ void SCIPsetConsExprExprEvalInterval(
 {
    assert(expr != NULL);
 
-   SCIPintervalSetBounds(&expr->interval, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
-   expr->intevaltag = tag;
+   SCIPintervalSetBounds(&expr->activity, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
+   expr->activitytag = tag;
 }
 
-/** gives the box tag from the last interval evaluation, or 0 */
+// TODO rename to SCIPgetConsExprExprEvalActivityTag
+/** gives the box tag from the last activity evaluation, or 0 */
 unsigned int SCIPgetConsExprExprEvalIntervalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->intevaltag;
+   return expr->activitytag;
 }
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -9902,10 +9952,10 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity));
 
-   oldlb = SCIPintervalGetInf(expr->interval);
-   oldub = SCIPintervalGetSup(expr->interval);
+   oldlb = SCIPintervalGetInf(expr->activity);
+   oldub = SCIPintervalGetSup(expr->activity);
    *cutoff = FALSE;
 
 #if 0 /* def SCIP_DEBUG */
@@ -9920,30 +9970,30 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    {
       SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%g,%g] with old bounds [%g,%g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
 
-      SCIPintervalSetEmpty(&expr->interval);
+      SCIPintervalSetEmpty(&expr->activity);
       *cutoff = TRUE;
 
       return SCIP_OKAY;
    }
 
    /* intersect old interval with the new one */
-   SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
-   newlb = SCIPintervalGetInf(expr->interval);
-   newub = SCIPintervalGetSup(expr->interval);
+   SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+   newlb = SCIPintervalGetInf(expr->activity);
+   newub = SCIPintervalGetSup(expr->activity);
 
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
    {
       SCIPdebugMsg(scip, "cut off due to infinite new bounds [%g,%g]\n", newlb, newub);
 
-      SCIPintervalSetEmpty(&expr->interval);
+      SCIPintervalSetEmpty(&expr->activity);
       *cutoff = TRUE;
 
       return SCIP_OKAY;
    }
 
-
-   /* check which bound can be tightened */
+   /* check which bound can be tightened
+    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will lightly have tightenlb|tightenub */
    if( force )
    {
       tightenlb = !SCIPisHugeValue(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
@@ -9961,7 +10011,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       SCIP_VAR* var;
 
       /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
-      expr->hastightened = TRUE;
+//      expr->hastightened = TRUE;
 
       /* tighten bounds of linearization variable
        * but: do not tighten variable in problem stage (important for unittests)
@@ -9984,7 +10034,10 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             }
 
             if( *cutoff )
+            {
+               SCIPintervalSetEmpty(&expr->activity);
                return SCIP_OKAY;
+            }
          }
 
          if( tightenub )
@@ -9999,7 +10052,10 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             }
 
             if( *cutoff )
+            {
+               SCIPintervalSetEmpty(&expr->activity);
                return SCIP_OKAY;
+            }
          }
       }
 
@@ -10126,8 +10182,8 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    /* type of auxiliary variable depends on integrality information of the expression */
    vartype = SCIPisConsExprExprIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
-      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, vartype) ); /*lint !e666*/
+   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->activity.inf ),
+      MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
    SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
    /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
@@ -10485,8 +10541,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening) */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening)
+    * TODO should not need this, but assume activities will be updated if necessary when requested
+    */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, NULL, NULL) );
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
