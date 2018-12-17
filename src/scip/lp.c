@@ -3121,6 +3121,31 @@ SCIP_RETCODE lpSetConditionLimit(
    return SCIP_OKAY;
 }
 
+/** sets the MARKOWITZ setting of the LP solver */
+static
+SCIP_RETCODE lpSetMarkowitz(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             threshhold,         /**< new MARKOWITZ value */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_MARKOWITZ, lp->lpimarkowitz) );
+
+   if( threshhold != lp->lpimarkowitz )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_MARKOWITZ, threshhold, success) );
+      if( *success )
+         lp->lpimarkowitz = threshhold;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** sets the type of timer of the LP solver */
 static
 SCIP_RETCODE lpSetTiming(
@@ -9127,6 +9152,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
+   (*lp)->lpimarkowitz = set->lp_markowitz;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -9252,6 +9278,13 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: condition number limit for the basis not available -- SCIP parameter lp/conditionlimit has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_MARKOWITZ, (*lp)->lpimarkowitz, &success) );
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: markowitz threshhold not available -- SCIP parameter lp/minmarkowitz has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_THREADS, (*lp)->lpithreads, &success) );
@@ -11486,6 +11519,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetThreads(lp, set->lp_threads, &success) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
+   SCIP_CALL( lpSetMarkowitz(lp, set->lp_markowitz, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, (int) SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
