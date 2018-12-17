@@ -21,6 +21,10 @@
 
 echo "This is debug_runs.sh running."
 
+# arguments and defaults
+# Find out what day of week it is: mon-1 .. sun-7
+: ${DAY_OF_WEEK:=$(date +%u)}
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
@@ -56,9 +60,6 @@ export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
 export BLISS_DIR=/nfs/optimi/usr/sw/bliss
-
-# Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=`date +%u`
 
 # create all required directories
 mkdir -p settings

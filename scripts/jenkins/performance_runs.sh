@@ -21,6 +21,10 @@
 
 echo "This is performance_runs.sh running."
 
+# arguments and defaults
+# Find out what day of week it is: mon-1 .. sun-7
+: ${DAY_OF_WEEK:=$(date +%u)}
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
@@ -55,9 +59,6 @@ export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
 export CRITERION_DIR=""
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export BLISS_DIR=/nfs/optimi/usr/sw/bliss
-
-# Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=$(date +%u)
 
 # create required directory
 mkdir -p settings
