@@ -1035,6 +1035,12 @@ SCIP_RETCODE readCols(
 
       val = atof(mpsinputField3(mpsi));
 
+      /* in case of infinity, make sure the normal infinity is used */
+      if( SCIPisInfinity(scip, val) )
+         val = SCIPinfinity(scip);
+      else if( SCIPisInfinity(scip, -val) )
+         val = -SCIPinfinity(scip);
+
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
          SCIP_CALL( SCIPchgVarObj(scip, var, val) );
