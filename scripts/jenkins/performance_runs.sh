@@ -67,17 +67,18 @@ mkdir -p settings
 ### Update Branches ###
 #######################
 
-#BRANCHNAME=${GITBRANCH}
-#if [ "${GITBRANCH}" == "bugfix" ]; then
-#  BRANCHNAME="v60-bugfix"
-#fi
-#if [ "${DAY_OF_WEEK}" == "6" ]; then
-#  git co master
-#  git co performance-${GITBRANCH}
-#  git merge ${BRANCHNAME}
-#  git push
-#  git co master
-#fi
+BRANCHNAME=${GITBRANCH}
+if [ "${GITBRANCH}" == "bugfix" ]; then
+  BRANCHNAME="v60-bugfix"
+fi
+if [ "${DAY_OF_WEEK}" == "6" ]; then
+  git checkout ${BRANCHNAME}
+  git pull
+  git checkout performance-${GITBRANCH}
+  git merge ${BRANCHNAME} --ff-only
+  git push
+  git checkout ${BRANCHNAME}
+fi
 
 ####################################
 ### jobs configuration variables ###
