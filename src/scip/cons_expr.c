@@ -1489,17 +1489,6 @@ SCIP_RETCODE propConss(
    roundnr = 0;
    cutoff = FALSE;
 
-   /* increase curboundstag
-    * TODO this should happen in var eventhandler
-    */
-   ++conshdlrdata->curboundstag;
-   assert(conshdlrdata->curboundstag > 0);
-
-   /* assume bounds were relaxed
-    * TODO this should be set in var eventhandler
-    */
-   conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
-
    /* main propagation loop */
    do
    {
@@ -1593,6 +1582,10 @@ SCIP_RETCODE propConss(
  * Also removes constraints of the form lhs <= variable <= rhs.
  *
  * @TODO it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
+ *
+ * @note This could should not run during solving, because the forwardProp takes the bounds of auxiliary variables into account.
+ * For the root expression, these bounds are already set to the constraint sides, so that the activity of every expression
+ * would appear as if the constraint is redundant.
  */
 static
 SCIP_RETCODE checkRedundancyConss(
@@ -1626,14 +1619,12 @@ SCIP_RETCODE checkRedundancyConss(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* increase curboundstag
-    * TODO this should also happen in var eventhandler
-    * we might still do this here to trigger a reeval of all bounds, since we relax variable bounds differently
+   /* increase curboundstag and pretend bounds were relaxed
+    * we do this here to trigger a reevaluation of all bounds, since we will relax variable bounds
+    * for the redundancy check differently than for domain propagation
     */
    ++conshdlrdata->curboundstag;
    assert(conshdlrdata->curboundstag > 0);
-
-   /* pretend bounds were relaxed, so old activities are no longer used, since we relax variable bounds differently */
    conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
    SCIPdebugMsg(scip, "checking %d constraints for redundancy\n", nconss);
@@ -1937,20 +1928,6 @@ SCIP_RETCODE detectNlhdlrs(
    /* allocate some buffer for temporary storage of nlhdlr detect result */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      /* increase curboundstag
-       * TODO this should happen in var eventhandler
-       */
-      ++(conshdlrdata->curboundstag);
-      assert(conshdlrdata->curboundstag > 0);
-
-      /* assume bounds were relaxed
-       * TODO this should be set in var eventhandler
-       */
-      conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
-   }
 
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
@@ -2307,6 +2284,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_CONSEXPR_EXPR* varexpr;
    SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR* var;
 
    assert(eventdata != NULL);
@@ -2335,9 +2314,23 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
       SCIPdebugMsg(scip, "  propagate and simplify %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
       consdata->issimplified = FALSE;
+
+      /* increase tag an bounds */
+      ++conshdlrdata->curboundstag;
+      assert(conshdlrdata->curboundstag > 0);
+
+      /* remember also if we relaxed bounds now */
+      if( eventtype & SCIP_EVENTTYPE_BOUNDRELAXED )
+         conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
    }
    if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != (unsigned int) 0 )
    {
