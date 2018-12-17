@@ -4462,8 +4462,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       /* 1e-4 <= dval <= 0.999 */
       if( dval < 1e-4 )
          dval = 1e-4;
-      else if( dval > 0.999 )
-         dval = 0.999;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
 
       (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
       break;
