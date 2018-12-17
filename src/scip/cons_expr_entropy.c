@@ -378,7 +378,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
    SCIPintervalEntropy(SCIPinfinity(scip), interval, childinterval);
@@ -484,8 +484,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
-   childinterval = SCIPgetConsExprExprInterval(child);
-   exprinterval = SCIPgetConsExprExprInterval(expr);
+   childinterval = SCIPgetConsExprExprActivity(scip, child);
+   exprinterval = SCIPgetConsExprExprActivity(scip, expr);
 
    /* compute resulting intervals */
    SCIP_CALL( reverseProp(scip, exprinterval, childinterval, &newinterval) );
@@ -539,6 +539,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_INTERVAL childbounds;
    SCIP_Real childinf;
    SCIP_Real childsup;
    SCIP_Real brpoint = exp(-1.0);
@@ -551,8 +552,9 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
-   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+   childbounds = SCIPgetConsExprExprActivity(scip, child);
+   childinf = SCIPintervalGetInf(childbounds);
+   childsup = SCIPintervalGetSup(childbounds);
 
    if( childsup <= brpoint )
       *result = SCIP_MONOTONE_INC;

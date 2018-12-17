@@ -2479,11 +2479,11 @@ SCIP_RETCODE addLocks(
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
       return SCIP_OKAY;
 
-   /* call interval evaluation when root expression is locked for the first time */
+   /* make sure activities are uptodate when root expression is locked for the first time */
    if( consdata->expr->nlockspos == 0 && consdata->expr->nlocksneg == 0 )
    {
-      /* TODO should not need this but assume that activities will be updated if needed and requested */
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, SCIPconsGetHdlr(cons), consdata->expr, NULL, NULL) );
+      SCIP_INTERVAL activity;
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, SCIPconsGetHdlr(cons), consdata->expr, &activity, TRUE) );
    }
 
    /* remember locks */
@@ -9812,75 +9812,80 @@ SCIP_Real SCIPgetConsExprExprDerivative(
    return expr->derivative;
 }
 
-/** evaluates an expression over a box
+/** returns the activity of the expression
  *
- * Initiates an expression walk to also evaluate children, if necessary.
- * The resulting interval can be received via SCIPgetConsExprExprEvalInterval().
- * If the box does not overlap with the domain of the function behind the expression
- * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
- *
- * For variables, the local variable bounds, possibly relaxed by some amount, are used as interval.
- * The actual interval is determined by the intevalvar function, if not NULL.
- * If NULL, then the local bounds of the variable are taken without modification.
- *
- * If a nonzero \p boxtag is passed, then only (sub)expressions are
- * reevaluated that have a different tag. If a tag of 0 is passed,
- * then subexpressions are always reevaluated.
- * The tag is stored together with the interval and can be received via
- * SCIPgetConsExprExprEvalIntervalTag().
- *
- * TODO remove? remove intevalvar argument?
+ * The caller needs to make sure that the activity is valid.
+ * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
+ * - interval evaluation (intervals for children only)
+ * - reverse propagation
+ * - monotonicity computation
+ * - convexity detection
  */
-SCIP_RETCODE SCIPevalConsExprExprInterval(
+SCIP_INTERVAL SCIPgetConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
-   void*                   intevalvardata    /**< data to be passed to intevalvar call */
-   )
-{
-   assert(expr != NULL);
-
-   SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intevalvar, intevalvardata, NULL, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
-// TODO rename to SCIPgetConsExprExprActivity
-// TODO change to function that might reevaluate activity if not uptodate?
-/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
-SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
 {
+#ifndef NDEBUG
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
    assert(expr != NULL);
+
+   /* check whether activity is valid */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   assert(expr->activitytag >= conshdlrdata->lastboundrelax);
+#endif
 
    return expr->activity;
 }
 
-// TODO rename to SCIPsetConsExprExprActivity, or remove?
-/** sets the evaluation interval */
-void SCIPsetConsExprExprEvalInterval(
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
+ * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
+ * since last evaluation.
+ */
+EXTERN
+SCIP_RETCODE SCIPevalConsExprExprActivity(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
+   SCIP_INTERVAL*          activity,         /**< interval where to store expression */
+   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
    assert(expr != NULL);
+   assert(activity != NULL);
 
-   SCIPintervalSetBounds(&expr->activity, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
-   expr->activitytag = tag;
-}
+   if( consexprhdlr == NULL )
+      consexprhdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(consexprhdlr != NULL);
 
-// TODO rename to SCIPgetConsExprExprEvalActivityTag
-/** gives the box tag from the last activity evaluation, or 0 */
-unsigned int SCIPgetConsExprExprEvalIntervalTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   )
-{
-   assert(expr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
 
-   return expr->activitytag;
+   if( expr->activitytag < conshdlrdata->lastboundrelax ||
+      (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
+   {
+      /* update activity of expression */
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, FALSE, intEvalVarBoundTightening, conshdlrdata, NULL, NULL, NULL) );
+
+      assert(expr->activitytag == conshdlrdata->curboundstag);
+   }
+
+   *activity = expr->activity;
+
+   return SCIP_OKAY;
 }
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -10161,6 +10166,8 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
       SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
    }
 #endif
+
+   /* TODO catch bound change events on this variable, since bounds on this variable take part of activity computation */
 
    if( auxvar != NULL )
       *auxvar = expr->auxvar;
@@ -10490,6 +10497,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPRCURV curv;
+   SCIP_INTERVAL activity;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -10497,10 +10505,8 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* evaluate all subexpressions (not relaxing variable bounds, as not in boundtightening)
-    * TODO should not need this, but assume activities will be updated if necessary when requested
-    */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, NULL, NULL) );
+   /* ensure activites are uptodate */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -10525,10 +10531,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    return SCIP_OKAY;
 }
 
-/** returns the monotonicity of an expression w.r.t. to a given child
- *
- *  @note Call SCIPevalConsExprExprInterval before using this function.
- */
+/** returns the monotonicity of an expression w.r.t. to a given child */
 SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
