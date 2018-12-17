@@ -1091,8 +1091,6 @@ SCIP_RETCODE forwardPropExpr(
                /* if bounds on auxiliary variable allow a further tightening, then reversepropagation
                 * might provide tighter bounds for children, thus add this expression to the reversepropqueue
                 * TODO we might want to require a mimimal tightening?
-                * TODO another case when to queue an expression for reversepropagation is when the domain of this
-                * expression would induce bound changes, i.e., sqrt(x) -> x >= 0
                 */
                if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, auxvarbounds) && !expr->inqueue )
                {
@@ -1249,6 +1247,13 @@ SCIP_RETCODE forwardPropCons(
    return SCIP_OKAY;
 }
 
+/** propagates bounds for each sub-expression in a given queue by starting from the root expressions
+ *
+ *  the expression will be traversed in breadth first search by using this queue
+ *
+ *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
+ *  forwardPropCons() before calling this function
+ */
 static
 SCIP_RETCODE reversePropQueue(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -1356,69 +1361,6 @@ SCIP_RETCODE reversePropQueue(
       /* mark that the expression is not in the queue anymore */
       expr->inqueue = FALSE;
    }
-
-   return SCIP_OKAY;
-}
-
-
-/* export this function here, so it can be used by unittests but is not really part of the API */
-/** propagates bounds for each sub-expression of a given set of constraints by starting from the root expressions; the
- *  expression will be traversed in breadth first search by using a queue
- *
- *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
- *  forwardPropCons() before calling this function
- */
-static
-SCIP_RETCODE reversePropConss(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS**             conss,            /**< constraints to propagate */
-   int                     nconss,           /**< total number of constraints to propagate */
-   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
-   SCIP_Bool               allexprs,         /**< whether reverseprop should be called for all expressions, regardless of whether their interval was tightened */
-   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_QUEUE* queue;
-   int i;
-
-   assert(scip != NULL);
-   assert(conss != NULL);
-   assert(nconss > 0);
-   assert(infeasible != NULL);
-   assert(ntightenings != NULL);
-
-   /* create queue */
-   SCIP_CALL( SCIPqueueCreate(&queue, SCIPgetNVars(scip), 2.0) );
-
-   /* add root expressions to the queue */
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss[i] != NULL);
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      /* propagate active, non-deleted, propagation-enabled constraints only */
-      if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
-         continue;
-
-      /* skip expressions that could not have been tightened, unless allexprs is set */
-//      if( !consdata->expr->hastightened && !allexprs )
-//         continue;
-
-      /* add expressions which are not in the queue so far */
-      if( !consdata->expr->inqueue && SCIPgetConsExprExprNChildren(consdata->expr) > 0 )
-      {
-         SCIP_CALL( SCIPqueueInsert(queue, (void*) consdata->expr) );
-         consdata->expr->inqueue = TRUE;
-      }
-   }
-
-   SCIP_CALL( reversePropQueue(scip, queue, force, allexprs, infeasible, ntightenings) );
-
-   /* free the queue */
-   SCIPqueueFree(&queue);
 
    return SCIP_OKAY;
 }
@@ -1911,6 +1853,7 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_QUEUE* reversepropqueue;
    SCIP_Bool redundant;
    int ntightenings;
    int i;
@@ -1929,6 +1872,11 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_CALL( SCIPqueueCreate(&reversepropqueue, 5*nconss, 2.0) );
+   }
+
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
    {
@@ -1940,9 +1888,10 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* make sure intervals in expression are uptodate (use 0 force recomputing)
+         /* make sure intervals in expression are uptodate
           * we do this here to have bounds for the auxiliary variables and for a reverseprop call at the end
           * we don't do auxiliary variables if in presolve, so do only in solving
+          * TODO we should not need to do this explicitly here
           */
          SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], FALSE, NULL, infeasible, &redundant, &ntightenings) );
          if( *infeasible )
@@ -2037,6 +1986,17 @@ SCIP_RETCODE detectNlhdlrs(
 
             if( *infeasible )
                break;
+
+            /* remember to call reverse propagation for this expression
+             * this can ensure that just created auxiliary variables take only values that are within the domain of functions that use them
+             * for example, sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
+             * TODO should we just call the relevant reverseProp code on this expr from reversePropQueue without creating a queue?
+             */
+            if( !expr->inqueue )
+            {
+               SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
+               expr->inqueue = TRUE;
+            }
          }
 
          expr = SCIPexpriteratorGetNext(it);
@@ -2053,16 +2013,16 @@ SCIP_RETCODE detectNlhdlrs(
    SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrssuccess);
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !*infeasible )
    {
-      /* call reverse propagation for ALL expressions
-       * This can ensure that auxiliary variables take only values that are within the domain of functions that use them
-       * for example, sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
-       * Also we do this already here because LP solving and separation will be called next, which could already profit
+      /* call reverse propagation for expressions in queue
+       * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
        * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
-       * TODO reconsider how to do this, i.e., call only reversePropQueue, with queue initialized above?, or call propConss?
        */
-      SCIP_CALL( reversePropConss(scip, conss, nconss, FALSE, TRUE, infeasible, &ntightenings) );
+      SCIP_CALL( reversePropQueue(scip, reversepropqueue, FALSE, FALSE, infeasible, &ntightenings) );
+
+      assert(SCIPqueueIsEmpty(reversepropqueue));
+      SCIPqueueFree(&reversepropqueue);
    }
 
    return SCIP_OKAY;
@@ -2325,6 +2285,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       consdata->issimplified = FALSE;
 
       /* increase tag an bounds */
+      /* TODO maybe do not increase if we did not use the new tag yet, e.g., when there is a sequence of bound changes,
+       * so we do not run out of numbers so soon
+       */
       ++conshdlrdata->curboundstag;
       assert(conshdlrdata->curboundstag > 0);
 
