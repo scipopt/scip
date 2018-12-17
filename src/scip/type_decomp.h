@@ -31,6 +31,7 @@ extern "C" {
 typedef struct SCIP_Decomp SCIP_DECOMP;
 
 #define SCIP_DECOMP_LINKVAR -1      /**< special label for linking variables */
+#define SCIP_DECOMP_LINKCONS -2     /**< special label for linking constraints */
 
 #ifdef __cplusplus
 }
