@@ -112,6 +112,9 @@ Interface changes
   global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
   domain.
 
+- Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
+  High values sacrifice performance for stability.
+
 ### Data structures
 
 ### Build system
