@@ -19,61 +19,70 @@
  */
 
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/decomp.h"
 
 #include "include/scip_test.h"
 
-const char* cip_input =
-"STATISTICS"
-"  Problem name     : mymip.cip"
-"  Variables        : 2 (0 binary, 2 integer, 0 implicit integer, 0 continuous)"
-"  Constraints      : 0 initial, 1 maximal"
-"OBJECTIVE"
-"  Sense            : minimize"
-"VARIABLES"
-"  [integer] <x1>: obj=1, original bounds=[0,10000]"
-"  [integer] <x2>: obj=1, original bounds=[0,10000]"
-"CONSTRAINTS"
-"  [linear] <lincons> : 3057<x1> +12227<x2> == 8908099.5;"
-"END";
-
-static const char* testfilename = "decomptest.cip";
-
+static const char* testfilename = "../check/instances/Tests/decomp/decomptest.cip";
+#define NVARS 5
+#define NCONSS 3
 /** GLOBAL VARIABLES **/
 static SCIP* scip;
 static SCIP_DECOMP* decomp;
+static SCIP_VAR* vars[NVARS];
+static SCIP_CONS* conss[NCONSS];
+static int labels_vars[] = {0,0,0,1,1};
+static int labels_conss[] = {SCIP_DECOMP_LINKCONS, 0, 1};
+
+/** set up some data structures */
+static
+void setupData(void)
+{
+   vars[0] = SCIPfindVar(scip, "y");
+   vars[1] = SCIPfindVar(scip, "x1");
+   vars[2] = SCIPfindVar(scip, "x2");
+   vars[3] = SCIPfindVar(scip, "x3");
+   vars[4] = SCIPfindVar(scip, "x4");
+
+   conss[0] = SCIPfindCons(scip, "linkingcons");
+   conss[1] = SCIPfindCons(scip, "block1cons");
+   conss[2] = SCIPfindCons(scip, "block2cons");
+
+}
+
+/** test setup */
+static
+void testData(void)
+{
+   int i;
+
+   /* check that all variables and constraints are there */
+   for( i = 0; i < NVARS; ++i )
+      cr_assert(vars[i] != NULL);
+
+   for( i = 0; i < NCONSS; ++i )
+      cr_assert(conss[i] != NULL);
+}
 
 /* TEST SUITE */
 static
 void setup(void)
 {
-   FILE* file = fopen(testfilename, "w");
-   printf("Print file");
-   fprintf(file, "STATISTICS"
-      "  Problem name     : mymip.cip\n"
-      "  Variables        : 5 (4 binary, 0 integer, 0 implicit integer, 1 continuous)\n"
-      "  Constraints      : 3 initial, 3 maximal\n"
-      "OBJECTIVE\n"
-      "  Sense            : minimize\n"
-      "VARIABLES\n"
-      "  [binary]  <x1>: obj=1, original bounds=[0,1]\n"
-      "  [binary]  <x2>: obj=1, original bounds=[0,1]\n"
-      "  [binary]  <x3>: obj=1, original bounds=[0,1]\n"
-      "  [binary]  <x4>: obj=1, original bounds=[0,1]\n"
-      "  [continuous]  <y>: obj=-1, original bounds=[0,100]\n"
-      "CONSTRAINTS\n"
-      "  [linear] <linkingcons> : 10<x1> +20<x2> +30<x3> +40<x4> -1<y> >= 0;\n"
-      "  [linear] <block1cons> : 1<x1> +<x2> == 1;\n"
-      "  [linear] <block2cons> : 1<x3> +<x4> == 1;\n"
-      "END\n");
-   fclose(file);
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   SCIPcreate(&scip);
+
+   SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
+   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip)) );
+
+   setupData();
 }
 
 static
 void teardown(void)
 {
+   SCIPdecompFree(&decomp, SCIPblkmem(scip));
    SCIPfree(&scip);
 }
 
@@ -87,15 +96,59 @@ Test(decomptest, create_and_free)
 
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
-   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip)) );
+   SCIP_DECOMP* newdecomp;
+   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip)) );
 
-   SCIPdecompFree(&decomp, SCIPblkmem(scip));
+   SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
 }
 
-Test(decomptest, read_file, .description = "treat constant string as file input")
+Test(decomptest, test_data_setup, .description = "check data setup")
 {
-   FILE* myfile = fmemopen((void*)cip_input, strlen(cip_input) + 1, "r");
-   cr_assert(myfile != NULL);
+   testData();
+}
 
-   fclose(myfile);
+Test(decomptest, test_setters_and_getters, .description="check that setting labels works")
+{
+   int returnedlabels[NVARS];
+
+   SCIP_CALL( SCIPdecompSetVarsLabels(decomp, vars, labels_vars, NVARS) );
+
+   SCIPdecompGetVarsLabels(decomp, vars, returnedlabels, NVARS);
+
+   /* check that each variable has the correct label */
+   cr_assert_arr_eq(returnedlabels, labels_vars, NVARS);
+}
+
+/** print integer array */
+static
+char* printIntArray(
+   char*                 strbuf,
+   int*                  array,
+   int                   length
+   )
+{
+   int i;
+   char* strptr = strbuf;
+
+   /* print entries */
+   for( i = 0; i < length; ++i )
+   {
+      strptr += sprintf(strptr, "%d ", array[i]);
+   }
+
+   return strbuf;
+}
+
+Test(decomptest, test_cons_labeling, .description="check constraint label computation")
+{
+   int returnedlabels[NCONSS];
+   char strbuf[1024];
+
+   SCIP_CALL( SCIPdecompSetVarsLabels(decomp, vars, labels_vars, NVARS) );
+
+   SCIP_CALL( SCIPdecompComputeConsLabels(scip, decomp, conss, NCONSS) );
+
+   SCIPdecompGetConsLabels(decomp, conss, returnedlabels, NCONSS);
+
+   cr_assert_arr_eq(returnedlabels, labels_conss, NCONSS, "%s\n", printIntArray(strbuf, labels_conss, NCONSS));
 }

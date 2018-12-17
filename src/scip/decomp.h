@@ -26,6 +26,7 @@
 
 #include "scip/type_decomp.h"
 #include "scip/type_var.h"
+#include "scip/type_cons.h"
 #include "blockmemshell/memory.h"
 
 
@@ -47,10 +48,6 @@ void SCIPdecompFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/* author bzfhende
- *
- * TODO getter and setter for variable labelling
- */
 /** set labels for an array of variables */
 EXTERN
 SCIP_RETCODE SCIPdecompSetVarsLabels(
@@ -69,10 +66,39 @@ void SCIPdecompGetVarsLabels(
    int                   nvars               /**< length of variables array */
    );
 
-/* author bzfhende
- *
- * TODO query the partitions of a variable subset in this decomposition
- */
+/** set labels for an array of constraints */
+EXTERN
+SCIP_RETCODE SCIPdecompSetConsLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int*                  labels,             /**< array of labels, one per constraint */
+   int                   nconss              /**< length of constraints array */
+   );
+
+/** query labels for an array of constraints */
+EXTERN
+void SCIPdecompGetConsLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int*                  labels,             /**< array of labels, one per constraint */
+   int                   nconss              /**< length of constraints array */
+   );
+
+/** clears the corresponding labeling (constraints, variables, or both) of this decomposition */
+EXTERN
+SCIP_RETCODE SCIPdecompClear(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             clearvarlabels,     /**< should the variable labels be cleared? */
+   SCIP_Bool             clearconslabels     /**< should the constraint labels be cleared? */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPdecompComputeConsLabels(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
+   );
 
 /* author bzfhende
  *
