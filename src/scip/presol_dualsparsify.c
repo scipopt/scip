@@ -53,7 +53,7 @@
 #define PRESOL_NAME            "dualsparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
 
-#define PRESOL_PRIORITY            -24000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY           -240000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
@@ -76,8 +76,8 @@
 #define DEFAULT_MINACCEPTCANCELNNZS    10    /**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
 #define DEFAULT_MINCONSIDEREDNNZS      10    /**< minimal number of considered non-zeros within one column */
 #define DEFAULT_MAXCOMPAREDEVERYPAIR  200    /**< maximal number on the implementaion of doing reduction on every pair of variables */
-#define DEFAULT_MAX_FILLINRATE       0.05    /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
-#define DEFAULT_MAX_FILLINRATE_FREE   0.1    /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
+#define DEFAULT_MAX_FILLINRATE       0.02    /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
+#define DEFAULT_MAX_FILLINRATE_FREE  0.01    /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
 
 /*
  * Data structures
@@ -474,6 +474,10 @@ SCIP_Bool isUpperBoundImplied(
    assert(scip != NULL);
    assert(matrix != NULL);
 
+   varub = SCIPmatrixGetColUb(matrix, col);
+   if( SCIPisInfinity(scip, varub) )
+      return TRUE;
+
    ubimplied = FALSE;
    impliedub = SCIPinfinity(scip);
 
@@ -492,9 +496,7 @@ SCIP_Bool isUpperBoundImplied(
          impliedub = rowub;
    }
 
-   varub = SCIPmatrixGetColUb(matrix, col);
-
-   if( !SCIPisInfinity(scip, varub) && SCIPisFeasLE(scip, impliedub, varub) )
+   if( SCIPisFeasLE(scip, impliedub, varub) )
       ubimplied = TRUE;
 
    return ubimplied;
@@ -518,6 +520,10 @@ SCIP_Bool isLowerBoundImplied(
    assert(scip != NULL);
    assert(matrix != NULL);
 
+   varlb = SCIPmatrixGetColLb(matrix, col);
+   if( SCIPisInfinity(scip, -varlb) )
+      return TRUE;
+
    lbimplied = FALSE;
    impliedlb = -SCIPinfinity(scip);
 
@@ -536,9 +542,7 @@ SCIP_Bool isLowerBoundImplied(
          impliedlb = rowlb;
    }
 
-   varlb = SCIPmatrixGetColLb(matrix, col);
-
-   if( !SCIPisInfinity(scip, -varlb) && SCIPisFeasGE(scip, impliedlb, varlb) )
+   if( SCIPisFeasGE(scip, impliedlb, varlb) )
       lbimplied = TRUE;
 
    return lbimplied;
@@ -978,7 +982,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       SCIPsortIntIntInt(processedvarsnnz, processedvarsidx, processedvarsisfree, nprocessedvarsidx);
 
       /* compare every pair of variables if the number of considered variables is small enough */
-      if( nprocessedvarsidx > presoldata->maxcompareeverypair )
+      if( nprocessedvarsidx < presoldata->maxcompareeverypair )
       {
          for(i=0; i<nprocessedvarsidx; i++)
          {
