@@ -1069,6 +1069,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real greedysolvalue;
    SCIP_Real greedyupperbound;
    SCIP_Bool eqweights;
+   SCIP_Bool intprofits;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1156,6 +1157,12 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          ++nmyitems;
       }
    }
+
+   intprofits = TRUE;
+   /* check if all profits are integer to strengthen the upper bound on the greedy solution */
+   for( j = 0; j < nmyitems && intprofits; ++j )
+      intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
+
 
    /* if no item is left then goto end */
    if( nmyitems == 0 )
@@ -1326,8 +1333,10 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* If the greedy solution is optimal by comparing to the LP solution, we take this solution. This happens if:
     * - the greedy solution reaches the capacity, because then the LP solution is integral;
-    * - the greedy solution has an objective that is at least the LP value rounded down. */
-   greedyupperbound = SCIPfloor(scip, greedysolvalue + myprofits[j] * (SCIP_Real) (capacity - greedysolweight)/((SCIP_Real) myweights[j]));
+    * - the greedy solution has an objective that is at least the LP value rounded down in case that all profits are integer, too. */
+   greedyupperbound = greedysolvalue + myprofits[j] * (SCIP_Real) (capacity - greedysolweight)/((SCIP_Real) myweights[j]);
+   if( intprofits )
+      greedyupperbound = SCIPfloor(scip, greedyupperbound);
    if( greedysolweight == capacity || SCIPisGE(scip, greedysolvalue, greedyupperbound) )
    {
       SCIPdebugMsg(scip, "Greedy solution is optimal.\n");
