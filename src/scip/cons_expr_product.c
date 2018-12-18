@@ -1397,6 +1397,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
    assert(exprdata != NULL);
 
    *success = FALSE;
+   *islocal = TRUE;
 
    nchildren = SCIPgetConsExprExprNChildren(expr);
 
@@ -1445,7 +1446,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       coefs[1] = 0.0;
       *constant = 0.0;
       *success = TRUE;
-      *islocal = TRUE;
 
       refpointx = SCIPgetSolVal(scip, sol, x);
       refpointy = SCIPgetSolVal(scip, sol, y);
@@ -1469,7 +1469,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
       int i;
       int nfixed;
 
-      /* Since the product is componentwise linear, its convex and concave envelopes are piecewise linear.*/
+      /* Since the product is multilinear, its convex and concave envelopes are piecewise linear.*/
 
       /* assemble box, check for unbounded variables, assemble xstar */
       SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nchildren) );
