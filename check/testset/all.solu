@@ -2307,7 +2307,7 @@
 =inf=        markshare_3_3
 =inf=        markshare_3_4
 =inf=        markshare_3_5
-=inf=        markshare_4_0
+=opt=        markshare_4_0                        1.0
 =inf=        markshare_4_1
 =inf=        markshare_4_2
 =inf=        markshare_4_4
