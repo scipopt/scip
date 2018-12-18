@@ -155,8 +155,8 @@
                                            *   removed afterwards? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
-#define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
-#define MAXSCALEDCOEFINTEGER        1e+05 /**< maximal coefficient value after scaling if all variables are of integral
+#define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEFINTEGER            0 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
 
@@ -4173,7 +4173,6 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4213,8 +4212,6 @@ SCIP_RETCODE normalizeCons(
    /* get coefficient arrays */
    vals = consdata->vals;
    nvars = consdata->nvars;
-   vars = consdata->vars;
-   assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
    if( nvars == 0 )
@@ -4223,7 +4220,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* get maximal and minimal absolute coefficient */
@@ -4275,9 +4271,7 @@ SCIP_RETCODE normalizeCons(
          /* get new consdata information, because scaleCons() might have deleted variables */
          vals = consdata->vals;
          nvars = consdata->nvars;
-         vars = consdata->vars;
 
-         assert(nvars == 0 || vars != NULL);
          assert(nvars == 0 || vals != NULL);
       }
    }
@@ -4289,7 +4283,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
@@ -4301,39 +4294,15 @@ SCIP_RETCODE normalizeCons(
    epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
-   maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
 
    if( !consdata->hasnonbinvalid )
       consdataCheckNonbinvar(consdata);
 
    /* if all variables are of integral type we will allow a greater multiplier */
    if( !consdata->hascontvar )
-   {
-      if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER / MAX(maxabsval, 1.0))); /*lint !e835*/
    else
-   {
-      SCIP_Bool foundcont;
-
-      foundcont = FALSE;
-
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            foundcont = TRUE;
-            break;
-         }
-      }
-
-      if( !foundcont )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEF / MAX(maxabsval, 1.0))); /*lint !e835*/
 
    /*
     * multiplication with +1 or -1
