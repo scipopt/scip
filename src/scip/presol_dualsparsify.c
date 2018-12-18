@@ -1050,10 +1050,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       }
 
       SCIPfreeBufferArray(scip, &ratios);
-      SCIPfreeBufferArray(scip, &processedvarsidx);
-      SCIPfreeBufferArray(scip, &processedvarsnnz);
-      SCIPfreeBufferArray(scip, &processedvarssign);
       SCIPfreeBufferArray(scip, &processedvarsisfree);
+      SCIPfreeBufferArray(scip, &processedvarssign);
+      SCIPfreeBufferArray(scip, &processedvarsnnz);
+      SCIPfreeBufferArray(scip, &processedvarsidx);
    }
 
    SCIPmatrixFree(scip, &matrix);
