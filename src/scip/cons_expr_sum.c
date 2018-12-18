@@ -147,7 +147,7 @@ SCIP_RETCODE createExprNode(
    EXPRNODE**            newnode             /**< pointer to store node */
    )
 {
-   SCIP_CALL( SCIPallocBuffer(scip, newnode) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, newnode) );
 
    (*newnode)->expr = expr;
    (*newnode)->coef = coef;
@@ -197,7 +197,7 @@ SCIP_RETCODE freeExprNode(
    assert(node != NULL && *node != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*node)->expr) );
-   SCIPfreeBuffer(scip, node);
+   SCIPfreeBlockMemory(scip, node);
 
    return SCIP_OKAY;
 }
