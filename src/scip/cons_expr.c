@@ -5483,7 +5483,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
    SCIP_CALL( SCIPlpiCreate(lp, SCIPgetMessagehdlr(scip), "facet finding LP", SCIP_OBJSEN_MINIMIZE) );
 
    nrows = (unsigned int)nvars + 1;
-   ncols = POWEROFTWO(nrows - 1);
+   ncols = POWEROFTWO((unsigned int)nvars);
    nnonz = (ncols * (nrows + 1)) / 2;
 
    /* allocate necessary memory; set obj, lb, and ub to zero */
@@ -5561,14 +5561,14 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
 }
 
 /** the given facet might not be a valid under(over)estimator, because of numerics and bad fixings; we compute \f$
- * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ are the
- * vertices of the domain
+ * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ is the
+ * set of vertices of the domain
  */
 static
 SCIP_Real computeVertexPolyhedralMaxFacetError(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             overestimate,       /**< whether we check for an over or underestimator */
-   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners, length: nvars */
+   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners, length: 2^nvars */
    SCIP_Real*            box,                /**< box for which facet was computed, length: 2*nallvars */
    int                   nallvars,           /**< number of all variables */
    int                   nvars,              /**< number of unfixed variables */
@@ -11870,7 +11870,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    }
 
    /* if all variables are fixed, then we could provide something trivial, but that wouldn't be the job of separation
-    * if too many variables are not fixed, then we do anything currently
+    * if too many variables are not fixed, then we do nothing currently
     */
    if( nvars == 0 || nvars > SCIP_MAXVERTEXPOLYDIM )
    {
@@ -11916,7 +11916,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       }
    }
 
-   /* clear coefs array, as below we only fill in coefs for nonfixed variables */
+   /* clear coefs array; below we only fill in coefs for nonfixed variables */
    BMSclearMemoryArray(facetcoefs, nallvars);
 
    if( nvars == 1 )

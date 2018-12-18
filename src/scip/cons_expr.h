@@ -1344,7 +1344,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function
  *
- * If \f$ f(x) \f$ is vertex-polyhedral, then \f$ g \f$ is an underestimator if and only if
+ * If \f$ f(x) \f$ is vertex-polyhedral, then \f$ g \f$ is a convex underestimator if and only if
  * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
  * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
  * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
@@ -1356,7 +1356,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  *
  * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
  * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
- * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even it the domain
+ * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even if the domain
  * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
  * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
  * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
@@ -1385,12 +1385,6 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  *
  * #### Technical and implementation details
  * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$.
- * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
- * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
- * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a vertex-polyhedral constraint with only \f$ k \f$
- * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0 (though we don't use this at the moment).
- * The \f$ n + 1 \f$-th row is the row representing the constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the
- * minimum between 10 and the maximum number of products among all product expressions.
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible.
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
@@ -1398,8 +1392,6 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
  *  \beta \f$ by this amount, otherwise, we discard the cut.
  * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
  * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
- * -# In every call we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different functions
- * have different number of children, so we might need to fix/unfix more variables.
  * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
  * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
  * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
