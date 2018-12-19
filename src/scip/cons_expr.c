@@ -1349,27 +1349,6 @@ SCIP_RETCODE propConss(
          if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
             continue;
 
-         /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant
-          * TODO this should run after simplify, not here
-          */
-         if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
-         {
-            SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
-            if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasNegative(scip, value - consdata->lhs)) ||
-                (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasPositive(scip, value - consdata->rhs)) )
-            {
-               SCIPdebugMsg(scip, "<%s> with constant expression found infeasible\n", SCIPconsGetName(conss[i]));
-               SCIPdebugPrintCons(scip, conss[i], NULL);
-               cutoff = TRUE;
-               break;
-            }
-            else
-            {
-               SCIP_CALL( SCIPdelConsLocal(scip, conss[i]) );
-               ++*ndelconss;
-            }
-         }
-
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
           * in other rounds, we skip already propagated constraints
@@ -2954,7 +2933,8 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< total number of constraints */
-   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
+   int*                  ndelconss           /**< counter to add number of deleted constraints, or NULL */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3098,6 +3078,27 @@ SCIP_RETCODE canonicalizeConstraints(
 
          /* scale constraint sides */
          SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
+
+         /* handle constant root expression; either the problem is infeasible or the constraint is redundant */
+         if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
+         {
+            SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
+            if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasNegative(scip, value - consdata->lhs)) ||
+                (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasPositive(scip, value - consdata->rhs)) )
+            {
+               SCIPdebugMsg(scip, "<%s> with constant expression found infeasible\n", SCIPconsGetName(conss[i]));
+               SCIPdebugPrintCons(scip, conss[i], NULL);
+               *infeasible = TRUE;
+               break;
+            }
+            else
+            {
+               SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+               if( ndelconss != NULL )
+                  ++*ndelconss;
+               havechange = TRUE;
+            }
+         }
       }
 
       /* call reformulation callback of nonlinear handlers for each expression */
@@ -3135,7 +3136,7 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 
    /* replace common subexpressions */
-   if( havechange )
+   if( havechange && !*infeasible )
    {
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
@@ -3161,7 +3162,7 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 
    /* run nlhdlr detect if in presolving stage (that is, not in exitpre) */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !*infeasible )
    {
       SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
    }
@@ -6465,7 +6466,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       int i;
 
       /* simplify constraints and replace common subexpressions */
-      SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible) );
+      SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, NULL) );
       /* currently SCIP does not offer to communicate this,
        * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs, which it doesn't do in EXITPRESOLVE stage
        */
@@ -6984,7 +6985,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
