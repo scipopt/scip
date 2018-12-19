@@ -294,7 +294,7 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
                                               *   component i in components array */
    int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   int*                  ncomponents         /**< pointer to number of components of symmetry group */
+   int                   ncomponents         /**< number of components of symmetry group */
    )
 {
    SCIP_Shortbool* varadded;
@@ -1022,7 +1022,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( computeGroupOrbitsFilterSymbreak(scip, npermvars, propdata->nmovedpermvars, propdata->movedpermvars,
          permstrans, nperms, inactiveperms, orbits, orbitbegins, &norbits, components, componentbegins,
-         vartocomponent, &ncomponents) );
+         vartocomponent, ncomponents) );
 
    if ( norbits > 0 )
    {
