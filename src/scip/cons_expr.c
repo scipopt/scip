@@ -999,7 +999,11 @@ SCIP_RETCODE forwardPropExpr(
                   break;
                }
 
-               /* TODO check whether to add child to reversepropqueue? */
+               /* we do not check here whether the child should be added to the reversepropqueue
+                * this should have happened when the activitytag of the child was set to curboundstag, I believe
+                */
+               assert(child->auxvar == NULL || reversepropqueue == NULL || child->inqueue ||
+                  SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, child->activity, intevalvar(scip, child->auxvar, intevalvardata)));
 
                expr = SCIPexpriteratorSkipDFS(it);
                continue;
