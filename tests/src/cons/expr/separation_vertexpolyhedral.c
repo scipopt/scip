@@ -220,6 +220,7 @@ Test(separation, multilinearseparation)
    cr_expect_float_eq(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
 
    /* the code below assumes that we do the same permutations as before, so recreate scip to reset random number generator */
+   SCIP_CALL( consExitExpr(scip, conshdlr, NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL( SCIPfree(&scip) );
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
@@ -243,6 +244,7 @@ Test(separation, multilinearseparation)
    cr_expect_float_eq(facetconstant, exact_facet2[3], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
 
    /* free SCIP */
+   SCIP_CALL( consExitExpr(scip, conshdlr, NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
@@ -439,6 +441,7 @@ Test(separation, vertexpolyhedral,
    }
 
    SCIPfreeRandom(scip, &randnumgen);
+   SCIP_CALL( consExitExpr(scip, SCIPfindConshdlr(scip, "expr"), NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL_ABORT( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
