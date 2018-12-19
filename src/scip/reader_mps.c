@@ -1051,7 +1051,7 @@ SCIP_RETCODE readCols(
                 (SCIPisInfinity(scip, -val) && SCIPinfinity(scip) != -val) )
             {
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains non-standard infinity value <%e>,"
-                  " consider adjusting infinity value.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
+                  " consider adjusting SCIP infinity value.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
             }
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
