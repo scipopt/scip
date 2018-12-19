@@ -6376,17 +6376,11 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
    SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->canonicalizetime) );
 
-   if( conshdlrdata->vp_randnumgen != NULL )
-      SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
-
-   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
+   assert(conshdlrdata->vp_randnumgen == NULL);
+#ifndef NDEBUG
    for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
-   {
-      if( conshdlrdata->vp_lp[i] != NULL )
-      {
-         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
-      }
-   }
+      assert(conshdlrdata->vp_lp[i] == NULL);
+#endif
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -6496,6 +6490,15 @@ SCIP_DECL_CONSEXIT(consExitExpr)
 
    if( conshdlrdata->vp_randnumgen != NULL )
       SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
+
+   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
+   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
+   {
+      if( conshdlrdata->vp_lp[i] != NULL )
+      {
+         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -6663,15 +6666,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       if( consdata->nlrow != NULL )
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
-      }
-   }
-
-   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
-   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
-   {
-      if( conshdlrdata->vp_lp[i] != NULL )
-      {
-         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
       }
    }
 
