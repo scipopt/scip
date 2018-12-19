@@ -47,6 +47,9 @@
 #include <symmetry/compute_symmetry.h>
 
 #include <string.h>
+#include "type_cons_expr.h"
+#include "struct_cons_expr.h"
+#include "cons_expr.h"
 
 /* presolver properties */
 #define PRESOL_NAME            "symmetry"
@@ -149,9 +152,9 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 /** data struct to store arrays used for sorting rhs types */
 struct SYM_Sortrhstype
 {
-   SCIP_Real*            vals;               /**< array of values */
-   SYM_RHSSENSE*         senses;             /**< array of senses of rhs */
-   int                   nrhscoef;           /**< size of arrays (for debugging) */
+   SCIP_Real*               vals;            /**< array of values */
+   SYM_RHSSENSE*            senses;          /**< array of senses of rhs */
+   int                      nrhscoef;        /**< size of arrays (for debugging) */
 };
 typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
 
@@ -214,7 +217,6 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 
    return 0;
 }
-
 
 /*
  * Local methods
@@ -456,6 +458,8 @@ SCIP_RETCODE collectCoefficients(
  *
  *  We need the matrix and rhs in the original order in order to speed up the comparison process. The matrix is needed
  *  in the right order to easily check rows. The rhs is used because of cache effects.
+ *
+ *  @TODO: extend this to MINLPs
  */
 static
 SCIP_RETCODE checkSymmetriesAreSymmetries(
@@ -471,6 +475,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int oldrhs;
    int j;
    int p;
+
+   /* TODO: remove this once the function works for MINLP */
+   return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
 
@@ -633,11 +640,13 @@ int getNSymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
 
    return nhandleconss;
 }
 
-/** compute symmetry group of MIP */
+/** compute symmetry group of MINLP */
 static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -671,6 +680,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nuniquevararray = 0;
    int nhandleconss;
    int nactiveconss;
+   int nlinconss;
    int nconss;
    int nvars;
    int nallvars;
@@ -716,6 +726,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* compute the number of active constraints */
    nactiveconss = SCIPgetNActiveConss(scip);
+   nlinconss = nactiveconss - SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "expr"));
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -758,9 +769,9 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoef, 2 * nactiveconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nactiveconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nactiveconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoef, 2 * nlinconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nlinconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nlinconss) );
 
    /* prepare temporary constraint data (use block memory, since this can become large);
     * also allocate memory for fixed vars since some vars might have been deactivated meanwhile */
@@ -972,15 +983,15 @@ SCIP_RETCODE computeSymmetryGroup(
             return SCIP_ERROR;
          }
       }
-      else
+      else if ( strcmp(conshdlrname, "expr") != 0 )
       {
+         /* if the remaining constraints are not expression constraints, they cannot be handled */
          SCIPerrorMessage("Cannot determine symmetries for constraint <%s> of constraint handler <%s>.\n",
             SCIPconsGetName(cons), SCIPconshdlrGetName(conshdlr) );
          return SCIP_ERROR;
       }
    }
-   assert( matrixdata.nrhscoef <= 2 * nactiveconss );
-   assert( matrixdata.nrhscoef > 0 ); /* cannot have empty rows! */
+   assert( matrixdata.nrhscoef <= 2 * nlinconss );
 
    SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
@@ -1123,15 +1134,15 @@ SCIP_RETCODE computeSymmetryGroup(
       }
    }
    assert( 0 < matrixdata.nuniquevars && matrixdata.nuniquevars <= nvars );
-   assert( 0 < matrixdata.nuniquerhs && matrixdata.nuniquerhs <= matrixdata.nrhscoef );
-   assert( 0 < matrixdata.nuniquemat && matrixdata.nuniquemat <= matrixdata.nmatcoef );
+   assert( 0 <= matrixdata.nuniquerhs && matrixdata.nuniquerhs <= matrixdata.nrhscoef );
+   assert( 0 <= matrixdata.nuniquemat && matrixdata.nuniquemat <= matrixdata.nmatcoef );
 
    SCIPdebugMsg(scip, "Number of detected different variables: %d (total: %d).\n", matrixdata.nuniquevars, nvars);
    SCIPdebugMsg(scip, "Number of detected different rhs types: %d (total: %d).\n", matrixdata.nuniquerhs, matrixdata.nrhscoef);
    SCIPdebugMsg(scip, "Number of detected different matrix coefficients: %d (total: %d).\n", matrixdata.nuniquemat, matrixdata.nmatcoef);
 
    /* do not compute symmetry if all variables are non-equivalent (unique) or if all matrix coefficients are different */
-   if ( matrixdata.nuniquevars < nvars && matrixdata.nuniquemat < matrixdata.nmatcoef )
+   if ( matrixdata.nuniquevars < nvars && (matrixdata.nuniquemat == 0 || matrixdata.nuniquemat < matrixdata.nmatcoef) )
    {
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
@@ -1207,9 +1218,9 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nlinconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nlinconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nlinconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);

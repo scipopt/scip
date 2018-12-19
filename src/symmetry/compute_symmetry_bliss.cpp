@@ -17,6 +17,7 @@
  * @brief  interface for symmetry computations to bliss
  * @author Marc Pfetsch
  * @author Thomas Rehn
+ * @author Fabian Wegscheider
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,6 +31,32 @@
 #include <vector>
 #include <list>
 #include <math.h>
+#include <scip/cons_expr_var.h>
+#include <scip/cons_expr_sum.h>
+#include <scip/cons_expr_pow.h>
+#include <scip/cons_expr_iterator.h>
+
+#include <permlib/permlib_api.h>
+#include <permlib/abstract_bsgs.h>
+#include <permlib/test/group_type.h>
+#include <boost/shared_ptr.hpp>
+
+#include <permlib/abstract_symmetric_product.h>
+#include <permlib/construct/known_bsgs_construction.h>
+#include <permlib/test/type_recognition.h>
+
+#ifdef WITH_GMP
+#include <gmpxx.h>
+#include <sstream>
+#endif
+
+/* useful typedefs */
+typedef boost::shared_ptr<permlib::AbstractPermutationGroup> PermutationGroupPtr;
+typedef std::vector<unsigned int> uintvec;
+typedef boost::shared_ptr<uintvec> uintvecPtr;
+
+using std::vector;
+using namespace permlib;
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -42,6 +69,159 @@ struct BLISS_Data
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
 };
 
+/** @struct Component
+ *  @brief  Symmetry component
+ */
+struct Component
+{
+   boost::dynamic_bitset<> bitset;
+   std::list<permlib::PERMUTATION::ptr> generators;
+   unsigned int degree;
+
+   /** constructor */
+   Component(const boost::dynamic_bitset<>& b, const permlib::PERMUTATION::ptr& p, unsigned int degree_) :
+      bitset(b), degree(degree_)
+   {
+      generators.push_back(p);
+   }
+};
+typedef boost::shared_ptr<Component> ComponentPtr;
+
+/* ------------------- map for operator types ------------------- */
+
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(SYMhashGetKeyOptype)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal
+ *
+ *  Compare the types of two variables according to oprator name, level and, in case of power, exponent.
+ */
+static
+SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
+{
+   SYM_OPTYPE* k1;
+   SYM_OPTYPE* k2;
+
+   k1 = (SYM_OPTYPE*) key1;
+   k2 = (SYM_OPTYPE*) key2;
+
+   /* first check operator name */
+   if ( SCIPgetConsExprExprHdlr(k1->expr) != SCIPgetConsExprExprHdlr(k2->expr) )
+      return FALSE;
+
+   /* for pow expressions, also check exponent */
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k1->expr)), "pow") == 0
+      && SCIPgetConsExprExprPowExponent(k1->expr) != SCIPgetConsExprExprPowExponent(k2->expr) )
+   {
+         return FALSE;
+   }
+
+   /* if still undecided, take level */
+   if ( k1->level != k2->level )
+      return FALSE;
+
+   return TRUE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
+{  /*lint --e{715}*/
+   SYM_OPTYPE* k;
+   SCIP_Real exponent;
+
+   k = (SYM_OPTYPE*) key;
+
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr)), "pow") == 0 )
+      exponent = SCIPgetConsExprExprPowExponent(k->expr);
+   else
+      exponent = 1.0;
+
+   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(exponent), k->level), (uint64_t) SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr)));
+}
+
+/* ------------------- map for constant types ------------------- */
+
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(SYMhashGetKeyConsttype)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal
+ *
+ *  Compare two constants according to their values.
+ */
+static
+SCIP_DECL_HASHKEYEQ(SYMhashKeyEQConsttype)
+{
+   SCIP* scip;
+   SYM_CONSTTYPE* k1;
+   SYM_CONSTTYPE* k2;
+
+   scip = (SCIP*) userptr;
+   k1 = (SYM_CONSTTYPE*) key1;
+   k2 = (SYM_CONSTTYPE*) key2;
+
+   return SCIPisEQ(scip, k1->value, k2->value);
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(SYMhashKeyValConsttype)
+{  /*lint --e{715}*/
+   SYM_CONSTTYPE* k;
+
+   k = (SYM_CONSTTYPE*) key;
+
+   return SCIPrealHashCode(k->value);
+}
+
+/* ------------------- map for constraint side types ------------------- */
+
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
+{  /*lint --e{715}*/
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal
+ *
+ *  Compare two constraint sides according to lhs and rhs.
+ */
+static
+SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
+{
+   SCIP* scip;
+   SYM_RHSTYPE* k1;
+   SYM_RHSTYPE* k2;
+
+   scip = (SCIP*) userptr;
+   k1 = (SYM_RHSTYPE*) key1;
+   k2 = (SYM_RHSTYPE*) key2;
+
+   if( !SCIPisEQ(scip, k1->lhs, k2->lhs) )
+      return FALSE;
+
+   return SCIPisEQ(scip, k1->rhs, k2->rhs);
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
+{  /*lint --e{715}*/
+   SYM_RHSTYPE* k;
+
+   k = (SYM_RHSTYPE*) key;
+
+   return SCIPcombineTwoInt(SCIPrealHashCode(k->lhs), SCIPrealHashCode(k->rhs));
+}
 
 /** callback function for bliss */
 static
@@ -110,33 +290,28 @@ void blisshook(
    data->perms[data->nperms++] = p;
 }
 
-
-/** Construct colored graph for symmetry computations
+/** Construct linear part of colored graph for symmetry computations
  *
- *  Construct bipartite graph:
+ *  Construct graph:
  *  - Each variable gets a different node.
  *  - Each constraint gets a different node.
- *  - Each matrix coefficient gets a different node that is conntected to the two nodes
- *    corresponding to the constraint and variable.
+ *  - Each matrix coefficient gets a different node that is connected to the two nodes
+ *    corresponding to the respective constraint and variable.
  *
- *  Each different variable, rhs, and matrix coefficient type gets a different color that is
- *  attached to the corresponding entries.
+ *  Each different variable, rhs, matrix coefficient gets a different color that is attached to the corresponding entries.
  */
 static
-SCIP_RETCODE fillGraphByColoredCoefficients(
+SCIP_RETCODE fillGraphByLinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   int&                  nnodes,             /**< number of nodes in graph */
-   int&                  nedges,             /**< number of edges in graph */
+   int&                  nnodes,             /**< buffer to store number of nodes in graph */
+   int&                  nedges,             /**< buffer to store number of edges in graph */
+   int&                  nusedcolors,        /**< buffer to store number of used colors */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
-   SCIPdebugMsg(scip, "Building graph with colored coefficient nodes.\n");
-
-   nnodes = 0;
-   nedges = 0;
-   success = FALSE;
+   success = TRUE;
 
    /* add nodes for variables */
    for (int v = 0; v < matrixdata->npermvars; ++v)
@@ -175,7 +350,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    /* Grouping of nodes depends on the number of nodes in the bipartite graph class.
     * If there are more variables than constraints, we group by constraints.
     * That is, given several variable nodes which are incident to one constraint node by the same color,
-    * we join these variable nodes to the constaint node by only one intermediate node.
+    * we join these variable nodes to the constraint node by only one intermediate node.
     */
    const bool groupByConstraints = matrixdata->nrhscoef < matrixdata->npermvars;
    if ( groupByConstraints )
@@ -184,7 +359,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       SCIPdebugMsg(scip, "Group intermediate nodes by variables.\n");
 
    /* "colored" edges based on all matrix coefficients - loop through ordered matrix coefficients */
-   int nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
+   nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
 
    int ninternodes;
    if ( groupByConstraints )
@@ -263,8 +438,8 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          /* determine whether graph would be too large for bliss (can only handle int) */
          if ( nnodes >= INT_MAX/2 )
          {
-            SCIPfreeBufferArray(scip, &internodes);
-            return SCIP_OKAY;
+            success = FALSE;
+            break;
          }
 
          G->add_edge((unsigned) varnode, (unsigned) internodes[varrhsidx]);
@@ -272,9 +447,384 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          nedges += 2;
       }
    }
+
+   nusedcolors += matrixdata->nuniquemat;
+
    SCIPfreeBufferArray(scip, &internodes);
+   return SCIP_OKAY;
+}
+
+/** Construct non-linear part of colored graph for symmetry computations
+ *
+ *  Construct graph:
+ *  - Each node of the expression trees gets a different node.
+ *  - Each coefficient of a sum expression gets its own node connected to the node of the corresponding child.
+ *  - Each constraint (with lhs and (!) rhs gets its own node connected to the corresponding node of the root expression.
+ *
+ *  note: in contrast to the linear part, lhs and rhs are treated together here, so that each unique combination of lhs
+ *  and rhs gets its own node. This makes the implementation a lot simpler with the small downside, that different
+ *  formulations of the same constraints would not be detected as equivalent, e.g. for
+ *      0 <= x1 + x2 <= 1
+ *      0 <= x3 + x4
+ *           x3 + x4 <= 1
+ *  there would be no symmetry between (x1,x2) and (x3,x4) detected.
+ *
+ *  Each different constraint (sides), sum-expression coefficient, constant and operator type gets a
+ *  different color that is attached to the corresponding entries.
+ */
+static
+SCIP_RETCODE fillGraphByNonlinearConss(
+   SCIP*                 scip,               /**< SCIP instance */
+   bliss::Graph*         G,                  /**< Graph to be constructed */
+   int&                  nnodes,             /**< buffer to store number of nodes in graph */
+   int&                  nedges,             /**< buffer to store number of edges in graph */
+   int                   nusedcolors,        /**< number of used colors ind the graph so far */
+   SCIP_Bool&            success             /**< whether the construction was successful */
+   )
+{
+   SCIP_HASHTABLE* optypemap;
+   SCIP_HASHTABLE* consttypemap;
+   SCIP_HASHTABLE* sumcoefmap;
+   SCIP_HASHTABLE* rhstypemap;
+   SYM_OPTYPE* uniqueoparray;
+   SYM_CONSTTYPE* uniqueconstarray;
+   SYM_CONSTTYPE* sumcoefarray;
+   SYM_RHSTYPE* uniquerhsarray;
+   SCIP_CONSHDLR* consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   SCIP_CONS** exprconss = SCIPconshdlrGetConss(consexprhdlr);
+   int nexprconss = SCIPconshdlrGetNConss(consexprhdlr);
+   int nuniqueops = 0;
+   int nuniqueconsts = 0;
+   int nuniquecoefs = 0;
+   int nuniquerhs = 0;
+   int oparraysize = 10 * nexprconss;
+   int constarraysize = 5 * nexprconss;
+   int coefarraysize = 20 * nexprconss;
+   int rhsarraysize = 2 * nexprconss;
+
+   assert(scip != NULL);
+   assert(G != NULL);
+   assert(nnodes >= nusedcolors);
+
+   /* create maps for optypes and constants to indices */
+   SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype, SYMhashKeyEQOptype, SYMhashKeyValOptype, (void*) scip) );
+   assert( optypemap != NULL );
+   SCIP_CALL( SCIPhashtableCreate(&consttypemap, SCIPblkmem(scip), constarraysize, SYMhashGetKeyConsttype, SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
+   assert( consttypemap != NULL );
+   SCIP_CALL( SCIPhashtableCreate(&sumcoefmap, SCIPblkmem(scip), coefarraysize, SYMhashGetKeyConsttype, SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
+   assert( sumcoefmap != NULL );
+   SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), rhsarraysize, SYMhashGetKeyRhstype, SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
+   assert( rhstypemap != NULL );
+
+   /* allocate space for mappings from optypes and constants to colors */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueoparray, oparraysize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize) );
+
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
 
    success = TRUE; /*lint !e838*/
+
+   /* iterate over all expressions and add the corresponding nodes to the graph */
+   for( int i = 0; i < nexprconss; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* rootexpr = SCIPgetExprConsExpr(scip, exprconss[i]);
+      vector<int> visitednodes(0);
+      vector<SCIP_Bool> ischildofsum(0);
+      int currentlevel = 0;
+
+      SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+      for( SCIP_CONSEXPR_EXPR* expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         switch( SCIPexpriteratorGetStageDFS(it) )
+         {
+            /* upon entering an expression, check its type and add nodes and edges if neccessary */
+            case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+            {
+               int node;
+               int parentnode;
+               int color = -1;
+               const char* opname = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+               /* for variable expressions, get the corresponding node that is already in the graph */
+               if( SCIPisConsExprExprVar(expr))
+               {
+                  node = SCIPvarGetProbindex((SCIPgetConsExprExprVarVar(expr)));
+                  assert(node < (int) G->get_nof_vertices());
+               }
+               /* for constant expressions, get the color of its type (value) or assign a new one */
+               else if( strcmp(opname, "val") == 0 )
+               {
+                  SYM_CONSTTYPE *ct;
+
+                  /* check whether we have to resize */
+                  if ( nuniqueconsts >= constarraysize )
+                  {
+                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
+                     assert( newsize >= 0 );
+                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
+                     constarraysize = newsize;
+                  }
+
+                  assert(nuniqueconsts < constarraysize);
+
+                  ct = &uniqueconstarray[nuniqueconsts];
+                  ct->value = SCIPgetConsExprExprValue(expr);
+
+                  if( !SCIPhashtableExists(consttypemap, (void *) ct))
+                  {
+                     SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
+                     ct->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                     color = ct->color;
+                     nuniqueconsts++;
+                  }
+                  else
+                  {
+                     color= ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                  }
+               }
+               /* for all other expressions, get the color of its operator type or assign a new one */
+               else
+               {
+                  SYM_OPTYPE *ot;
+
+                  /* check whether we have to resize */
+                  if ( nuniqueops >= oparraysize )
+                  {
+                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueops+1);
+                     assert( newsize >= 0 );
+                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueoparray, oparraysize, newsize) );
+                     oparraysize = newsize;
+                  }
+
+                  assert(nuniqueops < oparraysize);
+
+                  ot = &uniqueoparray[nuniqueops];
+
+                  ot->expr = expr;
+                  ot->level = currentlevel;
+
+                  if( !SCIPhashtableExists(optypemap, (void *) ot))
+                  {
+                     SCIP_CALL(SCIPhashtableInsert(optypemap, (void *) ot));
+                     ot->color = nusedcolors + nuniqueconsts + nuniquecoefs + nuniqueops + nuniquerhs;
+                     color = ot->color;
+                     nuniqueops++;
+                  }
+                  else
+                  {
+                     color = ((SYM_OPTYPE *) SCIPhashtableRetrieve(optypemap, (void *) ot))->color;
+                  }
+               }
+
+               /* if this is the root expression, add the constraint side node (will be parent of expression node) */
+               if( SCIPexpriteratorGetParentDFS(it) == NULL )
+               {
+                  /* add the node corresponding to the constraint */
+                  SYM_RHSTYPE *rt;
+                  int parentcolor;
+
+                  /* check whether we have to resize */
+                  if ( nuniquerhs >= rhsarraysize )
+                  {
+                     int newsize = SCIPcalcMemGrowSize(scip, nuniquerhs+1);
+                     assert( newsize >= 0 );
+                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize, newsize) );
+                     rhsarraysize = newsize;
+                  }
+
+                  assert(nuniquerhs < rhsarraysize);
+
+                  rt = &uniquerhsarray[nuniquerhs];
+                  rt->lhs = SCIPgetLhsConsExpr(scip, exprconss[i]);
+                  rt->rhs = SCIPgetRhsConsExpr(scip, exprconss[i]);
+
+                  if( !SCIPhashtableExists(rhstypemap, (void *) rt))
+                  {
+                     SCIP_CALL(SCIPhashtableInsert(rhstypemap, (void *) rt));
+                     rt->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                     parentcolor = rt->color;
+                     nuniquerhs++;
+                  }
+                  else
+                  {
+                     parentcolor = ((SYM_RHSTYPE *) SCIPhashtableRetrieve(rhstypemap, (void *) rt))->color;
+                  }
+
+                  /* add the constraint side node with the corresponding color */
+                  parentnode = (int) G->add_vertex((unsigned) parentcolor);
+                  ++nnodes;
+
+                  assert(parentnode < (int) G->get_nof_vertices());
+               }
+               /* otherwise, get the parentnode stored in visitednodes */
+               else
+               {
+                  parentnode = visitednodes[visitednodes.size() - 1];
+                  assert(parentnode < (int) G->get_nof_vertices());
+               }
+
+               /* in all cases apart from variable expressions, the new node is added with the corresponding color */
+               if( color != -1 )
+               {
+                  node = (int) G->add_vertex((unsigned) color);
+                  ++nnodes;
+
+                  assert(node < (int) G->get_nof_vertices());
+               }
+
+               /* store the new node so that it can be used as parentnode later */
+               visitednodes.push_back(node);
+               ischildofsum.push_back(FALSE);
+
+               /* connect the current node with its parent */
+               G->add_edge((unsigned) node, (unsigned) parentnode);
+               ++nedges;
+
+               /* for sum expression, also add intermediate nodes for the coefficients */
+               if( strcmp(opname, "sum") == 0 )
+               {
+                  SCIP_Real *coefs = SCIPgetConsExprExprSumCoefs(expr);
+                  int internode;
+
+                  /* iterate over children from last to first, such that visitednodes array is in correct order */
+                  for( int j = SCIPgetConsExprExprNChildren(expr) - 1; j >= 0; --j )
+                  {
+                     SYM_CONSTTYPE *ct;
+
+                     /* check whether we have to resize */
+                     if ( nuniquecoefs >= coefarraysize )
+                     {
+                        int newsize = SCIPcalcMemGrowSize(scip, nuniquecoefs+1);
+                        assert( newsize >= 0 );
+                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize, newsize) );
+                        coefarraysize = newsize;
+                     }
+
+                     assert(nuniquecoefs < coefarraysize);
+
+                     ct = &sumcoefarray[nuniquecoefs];
+                     ct->value = coefs[j];
+
+                     if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
+                     {
+                        SCIP_CALL(SCIPhashtableInsert(sumcoefmap, (void *) ct));
+                        ct->color = nusedcolors + nuniqueops + nuniqueconsts + nuniquecoefs + nuniquerhs;
+                        color = ct->color;
+                        nuniquecoefs++;
+                     }
+                     else
+                     {
+                        color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
+                     }
+
+                     /* add the intermediate node with the corresponding color */
+                     internode = (int) G->add_vertex((unsigned) color);
+                     ++nnodes;
+                     visitednodes.push_back(internode);
+                     ischildofsum.push_back(TRUE);
+
+                     assert(internode < (int) G->get_nof_vertices());
+
+                     G->add_edge((unsigned) internode, (unsigned) node);
+                     ++nedges;
+                  }
+
+                  /* add node for the constant term of the sum expression */
+                  SCIP_Real constval = SCIPgetConsExprExprSumConstant(expr);
+                  if( constval != 0.0 )
+                  {
+                     SYM_CONSTTYPE *ct;
+
+                     /* check whether we have to resize */
+                     if ( nuniqueconsts >= constarraysize )
+                     {
+                        int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
+                        assert( newsize >= 0 );
+                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
+                        constarraysize = newsize;
+                     }
+
+                     assert(nuniqueconsts < constarraysize);
+
+                     ct = &uniqueconstarray[nuniqueconsts];
+                     ct->value = constval;
+
+                     if( !SCIPhashtableExists(consttypemap, (void *) ct))
+                     {
+                        SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
+                        ct->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                        color = ct->color;
+                        nuniqueconsts++;
+                     }
+                     else
+                     {
+                        color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                     }
+
+                     /* add the node with a new color */
+                     internode = (int) G->add_vertex((unsigned) color);
+                     ++nnodes;
+
+                     assert(node < (int) G->get_nof_vertices());
+
+                     G->add_edge((unsigned) internode, (unsigned) node);
+                     ++nedges;
+                  }
+               }
+
+               currentlevel++;
+               break;
+            }
+
+            /* when leaving an expression, the nodes that are not needed anymore are erased from the respective arrays */
+            case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
+            {
+               visitednodes.pop_back();
+               ischildofsum.pop_back();
+               currentlevel--;
+
+               if( !ischildofsum.empty() && ischildofsum[ischildofsum.size() - 1] )
+               {
+                  visitednodes.pop_back();
+                  ischildofsum.pop_back();
+               }
+
+               break;
+            }
+
+            default:
+               SCIPABORT(); /* we should never be called in this stage */
+               break;
+         }
+      }
+
+      assert(currentlevel == 0);
+      assert(visitednodes.empty());
+      assert(ischildofsum.empty());
+
+      /* determine whether graph would be too large for bliss (can only handle int) */
+      if ( nnodes >= INT_MAX/2 )
+      {
+         success = FALSE; /*lint !e838*/
+         break;
+      }
+   }
+
+   /* free everything */
+   SCIPexpriteratorFree(&it);
+   SCIPfreeBlockMemoryArrayNull(scip, &uniquerhsarray, rhsarraysize);
+   SCIPfreeBlockMemoryArrayNull(scip, &sumcoefarray, coefarraysize);
+   SCIPfreeBlockMemoryArrayNull(scip, &uniqueconstarray, constarraysize);
+   SCIPfreeBlockMemoryArrayNull(scip, &uniqueoparray, oparraysize);
+   SCIPhashtableFree(&rhstypemap);
+   SCIPhashtableFree(&sumcoefmap);
+   SCIPhashtableFree(&consttypemap);
+   SCIPhashtableFree(&optypemap);
 
    return SCIP_OKAY;
 }
@@ -333,15 +883,27 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    int nnodes = 0;
    int nedges = 0;
+   int nusedcolors = 0;
+   SCIP_Bool success = FALSE;
 
    /* create bliss graph */
    bliss::Graph G(0);
 
-   SCIP_Bool success = FALSE;
-   SCIP_CALL( fillGraphByColoredCoefficients(scip, &G, matrixdata, nnodes, nedges, success) );
+   /* fill graph with nodes for variables and linear constraints */
+   SCIP_CALL( fillGraphByLinearConss(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
+
    if ( ! success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during linear part.\n");
+      return SCIP_OKAY;
+   }
+
+   /* add the nodes for expression constraints to the graph */
+   SCIP_CALL( fillGraphByNonlinearConss(scip, &G, nnodes, nedges, nusedcolors, success) );
+
+   if ( ! success )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during non-linear part.\n");
       return SCIP_OKAY;
    }
 

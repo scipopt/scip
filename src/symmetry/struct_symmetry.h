@@ -25,6 +25,7 @@
 
 #include "scip/scip.h"
 #include "symmetry/type_symmetry.h"
+#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +38,37 @@ struct SYM_Vartype
    SCIP_Real             lb;                 /**< lower bound of variable */
    SCIP_Real             ub;                 /**< upper bound of variable */
    SCIP_VARTYPE          type;               /**< type of variable */
+   int                   color;              /**< store color */
+};
+
+/** data of variables that are considered to be equivalent */
+struct SYM_Optype
+{
+   SCIP_CONSEXPR_EXPR*   expr;               /**< the underlying expression */
+   int                   level;              /**< level of operator in its expression tree */
+   int                   color;              /**< store color */
+};
+
+/** data of constants that have the same value */
+struct SYM_Consttype
+{
+   SCIP_Real             value;              /**< value of constant */
+   int                   color;              /**< store color */
+};
+
+/** data of coefficients that have the same value */
+struct SYM_Coeftype
+{
+   SCIP_Real             coefficient;        /**< value of constant */
+   int                   varidx;             /**< index of variable */
+   int                   color;              /**< store color */
+};
+
+/** data of coefficients that have the same value */
+struct SYM_Rhstype
+{
+   SCIP_Real             lhs;                /**< value of left-hand-side */
+   SCIP_Real             rhs;                /**< value of right-hand-side */
    int                   color;              /**< store color */
 };
 
