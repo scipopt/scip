@@ -1140,81 +1140,12 @@ SCIP_RETCODE forwardPropExpr(
    return SCIP_OKAY;
 }
 
-/** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
- *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
- *
- *  If queue is given and the computed activity in an expression is found to be larger than an auxiliary variables bounds,
- *  then the expression is added to the queue for reverse propagation.
- *
- *  TODO remove
- */
-static
-SCIP_RETCODE forwardPropCons(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONS*              cons,             /**< constraint to propagate */
-   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
-   SCIP_QUEUE*             reversepropqueue, /**< queue to add candidates for reverse propagation, or NULL */
-   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
-   SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
-   int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(infeasible != NULL);
-   assert(redundant != NULL);
-   assert(ntightenings != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   *infeasible = FALSE;
-   *redundant = FALSE;
-   *ntightenings = 0;
-
-   /* propagate active and non-deleted constraints only */
-   if( SCIPconsIsDeleted(cons) || !SCIPconsIsActive(cons) )
-      return SCIP_OKAY;
-
-   /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant */
-   if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
-   {
-      SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
-      if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, value - consdata->lhs, 0.0))
-         || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, value - consdata->rhs, 0.0)) )
-         *infeasible = TRUE;
-      else
-         *redundant = TRUE;
-
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), reversepropqueue, infeasible, ntightenings) );
-
-#ifdef SCIP_DEBUG
-   if( *infeasible )
-   {
-      SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
-         SCIPconsGetName(cons));
-   }
-#endif
-
-   return SCIP_OKAY;
-}
-
 /** propagates bounds for each sub-expression in a given queue by starting from the root expressions
  *
  *  the expression will be traversed in breadth first search by using this queue
  *
  *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
- *  forwardPropCons() before calling this function
+ *  forwardPropExpr() before calling this function
  */
 static
 SCIP_RETCODE reversePropQueue(
@@ -1364,7 +1295,6 @@ SCIP_RETCODE propConss(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
-   SCIP_Bool redundant;
    SCIP_Bool success;
    int ntightenings;
    int roundnr;
@@ -1412,27 +1342,51 @@ SCIP_RETCODE propConss(
          assert(consdata != NULL);
 
          /* skip deleted, non-active, or propagation-disabled constraints */
-         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) )
             continue;
+
+         /* handle constant expressions separately; either the problem is infeasible or the constraint is redundant
+          * TODO this should run after simplify, not here
+          */
+         if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
+         {
+            SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
+            if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasNegative(scip, value - consdata->lhs)) ||
+                (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasPositive(scip, value - consdata->rhs)) )
+            {
+               SCIPdebugMsg(scip, "<%s> with constant expression found infeasible\n", SCIPconsGetName(conss[i]));
+               SCIPdebugPrintCons(scip, conss[i], NULL);
+               cutoff = TRUE;
+               break;
+            }
+            else
+            {
+               SCIP_CALL( SCIPdelConsLocal(scip, conss[i]) );
+               ++*ndelconss;
+            }
+         }
 
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
           * in other rounds, we skip already propagated constraints
           */
-         if( consdata->ispropagated && roundnr > 0 )
+         if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
+         /* update acitivities in expression and collect initial candidates for reverse propagation */
+         SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
-         cutoff = FALSE;
-         redundant = FALSE;
          ntightenings = 0;
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), queue, &cutoff, &ntightenings) );
 
-         /* update acitivities in expression and collect initial candidates for reverse propagation */
-         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], force, queue, &cutoff, &redundant, &ntightenings) );
-         if( redundant )
-            *ndelconss += 1;
+      #ifdef SCIP_DEBUG
+         if( cutoff )
+         {
+            SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
+               SCIPconsGetName(cons));
+         }
+      #endif
 
          if( !cutoff && consdata->expr->auxvar == NULL )
          {
@@ -1515,7 +1469,7 @@ SCIP_RETCODE propConss(
 /** checks constraints for redundancy
  *
  * Checks whether the activity of constraint functions is a subset of the constraint sides (relaxed by feastol).
- * To compute the activity, we use forwardPropCons(), but relax variable bounds by feastol, because solutions to be checked
+ * To compute the activity, we use forwardPropExpr(), but relax variable bounds by feastol, because solutions to be checked
  * might violate variable bounds by up to feastol, too.
  * This is the main reason why the redundancy check is not done in propConss(), which relaxes variable bounds by epsilon only.
  *
@@ -1852,7 +1806,7 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_QUEUE* reversepropqueue;
-   SCIP_Bool redundant;
+   SCIP_INTERVAL activity;
    int ntightenings;
    int i;
 
@@ -1886,24 +1840,17 @@ SCIP_RETCODE detectNlhdlrs(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* make sure intervals in expression are uptodate
+         /* make sure activities in expression are uptodate
           * we do this here to have bounds for the auxiliary variables and for a reverseprop call at the end
           * we don't do auxiliary variables if in presolve, so do only in solving
-          * TODO we should not need to do this explicitly here
           */
-         SCIP_CALL( forwardPropCons(scip, conshdlr, conss[i], FALSE, NULL, infeasible, &redundant, &ntightenings) );
-         if( *infeasible )
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE) );
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
          {
-            SCIPdebugMsg(scip, "infeasibility detected in forward prop of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            SCIPdebugMsg(scip, "infeasibility detected in activity calculation of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            *infeasible = TRUE;
             break;
          }
-
-         /* forwardPropCons recognized redundant if the cons consists of a value expression
-          * for that one, we don't need nlhdlrs
-          * TODO can we delete constraint here (we are in initlp) ?
-          */
-         if( redundant )
-            continue;
 
 #ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
