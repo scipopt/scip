@@ -1047,8 +1047,8 @@ SCIP_RETCODE readCols(
          else if( !SCIPisZero(scip, val) )
          {
             /* warn the user in case a non-standard infinity is detected */
-            if( (SCIPisInfinity(scip, val) && SCIPinfinity(scip) != val) ||
-                (SCIPisInfinity(scip, -val) && SCIPinfinity(scip) != -val) )
+            if( (SCIPisInfinity(scip, val) && SCIPinfinity(scip) != val) ||   /*lint !e777*/
+                (SCIPisInfinity(scip, -val) && SCIPinfinity(scip) != -val) )  /*lint !e777*/
             {
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains non-standard infinity value <%e>,"
                   " consider adjusting SCIP infinity value.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
