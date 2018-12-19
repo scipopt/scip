@@ -9893,9 +9893,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    {
       SCIP_VAR* var;
 
-      /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
-//      expr->hastightened = TRUE;
-
       /* tighten bounds of linearization variable
        * but: do not tighten variable in problem stage (important for unittests)
        * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
