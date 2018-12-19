@@ -17,6 +17,7 @@
  * @brief  presolver for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
+ * @author Fabian Wegscheider
  *
  * This presolver computes symmetries of the problem and stores this information in adequate form. It does not
  * perform additional actions. The symmetry information can be accessed through external functions. However, the user
@@ -476,8 +477,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int j;
    int p;
 
-   /* TODO: remove this once the function works for MINLP */
-   return SCIP_OKAY;
+   if( SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "expr")) > 0 )
+   {
+      SCIPwarningMessage(scip, "Checking Symmetries is not implemented for MINLP, yet. Cannot guarantee correctness of symmetries");
+      return SCIP_OKAY;
+   }
 
    SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
 

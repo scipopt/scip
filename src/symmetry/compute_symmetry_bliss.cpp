@@ -61,7 +61,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyOptype)
 
 /** returns TRUE iff both keys are equal
  *
- *  Compare the types of two variables according to oprator name, level and, in case of power, exponent.
+ *  Compare the types of two operators according to their name, level and, in case of power, exponent.
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
@@ -463,13 +463,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    int oparraysize = 10 * nexprconss;
    int constarraysize = 5 * nexprconss;
    int coefarraysize = 20 * nexprconss;
-   int rhsarraysize = 2 * nexprconss;
+   int rhsarraysize = nexprconss;
 
    assert(scip != NULL);
    assert(G != NULL);
    assert(nnodes >= nusedcolors);
 
-   /* create maps for optypes and constants to indices */
+   /* create maps for optypes, constants, sum coefficients and rhs to indices */
    SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype, SYMhashKeyEQOptype, SYMhashKeyValOptype, (void*) scip) );
    assert( optypemap != NULL );
    SCIP_CALL( SCIPhashtableCreate(&consttypemap, SCIPblkmem(scip), constarraysize, SYMhashGetKeyConsttype, SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
@@ -479,7 +479,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), rhsarraysize, SYMhashGetKeyRhstype, SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
    assert( rhstypemap != NULL );
 
-   /* allocate space for mappings from optypes and constants to colors */
+   /* allocate space for mappings from optypes, constants, sum coefficients and rhs to colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueoparray, oparraysize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize) );
