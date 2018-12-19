@@ -1035,17 +1035,6 @@ SCIP_RETCODE readCols(
 
       val = atof(mpsinputField3(mpsi));
 
-      /* in case a non-standard infinity is detected, adjust SCIPs infinity to a higher one */
-      if( SCIPisInfinity(scip, val) )
-      {
-         SCIPwarningMessage(scip, "Bounds of variable <%s> contain non-standard infinity value <%e>,"
-            " consider setting infinity to a higher value.\n", SCIPvarGetName(var), val);
-      if( SCIPisInfinity(scip, -val) )
-      {
-         SCIPwarningMessage(scip, "Bounds of variable <%s> contain non-standard infinity value <%e>,"
-            " consider setting infinity to a higher value.\n", SCIPvarGetName(var), val);
-      }
-
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
          SCIP_CALL( SCIPchgVarObj(scip, var, val) );
@@ -1057,6 +1046,13 @@ SCIP_RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
+            /* warn the user in case a non-standard infinity is detected */
+            if( (SCIPisInfinity(scip, val) && SCIPinfinity(scip) != val) ||
+                (SCIPisInfinity(scip, -val) && SCIPinfinity(scip) != -val) )
+            {
+               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains non-standard infinity value <%e>,"
+                  " consider adjusting infinity value.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
+            }
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
