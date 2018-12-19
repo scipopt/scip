@@ -740,6 +740,12 @@ SCIP_RETCODE createNewSol(
    assert( subvars != NULL );
    assert( subsol != NULL );
 
+   *success = FALSE;
+
+   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
+      return SCIP_OKAY;
+
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 

@@ -791,6 +791,50 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
    }                                                                                           \
    while( FALSE )
 
+#ifndef NDEBUG
+/** verifies that the partial sorting and especially the median element satisfy all properties */
+static
+void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   int                   len,                /**< length of arrays */
+   int                   medianpos           /**< the position of the weighted median */
+   )
+{
+   int i;
+   SCIP_Real weightsum = 0.0;
+
+   for( i = 0; i < len; i++ )
+   {
+      if ( weights != NULL )
+         weightsum += weights[i];
+      else
+         weightsum += 1.0;
+
+      /* check that the weight sum exceeds the capacity at the median element */
+      if( i == medianpos )
+      {
+         assert(weightsum > capacity);
+      }
+      else if( i < medianpos )
+      {
+         /* check that the partial sorting is correct w.r.t. the median element and that capacity is not exceeded */
+         assert(medianpos == len || ! SORTTPL_ISBETTER(key[medianpos], key[i]));
+         assert(weightsum <= capacity);
+      }
+      else
+      {
+         assert(!SORTTPL_ISBETTER(key[i], key[medianpos]));
+      }
+   }
+}
+#endif
+
 /** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
  *  in the same way
  *
@@ -817,13 +861,30 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int hi;
    int lo;
    int j;
-   int recursiondepth;
+   int recursiondepth = 0;
+   int localmedianpos = -1;
+   SCIP_Real totalweightsum = 0.0;
    SCIP_Real residualcapacity;
 
    lo = 0;
    hi = len - 1;
    residualcapacity = capacity;
-   recursiondepth = 0;
+
+   /* compute the total weight and stop if all items fit */
+   if( weights != NULL )
+   {
+      for( j = 0; j < len; ++j )
+         totalweightsum += weights[j];
+   }
+   else
+      totalweightsum = len;
+
+   if( totalweightsum <= capacity )
+   {
+      localmedianpos = len;
+
+      goto CHECKANDRETURN;
+   }
 
    while( hi - lo + 1 > SORTTPL_SHELLSORTMAX )
    {
@@ -907,7 +968,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       }
 
       /* the weight in the better half of the array exceeds the capacity. Continue the search there */
-      if( betterweightsum >= residualcapacity )
+      if( betterweightsum > residualcapacity )
       {
          hi = bt - 1;
       }
@@ -923,12 +984,11 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
             weightsum += pivotweight;
 
             /* the element at index p is exactly the weighted median */
-            if( weightsum >= residualcapacity )
+            if( weightsum > residualcapacity )
             {
-               if( medianpos != NULL )
-                  *medianpos = p;
+               localmedianpos = p;
 
-               return;
+               goto CHECKANDRETURN;
             }
          }
 
@@ -957,16 +1017,21 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          lo, hi);
    }
 
+   /* it is impossible for lo or high to reach the end of the array. In this case, the item weights sum up to
+    * less than the capacity, which is handled at the top of this method.
+    */
+   assert(lo < len);
+   assert(hi < len);
+
    /* determine the median position among the remaining elements */
    for( j = lo; j <= MAX(lo, hi); ++j )
    {
       SCIP_Real weight = (weights != NULL ? weights[j] : 1.0);
 
       /* we finally found the median element */
-      if( weight >= residualcapacity )
+      if( weight > residualcapacity )
       {
-         if( medianpos != NULL )
-            *medianpos = j;
+         localmedianpos = j;
 
          break;
       }
@@ -974,12 +1039,25 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          residualcapacity -= weight;
    }
 
-   /* the capacity is not exceeded by the elements in the array */
-   if( j == len && medianpos != NULL )
-   {
-      assert(residualcapacity > 0);
-      *medianpos = len;
-   }
+CHECKANDRETURN:
+
+/* perform a thorough debug check of the selection result */
+#ifndef NDEBUG
+   SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
+   (key,
+      SORTTPL_HASPTRCOMPPAR(ptrcomp)
+      SORTTPL_HASINDCOMPPAR(indcomp)
+      SORTTPL_HASINDCOMPPAR(dataptr)
+    weights,
+    capacity,
+    len,
+    localmedianpos);
+#endif
+
+   if( medianpos != NULL )
+      *medianpos = localmedianpos;
+
+   return;
 }
 
 /** partially sorts a given keys array around the given index \p k and permutes the additional 'field' arrays are in the same way */
