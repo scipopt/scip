@@ -925,6 +925,11 @@ SCIP_RETCODE propagateOrbitalFixing(
       assert( pt != NULL );
 
       componentidx = vartocomponent[v];
+
+      /* skip unaffected variables */
+      if ( componentidx < 0 )
+         continue;
+
       for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
          int img;
@@ -974,7 +979,14 @@ SCIP_RETCODE propagateOrbitalFixing(
 
       pt = permstrans[v];
       assert( pt != NULL );
-      for (p = 0; p < nperms; ++p)
+
+      componentidx = vartocomponent[v];
+
+      /* skip unaffected variables */
+      if ( componentidx < 0 )
+         continue;
+
+      for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
          int img;
 
