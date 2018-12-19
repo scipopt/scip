@@ -16,8 +16,6 @@ CB_BASENAME="clusterbench_${CB_ID}"
 # last benchmarkrun is in database
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
 touch ${RBDB}
-# get the last clusterbench id, this has to happen here, before we write new ones
-OLDCB_ID=$(tail -n 1 ${RBDB}|cut -d ' ' -f 1)
 
 cd ${CB_OUTPUTDIR}
 
@@ -54,6 +52,9 @@ done
 # and send an email
 # otherwise just print the rubberband url in slurmlog
 if [ "${USER}" == "adm_timo" ]; then
+  # get the last clusterbench id
+  OLDCB_ID=$(grep queue=$Q ${RBDB} |tail -n 2|head -n 1|cut -d ' ' -f 2)
+
   MAILTEXT="The results of the clusterbenchmark are ready."
 
   # add a comparison for all queues
