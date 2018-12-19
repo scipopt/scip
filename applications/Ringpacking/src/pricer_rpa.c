@@ -77,7 +77,7 @@
 
 /* default values of pricing parameters */
 #define DEFAULT_PRICING_NLPTILIM             1e+20     /**< time limit for each pricing NLP */
-#define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
+#define DEFAULT_PRICING_NLPNODELIM           1000L     /**< node limit for each pricing NLP */
 #define DEFAULT_PRICING_HEURTILIM            1e+20     /**< time limit for each heuristic pricing */
 #define DEFAULT_PRICING_HEURITERLIM          1000      /**< iteration limit for each heuristic pricing */
 #define DEFAULT_PRICING_TOTALTILIM           1e+20     /**< total time limit for all pricing NLPs and heuristic calls */
