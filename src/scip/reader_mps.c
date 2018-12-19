@@ -1035,11 +1035,16 @@ SCIP_RETCODE readCols(
 
       val = atof(mpsinputField3(mpsi));
 
-      /* in case of infinity, make sure the normal infinity is used */
+      /* in case a non-standard infinity is detected, adjust SCIPs infinity to a higher one */
       if( SCIPisInfinity(scip, val) )
-         val = SCIPinfinity(scip);
-      else if( SCIPisInfinity(scip, -val) )
-         val = -SCIPinfinity(scip);
+      {
+         SCIPwarningMessage(scip, "Bounds of variable <%s> contain non-standard infinity value <%e>,"
+            " consider setting infinity to a higher value.\n", SCIPvarGetName(var), val);
+      if( SCIPisInfinity(scip, -val) )
+      {
+         SCIPwarningMessage(scip, "Bounds of variable <%s> contain non-standard infinity value <%e>,"
+            " consider setting infinity to a higher value.\n", SCIPvarGetName(var), val);
+      }
 
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
