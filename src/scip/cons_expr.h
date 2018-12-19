@@ -739,6 +739,7 @@ SCIP_Real SCIPgetConsExprExprDerivative(
  * - reverse propagation
  * - monotonicity computation
  * - convexity detection
+ * - structure detection
  */
 EXTERN
 SCIP_INTERVAL SCIPgetConsExprExprActivity(

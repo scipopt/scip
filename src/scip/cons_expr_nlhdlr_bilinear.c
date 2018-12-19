@@ -326,6 +326,8 @@ void getFeasiblePointsBilinear(
    SCIP_CONSEXPR_EXPR* child1;
    SCIP_CONSEXPR_EXPR* child2;
    SCIP_INTERVAL expractivity;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
    SCIP_Real ineqs[12];
    SCIP_Real lbx;
    SCIP_Real ubx;
@@ -367,12 +369,16 @@ void getFeasiblePointsBilinear(
    assert(child1 != NULL && child2 != NULL);
    assert(child1 != child2);
 
+   x = SCIPgetConsExprExprAuxVar(child1);
+   y = SCIPgetConsExprExprAuxVar(child2);
+   assert(x != NULL && y != NULL);
+   assert(x != y);
+
    /* collect bounds of children */
-   /* TODO use bounds of auxvar in child */
-   lbx = SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, child1));
-   ubx = SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, child1));
-   lby = SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, child2));
-   uby = SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, child2));
+   lbx = SCIPvarGetLbLocal(x);
+   ubx = SCIPvarGetUbLocal(x);
+   lby = SCIPvarGetLbLocal(y);
+   uby = SCIPvarGetUbLocal(y);
 
    /* corner points that satisfy all inequalities */
    for( i = 0; i < 4; ++i )
@@ -459,8 +465,8 @@ void getFeasiblePointsBilinear(
    if( !levelset )
       return;
 
-   /* TODO do not abort */
-   SCIP_CALL_ABORT( SCIPevalConsExprExprActivity(scip, NULL, expr, &expractivity, TRUE) );
+   /* we are either in forward or backward propagation, so should have valid activity */
+   expractivity = SCIPgetConsExprExprActivity(scip, expr);
 
    /* compute intersection of level sets with the boundary */
    for( i = 0; i < 2; ++i )

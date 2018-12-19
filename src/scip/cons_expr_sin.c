@@ -995,6 +995,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
+   SCIP_VAR* childvar;
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool success;
@@ -1003,9 +1004,12 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    int i;
 
    *infeasible = FALSE;
-   /* TODO use bounds of auxvar of child */
-   childlb = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]).inf;
-   childub = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]).sup;
+
+   childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
 
    /* no need for cut if child is fixed */
    if( SCIPisRelEQ(scip, childlb, childub) )

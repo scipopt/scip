@@ -180,15 +180,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool success;
+   SCIP_VAR* childvar;
 
    SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
 
    *infeasible = FALSE;
 
-   /* TODO take bounds of auxiliary variable in child */
-   childlb = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]).inf;
-   childub = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]).sup;
+   childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
 
    /* no need for cut if child is fixed */
    if( SCIPisRelEQ(scip, childlb, childub) )
