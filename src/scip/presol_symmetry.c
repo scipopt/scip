@@ -85,7 +85,7 @@ struct SCIP_PresolData
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
    int                   ncomponents;        /**< number of components of symmetry group */
-   int*                  components;         /**< array containing the indices of permutation sorted by components */
+   int*                  components;         /**< array containing the indices of permutations sorted by components */
    int*                  componentbegins;    /**< array containing in i-th position the first position of component i in components array */
    int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is contained in (-1 if not affected) */
    SCIP_Shortbool*       componentblocked;   /**< array to store whether a component is blocked to be considered by symmetry handling techniques */
