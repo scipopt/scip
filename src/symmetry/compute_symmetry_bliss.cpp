@@ -28,6 +28,7 @@
 #include <bliss/defs.hh>
 #include <bliss/graph.hh>
 
+#include <string.h>
 #include <vector>
 #include <list>
 #include <math.h>
@@ -36,27 +37,7 @@
 #include <scip/cons_expr_pow.h>
 #include <scip/cons_expr_iterator.h>
 
-#include <permlib/permlib_api.h>
-#include <permlib/abstract_bsgs.h>
-#include <permlib/test/group_type.h>
-#include <boost/shared_ptr.hpp>
-
-#include <permlib/abstract_symmetric_product.h>
-#include <permlib/construct/known_bsgs_construction.h>
-#include <permlib/test/type_recognition.h>
-
-#ifdef WITH_GMP
-#include <gmpxx.h>
-#include <sstream>
-#endif
-
-/* useful typedefs */
-typedef boost::shared_ptr<permlib::AbstractPermutationGroup> PermutationGroupPtr;
-typedef std::vector<unsigned int> uintvec;
-typedef boost::shared_ptr<uintvec> uintvecPtr;
-
 using std::vector;
-using namespace permlib;
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -68,24 +49,6 @@ struct BLISS_Data
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
 };
-
-/** @struct Component
- *  @brief  Symmetry component
- */
-struct Component
-{
-   boost::dynamic_bitset<> bitset;
-   std::list<permlib::PERMUTATION::ptr> generators;
-   unsigned int degree;
-
-   /** constructor */
-   Component(const boost::dynamic_bitset<>& b, const permlib::PERMUTATION::ptr& p, unsigned int degree_) :
-      bitset(b), degree(degree_)
-   {
-      generators.push_back(p);
-   }
-};
-typedef boost::shared_ptr<Component> ComponentPtr;
 
 /* ------------------- map for operator types ------------------- */
 
