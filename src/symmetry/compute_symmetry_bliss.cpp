@@ -556,7 +556,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   SYM_OPTYPE *ot;
 
                   /* check whether we have to resize */
-                  if ( nuniqueops >= oparraysize )
+                  if( nuniqueops >= oparraysize )
                   {
                      int newsize = SCIPcalcMemGrowSize(scip, nuniqueops+1);
                      assert( newsize >= 0 );
@@ -571,9 +571,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ot->expr = expr;
                   ot->level = currentlevel;
 
-                  if( !SCIPhashtableExists(optypemap, (void *) ot))
+                  if( !SCIPhashtableExists(optypemap, (void *) ot) )
                   {
-                     SCIP_CALL(SCIPhashtableInsert(optypemap, (void *) ot));
+                     SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
                      ot->color = nusedcolors + nuniqueconsts + nuniquecoefs + nuniqueops + nuniquerhs;
                      color = ot->color;
                      nuniqueops++;

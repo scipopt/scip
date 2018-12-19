@@ -418,7 +418,7 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
    cr_assert(conshdlr != NULL);
 
    /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
+   if( !SYMcanComputeSymmetry() )
    return;
 
    /* setup problem:
@@ -488,12 +488,12 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
          int i;
          int j;
 
-         for (i = 0; i < nperms; ++i)
+         for( i = 0; i < nperms; ++i )
          {
             SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-            for (j = 0; j < npermvars; ++j)
+            for( j = 0; j < npermvars; ++j )
             {
-               if ( j == 0 )
+               if( j == 0 )
                   SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
                else
                   SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
