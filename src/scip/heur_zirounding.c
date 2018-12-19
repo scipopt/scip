@@ -271,11 +271,17 @@ SCIP_RETCODE updateSlacks(
       if( rowpos >= 0 )
       {
          SCIP_Real val;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_ROW* row;
 
          val = colvals[i] * shiftvalue;
+         row = rows[i];
+         lhs = SCIProwGetLhs(row);
+         rhs = SCIProwGetRhs(row);
 
          /* if the row is an equation, we update its slack variable instead of its activities */
-         if( SCIPisFeasEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])) )
+         if( SCIPisFeasEQ(scip, lhs, rhs) )
          {
             SCIP_Real slackvarshiftval;
             SCIP_Real slackvarsolval;
@@ -291,7 +297,7 @@ SCIP_RETCODE updateSlacks(
 
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvars[rowpos], slackvarsolval + slackvarshiftval) );
          }
-         else if( !SCIPisInfinity(scip, -activities[rowpos]) && !SCIPisInfinity(scip, activities[rowpos]) )
+         else if( !SCIPisInfinity(scip, REALABS(activities[rowpos])) )
             activities[rowpos] += val;
 
          /* the slacks of the row now can be updated independently of its type */
@@ -300,8 +306,8 @@ SCIP_RETCODE updateSlacks(
          if( !SCIPisInfinity(scip, -downslacks[rowpos]) )
             downslacks[rowpos] += val;
 
-         assert(!SCIPisFeasNegative(scip, upslacks[rowpos]));
-         assert(!SCIPisFeasNegative(scip, downslacks[rowpos]));
+         assert(SCIPisInfinity(scip, -lhs) || SCIPisFeasGE(scip, activities[rowpos], lhs));
+         assert(SCIPisInfinity(scip, rhs) || SCIPisFeasLE(scip, activities[rowpos], rhs));
       }
    }
    return SCIP_OKAY;

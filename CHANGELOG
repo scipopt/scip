@@ -252,6 +252,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+- do not scale linear constraints to integral coefficients
 
 Known bugs
 ----------
