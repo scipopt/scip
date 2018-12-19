@@ -1758,6 +1758,17 @@ SCIP_RETCODE detectNlhdlr(
          SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
          /* tighten bounds of expression interval and the auxiliary variable */
          SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, TRUE, NULL, infeasible, &ntightenings) );
+
+         if( !*infeasible )
+         {
+            /* call reverse propagation of nlhdlr
+             * This can ensure that just created auxiliary variables take only values that are within the domain of functions that use them,
+             * e.g., sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
+             * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
+             * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
+             */
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
+         }
       }
    }
 
@@ -1805,9 +1816,7 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_QUEUE* reversepropqueue;
    SCIP_INTERVAL activity;
-   int ntightenings;
    int i;
 
    assert(conss != NULL || nconss == 0);
@@ -1823,11 +1832,6 @@ SCIP_RETCODE detectNlhdlrs(
    /* allocate some buffer for temporary storage of nlhdlr detect result */
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL( SCIPqueueCreate(&reversepropqueue, 5*nconss, 2.0) );
-   }
 
    *infeasible = FALSE;
    for( i = 0; i < nconss; ++i )
@@ -1931,17 +1935,6 @@ SCIP_RETCODE detectNlhdlrs(
 
             if( *infeasible )
                break;
-
-            /* remember to call reverse propagation for this expression
-             * this can ensure that just created auxiliary variables take only values that are within the domain of functions that use them
-             * for example, sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
-             * TODO should we just call the relevant reverseProp code on this expr from reversePropQueue without creating a queue?
-             */
-            if( !expr->inqueue )
-            {
-               SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
-               expr->inqueue = TRUE;
-            }
          }
 
          expr = SCIPexpriteratorGetNext(it);
@@ -1957,18 +1950,6 @@ SCIP_RETCODE detectNlhdlrs(
    SCIPexpriteratorFree(&it);
    SCIPfreeBufferArray(scip, &nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrssuccess);
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !*infeasible )
-   {
-      /* call reverse propagation for expressions in queue
-       * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
-       * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
-       */
-      SCIP_CALL( reversePropQueue(scip, reversepropqueue, FALSE, FALSE, infeasible, &ntightenings) );
-
-      assert(SCIPqueueIsEmpty(reversepropqueue));
-      SCIPqueueFree(&reversepropqueue);
-   }
 
    return SCIP_OKAY;
 }
