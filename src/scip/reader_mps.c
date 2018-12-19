@@ -1046,7 +1046,7 @@ SCIP_RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
-            /* warn the user in case a non-standard infinity is detected */
+            /* warn the user in case the coefficient is infinite */
             if( SCIPisInfinity(scip, REALABS(val)) )
             {
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
