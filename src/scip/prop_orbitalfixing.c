@@ -115,6 +115,10 @@ struct SCIP_PropData
    int*                  movedpermvars;      /**< indices of moved variables */
    int                   nperms;             /**< pointer to store number of permutations */
    int**                 permstrans;         /**< pointer to store transposed permutation generators as (npermvars x nperms) matrix */
+   int                   ncomponents;        /**< number of components of symmetry group */
+   int*                  components;         /**< array containing the indices of permutation sorted by components */
+   int*                  componentbegins;    /**< array containing in i-th position the first position of component i in components array */
+   int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is contained in (-1 if not affected) */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
@@ -278,12 +282,19 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
    int                   npermvars,          /**< length of a permutation array */
    int                   nmovedpermvars,     /**< number of variables moved by any permutation */
    int*                  movedpermvars,      /**< indices of moved variables */
-   int**                 permstrans,         /**< transposed matrix containing in each column a permutation of the symmetry group */
+   int**                 permstrans,         /**< transposed matrix containing in each column a
+                                              *   permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
    SCIP_Shortbool*       inactiveperms,      /**< array to store whether permutations are inactive */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
-   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int*                  components,         /**< array containing the indices of permutations sorted by components */
+   int*                  componentbegins,    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   int*                  ncomponents         /**< pointer to number of components of symmetry group */
    )
 {
    SCIP_Shortbool* varadded;
@@ -460,6 +471,10 @@ SCIP_RETCODE getSymmetries(
       propdata->npermvars = -1;
       propdata->nmovedpermvars = -1;
       propdata->permvarmap = NULL;
+      propdata->components = NULL;
+      propdata->componentbegins = NULL;
+      propdata->vartocomponent = NULL;
+      propdata->ncomponents = 0;
 
       recompute = TRUE;
    }
@@ -473,7 +488,8 @@ SCIP_RETCODE getSymmetries(
       int p;
 
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
-            &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL, NULL, NULL, NULL, NULL) );
+            &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL,
+            &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent), &(propdata->ncomponents)) );
 
       /* store restart level */
       propdata->lastrestart = SCIPgetNRuns(scip);
@@ -807,6 +823,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_VAR** permvars;
    int* orbitbegins;
    int* orbits;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
 #ifndef NDEBUG
    SCIP_Real* permvarsobj = NULL;
 #endif
@@ -844,11 +864,19 @@ SCIP_RETCODE propagateOrbitalFixing(
    assert( propdata->permvarmap != NULL );
    assert( propdata->permstrans != NULL );
    assert( propdata->inactiveperms != NULL );
+   assert( propdata->components != NULL );
+   assert( propdata->componentbegins != NULL );
+   assert( propdata->vartocomponent != NULL );
+   assert( propdata->ncomponents > 0 );
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    permstrans = propdata->permstrans;
    inactiveperms = propdata->inactiveperms;
+   components = propdata->components;
+   componentbegins = propdata->componentbegins;
+   vartocomponent = propdata->vartocomponent;
+   ncomponents = propdata->ncomponents;
 
    /* init bitset for marking variables (globally fixed or) branched to 1 */
    bg1 = propdata->bg1;
@@ -993,7 +1021,8 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( computeGroupOrbitsFilterSymbreak(scip, npermvars, propdata->nmovedpermvars, propdata->movedpermvars,
-         permstrans, nperms, inactiveperms, orbits, orbitbegins, &norbits) );
+         permstrans, nperms, inactiveperms, orbits, orbitbegins, &norbits, components, componentbegins,
+         vartocomponent, &ncomponents) );
 
    if ( norbits > 0 )
    {
