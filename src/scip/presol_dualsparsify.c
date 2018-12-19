@@ -824,7 +824,7 @@ SCIP_RETCODE cancelCol(
                *naddconss += 1;
 
             *ncanceled = *ncanceled + nmaxratio - nnz1;
-            *nchgcoefs = *nchgcoefs + varlen2;
+            *nchgcoefs = *nchgcoefs + varlen1;
          }
          else
          {
@@ -840,7 +840,7 @@ SCIP_RETCODE cancelCol(
                *naddconss += 1;
 
             *ncanceled = *ncanceled + nmaxratio - nnz2;
-            *nchgcoefs = *nchgcoefs + varlen1;
+            *nchgcoefs = *nchgcoefs + varlen2;
          }
       }
    }
