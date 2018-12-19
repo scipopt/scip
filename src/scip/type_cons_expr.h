@@ -942,6 +942,22 @@ typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< 
 
 /** @} */
 
+/** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
+ *
+ * input:
+ * - args the point to be evaluated
+ * - nargs the number of arguments of the function (length of array args)
+ * - funcdata user-data of function evaluation callback
+ *
+ * return:
+ * - value of function in point x or SCIP_INVALID if could not be evaluated
+ */
+#define SCIP_DECL_VERTEXPOLYFUN(f) SCIP_Real f (SCIP_Real* args, int nargs, void* funcdata)
+
+/** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
+#define SCIP_MAXVERTEXPOLYDIM 14
+
+
 #ifdef __cplusplus
 }
 #endif
