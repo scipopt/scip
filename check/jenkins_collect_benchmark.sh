@@ -53,14 +53,14 @@ done
 # otherwise just print the rubberband url in slurmlog
 if [ "${USER}" == "adm_timo" ]; then
   # get the last clusterbench id
-  OLDCB_ID=$(grep queue=$Q ${RBDB} |tail -n 2|head -n 1|cut -d ' ' -f 2)
+  OLDCB_ID=$(grep -P "queue=$Q($| )" ${RBDB} |tail -n 2|head -n 1|cut -d ' ' -f 2)
 
   MAILTEXT="The results of the clusterbenchmark are ready."
 
   # add a comparison for all queues
   for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
-    LASTWEEK=$(grep -e ${OLDCB_ID} ${RBDB}|grep queue=$Q |cut -d ' ' -f 2)
-    THISWEEK=$(grep -e ${CB_ID} ${RBDB}|grep queue=$Q |cut -d ' ' -f 2)
+    LASTWEEK=$(grep -e ${OLDCB_ID} ${RBDB}|grep -P "queue=$Q($| )" |cut -d ' ' -f 2)
+    THISWEEK=$(grep -e ${CB_ID} ${RBDB}|grep -P "queue=$Q($| )" |cut -d ' ' -f 2)
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
         # construct rubberband link and mailtext

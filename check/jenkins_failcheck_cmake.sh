@@ -187,13 +187,17 @@ fi
 SEED=0
 while [ ${SEED} -le ${SEEDS} ]; do
   # get ending given by seed
-  if [ "${SEED}" != "0" ]; then
+  if [ "${SEED}" == "0" ]; then
+    SEED_ENDING=""
+  else
     SEED_ENDING="-s${SEED}"
   fi
   PERM=0
   while [ ${PERM} -le ${PERMUTE} ]; do
     # get ending given by permutation
-    if [ "${PERM}" != "0" ]; then
+    if [ "${PERM}" == "0" ]; then
+      PERM_ENDING=""
+    else
       PERM_ENDING="-p${PERM}"
     fi
 
@@ -363,7 +367,7 @@ done
 if [ "${PERFORMANCE}" == "performance" ]; then
 
   function geturl() {
-    RBDB_STRS=$1
+    RBDB_STRS="$1"
     i=0
     while read -r line; do
       arr=($line)
@@ -390,12 +394,12 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   # add a comparison for all permutations
   PERM=0
   while [ $PERM -le $PERMUTE ]; do
-    LASTWEEK=$(grep -e ${OLDTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2)
-    THISWEEK=$(grep -e ${NEWTIMESTAMP} ${RBDB}|grep p=$PERM|cut -d ' ' -f 2)
+    LASTWEEK=$(grep -e ${OLDTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
+    THISWEEK=$(grep -e ${NEWTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
         PERF_MAIL="${PERF_MAIL}
-Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}"
+Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=$(geturl "${THISWEEK}")"
       fi
     fi
     PERM=$((PERM + 1))
