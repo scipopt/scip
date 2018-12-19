@@ -1077,13 +1077,7 @@ SCIP_RETCODE forwardPropExpr(
             if( expr->auxvar != NULL )
             {
                SCIP_INTERVAL auxvarbounds;
-               SCIP_Real lb = SCIPvarGetLbLocal(expr->auxvar);
-               SCIP_Real ub = SCIPvarGetUbLocal(expr->auxvar);
-               /* TODO use intevalvar */
-               lb = SCIPisInfinity(scip, -lb) ? -SCIP_INTERVAL_INFINITY : lb - SCIPepsilon(scip);
-               ub = SCIPisInfinity(scip,  ub) ?  SCIP_INTERVAL_INFINITY : ub + SCIPepsilon(scip);
-
-               SCIPintervalSetBounds(&auxvarbounds, lb, ub);
+               auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
 
                /* it would be odd if the domain of an auxiliary variable were empty */
                assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
