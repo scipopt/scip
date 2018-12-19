@@ -3719,6 +3719,22 @@ SCIP_RETCODE detectRedundantConstraints(
             goto TERMINATE;
          }
 
+         /* aggregate parity variables into each other */
+         if( consdata0->intvar != consdata1->intvar )
+         {
+            SCIP_Bool redundant;
+            SCIP_Bool aggregated;
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPaggregateVars(scip, consdata0->intvar, consdata1->intvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+         }
+
          /* delete cons0 and update flags of cons1 s.t. nonredundant information doesn't get lost */
          /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
