@@ -3720,18 +3720,30 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* aggregate parity variables into each other */
-         if( consdata0->intvar != consdata1->intvar )
+         if( consdata0->intvar != consdata1->intvar && consdata0->intvar != NULL )
          {
-            SCIP_Bool redundant;
-            SCIP_Bool aggregated;
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPaggregateVars(scip, consdata0->intvar, consdata1->intvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
-
-            if( infeasible )
+            if( consdata1->intvar != NULL )
             {
-               *cutoff = TRUE;
-               goto TERMINATE;
+               SCIP_Bool redundant;
+               SCIP_Bool aggregated;
+               SCIP_Bool infeasible;
+
+               SCIP_CALL( SCIPaggregateVars(scip, consdata0->intvar, consdata1->intvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+                  goto TERMINATE;
+               }
+            }
+            /* the special case that only cons0 has a parity variable 'intvar' is treated by swapping cons0 and cons1 */
+            else
+            {
+               SCIP_CALL( SCIPhashtableInsert(hashtable, (void *)cons0) );
+               assert(SCIPhashtableRetrieve(hashtable, (void *)cons1) == cons0);
+
+               SCIPswapPointers((void**)&cons0, (void**)(&cons1));
+               SCIPswapPointers((void**)&consdata0, (void**)(&consdata1));
             }
          }
 
