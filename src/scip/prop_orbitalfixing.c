@@ -842,6 +842,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    int p;
    int v;
    int j;
+   int componentidx;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -922,7 +923,9 @@ SCIP_RETCODE propagateOrbitalFixing(
 
       pt = permstrans[v];
       assert( pt != NULL );
-      for (p = 0; p < nperms; ++p)
+
+      componentidx = vartocomponent[v];
+      for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
          int img;
 
