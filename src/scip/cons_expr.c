@@ -1267,12 +1267,10 @@ SCIP_RETCODE reversePropQueue(
  *
  *  the propagation algorithm works as follows:
  *
- *   0.) mark all expressions as non-tightened
+ *   1.) apply forward propagation (update activities) and collect expressions for which auxiliary variables (during solve)
+ *       or constraint sides (during presolve) provide tighter bounds
  *
- *   1.) apply forward propagation and intersect the root expressions with the constraint sides; mark root nodes which
- *       have been changed after intersecting with the constraint sides
- *
- *   2.) apply reverse propagation to each root expression which has been marked as tightened; don't explore
+ *   2.) apply reverse propagation to all collected expressions; don't explore
  *       sub-expressions which have not changed since the beginning of the propagation loop
  *
  *   3.) if we have found enough tightenings go to 1.) otherwise leave propagation loop
@@ -1281,7 +1279,7 @@ SCIP_RETCODE reversePropQueue(
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  *
- *  @note when using forward and reverse propagation alternatingly we reuse expression intervals computed in previous
+ *  @note when using forward and reverse propagation alternatingly we reuse expression activites computed in previous
  *  iterations
  */
 static
@@ -1300,6 +1298,7 @@ SCIP_RETCODE propConss(
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
    SCIP_Bool success;
+   SCIP_Bool allexprs;
    int ntightenings;
    int roundnr;
    int i;
@@ -1319,6 +1318,10 @@ SCIP_RETCODE propConss(
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
+
+   /* TODO maybe only do this if first call or simplify or someone else changed the expression graph */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      allexprs = TRUE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1356,12 +1359,12 @@ SCIP_RETCODE propConss(
          if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         /* update acitivities in expression and collect initial candidates for reverse propagation */
+         /* update activities in expression and collect initial candidates for reverse propagation */
          SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), queue, &cutoff, &ntightenings) );
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
 
       #ifdef SCIP_DEBUG
          if( cutoff )
@@ -1384,7 +1387,7 @@ SCIP_RETCODE propConss(
             SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
             SCIPintervalSetBounds(&conssides, lhs, rhs);
 
-            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, conssides, force, queue, &cutoff, &ntightenings) );
+            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, conssides, force, allexprs ? NULL : queue, &cutoff, &ntightenings) );
 
             if( cutoff )
             {
@@ -1407,13 +1410,18 @@ SCIP_RETCODE propConss(
 
          if( ntightenings > 0 )
             *result = SCIP_REDUCEDDOM;
+
+         if( allexprs && !consdata->expr->inqueue )
+         {
+            SCIP_CALL( SCIPqueueInsert(queue, consdata->expr) );
+            consdata->expr->inqueue = TRUE;
+         }
       }
 
       if( !cutoff )
       {
          /* apply backward propagation */
-         /* TODO during presolve, maybe we want to run reverseprop for ALL expressions once, if roundnr==0 ? */
-         SCIP_CALL( reversePropQueue(scip, queue, force, FALSE, &cutoff, &ntightenings) );
+         SCIP_CALL( reversePropQueue(scip, queue, force, allexprs, &cutoff, &ntightenings) );
 
          /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
          success = ntightenings > 0;
@@ -1443,6 +1451,9 @@ SCIP_RETCODE propConss(
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
+
+      /* do this only for the first round */
+      allexprs = FALSE;
    }
    while( success && ++roundnr < conshdlrdata->maxproprounds );
 
