@@ -185,12 +185,12 @@ if [ "${PERFORMANCE}" == "performance" ]; then
 fi
 
 SEED=0
-PERM=0
 while [ ${SEED} -le ${SEEDS} ]; do
   # get ending given by seed
   if [ "${SEED}" != "0" ]; then
     SEED_ENDING="-s${SEED}"
   fi
+  PERM=0
   while [ ${PERM} -le ${PERMUTE} ]; do
     # get ending given by permutation
     if [ "${PERM}" != "0" ]; then
