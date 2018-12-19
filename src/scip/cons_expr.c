@@ -2193,11 +2193,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
-   /* mark constraint to be propagated and simplified again */
-   /* TODO: we only need to re-propagate if SCIP_EVENTTYPE_BOUNDTIGHTENED, but we need to reevaluate
-    * the intervals (forward-propagation) when SCIP_EVENTTYPE_BOUNDRELAXED
-    * at some point we should start using the intevaltag for this
-    */
+   /* mark constraint to be propagated and simplified again, update cutboundstag */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
       conshdlr = SCIPconsGetHdlr(cons);
