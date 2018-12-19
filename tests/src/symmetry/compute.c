@@ -388,138 +388,138 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 /* TEST 4 */
 Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple example with 4 variables and 2 expr constraints - before presolving")
 {
-SCIP_VAR* x;
-SCIP_VAR* y;
-SCIP_VAR* z;
-SCIP_VAR* w;
-SCIP_CONS* cons;
-SCIP_CONSHDLR* conshdlr;
-SCIP_VAR** permvars;
-SCIP_CONSEXPR_EXPR* xexpr;
-SCIP_CONSEXPR_EXPR* yexpr;
-SCIP_CONSEXPR_EXPR* zexpr;
-SCIP_CONSEXPR_EXPR* wexpr;
-SCIP_CONSEXPR_EXPR** powexprs1;
-SCIP_CONSEXPR_EXPR** powexprs2;
-SCIP_CONSEXPR_EXPR* sumexpr1;
-SCIP_CONSEXPR_EXPR* sumexpr2;
-int** perms;
-int* orbits;
-int* orbitbegins;
-int norbits;
-int npermvars;
-int nperms;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_VAR* w;
+   SCIP_CONS* cons;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR** permvars;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+   SCIP_CONSEXPR_EXPR* zexpr;
+   SCIP_CONSEXPR_EXPR* wexpr;
+   SCIP_CONSEXPR_EXPR** powexprs1;
+   SCIP_CONSEXPR_EXPR** powexprs2;
+   SCIP_CONSEXPR_EXPR* sumexpr1;
+   SCIP_CONSEXPR_EXPR* sumexpr2;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int npermvars;
+   int nperms;
 
-SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
-SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
 
-/* get expr conshdlr */
-conshdlr = SCIPfindConshdlr(scip, "expr");
-cr_assert(conshdlr != NULL);
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   cr_assert(conshdlr != NULL);
 
-/* skip test if no symmetry can be computed */
-if ( ! SYMcanComputeSymmetry() )
-return;
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+   return;
 
-/* setup problem:
- * min x1 + x2 + x3 + x4
- *     x1^2 + x2^2               =  1
- *                   x3^2 + x4^2 =  1
- *     x1, ..., x4 binary
- */
-SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
+   /* setup problem:
+    * min x1 + x2 + x3 + x4
+    *     x1^2 + x2^2               =  1
+    *                   x3^2 + x4^2 =  1
+    *     x1, ..., x4 binary
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
 
-SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-SCIP_CALL( SCIPaddVar(scip, x) );
-SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-SCIP_CALL( SCIPaddVar(scip, y) );
-SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-SCIP_CALL( SCIPaddVar(scip, z) );
-SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-SCIP_CALL( SCIPaddVar(scip, w) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
 
-SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[0], xexpr, 2) );
-SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[1], yexpr, 2) );
-SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[0], zexpr, 2) );
-SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[1], wexpr, 2) );
-SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 2, powexprs1, NULL, 0) );
-SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 2, powexprs2, NULL, 0) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[0], xexpr, 2) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[1], yexpr, 2) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[0], zexpr, 2) );
+   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[1], wexpr, 2) );
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 2, powexprs1, NULL, 0) );
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 2, powexprs2, NULL, 0) );
 
-SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
-SCIP_CALL( SCIPaddCons(scip, cons) );
-SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
-SCIP_CALL( SCIPaddCons(scip, cons) );
-SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-/* turn on checking of symmetries */
-SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", FALSE) );
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", FALSE) );
 
-/* turn off presolving in order to avoid having trivial problem afterwards */
-SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-/* presolve problem (symmetry will be available afterwards) */
-SCIP_CALL( SCIPpresolve(scip) );
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
 
-/* get symmetry */
-SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
+   /* get symmetry */
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
 
-/* compute orbits */
-SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-cr_assert( norbits == 1 );
-cr_assert( orbitbegins[0] == 0 );
-cr_assert( orbitbegins[1] == 4 );
-cr_assert( orbits[0] == 0 );
-cr_assert( orbits[1] == 1 );
-cr_assert( orbits[2] == 2 );
-cr_assert( orbits[3] == 3 );
-SCIPfreeBufferArray(scip, &orbitbegins);
-SCIPfreeBufferArray(scip, &orbits);
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
+   cr_assert( norbits == 1 );
+   cr_assert( orbitbegins[0] == 0 );
+   cr_assert( orbitbegins[1] == 4 );
+   cr_assert( orbits[0] == 0 );
+   cr_assert( orbits[1] == 1 );
+   cr_assert( orbits[2] == 2 );
+   cr_assert( orbits[3] == 3 );
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
 
-#ifdef SCIP_DEBUG
-{
-      int i;
-      int j;
+   #ifdef SCIP_DEBUG
+   {
+         int i;
+         int j;
 
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
+         for (i = 0; i < nperms; ++i)
          {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+            SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
+            for (j = 0; j < npermvars; ++j)
+            {
+               if ( j == 0 )
+                  SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
+               else
+                  SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+            }
+            SCIPinfoMessage(scip, NULL, ")\n");
          }
-         SCIPinfoMessage(scip, NULL, ")\n");
       }
-   }
-#endif
+   #endif
 
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[1]) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[0]) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[1]) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[0]) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
-SCIP_CALL( SCIPreleaseVar(scip, &w) );
-SCIP_CALL( SCIPreleaseVar(scip, &z) );
-SCIP_CALL( SCIPreleaseVar(scip, &y) );
-SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[1]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[0]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[1]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[0]) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
 
-SCIPfreeBufferArray(scip, &powexprs1);
-SCIPfreeBufferArray(scip, &powexprs2);
+   SCIPfreeBufferArray(scip, &powexprs1);
+   SCIPfreeBufferArray(scip, &powexprs2);
 }
 
 /* TEST 5 */
@@ -634,7 +634,7 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    SCIP_CALL( SCIPpresolve(scip) );
 
 /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
 
 /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -796,7 +796,7 @@ SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 SCIP_CALL( SCIPpresolve(scip) );
 
 /* get symmetry */
-SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
+SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
 
 /* compute orbits */
 SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -959,7 +959,7 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPpresolve(scip) );
 
 /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, &binvarsaffected) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, &binvarsaffected) );
 
    cr_assert(binvarsaffected);
 
