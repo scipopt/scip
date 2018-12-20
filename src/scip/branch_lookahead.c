@@ -4935,10 +4935,10 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    assert(branchruledata->persistent != NULL);
    assert(branchruledata->persistent->prevdecision != NULL);
 
-   SCIPfreeMemory(scip, &branchruledata->persistent->prevdecision);
-   SCIPfreeMemory(scip, &branchruledata->persistent);
-   SCIPfreeMemory(scip, &branchruledata->config);
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent->prevdecision);
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
+   SCIPfreeBlockMemory(scip, &branchruledata->config);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -5257,13 +5257,13 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_BRANCHRULE* branchrule;
 
    /* create lookahead branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->config) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->config) );
    branchruledata->config->forcebranching = FALSE;
 
    /* needs to be allocated here, such that the previous decision can be filled and reset over multiple runs */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent) );
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->prevdecision) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->prevdecision) );
    branchruledata->isinitialized = FALSE;
 
    /* include branching rule */
