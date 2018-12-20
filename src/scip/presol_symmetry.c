@@ -43,14 +43,12 @@
 #include <scip/cons_or.h>
 #include <scip/cons_xor.h>
 #include <scip/cons_linking.h>
+#include <scip/cons_expr.h>
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
 
 #include <string.h>
-#include "type_cons_expr.h"
-#include "struct_cons_expr.h"
-#include "cons_expr.h"
 
 /* presolver properties */
 #define PRESOL_NAME            "symmetry"
