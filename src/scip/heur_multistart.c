@@ -476,8 +476,8 @@ TERMINATE:
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
-   SCIPfreeBufferArray(scip, &grad);
    SCIPfreeBufferArray(scip, &updatevec);
+   SCIPfreeBufferArray(scip, &grad);
 
    return SCIP_OKAY;
 }

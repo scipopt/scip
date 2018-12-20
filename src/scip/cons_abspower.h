@@ -206,6 +206,16 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIP_SOL*             sol                 /**< LP solution */
    );
 
+/** returns whether constraint is convex w.r.t. global bounds
+ *
+ * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
+ */
+EXTERN
+SCIP_Bool SCIPisConvexAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< absolute power constraint */
+   );
+
 /* @} */
 
 /* @} */

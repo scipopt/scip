@@ -867,11 +867,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIPfreeBufferArrayNull(scip, &coef);
    SCIPfreeBufferArrayNull(scip, &binvrow);
    SCIPfreeBufferArrayNull(scip, &basisrow);
+   SCIPfreeBufferArrayNull(scip, &rowsmaxval);
+   SCIPfreeBufferArrayNull(scip, &varrank);
    SCIPfreeBufferArrayNull(scip, &fixings2);
    SCIPfreeBufferArrayNull(scip, &fixings1);
    SCIPfreeBufferArrayNull(scip, &edgearray);
-   SCIPfreeBufferArrayNull(scip, &rowsmaxval);
-   SCIPfreeBufferArrayNull(scip, &varrank);
 
    return SCIP_OKAY;
 }

@@ -823,7 +823,7 @@ SCIP_RETCODE setupSubscipLpface(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

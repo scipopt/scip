@@ -62,30 +62,32 @@ endforeach()
 #
 # add a test for every quadratic instance
 #
-foreach(instance ${quadinstances})
-    list(GET instance 0 basename)
-    list(GET instance 1 optval)
-    #
-    # call the SCFLP binary and validate the solve with the given objective value
-    #
-    add_test(NAME "examples-scflp-quad-${basename}"
-            COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
-            )
-    set_tests_properties("examples-scflp-quad-${basename}"
-                        PROPERTIES
-                            PASS_REGULAR_EXPRESSION "Validation         : Success"
-                            DEPENDS examples-scflp-build
-                        )
+if(${IPOPT_FOUND})
+   foreach(instance ${quadinstances})
+       list(GET instance 0 basename)
+       list(GET instance 1 optval)
+       #
+       # call the SCFLP binary and validate the solve with the given objective value
+       #
+       add_test(NAME "examples-scflp-quad-${basename}"
+               COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+               )
+       set_tests_properties("examples-scflp-quad-${basename}"
+                           PROPERTIES
+                               PASS_REGULAR_EXPRESSION "Validation         : Success"
+                               DEPENDS examples-scflp-build
+                           )
 
-    #
-    # call the SCFLP binary and validate the solve with the given objective value
-    #
-    add_test(NAME "examples-scflpbenders-quad-${basename}"
-            COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/benders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
-            )
-    set_tests_properties("examples-scflpbenders-quad-${basename}"
-                        PROPERTIES
-                            PASS_REGULAR_EXPRESSION "Validation         : Success"
-                            DEPENDS examples-scflp-build
-                        )
-endforeach()
+       #
+       # call the SCFLP binary and validate the solve with the given objective value
+       #
+       add_test(NAME "examples-scflpbenders-quad-${basename}"
+               COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/benders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+               )
+       set_tests_properties("examples-scflpbenders-quad-${basename}"
+                           PROPERTIES
+                               PASS_REGULAR_EXPRESSION "Validation         : Success"
+                               DEPENDS examples-scflp-build
+                           )
+   endforeach()
+endif()

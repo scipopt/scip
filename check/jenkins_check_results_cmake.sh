@@ -48,6 +48,12 @@ if [ "${PERF}" != "" ]; then
   export PERFORMANCE=${PERF}
 fi
 
+# if SEEDS is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $SEEDS =~ $re ]] ; then
+  SEEDS="0"
+fi
+export SEEDS
 # if PERMUTE is not a number, set it to 0
 re='^[0-9]+$'
 if ! [[ $PERMUTE =~ $re ]] ; then

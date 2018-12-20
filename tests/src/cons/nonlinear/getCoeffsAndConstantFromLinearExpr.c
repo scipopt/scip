@@ -91,11 +91,11 @@ Test(simple_expressions, var)
 
 Test(simple_expressions, mulA)
 {
-   constant = 10;
-   scalar = 5.0;
    SCIP_Real constval = 2.0;
    SCIP_EXPR* varexpr;
    SCIP_EXPR* constexpr;
+   constant = 10;
+   scalar = 5.0;
 
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr, SCIP_EXPR_CONST, constval) );
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexpr, SCIP_EXPR_VARIDX, 0) );
@@ -107,11 +107,11 @@ Test(simple_expressions, mulA)
 
 Test(simple_expressions, mulB)
 {
-   constant = 10;
-   scalar = 5.0;
    SCIP_Real constval = 2.0;
    SCIP_EXPR* varexpr;
    SCIP_EXPR* constexpr;
+   constant = 10;
+   scalar = 5.0;
 
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr, SCIP_EXPR_CONST, constval) );
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexpr, SCIP_EXPR_VARIDX, 0) );
@@ -123,12 +123,12 @@ Test(simple_expressions, mulB)
 
 Test(simple_expressions, plus)
 {
-   constant = 0.0;
-   scalar = 5.0;
    SCIP_Real constval1 = 2.0;
    SCIP_Real constval2 = 3.0;
    SCIP_EXPR* constexpr1;
    SCIP_EXPR* constexpr2;
+   constant = 0.0;
+   scalar = 5.0;
 
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr1, SCIP_EXPR_CONST, constval1) );
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr2, SCIP_EXPR_CONST, constval2) );
@@ -140,12 +140,12 @@ Test(simple_expressions, plus)
 
 Test(simple_expressions, minus)
 {
-   constant = 0.0;
-   scalar = 5.0;
    SCIP_Real constval1 = 2.0;
    SCIP_Real constval2 = 3.0;
    SCIP_EXPR* constexpr1;
    SCIP_EXPR* constexpr2;
+   constant = 0.0;
+   scalar = 5.0;
 
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr1, SCIP_EXPR_CONST, constval1) );
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &constexpr2, SCIP_EXPR_CONST, constval2) );
@@ -157,13 +157,13 @@ Test(simple_expressions, minus)
 
 Test(simple_expressions, linear)
 {
-   constant = 0.0;
-   scalar = 5.0;
    SCIP_Real intercept = 5.0;
    SCIP_Real coefficients[2];
+   SCIP_EXPR* varexprs[2];
    coefficients[0] = 2.0;
    coefficients[1] = 3.0;
-   SCIP_EXPR* varexprs[2];
+   constant = 0.0;
+   scalar = 5.0;
 
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexprs[0], SCIP_EXPR_VARIDX, 0) );
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &varexprs[1], SCIP_EXPR_VARIDX, 1) );

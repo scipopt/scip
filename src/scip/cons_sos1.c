@@ -1255,7 +1255,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* save new clique */
          assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] <= nsos1vars );
          assert( *ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
-         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
          {
             vars[j] = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, newclique[j]);
@@ -1806,6 +1806,8 @@ SCIP_RETCODE presolRoundConsSOS1(
  *  we perform the following additional presolving steps
  *
  *  - Search for larger SOS1 constraints in the conflict graph
+ *
+ *  @todo Use one long array for storing cliques.
  */
 static
 SCIP_RETCODE presolRoundConssSOS1(
@@ -1858,12 +1860,14 @@ SCIP_RETCODE presolRoundConssSOS1(
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
+
+   /* Use block memory for cliques, because sizes might be quite different and allocation interfers with workingset. */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliquesizes, csize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques, csize) );
 
    /* get constraint indices and sort them in descending order of their lengths */
    for (c = 0; c < nconss; ++c)
@@ -2039,7 +2043,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                /* add directed edges to the vertex-clique graph */
                assert( cliquesize >= 0 && cliquesize <= nsos1vars );
                assert( ncliques < csize );
-               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
                for (j = 0; j < cliquesize; ++j)
                {
                   cliques[ncliques][j] = newclique[j];
@@ -2055,13 +2059,14 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* free buffer arrays */
    for (c = ncliques-1; c >= 0; --c)
-      SCIPfreeBufferArrayNull(scip, &cliques[c]);
-   SCIPfreeBufferArrayNull(scip, &cliques);
+      SCIPfreeBlockMemoryArray(scip, &cliques[c], cliquesizes[c]);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliques, csize);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliquesizes, csize);
+
    SCIPfreeBufferArrayNull(scip, &comsucc);
    SCIPfreeBufferArrayNull(scip, &lengthconss);
    SCIPfreeBufferArrayNull(scip, &indconss);
    SCIPfreeBufferArrayNull(scip, &newclique);
-   SCIPfreeBufferArrayNull(scip, &cliquesizes);
    SCIPfreeBufferArrayNull(scip, &consweights);
    SCIPfreeBufferArrayNull(scip, &consvars);
    SCIPdigraphFree(&vertexcliquegraph);
@@ -2804,8 +2809,8 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
       if ( ntrafolinvars == 0 )
       {
-         SCIPfreeBufferArray(scip, &trafolinvars);
          SCIPfreeBufferArray(scip, &trafolinvals);
+         SCIPfreeBufferArray(scip, &trafolinvars);
          continue;
       }
 
@@ -3326,12 +3331,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
    } /* end for every linear constraint */
 
    /* free buffer arrays */
-   SCIPfreeBufferArrayNull(scip, &sos1linvars);
    SCIPfreeBufferArrayNull(scip, &trafolbs);
    SCIPfreeBufferArrayNull(scip, &trafoubs);
    SCIPfreeBufferArrayNull(scip, &coveredvars);
    SCIPfreeBufferArrayNull(scip, &varindincons);
    SCIPfreeBufferArrayNull(scip, &implnodes);
+   SCIPfreeBufferArrayNull(scip, &sos1linvars);
 
    return SCIP_OKAY;
 }
@@ -9852,8 +9857,8 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }

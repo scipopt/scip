@@ -241,7 +241,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    valid = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, global, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, global, FALSE, FALSE, TRUE, &valid) );
 
    if( sepadata->copycuts )
    {
@@ -263,8 +263,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       }
 
       /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
-      * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
-     */
+       * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
+       */
       if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
       {
          SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
@@ -398,7 +398,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
    * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
-  */
+   */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );

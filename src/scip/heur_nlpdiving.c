@@ -1288,7 +1288,8 @@ SCIP_RETCODE doSolveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, FALSE,
+         TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
@@ -2662,16 +2663,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    else
       assert(varincover == NULL);
 
-   /* free array of cover variables */
-   if( heurdata->prefercover || heurdata->solvesubmip )
-   {
-      assert(covervars != NULL || !covercomputed);
-      if( covervars != NULL )
-         SCIPfreeBufferArray(scip, &covervars);
-   }
-   else
-      assert(covervars == NULL);
-
    /* free NLP start solution */
    if( nlpstartsol != NULL )
    {
@@ -2696,14 +2687,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       assert(pseudocandsnlpsol != NULL);
       assert(pseudocandsnlpsol != NULL);
-      SCIPfreeBufferArray(scip, &pseudocandslpsol);
       SCIPfreeBufferArray(scip, &pseudocandsnlpsol);
+      SCIPfreeBufferArray(scip, &pseudocandslpsol);
    }
    else
    {
       assert(pseudocandsnlpsol == NULL);
       assert(pseudocandsnlpsol == NULL);
    }
+
+   /* free array of cover variables */
+   if( heurdata->prefercover || heurdata->solvesubmip )
+   {
+      assert(covervars != NULL || !covercomputed);
+      if( covervars != NULL )
+         SCIPfreeBufferArray(scip, &covervars);
+   }
+   else
+      assert(covervars == NULL);
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;

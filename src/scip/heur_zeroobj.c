@@ -322,7 +322,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, FALSE, TRUE, &valid) );
    SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
