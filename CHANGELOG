@@ -43,6 +43,8 @@ Interface changes
 
 ### Command line interface
 
+- warn about coefficients in MPS files with absolute larger than SCIP's infinity parameter
+
 ### Interfaces to external software
 
 ### Changed parameters
@@ -97,6 +99,7 @@ Fixed bugs
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints.
 
 Miscellaneous
 -------------
