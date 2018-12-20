@@ -10704,6 +10704,8 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->lastsoltag = 1;
+   conshdlrdata->curboundstag = 1;
+   conshdlrdata->lastboundrelax = 1;
    SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->canonicalizetime) );
 
    /* include constraint handler */
