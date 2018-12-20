@@ -326,9 +326,10 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
    {
       int beginorbitidx;
       int j;
+      int componentidx = vartocomponent[i];
 
       /* skip variables that are not affected by symmetry */
-      if ( vartocomponent[i] == -1 )
+      if ( componentidx == -1 )
          continue;
 
       /* skip variable already contained in an orbit of a previous variable */
@@ -353,11 +354,16 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
          curelem = orbits[j];
 
          pt = permstrans[curelem];
-         for (p = 0; p < nperms; ++p)
+         for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
          {
-            if ( ! inactiveperms[p] )
+            int perm;
+
+            perm = components[p];
+
+            if ( ! inactiveperms[perm] )
             {
-               image = pt[p];
+               image = pt[perm];
+               assert( vartocomponent[image] == componentidx );
 
                /* found new element of the orbit of i */
                if ( ! varadded[image] )
