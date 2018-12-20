@@ -34,10 +34,9 @@
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_VAR* x;
-static SCIP_VAR* y;
-static SCIP_VAR* w;
-static SCIP_VAR* z;
+static SCIP_VAR* x_1;
+static SCIP_VAR* y_1;
+static SCIP_VAR* z_1;
 
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
@@ -81,34 +80,32 @@ void setup(void)
    /* go to PRESOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 1.49, 1.51, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0, 1, 0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, x) );
-   SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x_1, "x1", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y_1, "y1", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z_1, "z1", 0, 1, 0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, x_1) );
+   SCIP_CALL( SCIPaddVar(scip, y_1) );
+   SCIP_CALL( SCIPaddVar(scip, z_1) );
 }
 
 /* releases variables, frees scip */
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y_1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z_1) );
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-/* detects x^2 + x as an on/off expression */
+/* detects x1^2 + x1 - log(y1) as an on/off expression */
 Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
@@ -122,7 +119,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_SCVARDATA* scv;
 
    /* create expression and simplify it */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x>", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1> - log(<y1>)", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
@@ -131,13 +128,15 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
-   /* create varbound constraint */
-   SCIP_CALL( SCIPcreateConsVarbound(scip, &vubcons, "vub", x, z, -2.0, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   /* create upper varbound constraint x1 - 2z <= 0 */
+   SCIP_CALL( SCIPcreateConsVarbound(scip, &vubcons, "vub", x_1, z_1, -2.0, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, vubcons)  );
 
-   SCIP_CALL( SCIPcreateConsVarbound(scip, &vlbcons, "vlb", x, z, -1.0, 0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   /* create lower varbound constraint x1 - z >= 0 */
+   SCIP_CALL( SCIPcreateConsVarbound(scip, &vlbcons, "vlb", x_1, z_1, -1.0, 0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, vlbcons)  );
 
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
@@ -147,21 +146,19 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
+   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
    cr_assert(enforcebelow);
    cr_assert(!enforceabove);
    cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nlinterms, 0, "Expecting 0 linear terms, got %d\n", nlhdlrexprdata->nlinterms);
+   cr_expect_eq(nlhdlrexprdata->nconvterms, 2, "Expecting 2 convex terms, got %d\n", nlhdlrexprdata->nconvterms);
    cr_expect_eq(nlhdlrexprdata->nperspterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nperspterms);
 
-   scv = SCIPhashmapGetImage(nlhdlrexprdata->scvars, (void*)x);
+   scv = SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)x_1);
    cr_expect_not_null(scv, "x should be detected as a semicontinuous variable!\n");
-   cr_expect_eq(scv->lb0, 0.0, "Expecting lb0 to be %g, got %g\n", 0.0, scv->lb0);
-   cr_expect_eq(scv->ub0, 0.0, "Expecting ub0 to be %g, got %g\n", 0.0, scv->ub0);
-   cr_expect_eq(scv->lb1, 1.0, "Expecting lb1 to be %g, got %g\n", 1.0, scv->lb1);
-   cr_expect_eq(scv->ub1, 1.01, "Expecting ub1 to be %g, got %g\n", 1.01, scv->ub1);
+   cr_expect_eq(scv->val0, 0.0, "Expecting val0 to be %g, got %g\n", 0.0, scv->val0);
+   cr_expect_eq(scv->bvar, z_1, "Expecting bvar to be %p, got %p\n", z_1, scv->bvar);
 
    SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
@@ -174,7 +171,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &vlbcons) );
 }
 
-
+/* TODO more unittests */
 
 
 

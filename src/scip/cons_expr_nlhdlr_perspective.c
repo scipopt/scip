@@ -768,6 +768,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       for( c = 0; c < (*nlhdlrexprdata)->nconvterms; ++c )
       {
          child_curvature = SCIPgetConsExprExprCurvature((*nlhdlrexprdata)->convterms[c]);
+         if( (*nlhdlrexprdata)->convcoefs[c] < 0 )
+         {
+            if( child_curvature == SCIP_EXPRCURV_CONVEX )
+               child_curvature = SCIP_EXPRCURV_CONCAVE;
+            else if( child_curvature == SCIP_EXPRCURV_CONCAVE )
+               child_curvature = SCIP_EXPRCURV_CONVEX;
+         }
          if( child_curvature != (*nlhdlrexprdata)->curvature && child_curvature != SCIP_EXPRCURV_LINEAR )
          {
             SCIPdebugMsg(scip, "Non-convex cont term, curv %d, expr curv %d: detect will return false\n", child_curvature, (*nlhdlrexprdata)->curvature);
