@@ -65,6 +65,7 @@
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
 
 #define SCIP_OUTPUT               FALSE
+#define SCIP_OUTPUT_COMPONENT     FALSE
 
 /** presolver data */
 struct SCIP_PresolData
@@ -1254,6 +1255,11 @@ SCIP_RETCODE computeComponents(
    assert( presoldata->vartocomponent == NULL );
    assert( presoldata->componentblocked == NULL );
 
+#if SCIP_OUTPUT_COMPONENT
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
+#endif
+
    /* get data */
    nperms = presoldata->nperms;
 
@@ -1444,6 +1450,11 @@ SCIP_RETCODE computeComponents(
       }
       printf("\n");
    }
+#endif
+
+#if SCIP_OUTPUT_COMPONENT
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
 #endif
 
    return SCIP_OKAY;
