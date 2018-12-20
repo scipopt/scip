@@ -4025,10 +4025,7 @@ SCIP_RETCODE detectNlhdlr(
          SCIPgetConsExprNlhdlrName(nlhdlr), nlhdlrenforcedbelow, nlhdlrenforcedabove, nlhdlrenforcemethods);
 
       /* if the nlhdlr enforces, then it must have added at least one enforcement method */
-      /* TODO this assert currently can fail because the perspective handler adds an enforcement method but doesn't enforce */
-#if 0
       assert(nlhdlrenforcemethods > enforcemethods || (nlhdlrenforcedbelow == enforcedbelow && nlhdlrenforcedabove == enforcedabove));
-#endif
 
       /* remember nlhdlr and its data */
       nlhdlrssuccess[nsuccess] = nlhdlr;

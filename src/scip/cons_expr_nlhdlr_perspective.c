@@ -49,6 +49,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int nperspterms;                  /**< number of on/off expressions */
    int nconvterms;                   /**< number of convterms */
    int convtermssize;                /**< size of the convterms array */
+   SCIP_CONSEXPR_EXPR** varexprs;    /**< variable expressions */
+   int nvarexprs;                    /**< total number of variable expressions */
 };
 
 /** nonlinear handler data */
@@ -484,13 +486,14 @@ SCIP_RETCODE freeNlhdlrExprData(
 {
    SCIP_HASHMAPENTRY* entry;
    SCIP_CONSEXPR_EXPR* expr;
+   int c;
 
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convterms), nlhdlrexprdata->convtermssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convcoefs), nlhdlrexprdata->convtermssize);
 
    if( nlhdlrexprdata->onoffterms != NULL )
    {
-      for( int c = 0; c < SCIPhashmapGetNEntries(nlhdlrexprdata->onoffterms); ++c )
+      for( c = 0; c < SCIPhashmapGetNEntries(nlhdlrexprdata->onoffterms); ++c )
       {
          entry = SCIPhashmapGetEntry(nlhdlrexprdata->onoffterms, c);
          if( entry != NULL )
@@ -501,6 +504,16 @@ SCIP_RETCODE freeNlhdlrExprData(
       }
       SCIPhashmapFree(&(nlhdlrexprdata->onoffterms));
    }
+
+   if( nlhdlrexprdata->varexprs != NULL )
+   {
+      for( c = 0; c < nlhdlrexprdata->nvarexprs; ++c )
+      {
+         SCIPreleaseConsExprExpr(scip, &(nlhdlrexprdata->varexprs[c]));
+      }
+      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->varexprs, nlhdlrexprdata->nvarexprs);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -509,18 +522,20 @@ SCIP_RETCODE freeNlhdlrExprData(
  */
 
 /** nonlinear handler copy callback */
-#if 0
+
 static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(targetscip, targetconsexprhdlr) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrCopyhdlrPerspective NULL
-#endif
+
 
 /** callback to free data of handler */
 static
@@ -750,7 +765,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    if( !SCIPhashmapIsEmpty((*nlhdlrexprdata)->onoffterms) )
    {
       *success = TRUE;
-      SCIPdebugMsg(scip, "Found on/off expressions: ");
+      for( c = 0; c < (*nlhdlrexprdata)->nconvterms; ++c )
+      {
+         child_curvature = SCIPgetConsExprExprCurvature((*nlhdlrexprdata)->convterms[c]);
+         if( child_curvature != (*nlhdlrexprdata)->curvature && child_curvature != SCIP_EXPRCURV_LINEAR )
+         {
+            SCIPdebugMsg(scip, "Non-convex cont term, curv %d, expr curv %d: detect will return false\n", child_curvature, (*nlhdlrexprdata)->curvature);
+            *success = FALSE;
+            break;
+         }
+      }
+      SCIPdebugMsg(scip, "Found on/off terms: ");
       for( c = 0; c < SCIPhashmapGetNEntries((*nlhdlrexprdata)->onoffterms); ++c )
       {
          SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry((*nlhdlrexprdata)->onoffterms, c);
@@ -770,15 +795,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
             }
          }
       }
-      for( c = 0; c < (*nlhdlrexprdata)->nconvterms; ++c )
-      {
-         child_curvature = SCIPgetConsExprExprCurvature((*nlhdlrexprdata)->convterms[c]);
-         if( child_curvature != (*nlhdlrexprdata)->curvature && child_curvature != SCIP_EXPRCURV_LINEAR )
-         {
-            SCIPdebugMsg(scip, "Non-convex cont term, curv %d, expr curv %d: detect will return false\n", child_curvature, (*nlhdlrexprdata)->curvature);
-            *success = FALSE;
-         }
-      }
    }
 
    if( *success )
@@ -787,13 +803,19 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
       {
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+         *enforcedbelow = TRUE;
          SCIPdebugMsg(scip, "detected expr to be convex -> can enforce expr <= auxvar\n");
       }
       else if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONCAVE )
       {
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+         *enforcedabove = TRUE;
          SCIPdebugMsg(scip, "detected expr to be concave -> can enforce expr >= auxvar\n");
       }
+      /* save varexprs to nlhdlrexprdata */
+      SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
+      SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &((*nlhdlrexprdata)->nvarexprs));
    }
    else
    {
@@ -870,8 +892,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "sepa method of perspective nonlinear handler called for expr: ");
+   SCIPdebugMsg(scip, "sepa method of perspective nonlinear handler called for expr %p: ", expr);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
    assert(scip != NULL);
@@ -888,11 +911,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
        (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
    {
-      SCIPdebugMsg(scip, "Estimating on non-convex side, do nothing");
+      SCIPdebugMsg(scip, "Estimating on non-convex side, do nothing\n");
       return SCIP_OKAY;
    }
-
-   SCIPinfoMessage(scip, NULL, "sepa method of perspective nonlinear handler will generate a cut ");
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
    auxvar = SCIPgetConsExprExprAuxVar(expr);
@@ -931,8 +952,13 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       SCIP_Bool infeasible;
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "Separating sol point ");
-      SCIPprintSol(scip, sol, NULL, TRUE);
+      SCIPdebugMsg(scip, "Separating sol point\n");
+      for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      {
+         SCIP_VAR* var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+         SCIPwriteVarName(scip, NULL, var, TRUE);
+         SCIPinfoMessage(scip, NULL, ": %f\n",  SCIPgetSolVal(scip, sol, var));
+      }
       SCIPinfoMessage(scip, NULL, "by perspective cut ");
       SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
@@ -1006,19 +1032,52 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropPerspective)
 
 
 /** nonlinear handler callback for branching scores */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_Real violation;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->varexprs != NULL);
+   assert(nlhdlrexprdata->nvarexprs > 0);
+   assert(success != NULL);
+
+   /* we separate only convex functions here, so there should be little use for branching
+    * if violations are small or there are numerical issues, then we will not have generated a cut, though
+    * in that case, we will still branch, that is, register branchscores for all depending var exprs
+    */
+
+   /* compute violation */
+   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
+      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
+   else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
+      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+   else
+      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
+
+   /* if violation is not on the side that we need to enforce, then no need for branching */
+   if( violation <= 0.0 )
+      return SCIP_OKAY;
+
+   /* TODO try to figure out which variables appear linear and skip them here */
+   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
+   {
+      assert(nlhdlrexprdata->varexprs[i] != NULL);
+      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
+
+      SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrBranchscorePerspective NULL
-#endif
-
 
 /** nonlinear handler callback for reformulation */
 #if 0
@@ -1069,6 +1128,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitPerspective, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaPerspective, NULL, NULL);
+   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscorePerspective);
 
    return SCIP_OKAY;
 }
