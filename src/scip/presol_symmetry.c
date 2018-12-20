@@ -1227,7 +1227,7 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
-/** compute components of symmetry group */
+/** compute components of symmetry group w.r.t. variables */
 static
 SCIP_RETCODE computeComponents(
    SCIP*                 scip,               /**< SCIP instance */
@@ -1235,16 +1235,16 @@ SCIP_RETCODE computeComponents(
    SCIP_Bool             transposed          /**< whether transposed permutation matrix is stored */
    )
 {
-   SCIP_DISJOINTSET* componentstoperm = NULL;
+   SCIP_DISJOINTSET* componentstovar = NULL;
    int** perms;
+   int* permtovar;
    int* permtocomponent;
-   int* correctorcomponentidx;
    int nperms;
    int npermvars;
    int ncomponents;
+   int p;
    int i;
-   int j;
-   int k;
+   int idx;
 
    assert( scip != NULL );
    assert( presoldata != NULL );
@@ -1269,188 +1269,120 @@ SCIP_RETCODE computeComponents(
    npermvars = presoldata->npermvars;
    perms = presoldata->perms;
 
-   /* init array that assigns to each permutation its component of the group */
-   SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
-   ncomponents = nperms;
+   /* init array that assigns to each permutation a variable in its component of the group */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtovar, nperms) );
 
-   /* check whether two permutations belong to the same component */
-   if ( transposed )
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
+   ncomponents = npermvars;
+
+   /* find variable components by merging supports of permutations */
+   for (p = 0; p < nperms; ++p)
    {
-      int componentI;
-      int componentJ;
+      permtovar[p] = -1;
 
-      for (k = 0; k < npermvars; ++k)
+      for (i = 0; i < npermvars; ++i)
       {
-         for (i = 0; i < nperms && ncomponents > 1; ++i)
+         int img;
+
+         if ( transposed )
+            img = perms[i][p];
+         else
+            img = perms[p][i];
+
+         if ( img != i )
          {
-            componentI = SCIPdisjointsetFind(componentstoperm, i);
-            for (j = i + 1; j < nperms && ncomponents > 1; ++j)
-            {
-               componentJ = SCIPdisjointsetFind(componentstoperm, j);
-               if ( componentI == componentJ )
-                  continue;
+            int componentI;
+            int componentImg;
 
-               /* both permutations belong to the same component */
-               if ( perms[k][i] != k && perms[k][j] != k )
-               {
-                  /* Keep the smallest identifier to keep track of where a new component starts.
-                   * Note that it is necessary to store the smaller identifier to be able to iterate
-                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
-                   * pairs {i,j}. */
-                  if ( componentI < componentJ )
-                     SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
-                  else
-                     SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
+            permtovar[p] = i;
 
-                  --ncomponents;
-                  break;
-               }
-            }
-         }
-      }
-   }
-   else
-   {
-      int componentI;
-      int componentJ;
-      int* permI;
-      int* permJ;
+            /* All variables are in a single component. Cannot terminate early, because we have
+             * to find for each permutation a representative variable */
+            if ( ncomponents == 1 )
+               break;
 
-      for (i = 0; i < nperms && ncomponents > 1; ++i)
-      {
-         for (j = i + 1; j < nperms && ncomponents > 1; ++j)
-         {
-            componentI = SCIPdisjointsetFind(componentstoperm, i);
-            componentJ = SCIPdisjointsetFind(componentstoperm, j);
-            if ( componentI == componentJ )
+            componentI = SCIPdisjointsetFind(componentstovar, i);
+            componentImg = SCIPdisjointsetFind(componentstovar, img);
+
+            if ( componentI == componentImg )
                continue;
 
-            permI = perms[i];
-            permJ = perms[j];
-
-            /* Do perms[i] and perms[j] belong to the same component? */
-            for (k = 0; k < npermvars; ++k)
-            {
-               /* both permutations belong to the same component */
-               if ( permI[k] != k && permJ[k] != k )
-               {
-                  /* Keep the smallest identifier to keep track of where a new component starts.
-                   * Note that it is necessary to store the smaller identifier to be able to iterate
-                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
-                   * pairs {i,j}. */
-                  if ( componentI < componentJ )
-                     SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
-                  else
-                     SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
-
-                  --ncomponents;
-                  break;
-               }
-            }
+            SCIPdisjointsetUnion(componentstovar, i, img, FALSE);
+            --ncomponents;
          }
       }
    }
-   assert( ncomponents > 0 );
 
-   /* store data */
+   /* update representative variable for permutations to identifiers of components and
+    * init components array by trivial natural order of permutations */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->components, nperms) );
+   for (p = 0; p < nperms; ++p)
+   {
+      permtovar[p] = SCIPdisjointsetFind(componentstovar, permtovar[p]);
+      presoldata->components[p] = p;
+   }
+
+   /* get correct order of components array */
+   SCIPsortIntInt(permtovar, presoldata->components, nperms);
+
+   /* determine correct number of components */
+   ncomponents = 1;
+   for (p = 1; p < nperms; ++p)
+   {
+      if ( permtovar[p] > permtovar[p - 1] )
+         ++ncomponents;
+   }
    presoldata->ncomponents = ncomponents;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->components, nperms) );
+   /* determine componentbegins  */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->componentbegins, ncomponents + 1) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->vartocomponent, npermvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->componentblocked, ncomponents) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
+   presoldata->componentbegins[0] = 0;
+   permtocomponent[0] = 0;
+   idx = 0;
+   for (p = 1; p < nperms; ++p)
+   {
+      if ( permtovar[p] > permtovar[p - 1] )
+         presoldata->componentbegins[++idx] = p;
+
+      permtocomponent[p] = idx;
+   }
+   assert( ncomponents == idx + 1 );
+   presoldata->componentbegins[++idx] = nperms;
+
+   /* determine vartocomponent */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->vartocomponent, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+   {
+      presoldata->vartocomponent[i] = -1;
+
+      for (p = 0; p < nperms; ++p)
+      {
+         int img;
+
+         if ( transposed )
+            img = perms[i][presoldata->components[p]];
+         else
+            img = perms[presoldata->components[p]][i];
+
+         /* if variable i is affected by permutation p, store component */
+         if ( img != i )
+         {
+            presoldata->vartocomponent[i] = permtocomponent[p];
+            break;
+         }
+      }
+   }
+
+   /* init componentblocked */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->componentblocked, ncomponents) );
    for (i = 0; i < ncomponents; ++i)
       presoldata->componentblocked[i] = FALSE;
 
-   /* The set of component indices contains gaps if two permutations are in the same component.
-    * Thus, we need to correct the component indices to have the correct indices in vartocomponent. */
-   SCIP_CALL( SCIPallocBufferArray(scip, &correctorcomponentidx, nperms) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
-
-   /* init components array and array assigning permutations to components
-    * (the first component index is always correct since we use the smaller
-    * index as identifier above) */
-   presoldata->components[0] = 0;
-   correctorcomponentidx[0] = 0;
-   permtocomponent[0] = 0;
-   assert( SCIPdisjointsetFind(componentstoperm, 0) == 0 );
-
-   for (i = 1; i < nperms; ++i)
-   {
-      presoldata->components[i] = i;
-      k = SCIPdisjointsetFind(componentstoperm, i);
-
-      /* store corrected component index for each permutation */
-      if ( i == k )
-      {
-         correctorcomponentidx[i] = correctorcomponentidx[i - 1];
-         permtocomponent[i] = k - correctorcomponentidx[i];
-      }
-      else
-      {
-         correctorcomponentidx[i] = correctorcomponentidx[i - 1] + 1;
-         permtocomponent[i] = permtocomponent[k];
-      }
-   }
-
-   /* generate vartocomponent array */
-   for (k = 0; k < npermvars; ++k)
-   {
-      presoldata->vartocomponent[k] = -1;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         if ( transposed )
-         {
-            if ( perms[k][i] != k )
-            {
-               presoldata->vartocomponent[k] = permtocomponent[i];
-               break;
-            }
-         }
-         else
-         {
-            if ( perms[i][k] != k )
-            {
-               presoldata->vartocomponent[k] = permtocomponent[i];
-               break;
-            }
-         }
-      }
-   }
-
-   SCIPsortIntInt(permtocomponent, presoldata->components, nperms);
-
-   /* generate componentbegins array */
-   k = 0;
-   presoldata->componentbegins[k++] = 0;
-
-   for (i = 1; i < nperms; ++i)
-   {
-      if ( permtocomponent[i] > permtocomponent[i - 1] )
-         presoldata->componentbegins[k++] = i;
-   }
-   assert( k == ncomponents );
-
-   presoldata->componentbegins[k] = nperms;
-
-   SCIPfreeBufferArray(scip, &correctorcomponentidx);
    SCIPfreeBufferArray(scip, &permtocomponent);
-   SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
-
-#if SCIP_OUTPUT
-   printf("number of components: %d\n", presoldata->ncomponents);
-   for (i = 0; i < ncomponents; ++i)
-   {
-      printf("Component %d contains the following permutations:\n\t", i);
-      for (j = presoldata->componentbegins[i]; j < presoldata->componentbegins[i + 1]; ++j)
-      {
-         printf("%d, ", presoldata->components[j]);
-      }
-      printf("\n");
-   }
-#endif
+   SCIPfreeBufferArray(scip, &permtovar);
+   SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
 #if SCIP_OUTPUT_COMPONENT
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
