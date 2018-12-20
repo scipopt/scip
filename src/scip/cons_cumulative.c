@@ -12380,6 +12380,7 @@ SCIP_RETCODE removeRedundantConss(
                   initializeLocks(consdata1, TRUE);
                }
 
+               /* coverity[swapped_arguments] */
                SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
