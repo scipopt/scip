@@ -1226,7 +1226,7 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
-/* compute components of symmetry group */
+/** compute components of symmetry group */
 static
 SCIP_RETCODE computeComponents(
    SCIP*                 scip,               /**< SCIP instance */
@@ -1234,7 +1234,7 @@ SCIP_RETCODE computeComponents(
    SCIP_Bool             transposed          /**< whether transposed permutation matrix is stored */
    )
 {
-   SCIP_DISJOINTSET* componentstoperm;
+   SCIP_DISJOINTSET* componentstoperm = NULL;
    int** perms;
    int* permtocomponent;
    int* correctorcomponentidx;
@@ -1248,7 +1248,11 @@ SCIP_RETCODE computeComponents(
    assert( scip != NULL );
    assert( presoldata != NULL );
 
-   presoldata->ncomponents = -1;
+   assert( presoldata->ncomponents == -1 );
+   assert( presoldata->components == NULL );
+   assert( presoldata->componentbegins == NULL );
+   assert( presoldata->vartocomponent == NULL );
+   assert( presoldata->componentblocked == NULL );
 
    /* get data */
    nperms = presoldata->nperms;
@@ -1260,7 +1264,6 @@ SCIP_RETCODE computeComponents(
    perms = presoldata->perms;
 
    /* init array that assigns to each permutation its component of the group */
-   componentstoperm = NULL;
    SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
    ncomponents = nperms;
 
@@ -1274,9 +1277,9 @@ SCIP_RETCODE computeComponents(
       {
          for (i = 0; i < nperms && ncomponents > 1; ++i)
          {
+            componentI = SCIPdisjointsetFind(componentstoperm, i);
             for (j = i + 1; j < nperms && ncomponents > 1; ++j)
             {
-               componentI = SCIPdisjointsetFind(componentstoperm, i);
                componentJ = SCIPdisjointsetFind(componentstoperm, j);
                if ( componentI == componentJ )
                   continue;
@@ -1355,15 +1358,13 @@ SCIP_RETCODE computeComponents(
       presoldata->componentblocked[i] = FALSE;
 
    /* The set of component indices contains gaps if two permutations are in the same component.
-    * Thus, we need to correct the component indices.
-    */
+    * Thus, we need to correct the component indices. */
    SCIP_CALL( SCIPallocBufferArray(scip, &correctorcomponentidx, nperms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
 
    /* init components array and array assigning permutations to components
     * (the first component index is always correct since we use the smaller
-    * index as identifier above)
-    */
+    * index as identifier above) */
    presoldata->components[0] = 0;
    correctorcomponentidx[0] = 0;
    permtocomponent[0] = 0;
@@ -1809,6 +1810,11 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->successful = FALSE;
    presoldata->ncomponents = 0;
    presoldata->transposedperms = FALSE;
+   presoldata->ncomponents = -1;
+   presoldata->components = NULL;
+   presoldata->componentbegins = NULL;
+   presoldata->vartocomponent = NULL;
+   presoldata->componentblocked = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
@@ -1893,10 +1899,16 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
       if ( presoldata->ncomponents > 0 )
       {
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentblocked, presoldata->ncomponents);
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->vartocomponent, presoldata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->nperms);
+         assert( presoldata->componentblocked != NULL );
+         assert( presoldata->vartocomponent != NULL );
+         assert( presoldata->componentbegins != NULL );
+         assert( presoldata->components != NULL );
+         SCIPfreeBlockMemoryArray(scip, &presoldata->componentblocked, presoldata->ncomponents);
+         SCIPfreeBlockMemoryArray(scip, &presoldata->vartocomponent, presoldata->npermvars);
+         SCIPfreeBlockMemoryArray(scip, &presoldata->componentbegins, presoldata->ncomponents + 1);
+         SCIPfreeBlockMemoryArray(scip, &presoldata->components, presoldata->nperms);
+
+         presoldata->ncomponents = -1;
       }
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
@@ -1952,14 +1964,21 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( binvaraffected != NULL )
       *binvaraffected = presoldata->binvaraffected;
 
-   if ( ncomponents != NULL )
+   if ( ncomponents != NULL || components != NULL || componentbegins != NULL || vartocomponent != NULL )
    {
       SCIP_CALL( computeComponents(scip, presoldata, transposedperms) );
 
-      *components = presoldata->components;
-      *componentbegins = presoldata->componentbegins;
-      *vartocomponent = presoldata->vartocomponent;
-      *ncomponents = presoldata->ncomponents;
+      if ( components != NULL )
+         *components = presoldata->components;
+
+      if ( componentbegins != NULL )
+         *componentbegins = presoldata->componentbegins;
+
+      if ( vartocomponent )
+         *vartocomponent = presoldata->vartocomponent;
+
+      if ( ncomponents )
+         *ncomponents = presoldata->ncomponents;
    }
 
    return SCIP_OKAY;
@@ -1997,7 +2016,7 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
 }
 
 
-/* block component of symmetry group to be considered by symmetry handling routines */
+/** block component of symmetry group to be considered by symmetry handling routines */
 SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to block */
@@ -2006,8 +2025,6 @@ SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   assert( i >= 0 );
-
    /* find symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    if ( presol == NULL )
@@ -2020,8 +2037,7 @@ SCIP_RETCODE SCIPsetSymmetryComponentblocked(
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
-   assert( presoldata->ncomponents > 0 );
-   assert( i < presoldata->ncomponents );
+   assert( 0 <= i && i < presoldata->ncomponents );
    assert( presoldata->componentblocked != NULL );
 
    presoldata->componentblocked[i] = TRUE;
@@ -2030,7 +2046,7 @@ SCIP_RETCODE SCIPsetSymmetryComponentblocked(
 }
 
 
-/* get blocked status component of symmetry group */
+/** get blocked status component of symmetry group */
 SCIP_Shortbool SCIPgetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to check blocked status */
@@ -2039,22 +2055,19 @@ SCIP_Shortbool SCIPgetSymmetryComponentblocked(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   assert( i >= 0 );
-
    /* find symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    if ( presol == NULL )
    {
       SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
+      return FALSE;
    }
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
-   assert( presoldata->ncomponents > 0 );
-   assert( i < presoldata->ncomponents );
+   assert( 0 <= 0 && i < presoldata->ncomponents );
    assert( presoldata->componentblocked != NULL );
 
    return presoldata->componentblocked[i];

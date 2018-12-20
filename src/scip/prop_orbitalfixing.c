@@ -325,10 +325,11 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
    for (i = 0; i < npermvars; ++i)
    {
       int beginorbitidx;
+      int componentidx;
       int j;
-      int componentidx = vartocomponent[i];
 
       /* skip variables that are not affected by symmetry */
+      componentidx = vartocomponent[i];
       if ( componentidx == -1 )
          continue;
 
@@ -479,7 +480,7 @@ SCIP_RETCODE getSymmetries(
       propdata->components = NULL;
       propdata->componentbegins = NULL;
       propdata->vartocomponent = NULL;
-      propdata->ncomponents = 0;
+      propdata->ncomponents = -1;
       propdata->nmovedpermvars = 0;
 
       recompute = TRUE;
@@ -896,14 +897,14 @@ SCIP_RETCODE propagateOrbitalFixing(
       assert( 0 <= v && v < npermvars );
       assert( bg0[v] );
 
-      pt = permstrans[v];
-      assert( pt != NULL );
-
       componentidx = vartocomponent[v];
 
       /* skip unaffected variables */
       if ( componentidx < 0 )
          continue;
+
+      pt = permstrans[v];
+      assert( pt != NULL );
 
       for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
@@ -955,14 +956,14 @@ SCIP_RETCODE propagateOrbitalFixing(
       assert( 0 <= v && v < npermvars );
       assert( bg1[v] );
 
-      pt = permstrans[v];
-      assert( pt != NULL );
-
       componentidx = vartocomponent[v];
 
       /* skip unaffected variables */
       if ( componentidx < 0 )
          continue;
+
+      pt = permstrans[v];
+      assert( pt != NULL );
 
       for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
@@ -1151,6 +1152,10 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata->nmovedpermvars = 0;
    propdata->permvarmap = NULL;
    propdata->lastrestart = 0;
+   propdata->components = NULL;
+   propdata->componentbegins = NULL;
+   propdata->vartocomponent = NULL;
+   propdata->ncomponents = -1;
 
    return SCIP_OKAY;
 }
@@ -1356,6 +1361,10 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->bg1 = NULL;
    propdata->bg1list = NULL;
    propdata->nbg1 = 0;
+   propdata->components = NULL;
+   propdata->componentbegins = NULL;
+   propdata->vartocomponent = NULL;
+   propdata->ncomponents = -1;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
