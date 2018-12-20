@@ -171,6 +171,9 @@ Features
 Performance improvements
 ------------------------
 
+- try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
+  compute greedy solution by weighted median selection.
+
 Examples and applications
 -------------------------
 
@@ -199,6 +202,8 @@ Interface changes
 
 ### Command line interface
 
+- warn about coefficients in MPS files with absolute larger than SCIP's infinity parameter
+
 ### Interfaces to external software
 
 ### Changed parameters
@@ -214,6 +219,8 @@ Deleted files
 
 Unit tests
 ----------
+
+- added unit tests for exact knapsack solving and (weighted) median selection algorithms
 
 Testing
 -------
@@ -249,6 +256,9 @@ Fixed bugs
 - ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
   special case of an implication between two binary variables.
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
+- fixed some special cases in SCIPselect/SCIPselectWeighted methods
+- relaxed too strict assertion in Zirounding heuristic
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints.
 
 Miscellaneous
 -------------
