@@ -1358,7 +1358,7 @@ SCIP_RETCODE computeComponents(
       presoldata->componentblocked[i] = FALSE;
 
    /* The set of component indices contains gaps if two permutations are in the same component.
-    * Thus, we need to correct the component indices. */
+    * Thus, we need to correct the component indices to have the correct indices in vartocomponent. */
    SCIP_CALL( SCIPallocBufferArray(scip, &correctorcomponentidx, nperms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
 
