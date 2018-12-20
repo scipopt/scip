@@ -193,7 +193,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */
@@ -282,7 +282,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -639,7 +639,6 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_INTERVAL interval;
-   SCIP_INTERVAL exprinterval;
    SCIP_Bool changed = FALSE;
    SCIP_Real matinf = -40.474214;
    SCIP_Real matsup = 36.508894;
@@ -689,8 +688,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    }
 
    /* interval evaluate */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
    SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
 
    cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
@@ -702,9 +701,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIP_Bool infeasible = FALSE;
       int nreductions = 0;
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
-      exprinterval.inf = 35;
-      exprinterval.sup = 35;
-      SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
+      SCIPintervalSet(&expr->activity, 35);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );

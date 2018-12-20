@@ -414,10 +414,9 @@ Test(nlhdlrbilinear, inteval_corner)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -10.0), "expect -10.0 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 12.0), "expect 12.0 got %g\n", SCIPintervalGetSup(interval));
 
@@ -452,10 +451,9 @@ Test(nlhdlrbilinear, inteval_single_line)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -3.0625), "expect -3.0625 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 15.0), "expect 15.0 got %g\n", SCIPintervalGetSup(interval));
 
@@ -497,10 +495,9 @@ Test(nlhdlrbilinear, inteval_three_lines)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -19.2), "expect -19.2 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 4.248046875), "expect 4.248046875 got %g\n", SCIPintervalGetSup(interval));
 
@@ -539,10 +536,9 @@ Test(nlhdlrbilinear, inteval_parallel)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -0.25), "expect -0.25 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 1.0), "expect 1.0 got %g\n", SCIPintervalGetSup(interval));
 
@@ -556,6 +552,7 @@ Test(nlhdlrbilinear, reverseprop_single)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    SCIP_CONS* cons;
+   SCIP_INTERVAL activity;
    SCIP_INTERVAL intervalx;
    SCIP_INTERVAL intervaly;
    SCIP_Bool success;
@@ -579,9 +576,9 @@ Test(nlhdlrbilinear, reverseprop_single)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.0));
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   cr_expect(SCIPisEQ(scip, activity.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, activity.sup, 0.0));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
@@ -629,16 +626,16 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 1.0));
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -0.8, 0.5);
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -0.8));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.5));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -0.8));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
@@ -686,16 +683,16 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    cr_expect(success);
 
    /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 1.0));
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -1.0, 0.5);
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.5));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -1.0));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
 
    /* compute intervals; inequality does not intersect the level set in the interior of the domain -> no tightening */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);

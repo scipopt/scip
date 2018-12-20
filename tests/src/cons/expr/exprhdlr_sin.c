@@ -204,9 +204,8 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sinexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, sinexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, sinexpr, &interval, FALSE) );
 
-      interval = SCIPgetConsExprExprInterval(sinexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
    }
@@ -217,9 +216,8 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sinexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, sinexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, sinexpr, &interval, FALSE) );
 
-      interval = SCIPgetConsExprExprInterval(sinexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
    }

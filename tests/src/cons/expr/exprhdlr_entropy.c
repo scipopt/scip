@@ -167,7 +167,7 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
 Test(entropy, inteval, .description = "Tests the expression interval evaluation.")
 {
    SCIP_INTERVAL intervalEntropy;
-   SCIP_INTERVAL intervalProd;
+   /*FIXME SCIP_INTERVAL intervalProd;*/
    SCIP_Real rndlb[4];
    SCIP_Real rndub[4];
    SCIP_Real rndreslb[4];
@@ -206,16 +206,17 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
-      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
 
+      /* FIXME what was this code meant to do?
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
+      */
    }
 
    /* random part */
@@ -223,16 +224,17 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
-      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
 
+      /* FIXME what was this code meant to do?
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
+      */
    }
 }
 
