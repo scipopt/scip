@@ -64,7 +64,7 @@
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
 
-#define SCIP_OUTPUT               FALSE
+#define SCIP_OUTPUT                TRUE
 
 /** presolver data */
 struct SCIP_PresolData
@@ -1230,7 +1230,8 @@ SCIP_RETCODE computeSymmetryGroup(
 static
 SCIP_RETCODE computeComponents(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SCIP_Bool             transposed          /**< whether transposed permutation matrix is stored */
    )
 {
    SCIP_DISJOINTSET* componentstoperm;
@@ -1264,40 +1265,78 @@ SCIP_RETCODE computeComponents(
    ncomponents = nperms;
 
    /* check whether two permutations belong to the same component */
-   for (i = 0; i < nperms && ncomponents > 1; ++i)
+   if ( transposed )
    {
-      for (j = i + 1; j < nperms && ncomponents > 1; ++j)
+      int componentI;
+      int componentJ;
+
+      for (k = 0; k < npermvars; ++k)
       {
-         int componentI;
-         int componentJ;
-         int* permI;
-         int* permJ;
-
-         componentI = SCIPdisjointsetFind(componentstoperm, i);
-         componentJ = SCIPdisjointsetFind(componentstoperm, j);
-         if ( componentI == componentJ )
-            continue;
-
-         permI = perms[i];
-         permJ = perms[j];
-
-         /* Do perms[i] and perms[j] belong to the same component? */
-         for (k = 0; k < npermvars; ++k)
+         for (i = 0; i < nperms && ncomponents > 1; ++i)
          {
-            /* both permutations belong to the same component */
-            if ( permI[k] != k && permJ[k] != k )
+            for (j = i + 1; j < nperms && ncomponents > 1; ++j)
             {
-               /* Keep the smallest identifier to keep track of where a new component starts.
-                * Note that it is necessary to store the smaller identifier to be able to iterate
-                * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
-                * pairs {i,j}. */
-               if ( componentI < componentJ )
-                  SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
-               else
-                  SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
+               componentI = SCIPdisjointsetFind(componentstoperm, i);
+               componentJ = SCIPdisjointsetFind(componentstoperm, j);
+               if ( componentI == componentJ )
+                  continue;
 
-               --ncomponents;
-               break;
+               /* both permutations belong to the same component */
+               if ( perms[k][i] != k && perms[k][j] != k )
+               {
+                  /* Keep the smallest identifier to keep track of where a new component starts.
+                   * Note that it is necessary to store the smaller identifier to be able to iterate
+                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
+                   * pairs {i,j}. */
+                  if ( componentI < componentJ )
+                     SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
+                  else
+                     SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
+
+                  --ncomponents;
+                  break;
+               }
+            }
+         }
+      }
+   }
+   else
+   {
+      int componentI;
+      int componentJ;
+      int* permI;
+      int* permJ;
+
+      for (i = 0; i < nperms && ncomponents > 1; ++i)
+      {
+         for (j = i + 1; j < nperms && ncomponents > 1; ++j)
+         {
+            componentI = SCIPdisjointsetFind(componentstoperm, i);
+            componentJ = SCIPdisjointsetFind(componentstoperm, j);
+            if ( componentI == componentJ )
+               continue;
+
+            permI = perms[i];
+            permJ = perms[j];
+
+            /* Do perms[i] and perms[j] belong to the same component? */
+            for (k = 0; k < npermvars; ++k)
+            {
+               /* both permutations belong to the same component */
+               if ( permI[k] != k && permJ[k] != k )
+               {
+                  /* Keep the smallest identifier to keep track of where a new component starts.
+                   * Note that it is necessary to store the smaller identifier to be able to iterate
+                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
+                   * pairs {i,j}. */
+                  if ( componentI < componentJ )
+                     SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
+                  else
+                     SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
+
+                  --ncomponents;
+                  break;
+               }
             }
          }
       }
@@ -1904,7 +1943,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ncomponents != NULL )
    {
-      SCIP_CALL( computeComponents(scip, presoldata) );
+      SCIP_CALL( computeComponents(scip, presoldata, transposedperms) );
 
       *components = presoldata->components;
       *componentbegins = presoldata->componentbegins;
