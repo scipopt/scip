@@ -132,6 +132,7 @@ struct SCIP_HashMap
    uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
    uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
    uint32_t              nelements;          /**< number of elements in the hashtable */
+   SCIP_HASHMAPTYPE      hashmaptype;        /**< type of entries */
 };
 
 /** lightweight hash set data structure to map pointers on pointers */
