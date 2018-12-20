@@ -902,12 +902,15 @@ SCIP_RETCODE propagateOrbitalFixing(
       for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
          int img;
+         int perm;
+
+         perm = components[p];
 
          /* skip inactive permutations */
-         if ( inactiveperms[p] )
+         if ( inactiveperms[perm] )
             continue;
 
-         img = pt[p];
+         img = pt[perm];
 
          if ( img != v )
          {
@@ -930,7 +933,7 @@ SCIP_RETCODE propagateOrbitalFixing(
             /* we are moving a variable globally fixed to 0 to a variable not of this type */
             if ( ! bg0[img] )
             {
-               inactiveperms[p] = TRUE; /* mark as inactive */
+               inactiveperms[perm] = TRUE; /* mark as inactive */
                --nactiveperms;
             }
          }
@@ -958,12 +961,15 @@ SCIP_RETCODE propagateOrbitalFixing(
       for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
       {
          int img;
+         int perm;
+
+         perm = components[p];
 
          /* skip inactive permutations */
-         if ( inactiveperms[p] )
+         if ( inactiveperms[perm] )
             continue;
 
-         img = pt[p];
+         img = pt[perm];
 
          if ( img != v )
          {
@@ -986,7 +992,7 @@ SCIP_RETCODE propagateOrbitalFixing(
             /* we are moving a variable globally fixed or branched to 1 to a variable not of this type */
             if ( ! bg1[img] )
             {
-               inactiveperms[p] = TRUE; /* mark as inactive */
+               inactiveperms[perm] = TRUE; /* mark as inactive */
                --nactiveperms;
             }
          }
