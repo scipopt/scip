@@ -64,7 +64,7 @@
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
 
-#define SCIP_OUTPUT                TRUE
+#define SCIP_OUTPUT               FALSE
 
 /** presolver data */
 struct SCIP_PresolData
@@ -1394,10 +1394,21 @@ SCIP_RETCODE computeComponents(
 
       for (i = 0; i < nperms; ++i)
       {
-         if ( perms[i][k] != k )
+         if ( transposed )
          {
-            presoldata->vartocomponent[k] = permtocomponent[i];
-            break;
+            if ( perms[k][i] != k )
+            {
+               presoldata->vartocomponent[k] = permtocomponent[i];
+               break;
+            }
+         }
+         else
+         {
+            if ( perms[i][k] != k )
+            {
+               presoldata->vartocomponent[k] = permtocomponent[i];
+               break;
+            }
          }
       }
    }
