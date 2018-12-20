@@ -449,10 +449,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_HASHTABLE* consttypemap;
    SCIP_HASHTABLE* sumcoefmap;
    SCIP_HASHTABLE* rhstypemap;
-   SYM_OPTYPE* uniqueoparray;
-   SYM_CONSTTYPE* uniqueconstarray;
-   SYM_CONSTTYPE* sumcoefarray;
-   SYM_RHSTYPE* uniquerhsarray;
+   SYM_OPTYPE* uniqueoparray = NULL;
+   SYM_CONSTTYPE* uniqueconstarray = NULL;
+   SYM_CONSTTYPE* sumcoefarray = NULL;
+   SYM_RHSTYPE* uniquerhsarray = NULL;
    SCIP_CONSHDLR* consexprhdlr = SCIPfindConshdlr(scip, "expr");
    SCIP_CONS** exprconss = SCIPconshdlrGetConss(consexprhdlr);
    int nexprconss = SCIPconshdlrGetNConss(consexprhdlr);
