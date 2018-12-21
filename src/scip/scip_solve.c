@@ -59,6 +59,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cutpool.h"
 #include "scip/cuts.h"
+#include "scip/decomp.h"
 #include "scip/debug.h"
 #include "scip/def.h"
 #include "scip/dialog.h"
@@ -1684,6 +1685,9 @@ SCIP_RETCODE initSolve(
    /* inform the transformed problem that the branch and bound process starts now */
    SCIP_CALL( SCIPprobInitSolve(scip->transprob, scip->set) );
 
+   /* transform the decomposition storage */
+   SCIP_CALL( SCIPtransformDecompstore(scip) );
+
    /* inform plugins that the branch and bound process starts now */
    SCIP_CALL( SCIPsetInitsolPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
@@ -1805,6 +1809,8 @@ SCIP_RETCODE freeSolve(
     * subroots have to be released
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   SCIPexitSolveDecompstore(scip);
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );

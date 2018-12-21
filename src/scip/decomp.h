@@ -38,7 +38,8 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
    );
 
 /** free a decomposition */
@@ -46,6 +47,12 @@ EXTERN
 void SCIPdecompFree(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** returns TRUE if decomposition is in the original space */
+EXTERN
+SCIP_Bool SCIPdecompIsOriginal(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** set labels for an array of variables */
@@ -100,6 +107,15 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    int                   nconss              /**< number of constraints */
    );
 
+/** create a decomposition of the variables from a labeling of the constraints */
+EXTERN
+SCIP_RETCODE SCIPdecompComputeVarsLabels(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
+   );
+
 /* author bzfhende
  *
  * TODO query if a variable is a linking variable
@@ -111,16 +127,76 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
  */
 
 
-/* author bzfhende
- *
- * TODO create a decomposition of the variables from a labeling of the constraints
- *      to be able to read in dec files.
- */
+
 
 /* author bzfhende
  *
  * TODO get a decomposition score, and compute other stuff that may be important
  */
+
+/** create a decomposition storage */
+EXTERN
+SCIP_RETCODE SCIPdecompstoreCreate(
+   SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   int                   nslots              /**< maximum number of decomposition slots in storage */
+   );
+
+/** free a decomposition storage */
+EXTERN
+void SCIPdecompstoreFree(
+   SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
+   BMS_BLKMEM*           blkmem              /**< block memory data structure */
+   );
+
+/** add decomposition to storage */
+EXTERN
+SCIP_RETCODE SCIPdecompstoreAdd(
+   SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
+   SCIP_DECOMP*          decomp              /**< decomposition to add */
+   );
+
+/** get decompositions from this storage */
+EXTERN
+SCIP_DECOMP** SCIPdecompstoreGetDecomps(
+   SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
+   );
+
+/** get number of decompositions in this storage */
+EXTERN
+int SCIPdecompstoreGetNDecomps(
+   SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
+   );
+
+/** get decompositions in original space from this storage */
+EXTERN
+SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
+   SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
+   );
+
+/** get number of decompositions in original space in this storage */
+EXTERN
+int SCIPdecompstoreGetNOrigDecomps(
+   SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
+   );
+
+/** get decomposition store from SCIP */
+EXTERN
+SCIP_DECOMPSTORE* SCIPgetDecompstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** transform all available original decompositions into transformed space */
+EXTERN
+SCIP_RETCODE SCIPtransformDecompstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** free all decompositions in transformed space */
+EXTERN
+void SCIPexitSolveDecompstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

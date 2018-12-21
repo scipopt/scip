@@ -59,6 +59,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cutpool.h"
 #include "scip/cuts.h"
+#include "scip/decomp.h"
 #include "scip/debug.h"
 #include "scip/def.h"
 #include "scip/dialog.h"
@@ -193,6 +194,8 @@ SCIP_RETCODE SCIPcreateProb(
 
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
+
+   SCIP_CALL( SCIPdecompstoreCreate(&scip->decompstore, SCIPblkmem(scip), 10) );
 
    return SCIP_OKAY;
 }
@@ -804,6 +807,7 @@ SCIP_RETCODE SCIPfreeProb(
       {
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
+      SCIPdecompstoreFree(&scip->decompstore, SCIPblkmem(scip));
       SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );

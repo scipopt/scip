@@ -25,7 +25,7 @@
 #define SRC_SCIP_STRUCT_DECOMP_H_
 
 #include "scip/type_misc.h"
-
+#include "scip/type_decomp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +39,17 @@ struct SCIP_Decomp
    SCIP_Real             score;              /**< score of this decomposition */
    int                   nblocks;            /**< the number of variable blocks without the linking block */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
+   SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
+};
+
+/** data structure to manage decompositions */
+struct SCIP_DecompStore
+{
+   SCIP_DECOMP**         decomps;            /**< array of decompositions in this store */
+   SCIP_DECOMP**         origdecomps;        /**< array of decompositions in original space */
+   int                   ndecomps;           /**< number of available decompositions */
+   int                   norigdecomps;       /**< number of decompositions in original space */
+   int                   decompssize;        /**< size of the decomposition arrays */
 };
 
 #ifdef __cplusplus

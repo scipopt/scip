@@ -59,6 +59,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cutpool.h"
 #include "scip/cuts.h"
+#include "scip/decomp.h"
 #include "scip/debug.h"
 #include "scip/def.h"
 #include "scip/dialog.h"
@@ -503,6 +504,8 @@ SCIP_RETCODE copyProb(
 
    /* create conflict store to store conflict constraints */
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
+
+   SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), 10) );
 
    if( uselocalvarmap )
    {
