@@ -113,6 +113,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
+   SCIP_Bool changed;
    SCIP_CONS* cons;
    SCIP_CONS* vubcons;
    SCIP_CONS* vlbcons;
@@ -120,7 +121,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    /* create expression and simplify it */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1> - log(<y1>)", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
@@ -143,7 +144,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    enforcebelow = FALSE;
    enforceabove = FALSE;
    success = FALSE;
-   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
 
    providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);

@@ -107,6 +107,9 @@ SCIP_Bool varIsSemicontinuous(
    ub1 = SCIPinfinity(scip);
 
    varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
+   /* TODO @bzfkensi in some unittests, we don't have the varbound conshdlr; so is it correct to return FALSE here? */
+   if( varboundconshdlr == NULL )
+      return FALSE;
    nvbconss = SCIPconshdlrGetNConss(varboundconshdlr);
    vbconss = SCIPconshdlrGetConss(varboundconshdlr);
 
