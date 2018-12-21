@@ -1274,7 +1274,7 @@ SCIP_RETCODE computeComponents(
    /* find variable components by merging supports of permutations */
    for (p = 0; p < nperms; ++p)
    {
-      auxpermtcomp[p] = -1;
+      auxpermtocomp[p] = -1;
 
       for (i = 0; i < npermvars; ++i)
       {
@@ -1313,10 +1313,10 @@ SCIP_RETCODE computeComponents(
    }
 
    /* init array that assigns to each permutation a component of the group */
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxpermtcomp, nperms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxpermtocomp, nperms) );
    for (p = 0; p < nperms; ++p)
    {
-      auxpermtcomp[p] = -1;
+      auxpermtocomp[p] = -1;
 
       for (i = 0; i < npermvars; ++i)
       {
@@ -1337,15 +1337,15 @@ SCIP_RETCODE computeComponents(
             componentImg = SCIPdisjointsetFind(componentstovar, img);
 
             /* initialize auxpermtocomp to first affected component */
-            if ( auxpermtcomp[p] == -1 )
-               auxpermtcomp[p] = componentI < componentImg ? componentI : componentImg;
+            if ( auxpermtocomp[p] == -1 )
+               auxpermtocomp[p] = componentI < componentImg ? componentI : componentImg;
 
             /* components are already the same */
-            comp = auxpermtcomp[p];
+            comp = auxpermtocomp[p];
             if ( componentI == comp && componentImg == comp )
                continue;
 
-            /* merge affected components different to auxpermtcomp */
+            /* merge affected components different to auxpermtocomp */
             if ( componentI != comp )
             {
                SCIPdisjointsetUnion(componentstovar, comp, componentI, TRUE);
@@ -1366,13 +1366,13 @@ SCIP_RETCODE computeComponents(
       presoldata->components[p] = p;
 
    /* get correct order of components array */
-   SCIPsortIntInt(auxpermtcomp, presoldata->components, nperms);
+   SCIPsortIntInt(auxpermtocomp, presoldata->components, nperms);
 
    /* determine correct number of components */
    ncomponents = 1;
    for (p = 1; p < nperms; ++p)
    {
-      if ( auxpermtcomp[p] > auxpermtcomp[p - 1] )
+      if ( auxpermtocomp[p] > auxpermtocomp[p - 1] )
          ++ncomponents;
    }
    presoldata->ncomponents = ncomponents;
@@ -1386,7 +1386,7 @@ SCIP_RETCODE computeComponents(
    idx = 0;
    for (p = 1; p < nperms; ++p)
    {
-      if ( auxpermtcomp[p] > auxpermtcomp[p - 1] )
+      if ( auxpermtocomp[p] > auxpermtocomp[p - 1] )
          presoldata->componentbegins[++idx] = p;
 
       permtocomponent[p] = idx;
@@ -1424,7 +1424,7 @@ SCIP_RETCODE computeComponents(
       presoldata->componentblocked[i] = FALSE;
 
    SCIPfreeBufferArray(scip, &permtocomponent);
-   SCIPfreeBufferArray(scip, &auxpermtcomp);
+   SCIPfreeBufferArray(scip, &auxpermtocomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
 #if SCIP_OUTPUT_COMPONENT
