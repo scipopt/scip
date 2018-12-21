@@ -176,6 +176,7 @@ set(scipsources
     scip/reader_cip.c
     scip/reader_cnf.c
     scip/reader_cor.c
+    scip/reader_dec.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -668,6 +669,7 @@ set(scipheaders
     scip/reader_cip.h
     scip/reader_cnf.h
     scip/reader_cor.h
+    scip/reader_dec.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h

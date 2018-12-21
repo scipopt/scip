@@ -25,6 +25,7 @@
 #include "include/scip_test.h"
 
 static const char* testfilename = "../check/instances/Tests/decomp/decomptest.cip";
+static const char* testdecname = "../check/instances/Tests/decomp/decomptest.dec";
 #define NVARS 5
 #define NCONSS 3
 /** GLOBAL VARIABLES **/
@@ -32,8 +33,10 @@ static SCIP* scip;
 static SCIP_DECOMP* decomp;
 static SCIP_VAR* vars[NVARS];
 static SCIP_CONS* conss[NCONSS];
-static int labels_vars[] = {0,0,0,1,1};
+static int labels_vars[] = {SCIP_DECOMP_LINKVAR,0,0,1,1};
 static int labels_conss[] = {SCIP_DECOMP_LINKCONS, 0, 1};
+static char strbuf1[1024];
+static char strbuf2[1024];
 
 /** set up some data structures */
 static
@@ -74,7 +77,7 @@ void setup(void)
 
 
    SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
-   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), TRUE) );
 
    setupData();
 }
@@ -84,6 +87,8 @@ void teardown(void)
 {
    SCIPdecompFree(&decomp, SCIPblkmem(scip));
    SCIPfree(&scip);
+
+   BMScheckEmptyMemory();
 }
 
 TestSuite(decomptest, .init = setup, .fini = teardown);
@@ -97,7 +102,7 @@ Test(decomptest, create_and_free)
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
    SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), TRUE) );
 
    SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
 }
@@ -139,16 +144,102 @@ char* printIntArray(
    return strbuf;
 }
 
-Test(decomptest, test_cons_labeling, .description="check constraint label computation")
+
+/** check constraint labels of this decomposition */
+static
+void checkConsLabels(
+   SCIP_DECOMP*          decomposition       /**< some decomposition */
+   )
 {
    int returnedlabels[NCONSS];
-   char strbuf[1024];
+   cr_assert_not_null(decomposition);
 
+   SCIPdecompGetConsLabels(decomposition, conss, returnedlabels, NCONSS);
+
+   cr_assert_arr_eq(returnedlabels, labels_conss, NCONSS,
+      "Array {%s} not equal to {%s}\n",
+      printIntArray(strbuf1, returnedlabels, NCONSS),
+      printIntArray(strbuf2, labels_conss, NCONSS));
+
+}
+
+Test(decomptest, test_cons_labeling, .description="check constraint label computation")
+{
    SCIP_CALL( SCIPdecompSetVarsLabels(decomp, vars, labels_vars, NVARS) );
 
    SCIP_CALL( SCIPdecompComputeConsLabels(scip, decomp, conss, NCONSS) );
 
-   SCIPdecompGetConsLabels(decomp, conss, returnedlabels, NCONSS);
+   checkConsLabels(decomp);
 
-   cr_assert_arr_eq(returnedlabels, labels_conss, NCONSS, "%s\n", printIntArray(strbuf, labels_conss, NCONSS));
+}
+/** check variable labels of this decomposition */
+static
+void checkVarsLabels(
+   SCIP_DECOMP*          decomposition       /**< some decomposition */
+   )
+{
+   int returnedlabels[NVARS];
+   cr_assert_not_null(decomposition);
+   SCIPdecompGetVarsLabels(decomposition, vars, returnedlabels, NVARS);
+
+   cr_assert_arr_eq(returnedlabels, labels_vars, NVARS,
+      "Array {%s} not equal to {%s}\n",
+      printIntArray(strbuf1, returnedlabels, NVARS),
+      printIntArray(strbuf2, labels_vars, NVARS)
+      );
+}
+
+Test(decomptest, test_var_labeling, .description="check variable label computation")
+{
+
+   SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels_conss, NCONSS) );
+
+   SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, conss, NCONSS) );
+
+   checkVarsLabels(decomp);
+
+}
+
+Test(decomptest, test_dec_reader, .description="test decomposition reader")
+{
+   SCIP_DECOMPSTORE* decompstore = SCIPgetDecompstore(scip);
+   SCIP_DECOMP* scip_decomp;
+   SCIP_VAR* transvars[NVARS];
+   int returnedlabels[NVARS];
+   int v;
+
+   assert(decompstore != NULL);
+
+   SCIP_CALL( SCIPreadProb(scip, testdecname, "dec") );
+
+   cr_assert_eq(SCIPdecompstoreGetNOrigDecomps(decompstore), 1);
+
+   scip_decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
+   cr_assert_not_null(scip_decomp);
+
+   checkConsLabels(scip_decomp);
+
+   checkVarsLabels(scip_decomp);
+
+   /* solve the problem without presolving */
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsolve(scip) );
+
+   /* transform variable array */
+   for( v = 0; v < NVARS; ++v )
+   {
+      transvars[v] = SCIPvarGetTransVar(vars[v]);
+      cr_assert_not_null(transvars[v]);
+   }
+
+   cr_assert_eq(SCIPdecompstoreGetNDecomps(decompstore), 1, "Number of transformed decompositions should be 1.\n");
+   scip_decomp = SCIPdecompstoreGetDecomps(decompstore)[0];
+
+   SCIPdecompGetVarsLabels(scip_decomp, transvars, returnedlabels, NVARS);
+
+   cr_assert_arr_eq(returnedlabels, labels_vars, NVARS,
+      "Arrays should be equal: {%s} != {%s}",
+      printIntArray(strbuf1, returnedlabels, NVARS),
+      printIntArray(strbuf2, labels_vars, NVARS)
+      );
 }

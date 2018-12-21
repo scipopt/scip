@@ -29,6 +29,8 @@ extern "C" {
 #endif
 
 typedef struct SCIP_Decomp SCIP_DECOMP;
+typedef struct SCIP_DecompStore SCIP_DECOMPSTORE;
+
 
 #define SCIP_DECOMP_LINKVAR -1      /**< special label for linking variables */
 #define SCIP_DECOMP_LINKCONS -2     /**< special label for linking constraints */
