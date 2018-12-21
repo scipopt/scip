@@ -110,6 +110,7 @@ SCIP_RETCODE SCIPdecompSetVarsLabels(
        * TODO ensure that labels are okay, e.g., nonnegative integers
        */
       SCIP_CALL( SCIPhashmapInsertInt(decomp->var2block, (void *)vars[i], labels[i]) );
+
    }
 
    return SCIP_OKAY;
@@ -344,6 +345,7 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       int v;
       int nconsvars;
       SCIP_Bool success;
+      int requiredsize;
 
       /* skip linking constraints */
       conslabel = conslabels[c];
@@ -355,6 +357,12 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       SCIP_CALL( ensureCondition(success) );
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuffer, twicenvars, &success) );
       SCIP_CALL( ensureCondition(success) );
+
+      if( ! SCIPdecompIsOriginal(decomp) )
+      {
+         SCIP_CALL( SCIPgetActiveVars(scip, varbuffer, &nconsvars, twicenvars, &requiredsize) );
+         assert(nconsvars <= twicenvars);
+      }
 
       /** each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
       for( v = 0; v < nconsvars; ++v )
