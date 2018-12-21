@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_nlhdlr_erspective.h
- * @brief  PERSPECTIVE nonlinear handler
- * @author Benjamin Mueller
+ * @brief  perspective nonlinear handler
+ * @author Ksenia Bestuzheva
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -24,20 +24,10 @@
 #define __SCIP_CONS_EXPR_NLHDLR_PERSPECTIVE_H__
 
 #include "scip/scip.h"
-#include "scip/type_cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** data structure to store information of a semicontinuous variable
- */
-struct SCIP_SCVarData
-{
-   SCIP_VAR*             bvar;           /**< the binary variable on which the variable domain depends */
-   SCIP_Real             val0;            /**< var value when bvar = 0 */
-};
-typedef struct SCIP_SCVarData SCIP_SCVARDATA;
 
 /** includes perspective nonlinear handler to consexpr */
 EXTERN

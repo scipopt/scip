@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_perspective.h
+/**@file   cons_expr_nlhdlr_perspective.c
  * @brief  perspective nonlinear handler
  * @author Ksenia Bestuzheva
  */
@@ -36,6 +36,14 @@
 /*
  * Data structures
  */
+
+/** data structure to store information of a semicontinuous variable */
+struct SCIP_SCVarData
+{
+   SCIP_VAR*             bvar;               /**< the binary variable on which the variable domain depends */
+   SCIP_Real             val0;               /**< var value when bvar = 0 */
+};
+typedef struct SCIP_SCVarData SCIP_SCVARDATA;
 
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
