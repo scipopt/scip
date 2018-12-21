@@ -26,8 +26,6 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_sum.h"
-#include "scip/type_cons_expr.h"
-#include "scip/struct_cons_expr.h"
 #include "scip/scip_sol.h"
 
 /* fundamental nonlinear handler properties */
@@ -957,7 +955,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    if( success )
    {
       SCIP_Bool infeasible;
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "Separating sol point\n");
       for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
@@ -971,17 +969,15 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 #endif
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-      *ncuts++;
 
       if( infeasible )
       {
          *result = SCIP_CUTOFF;
-         ++nlhdlr->ncutoffs;
       }
       else
       {
          *result = SCIP_SEPARATED;
-         ++nlhdlr->ncutsfound;
+         ++*ncuts;
       }
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
