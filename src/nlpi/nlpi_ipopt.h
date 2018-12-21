@@ -76,7 +76,8 @@ void* SCIPgetNlpiOracleIpopt(
 extern
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   const char*           optionsstring,      /**< string with options as in Ipopt options file */
+   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    );
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 

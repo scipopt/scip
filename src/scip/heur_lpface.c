@@ -805,7 +805,6 @@ SCIP_RETCODE setupSubscipLpface(
       SCIP_Bool valid;
       char probname[SCIP_MAXSTRLEN];
 
-
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
             TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
@@ -824,7 +823,7 @@ SCIP_RETCODE setupSubscipLpface(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

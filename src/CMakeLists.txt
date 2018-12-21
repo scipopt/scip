@@ -66,6 +66,7 @@ set(scipsources
     scip/cons_expr_sum.c
     scip/cons_expr_value.c
     scip/cons_expr_var.c
+    scip/cons_expr_nlhdlr_bilinear.c
     scip/cons_expr_nlhdlr_convex.c
     scip/cons_expr_nlhdlr_default.c
     scip/cons_expr_nlhdlr_perspective.c
@@ -224,6 +225,7 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
+    scip/sepa_rlt.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/benders_default.c
@@ -492,13 +494,16 @@ set(scipheaders
     scip/cons_disjunction.h
     scip/cons_expr.h
     scip/cons_expr_abs.h
+    scip/cons_expr_cos.h
     scip/cons_expr_exp.h
     scip/cons_expr_log.h
     scip/cons_expr_pow.h
     scip/cons_expr_product.h
+    scip/cons_expr_sin.h
     scip/cons_expr_sum.h
     scip/cons_expr_value.h
     scip/cons_expr_var.h
+    scip/cons_expr_nlhdlr_bilinear.h
     scip/cons_expr_nlhdlr_convex.h
     scip/cons_expr_nlhdlr_default.h
     scip/cons_expr_nlhdlr_quadratic.h
@@ -779,6 +784,7 @@ set(scipheaders
     scip/sepa_mcf.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
+    scip/sepa_rlt.h
     scip/sepastore.h
     scip/sepa_strongcg.h
     scip/sepa_zerohalf.h
@@ -1003,7 +1009,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} DESTINATION include/scip)
+install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -1032,7 +1038,7 @@ if(ZIMPL_FOUND)
 endif()
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 

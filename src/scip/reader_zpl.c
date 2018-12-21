@@ -23,7 +23,7 @@
 
 #include "scip/reader_zpl.h"
 
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -1602,7 +1602,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;

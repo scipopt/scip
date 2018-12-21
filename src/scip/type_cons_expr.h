@@ -419,6 +419,7 @@ typedef enum
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - expr            : expression
  *  - overestimate    : whether the expression needs to be overestimated
  *  - underestimate   : whether the expression needs to be underestimated
@@ -429,6 +430,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
@@ -450,6 +452,8 @@ typedef enum
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - cons : expression constraint
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
@@ -460,6 +464,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
@@ -674,6 +679,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
+ * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when is not the root of an expression
  * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
  * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
  * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
@@ -685,6 +691,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
    SCIP_Bool* enforcedbelow, \
    SCIP_Bool* enforcedabove, \
@@ -781,6 +788,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - nlhdlr          : nonlinear handler
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
@@ -793,6 +801,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -816,11 +825,26 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler separation callback
  *
- * The method tries to separate a given point by means of the nonlinear handler.
+ * The method tries to find an affine hyperplane (a cut) that separates a given point
+ * from the set defined by either
+ *   expr - auxvar <= 0 (if !overestimate)
+ * or
+ *   expr - auxvar >= 0 (if  overestimate),
+ * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ *
+ * If the NLHDLR always separates by computing a linear under- or overestimator of expr,
+ * then it could be advantageous to implement the NLHDLRESTIMATE callback instead.
+ *
+ * Note, that the NLHDLR may also choose to separate for a relaxation of the mentioned sets,
+ * e.g., expr <= upperbound(auxvar)  or  expr >= lowerbound(auxvar).
+ * This is especially useful in situations where expr is the root expression of a constraint
+ * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
+ * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : cons expr handler
+ *  - cons : expression constraint
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -835,6 +859,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -916,6 +941,22 @@ typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< 
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 /** @} */
+
+/** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
+ *
+ * input:
+ * - args the point to be evaluated
+ * - nargs the number of arguments of the function (length of array args)
+ * - funcdata user-data of function evaluation callback
+ *
+ * return:
+ * - value of function in point x or SCIP_INVALID if could not be evaluated
+ */
+#define SCIP_DECL_VERTEXPOLYFUN(f) SCIP_Real f (SCIP_Real* args, int nargs, void* funcdata)
+
+/** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
+#define SCIP_MAXVERTEXPOLYDIM 14
+
 
 #ifdef __cplusplus
 }

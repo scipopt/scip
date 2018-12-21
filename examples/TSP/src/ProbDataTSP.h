@@ -115,7 +115,6 @@ public:
 
 };/*lint !e1712*/
 
-
 } /* namespace tsp */
 
 #endif

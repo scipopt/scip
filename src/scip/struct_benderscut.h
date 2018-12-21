@@ -54,13 +54,6 @@ struct SCIP_Benderscut
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */
 
-   SCIP_CONS**           addedconss;         /**< an array to store the added constraints */
-   SCIP_ROW**            addedcuts;          /**< an array to store the added cuts */
-   int                   addedconsssize;     /**< the size of the added constraint array */
-   int                   addedcutssize;      /**< the size of the added cuts array */
-   int                   naddedconss;        /**< the number of the added constraint */
-   int                   naddedcuts;         /**< the number of the added cuts */
-
    /* additional Benders' decomposition cuts parameters */
    SCIP_Bool             enabled;            /**< is this Benders' decomposition cut enabled? */
 };

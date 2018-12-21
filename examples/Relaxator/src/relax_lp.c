@@ -90,7 +90,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
    SCIP_CALL( SCIPcreate(&relaxscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(relaxscip), SCIPgetNVars(scip)) );
    valid = FALSE;
-   SCIP_CALL( SCIPcopy(scip, relaxscip, varmap, NULL, "relaxscip", FALSE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, relaxscip, varmap, NULL, "relaxscip", FALSE, FALSE, FALSE, FALSE, &valid) );
 
    /* change variable types */
    for( i = 0; i < SCIPgetNVars(relaxscip); ++i )

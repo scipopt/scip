@@ -179,7 +179,6 @@ SCIP_DECL_READERREAD(readerReadBpa)
       SCIPdebugMsg(scip, "capacity = <%d>, number of items = <%d>, best known solution = <%d>\n", capacity, nitems, bestsolvalue);
    }
 
-
    /* allocate buffer memory for storing the weights and ids temporary */
    SCIP_CALL( SCIPallocBufferArray(scip, &weights, nitems) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ids, nitems) );

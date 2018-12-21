@@ -40,6 +40,8 @@
 # - Check for spaces around operators; non-strict setting allows operators with numbers like "a+1"
 #   [checkoperspaces, default: false]
 #
+# - Check for the presence of "/**>", which is likely to be a typo.
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -259,7 +261,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # handle strings (must be executed after the functions above that need strings)
 
       # remove everything within a string
-      if ( $str =~ /\".*\"/ )
+      if ( $str =~ /\".*\"/ && $str !~ /(extern \"C\" \{)/ )
       {
 	 # remove minimal occurence of string
 	 $str =~ s/\".*?\"//g;
@@ -267,6 +269,12 @@ for (my $i = 0; $i < $narg; ++$i)
 
       # ---------------------------------------------------------
       # handle comments
+
+      # check for the presence of "/**>"
+      if ( $str =~ /\/\*\*>/ )
+      {
+	 printf("%d: found \"/**>\", likely to be an error.\n%s\n", $line, $_);
+      }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
@@ -314,7 +322,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	    # check whether we have a doxygen documentation within the code
 	    if ( $checkdocinbody == 1 && $str =~ /\/\*\*/ && ($depth - $foundexternc - $inenumstruct) > 0 )
 	    {
-	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ )
+	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ && $str !~ /\[Snippet/ )
 	       {
 		  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
 	       }

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -76,13 +76,14 @@ Test(linconsupg, linear)
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONS* lincons;
    SCIP_CONS* cons;
+   SCIP_Bool changed;
    int i;
 
    const char* input = "1.0 * <x> + 2.0 * <y> - 3.0 * <z> + 0.5";
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint */
@@ -121,12 +122,13 @@ Test(linconsupg, quadratic)
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONS* lincons;
    SCIP_CONS* cons;
+   SCIP_Bool changed;
 
    const char* input = "<x>^2 + <y>";
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint, which should not be possible  */

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -205,6 +205,7 @@ static
 SCIP_RETCODE computeCutsAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_CONSEXPR_EXPR*   expr,               /**< absolute expression */
    SCIP_Bool             overestimate,       /**< overestimate the absolute expression? */
    SCIP_Bool             underestimate,      /**< underestimate the absolute expression? */
@@ -240,7 +241,7 @@ SCIP_RETCODE computeCutsAbs(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_neg_%s", SCIPvarGetName(x));
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowneg, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowneg, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowneg, 2, vars, coefs) );
    }
 
@@ -249,7 +250,7 @@ SCIP_RETCODE computeCutsAbs(
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_pos_%s", SCIPvarGetName(x));
       coefs[1] = 1.0;
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowpos, 2, vars, coefs) );
    }
 
@@ -272,14 +273,14 @@ SCIP_RETCODE computeCutsAbs(
          {
             /* z = -x, so add -z-x >= 0 here (-z-x <= 0 is the underestimator that is added above) */
             coefs[1] = -1.0;
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, cons, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
          }
          else if( !SCIPisNegative(scip, lb) )
          {
             /* z =  x, so add -z+x >= 0 here (-z+x <= 0 is the underestimator that is added above) */
             coefs[1] =  1.0;
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, cons, name, 0.0, SCIPinfinity(scip), TRUE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *secant, 2, vars, coefs) );
          }
          else
@@ -308,7 +309,7 @@ SCIP_RETCODE computeCutsAbs(
             if( success )
             {
                memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, secant, rowprep, cons) );
             }
 
             SCIPfreeRowprep(scip, &rowprep);
@@ -335,7 +336,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
    secant = NULL;
 
    /* compute initial cuts; do no store the secant in the expression data */
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, overestimate, underestimate, &exprdata->rowneg, &exprdata->rowpos,
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, overestimate, underestimate, &exprdata->rowneg, &exprdata->rowpos,
       &secant) );
    assert(exprdata->rowneg != NULL || !underestimate);
    assert(exprdata->rowpos != NULL || !underestimate);
@@ -416,16 +417,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
       /* create tangents if it not happened so far (might be possible if the constraint is not 'initial') */
       if( exprdata->rowneg == NULL )
       {
-         SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, FALSE, TRUE, &exprdata->rowneg, NULL, NULL) );
+         SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, FALSE, TRUE, &exprdata->rowneg, NULL, NULL) );
       }
       if( exprdata->rowpos == NULL )
       {
-         SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, FALSE, TRUE, NULL, &exprdata->rowpos, NULL) );
+         SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, FALSE, TRUE, NULL, &exprdata->rowpos, NULL) );
       }
    }
    else
    {
-      SCIP_CALL( computeCutsAbs(scip, conshdlr, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
+      SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, TRUE, FALSE, NULL, NULL, &rows[2]) );
 
       /* check whether violation >= mincutviolation */
       if( rows[2] != NULL && -SCIPgetRowSolFeasibility(scip, rows[2], sol) < mincutviolation )

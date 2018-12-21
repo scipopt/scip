@@ -44,7 +44,7 @@ function isEQ(a, b)
 }
 
 BEGIN {
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    writesolufile = 0;        # should a solution file be created from the results

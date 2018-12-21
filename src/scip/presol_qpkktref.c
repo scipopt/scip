@@ -1249,8 +1249,8 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
                vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
       }
 
-      SCIPfreeBufferArrayNull(scip, &vars);
       SCIPfreeBufferArrayNull(scip, &vals);
+      SCIPfreeBufferArrayNull(scip, &vars);
    }
 
    return SCIP_OKAY;

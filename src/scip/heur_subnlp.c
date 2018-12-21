@@ -25,6 +25,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/nlpi_ipopt.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -163,6 +164,7 @@ SCIP_RETCODE createSubSCIP(
    static const SCIP_Bool copydisplays = FALSE;
    static const SCIP_Bool copyreader = FALSE;
 #endif
+   SCIP_NLPI* ipopt;
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -344,6 +346,11 @@ SCIP_RETCODE createSubSCIP(
    /* for debugging, enable SCIP output */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 5) );
 #endif
+
+   /* enable infeasible problem heuristic in Ipopt */
+   ipopt = SCIPfindNlpi(heurdata->subscip, "ipopt");
+   if( ipopt != NULL )
+      SCIPsetModifiedDefaultSettingsIpopt(ipopt, "expect_infeasible_problem yes\n", TRUE);
 
    return SCIP_OKAY;
 }
@@ -1676,9 +1683,9 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-      SCIPfreeBufferArray(scip, &consvars);
-      SCIPfreeBufferArray(scip, &boundtypes);
       SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* add and release constraint if created successfully */

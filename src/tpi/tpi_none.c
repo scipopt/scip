@@ -40,8 +40,7 @@ SCIP_RETCODE SCIPtpiCreateJob(
    return SCIP_ERROR;
 }
 
-/** submit a job for parallel processing */
-/* the return is a globally defined status */
+/** submit a job for parallel processing the return is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
@@ -53,8 +52,8 @@ SCIP_RETCODE SCIPtpiSumbitJob(
    return SCIP_ERROR;
 }
 
-/** Blocks until all jobs with the given jobid have finished
- * and then returns the smallest SCIP_RETCODE of all the jobs */
+/** Blocks until all jobs with the given jobid have finished and then returns the smallest SCIP_RETCODE of all the
+ *  jobs */
 SCIP_RETCODE SCIPtpiCollectJobs(
    int                   jobid               /**< the id of the jobs to collect */
    )

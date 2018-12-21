@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -147,7 +147,7 @@ SCIP_RETCODE createExprNode(
    EXPRNODE**            newnode             /**< pointer to store node */
    )
 {
-   SCIP_CALL( SCIPallocBuffer(scip, newnode) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, newnode) );
 
    (*newnode)->expr = expr;
    (*newnode)->coef = coef;
@@ -197,7 +197,7 @@ SCIP_RETCODE freeExprNode(
    assert(node != NULL && *node != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*node)->expr) );
-   SCIPfreeBuffer(scip, node);
+   SCIPfreeBlockMemory(scip, node);
 
    return SCIP_OKAY;
 }
@@ -245,7 +245,8 @@ static
 SCIP_RETCODE mergeSumExprlist(
    SCIP*                 scip,               /**< SCIP data structure */
    EXPRNODE*             tomerge,            /**< list to merge */
-   EXPRNODE**            finalchildren       /**< pointer to store the result of merge between tomerge and *finalchildren */
+   EXPRNODE**            finalchildren,      /**< pointer to store the result of merge between tomerge and *finalchildren */
+   SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
    EXPRNODE* tomergenode;
@@ -288,6 +289,8 @@ SCIP_RETCODE mergeSumExprlist(
 
       if( compareres == 0 )
       {
+         *changed = TRUE;
+
          /* enforces SS4 and SS8 */
          current->coef += tomergenode->coef;
 
@@ -327,6 +330,7 @@ SCIP_RETCODE mergeSumExprlist(
       }
       else
       {
+         *changed = TRUE;
          assert(compareres == 1);
 
          /* insert: if current is the first node, then insert at beginning; otherwise, insert between previous and current */
@@ -421,7 +425,8 @@ SCIP_RETCODE simplifyTerm(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression to be simplified */
    SCIP_Real             coef,               /**< coefficient of expressions to be simplified */
    SCIP_Real*            simplifiedconstant, /**< constant of parent sum expression */
-   EXPRNODE**            simplifiedterm      /**< pointer to store the resulting expression node/list of nodes */
+   EXPRNODE**            simplifiedterm,     /**< pointer to store the resulting expression node/list of nodes */
+   SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
    const char* exprtype;
@@ -435,6 +440,7 @@ SCIP_RETCODE simplifyTerm(
    /* enforces SS3 */
    if( strcmp(exprtype, "val") == 0 )
    {
+      *changed = TRUE;
       *simplifiedconstant += coef * SCIPgetConsExprExprValueValue(expr);
       return SCIP_OKAY;
    }
@@ -453,15 +459,16 @@ SCIP_RETCODE simplifyTerm(
     */
    if( strcmp(exprtype, EXPRHDLR_NAME) == 0 )
    {
+      *changed = TRUE;
+
       /* pass constant to parent */
       *simplifiedconstant += coef * SCIPgetConsExprExprSumConstant(expr);
 
       /* check if SS7 could fail after distributing */
       if( SCIPgetConsExprExprNChildren(expr) == 1 && coef * SCIPgetConsExprExprSumCoefs(expr)[0] == 1.0 )
       {
-         /* this is a one level recursion: expr is sum -> no child of expr is sum */
          assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), EXPRHDLR_NAME) != 0);
-         SCIP_CALL( simplifyTerm(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedconstant, simplifiedterm) );
+         SCIP_CALL( createExprNode(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedterm) );
          return SCIP_OKAY;
       }
 
@@ -524,7 +531,7 @@ SCIP_RETCODE createData(
  *
  * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified sum
  * and then we process this list in order to enforce SS6 and SS7.
- * Description: To build finalchildren, each child of sum is manipulated (see simplifyTerm) in order to satisfy
+ * Description: To build finalchildren, each child of sum is manipulated in order to satisfy
  * SS2, SS3 and SS8 as follows
  * SS8: if the child's coefficient is 0, ignore it
  * SS3: if the child is a value, add the value to the sum's constant
@@ -543,6 +550,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    SCIP_Real* coefs;
    int i;
    int nchildren;
+   SCIP_Bool changed;
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
@@ -551,6 +559,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    children  = SCIPgetConsExprExprChildren(expr);
    nchildren = SCIPgetConsExprExprNChildren(expr);
    coefs     = SCIPgetConsExprExprSumCoefs(expr);
+
+   changed = FALSE;
 
    /* while there are still children to process */
    finalchildren  = NULL;
@@ -561,15 +571,18 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
       /* enforces SS8 */
       if( coefs[i] == 0.0 )
+      {
+         changed = TRUE;
          continue;
+      }
 
       /* enforces SS2 and SS3 */
       tomerge = NULL;
-      SCIP_CALL( simplifyTerm(scip, children[i], coefs[i], &simplifiedconstant, &tomerge) );
+      SCIP_CALL( simplifyTerm(scip, children[i], coefs[i], &simplifiedconstant, &tomerge, &changed) );
 
       /* enforces SS4 and SS5
        * note: merge frees (or uses) the nodes of the list tomerge */
-      SCIP_CALL( mergeSumExprlist(scip, tomerge, &finalchildren) );
+      SCIP_CALL( mergeSumExprlist(scip, tomerge, &finalchildren, &changed) );
    }
 
    /* build sum expression from finalchildren and post-simplify */
@@ -582,16 +595,24 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedconstant) );
    }
    /* enforces SS7
-    * if list contains one expr with coef 1.0 and constant is 0, return that expr */
+    * if list consists of one expr with coef 1.0 and constant is 0, return that expr */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 && simplifiedconstant == 0.0 )
    {
       *simplifiedexpr = finalchildren->expr;
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
    /* build sum expression from list */
-   else
+   else if( changed )
    {
       SCIP_CALL( createExprSumFromExprlist(scip, finalchildren, simplifiedconstant, simplifiedexpr) );
+   }
+   else
+   {
+      /* NOTE: it might be that nothing really changed, but the order of the children; this is also considered a change! */
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
 
    /* free memory */
@@ -963,7 +984,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 
          assert(i == 0);
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
          /* since we did not relax the overestimator (i=0), we can turn the row into an equality if we need an underestimator, too */
          if( rowprep->sidetype == SCIP_SIDETYPE_LEFT )
@@ -1003,7 +1024,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
       {
          SCIP_ROW* row;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "adding row ");
@@ -1048,7 +1069,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
    SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, mincutviolation);
    if( SCIPisZero(scip, viol) )
+   {
+      SCIPfreeRowprep(scip, &rowprep);
       return SCIP_OKAY;
+   }
 
 #if 0
    for( int i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
@@ -1078,7 +1102,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       assert(SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation);
 
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "add %s cut with violation %g\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, NULL));

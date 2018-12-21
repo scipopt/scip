@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   LOP/src/cmain.c
+/**@file   examples/LOP/src/cmain.c
  * @brief  main file for linear ordering example
  * @author Marc Pfetsch
  */
@@ -43,8 +43,8 @@
 
 /** main function, which starts the solution of the linear ordering problem */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
    )
 {
    SCIP* scip = NULL;

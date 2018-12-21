@@ -1509,7 +1509,7 @@ SCIP_RETCODE generateLinearizationCut(
    /* setup SCIP row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, rowname, -SCIPinfinity(scip), rhs, FALSE, FALSE /* modifiable */, TRUE /* removable */) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), fgrad) );
 
@@ -1800,7 +1800,7 @@ SCIP_RETCODE generateOverestimatingHyperplaneCut(
       assert(SCIPisFinite(coefs[1]));
       assert(SCIPisFinite(constant));
 
-      SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowCons(scip, row, cons, "bivaroveresthyperplanecut", 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
       if( consdata->z != NULL )
@@ -3390,7 +3390,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             assert(SCIPisFinite(constant));
 
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_overesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, cons, cutname, 0, NULL, NULL, consdata->lhs - constant, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3426,7 +3426,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = -cutcoeff[1] / cutcoeff[2];
             coefs[1] = -cutcoeff[0] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveoverest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, cutname, consdata->lhs - cutcoeff[3]/cutcoeff[2], SCIPinfinity(scip),
                   TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3456,7 +3456,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             assert(SCIPisFinite(constant));
 
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_underesthyperplanecut_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateRowCons(scip, row, cons, cutname, 0, NULL, NULL, -SCIPinfinity(scip), consdata->rhs - constant, TRUE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -3489,7 +3489,7 @@ SCIP_RETCODE generateConvexConcaveEstimator(
             coefs[0] = cutcoeff[0] / cutcoeff[2];
             coefs[1] = cutcoeff[1] / cutcoeff[2];
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_convexconcaveunderest_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, cutname, -SCIPinfinity(scip), consdata->rhs + cutcoeff[3]/cutcoeff[2],
                   TRUE, FALSE /* modifiable */, TRUE /* removable */) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *row, 2, SCIPexprtreeGetVars(consdata->f), coefs) );
             if( consdata->z != NULL )
@@ -4303,7 +4303,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
    }
 
    rhs = consdata->rhs + cutcoeff[3]/cutcoeff[2];
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), "1ConvexUnderest", -SCIPinfinity(scip), rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, "1ConvexUnderest", -SCIPinfinity(scip), rhs,
          TRUE, FALSE /* modifiable */, TRUE /* removable */) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[0], cutcoeff[0] / cutcoeff[2]) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(consdata->f)[1], cutcoeff[1] / cutcoeff[2]) );
@@ -5457,6 +5457,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real viol;
    SCIP_Real delta;
    SCIP_Real gap;
+   SCIP_Bool solchanged;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -5482,24 +5483,23 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   solchanged = FALSE;
 
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* recompute violation of solution in case solution has changed
-       * get absolution violation and sign */
+      /* recompute violation of constraint in case solution newsol is not identical to sol anymore */
+      if( solchanged )
+      {
+         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
+      }
+
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->lhs - consdata->activity;
-      }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol) );  /*lint !e613*/
          viol = consdata->rhs - consdata->activity;
-      }
       else
          continue; /* constraint is satisfied */
 
@@ -5526,6 +5526,8 @@ SCIP_RETCODE proposeFeasibleSolution(
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;
@@ -5556,6 +5558,8 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->zcoef * delta;
@@ -6315,28 +6319,28 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
       /* check if linear variable can be rounded up or down without harming other constraints */
       if( consdata->z != NULL )
       {
-         int poslock;
-         int neglock;
+         int downlock;
+         int uplock;
 
          if( consdata->zcoef > 0.0 )
          {
-            poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
          }
          else
          {
-            poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-            neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+            downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+            uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - downlock == 0 )
          {
             /* for c*z + f(x,y) \in [lhs, rhs], we can decrease z without harming other constraints */
             consdata->maydecreasez = TRUE;
             SCIPdebugMsg(scip, "may decrease <%s> to become feasible\n", SCIPvarGetName(consdata->z));
          }
 
-         if( SCIPvarGetNLocksDownType(consdata->z, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+         if( SCIPvarGetNLocksUpType(consdata->z, SCIP_LOCKTYPE_MODEL) - uplock == 0 )
          {
             /* for c*x + f(x,y) \in [lhs, rhs], we can increase x without harming other constraints */
             consdata->mayincreasez = TRUE;

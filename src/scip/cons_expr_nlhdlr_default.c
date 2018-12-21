@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -81,6 +81,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(nlhdlrexprdata != NULL);
 
    *success = FALSE;
+
+   /* we currently do not get active in presolve, the core will call the exprhdlr directly */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    mymethods = SCIP_CONSEXPR_EXPRENFO_NONE;
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
@@ -192,7 +197,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       return SCIP_OKAY;
 
    /* call the separation initialization callback of the expression handler */
-   SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, expr, overestimate, underestimate, infeasible) );
+   SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -219,7 +224,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    }
 
    /* call the separation callback of the expression handler */
-   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, mincutviolation, result, ncuts) );
+   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
 
    return SCIP_OKAY;
 }
