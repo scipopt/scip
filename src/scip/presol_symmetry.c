@@ -1274,8 +1274,6 @@ SCIP_RETCODE computeComponents(
    /* find variable components by merging supports of permutations */
    for (p = 0; p < nperms; ++p)
    {
-      auxpermtocomp[p] = -1;
-
       for (i = 0; i < npermvars; ++i)
       {
          int img;
