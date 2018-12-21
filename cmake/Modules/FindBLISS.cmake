@@ -3,7 +3,7 @@ include(FindPackageHandleStandardArgs)
 # Check whether environment variable BLISS_DIR was set.
 if(NOT BLISS_DIR)
    set(ENV_BLISS_DIR $ENV{BLISS_DIR})
-   if(ENV_BLISS_DIR_TEST)
+   if(ENV_BLISS_DIR)
       set(BLISS_DIR $ENV{BLISS_DIR} CACHE PATH "Path to bliss build directory")
    endif()
 endif()
