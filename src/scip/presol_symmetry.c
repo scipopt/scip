@@ -1683,7 +1683,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
-   presoldata->ncomponents = 0;
+   presoldata->ncomponents = -1;
 
    return SCIP_OKAY;
 }
@@ -1751,7 +1751,6 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->binvaraffected = FALSE;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
-   presoldata->ncomponents = 0;
    presoldata->transposedperms = FALSE;
    presoldata->ncomponents = -1;
    presoldata->components = NULL;
@@ -1880,7 +1879,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       presoldata->binvaraffected = FALSE;
       presoldata->computedsym = FALSE;
       presoldata->successful = FALSE;
-      presoldata->ncomponents = 0;
+      presoldata->ncomponents = -1;
    }
 
    /* if not already done before, compute symmetries */
