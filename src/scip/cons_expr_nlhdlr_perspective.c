@@ -924,14 +924,16 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
       SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
 
+   success = TRUE; /* think positive */
+
    /* handle convex terms */
-   for( i = 0; i < nlhdlrexprdata->nconvterms; ++i )
+   for( i = 0; i < nlhdlrexprdata->nconvterms && success; ++i )
    {
       SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol, &success) );
    }
 
    /* handle on/off terms */
-   for( i = 0; i < SCIPhashmapGetNEntries(nlhdlrexprdata->onoffterms); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(nlhdlrexprdata->onoffterms) && success; ++i )
    {
       SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(nlhdlrexprdata->onoffterms, i);
       if( entry == NULL )
@@ -945,7 +947,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 
    rowprep->local = FALSE;
    if( success )
+   {
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+   }
 
    /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
    if( success )
