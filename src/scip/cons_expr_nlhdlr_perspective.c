@@ -75,11 +75,12 @@ struct SCIP_ConsExpr_NlhdlrData
  * real constant v_off. If the bvar is not specified, find the first binary variable that var depends on.
  */
 static
-SCIP_Bool varIsSemicontinuous(
+SCIP_RETCODE varIsSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable to check */
    SCIP_VAR**            bvar,               /**< the binary variable */
-   SCIP_HASHMAP*         scvars              /**< semicontinuous variable information */
+   SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+   SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
    )
 {
    SCIP_SCVARDATA* scv;
@@ -92,13 +93,17 @@ SCIP_Bool varIsSemicontinuous(
    assert(scip != NULL);
    assert(var != NULL);
    assert(scvars != NULL);
+   assert(result != NULL);
+
+   *result = FALSE;
 
    olddata = (SCIP_SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)var);
    if( olddata != NULL )
    {
       if( *bvar == NULL )
          *bvar = olddata->bvar;
-      return olddata->bvar == *bvar;
+      *result = (olddata->bvar == *bvar);
+      return SCIP_OKAY;
    }
 
    lb0 = -SCIPinfinity(scip);
@@ -109,7 +114,8 @@ SCIP_Bool varIsSemicontinuous(
    varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
    /* TODO @bzfkensi in some unittests, we don't have the varbound conshdlr; so is it correct to return FALSE here? */
    if( varboundconshdlr == NULL )
-      return FALSE;
+      return SCIP_OKAY;
+
    nvbconss = SCIPconshdlrGetNConss(varboundconshdlr);
    vbconss = SCIPconshdlrGetConss(varboundconshdlr);
 
@@ -148,18 +154,18 @@ SCIP_Bool varIsSemicontinuous(
    /* the 'off' domain of the variable should reduce to a single point and be different from the 'on' domain */
    if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) )  /*lint !e777*/
    {
-      SCIP_CALL_ABORT( SCIPallocBlockMemory(scip, &scv) );  /* FIXME: should be SCIP_CALL */
+      SCIP_CALL( SCIPallocBlockMemory(scip, &scv) );
       scv->bvar = *bvar;
       scv->val0 = lb0;
       if( lb0 != 0.0 )
       {
          SCIPdebugMsg(scip, "var %s has a non-zero off value %f\n", SCIPvarGetName(var), lb0);
       }
-      SCIP_CALL_ABORT( SCIPhashmapInsert(scvars, var, scv) );  /* FIXME: should be SCIP_CALL */
-      return TRUE;
+      SCIP_CALL( SCIPhashmapInsert(scvars, var, scv) );
+      *result = TRUE;
    }
 
-   return FALSE;
+   return SCIP_OKAY;
 }
 
 /** adds an expression to the hashmap linking binary vars to on/off expressions */
@@ -656,6 +662,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_CONSEXPR_EXPR* pexpr;
    SCIP_Real* coefs;
    SCIP_Bool expr_is_onoff;
+   SCIP_Bool var_is_sc;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
@@ -729,7 +736,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       for( v = 0; v < nvars; ++v )
       {
          var = SCIPgetConsExprExprVarVar(varexprs[v]);
-         if( !varIsSemicontinuous(scip, var, &bvar, nlhdlrdata->scvars) )
+         SCIP_CALL( varIsSemicontinuous(scip, var, &bvar, nlhdlrdata->scvars, &var_is_sc) );
+         if( !var_is_sc )
          {
             expr_is_onoff = FALSE;
             break;
