@@ -1443,10 +1443,6 @@ SCIP_RETCODE computeComponents(
    }
 #endif
 
-   for (i = 0; i < npermvars; ++i)
-   {
-      printf("%d -> (%d, %d)\n", i, perms[i][0], perms[i][1]);
-   }
    return SCIP_OKAY;
 }
 
