@@ -146,7 +146,7 @@ SCIP_Bool varIsSemicontinuous(
    SCIPdebugMsg(scip, "onoff bounds: lb0 = %f, ub0 = %f, lb1 = %f, ub1 = %f\n", lb0, ub0, lb1, ub1);
 
    /* the 'off' domain of the variable should reduce to a single point and be different from the 'on' domain */
-   if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) )
+   if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) )  /*lint !e777*/
    {
       SCIP_CALL_ABORT( SCIPallocBlockMemory(scip, &scv) );  /* FIXME: should be SCIP_CALL */
       scv->bvar = *bvar;
@@ -249,7 +249,7 @@ SCIP_RETCODE addGradientLinearisation(
 )
 {
    SCIP_CONSEXPR_EXPR** varexprs;
-   SCIP_Real constant = 0;
+   SCIP_Real constant;
    int i, v, nvars;
 
    assert(scip != NULL);
@@ -282,7 +282,7 @@ SCIP_RETCODE addGradientLinearisation(
 
    /* compute gradient cut */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
-   SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars);
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VAR* var;
@@ -311,7 +311,7 @@ SCIP_RETCODE addGradientLinearisation(
                       SCIPvarGetName(var), (void*)expr);
          for( v = 0; v < nvars; ++v )
          {
-            SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
          }
          SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
          return SCIP_OKAY;
@@ -326,7 +326,7 @@ SCIP_RETCODE addGradientLinearisation(
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
    }
    SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
 
@@ -422,7 +422,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
       *success = FALSE;
       for(v = 0; v < nvars; ++v)
       {
-         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
       }
       SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
       SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
@@ -444,7 +444,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
       *success = FALSE;
       for(v = 0; v < nvars; ++v)
       {
-         SCIPreleaseConsExprExpr(scip, &varexprs[v]);
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
       }
       SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
       SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
@@ -569,7 +569,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
 {  /*lint --e{715}*/
-   freeNlhdlrExprData(scip, *nlhdlrexprdata);
+   SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
 
    return SCIP_OKAY;
@@ -687,9 +687,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
    SCIPdebugMsg(scip, "expr %p is %s\n", expr, (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX ? "convex" : "concave");
 
-   SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars);
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
    if( nlhdlrdata->scvars == NULL )
-      SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), nvars);
+   {
+      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), nvars) );
+   }
 
    /* prepare the list of terms */
    if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
@@ -853,8 +855,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrInitSepaPerspective NULL
 #endif
 
 
@@ -868,8 +868,6 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrExitSepaPerspective NULL
 #endif
 
 
@@ -999,8 +997,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimatePerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrEstimatePerspective NULL
 #endif
 
 
@@ -1014,8 +1010,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalPerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrIntevalPerspective NULL
 #endif
 
 
@@ -1029,8 +1023,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropPerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrReversepropPerspective NULL
 #endif
 
 
@@ -1098,8 +1090,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulatePerspective)
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrReformulatePerspective NULL
 #endif
 
 /*
