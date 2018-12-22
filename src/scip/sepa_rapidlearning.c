@@ -212,7 +212,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_Longint nodelimit;                   /* node limit for the subproblem */
 
    int nconshdlrs;                           /* size of conshdlr and oldnconss array */
-   int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
    int nvars;                                /* number of variables */
    int restartnum;                           /* maximal number of conflicts that should be created */
    int i;                                    /* counter */
@@ -397,8 +396,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    }
 
    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
-   * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
-   */
+    * Therefore, we need to remember oldnconss to get the conflicts from the FD search.
+    */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &oldnconss, nconshdlrs) );
@@ -418,8 +417,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          oldnconss[i] = SCIPconshdlrGetNConss(conshdlrs[i]);
    }
 
-   nfixedvars = SCIPgetNFixedVars(scip);
-
    /* solve the subproblem, abort after errors in debug mode */
    SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
@@ -435,7 +432,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    }
    /* if the first 20% of the solution process were successful, proceed */
    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
-      || (sepadata->applybdchgs && SCIPgetNFixedVars(subscip) > nfixedvars)
+      || (sepadata->applybdchgs && SCIPgetNRootboundChgs(subscip) > 0 )
       || (sepadata->applyconflicts && SCIPgetNConflictConssApplied(subscip) > 0) )
    {
       SCIPdebugMsg(scip, "proceed solving after the first 20%% of the solution process, since:\n");
@@ -444,9 +441,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       {
          SCIPdebugMsg(scip, "   - there was a better solution (%f < %f)\n",SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip));
       }
-      if( SCIPgetNFixedVars(subscip) > nfixedvars )
+      if( SCIPgetNRootboundChgs(subscip) > 0 )
       {
-         SCIPdebugMsg(scip, "   - there were %d variables fixed\n", SCIPgetNFixedVars(scip)-nfixedvars );
+         SCIPdebugMsg(scip, "   - there were %d changed variables bounds\n", SCIPgetNRootboundChgs(subscip) );
       }
       if( SCIPgetNConflictConssFound(subscip) > 0 )
       {
