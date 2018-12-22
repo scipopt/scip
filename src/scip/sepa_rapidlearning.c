@@ -60,6 +60,7 @@
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
 #define DEFAULT_MAXNCONSS         10000 /**< maximum problem size (constraints) for which rapid learning will be called */
+#define DEFAULT_MAXCALLS            100 /**< maximum number of overall calls */
 
 #define DEFAULT_MINNODES            500 /**< minimum number of nodes considered in rapid learning run */
 #define DEFAULT_MAXNODES           5000 /**< maximum number of nodes considered in rapid learning run */
@@ -82,6 +83,7 @@ struct SCIP_SepaData
    SCIP_Real             mininflpratio;      /**< minimal threshold of inf/obj leaves to allow local rapid learning */
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
+   int                   maxcalls;           /**< maximum number of overall calls */
    int                   minnodes;           /**< minimum number of nodes considered in rapid learning run */
    int                   maxnodes;           /**< maximum number of nodes considered in rapid learning run */
    SCIP_Longint          nwaitingnodes;      /**< number of nodes that should be processed before rapid learning is executed locally
@@ -875,6 +877,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
+   /* call separator at most @p maxcalls times */
+   if( SCIPsepaGetNCalls(sepa) >= sepadata->maxcalls )
+      return SCIP_OKAY;
+
    /* only run for integer programs */
    if( !sepadata->contvars && ndiscvars != SCIPgetNVars(scip) )
       return SCIP_OKAY;
@@ -1026,6 +1032,10 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnconss",
          "maximum problem size (constraints) for which rapid learning will be called",
          &sepadata->maxnconss, TRUE, DEFAULT_MAXNCONSS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxcalls",
+         "maximum number of overall calls",
+         &sepadata->maxcalls, TRUE, DEFAULT_MAXCALLS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnodes",
          "maximum number of nodes considered in rapid learning run",
