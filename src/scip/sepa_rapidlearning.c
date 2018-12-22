@@ -218,6 +218,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
 
+   SCIP_Bool cutoff;                         /* detected infeasibility */
    int nconflicts;                           /* statistic: number of conflicts applied */
    int nbdchgs;                              /* statistic: number of bound changes applied */
    int n1startinfers;                        /* statistic: number of one side infer values */
@@ -578,13 +579,13 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIPhashmapFree(&consmap);
    }
 
-   /* check, whether tighter global bounds were detected */
+   /* check, whether tighter (global) bounds were detected */
+   cutoff = FALSE;
    nbdchgs = 0;
    if( sepadata->applybdchgs && !disabledualreductions )
    {
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_Bool infeasible;
          SCIP_Bool tightened;
 
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
@@ -592,27 +593,44 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
 
          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
-         /* @todo handle infeasible pointer? can it be set to TRUE? */
          if( global )
          {
-            SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+#ifndef NDEBUG
+            assert(SCIPgetEffectiveRootDepth(scip) == SCIPgetDepth(scip));
+#else
+            if( SCIPgetEffectiveRootDepth(scip) < SCIPgetDepth(scip) )
+               return SCIP_INVALIDCALL;
+#endif
+            SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( cutoff )
+               break;
 
             if( tightened )
                nbdchgs++;
 
-            SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( cutoff )
+               break;
 
             if( tightened )
                nbdchgs++;
          }
          else
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( cutoff )
+               break;
 
             if( tightened )
                nbdchgs++;
 
-            SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( cutoff )
+               break;
 
             if( tightened )
                nbdchgs++;
@@ -657,14 +675,23 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       }
    }
 
+#ifdef SCIP_DEBUG
+   if( cutoff )
+   {
+      SCIPdebugMsg(scip, "Rapidlearning detected %s infeasibility.\n", global ? "global" : "local");
+   }
+
    SCIPdebugMsg(scip, "Rapidlearning added %d %s conflicts, changed %d bounds, %s primal solution, %s dual bound improvement.\n",
       nconflicts, global ? "global" : "local", nbdchgs, soladded ? "found" : "no",  dualboundchg ? "found" : "no");
 
    SCIPdebugMsg(scip, "YYY Infervalues initialized on one side: %5.2f %% of variables, %5.2f %% on both sides\n",
       100.0 * n1startinfers/(SCIP_Real)nvars, 100.0 * n2startinfers/(SCIP_Real)nvars);
+#endif
 
    /* change result pointer */
-   if( nconflicts > 0 || dualboundchg )
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( nconflicts > 0 || dualboundchg )
       *result = SCIP_CONSADDED;
    else if( nbdchgs > 0 )
       *result = SCIP_REDUCEDDOM;
