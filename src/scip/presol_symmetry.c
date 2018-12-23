@@ -1239,7 +1239,6 @@ SCIP_RETCODE computeComponents(
    int** perms;
    int* permtovarcomp;
    int* permtocomponent;
-   int* reordercomps;
    int nperms;
    int npermvars;
    int ncomponents;
@@ -1366,11 +1365,6 @@ SCIP_RETCODE computeComponents(
    /* get correct order of components array */
    SCIPsortIntInt(permtovarcomp, presoldata->components, nperms);
 
-   /* auxiliary map: permutation idx -> position in components array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &reordercomps, nperms) );
-   for (p = 0; p < nperms; ++p)
-      reordercomps[presoldata->components[p]] = p;
-
    /* determine componentbegins and store for each permutation its component */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->componentbegins, ncomponents + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
@@ -1384,7 +1378,7 @@ SCIP_RETCODE computeComponents(
       if ( permtovarcomp[p] > permtovarcomp[p - 1] )
          presoldata->componentbegins[++idx] = p;
 
-      permtocomponent[p] = idx;
+      permtocomponent[presoldata->components[p]] = idx;
    }
    assert( ncomponents == idx + 1 );
    presoldata->componentbegins[++idx] = nperms;
@@ -1398,12 +1392,10 @@ SCIP_RETCODE computeComponents(
 
       if ( permidx != -1 )
       {
-         assert( 0 <= reordercomps[permidx] );
-         assert( reordercomps[permidx] < nperms );
-         assert( 0 <= permtocomponent[reordercomps[permidx]] );
-         assert( permtocomponent[reordercomps[permidx]] < ncomponents );
+         assert( 0 <= permtocomponent[permidx] );
+         assert( permtocomponent[permidx] < ncomponents );
 
-         presoldata->vartocomponent[i] = permtocomponent[reordercomps[permidx]];
+         presoldata->vartocomponent[i] = permtocomponent[permidx];
       }
    }
 
@@ -1413,7 +1405,6 @@ SCIP_RETCODE computeComponents(
       presoldata->componentblocked[i] = FALSE;
 
    SCIPfreeBufferArray(scip, &permtocomponent);
-   SCIPfreeBufferArray(scip, &reordercomps);
    SCIPfreeBufferArray(scip, &permtovarcomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
