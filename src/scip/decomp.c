@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPdecompSetVarsLabels(
        *
        * TODO ensure that labels are okay, e.g., nonnegative integers
        */
-      SCIP_CALL( SCIPhashmapInsertInt(decomp->var2block, (void *)vars[i], labels[i]) );
+      SCIP_CALL( SCIPhashmapSetImageInt(decomp->var2block, (void *)vars[i], labels[i]) );
 
    }
 
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPdecompSetConsLabels(
        * TODO ensure that labels are okay, e.g., nonnegative integers
        */
 
-      SCIP_CALL( SCIPhashmapInsertInt(decomp->cons2block, (void *)conss[i], labels[i]) );
+      SCIP_CALL( SCIPhashmapSetImageInt(decomp->cons2block, (void *)conss[i], labels[i]) );
    }
 
    return SCIP_OKAY;
@@ -245,38 +245,47 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    int                   nconss              /**< number of constraints */
    )
 {
+   SCIP_VAR** varbuffer;
    int c;
+   int twicenvars;
+   int* varlabels;
+   int* conslabels;
 
    assert(decomp != NULL);
 
    if( nconss == 0 )
       return SCIP_OKAY;
 
+   twicenvars = 2 * SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, twicenvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, twicenvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
+
+
    /* assign label to each individual constraint */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_VAR** consvarsbuff;
       int nconsvars;
       int v;
-      int* varlabels;
       int nlinkingvars;
       int conslabel;
+      int requiredsize;
 
       SCIP_Bool success;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
-
+      SCIP_CALL( ensureCondition(success) );
+      SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuffer, twicenvars, &success) );
       SCIP_CALL( ensureCondition(success) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvarsbuff, nconsvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nconsvars) );
+      if( ! SCIPdecompIsOriginal(decomp) )
+      {
+         SCIP_CALL( SCIPgetActiveVars(scip, varbuffer, &nconsvars, twicenvars, &requiredsize) );
+         assert(nconsvars <= twicenvars);
+      }
 
-
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], consvarsbuff, nconsvars, &success) );
-
-      SCIP_CALL( ensureCondition(success) );
-
-      SCIPdecompGetVarsLabels(decomp, consvarsbuff, varlabels, nconsvars);
+      SCIPdecompGetVarsLabels(decomp, varbuffer, varlabels, nconsvars);
 
       /* loop over variable labels to compute the constraint label */
       conslabel = LABEL_UNASSIGNED;
@@ -284,6 +293,7 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
       {
          int varlabel = varlabels[v];
 
+         /* count the number of linking variables, and keep track if there are two variables with different labels */
          if( varlabels[v] == SCIP_DECOMP_LINKVAR )
             ++nlinkingvars;
          else if( conslabel == LABEL_UNASSIGNED )
@@ -298,14 +308,17 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
       assert(nlinkingvars == nconsvars || conslabel != LABEL_UNASSIGNED);
       assert(v == nconsvars || conslabel == SCIP_DECOMP_LINKCONS);
 
+      /* if there are only linking variables, the constraint is unassigned */
       if( conslabel == LABEL_UNASSIGNED )
          conslabel = SCIP_DECOMP_LINKCONS;
-
-      SCIP_CALL( SCIPdecompSetConsLabels(decomp, &(conss[c]), &conslabel, 1) );
-
-      SCIPfreeBufferArray(scip, &varlabels);
-      SCIPfreeBufferArray(scip, &consvarsbuff);
+      conslabels[c] = conslabel;
    }
+
+   SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, conslabels, nconss) );
+
+   SCIPfreeBufferArray(scip, &conslabels);
+   SCIPfreeBufferArray(scip, &varlabels);
+   SCIPfreeBufferArray(scip, &varbuffer);
 
    return SCIP_OKAY;
 }
@@ -375,8 +388,9 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
          {
             int varlabel = SCIPhashmapGetImageInt(decomp->var2block, (void *)var);
 
+            /* store the label linking variable explicitly to distinguish it from the default */
             if( varlabel != SCIP_DECOMP_LINKVAR && varlabel != conslabel )
-               SCIPhashmapInsertInt(decomp->var2block, (void *)var, SCIP_DECOMP_LINKCONS);
+               SCIP_CALL( SCIPhashmapSetImageInt(decomp->var2block, (void *)var, SCIP_DECOMP_LINKVAR) );
          }
          else
          {
