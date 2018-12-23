@@ -1370,7 +1370,7 @@ SCIP_RETCODE computeComponents(
    SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
 
    presoldata->componentbegins[0] = 0;
-   permtocomponent[0] = 0;
+   permtocomponent[presoldata->components[0]] = 0;
    idx = 0;
 
    for (p = 1; p < nperms; ++p)
@@ -1378,6 +1378,8 @@ SCIP_RETCODE computeComponents(
       if ( permtovarcomp[p] > permtovarcomp[p - 1] )
          presoldata->componentbegins[++idx] = p;
 
+      assert( presoldata->components[p] >= 0 );
+      assert( presoldata->components[p] < nperms );
       permtocomponent[presoldata->components[p]] = idx;
    }
    assert( ncomponents == idx + 1 );
