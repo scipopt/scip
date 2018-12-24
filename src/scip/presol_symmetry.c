@@ -1332,7 +1332,7 @@ SCIP_RETCODE computeComponents(
             /* possibly merge new component and permvartocom[p] and ensure the latter
              * to have the smallest value
              */
-            if ( representative != component1 )
+            if ( representative != component1 && representative != component2 )
             {
                if ( representative > component1 )
                {
@@ -1342,6 +1342,11 @@ SCIP_RETCODE computeComponents(
                else
                   SCIPdisjointsetUnion(componentstovar, representative, component1, TRUE);
                --ncomponents;
+            }
+            else if ( representative > component1 )
+            {
+               assert( representative == component2 );
+               permtovarcomp[p] = component1;
             }
          }
       }
