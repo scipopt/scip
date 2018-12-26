@@ -253,6 +253,48 @@ void blisshook(
    data->perms[data->nperms++] = p;
 }
 
+/** Creates the nodes in the graph that correspond to variables. Each variable type gets a unique color
+ *
+ *  @pre Graph should be empty when this is called
+ */
+static
+SCIP_RETCODE createVariableNodes(
+   SCIP*                 scip,               /**< SCIP instance */
+   bliss::Graph*         G,                  /**< Graph to be constructed */
+   SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix (also contains the relevant variables) */
+   int&                  nnodes,             /**< buffer to store number of nodes in graph */
+   int&                  nedges,             /**< buffer to store number of edges in graph */
+   int&                  nusedcolors,        /**< buffer to store number of used colors */
+   SCIP_Bool&            success             /**< whether the construction was successful */
+   )
+{
+   assert(scip != NULL);
+   assert(G != NULL);
+   assert(nnodes == 0);
+   assert(nedges == 0);
+   assert(nusedcolors == 0);
+
+   SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
+
+   success = TRUE;
+
+   /* add nodes for variables */
+   for( int v = 0; v < matrixdata->npermvars; ++v )
+   {
+      const int color = matrixdata->permvarcolors[v];
+      assert( 0 <= color && color < matrixdata->nuniquevars );
+
+#ifndef NDEBUG
+      int node = (int) G->add_vertex((unsigned) color);
+      assert( node == v );
+#else
+      (void) G->add_vertex((unsigned) color);
+#endif
+
+      ++nnodes;
+   }
+}
+
 /** Construct linear part of colored graph for symmetry computations
  *
  *  Construct graph:
@@ -274,26 +316,12 @@ SCIP_RETCODE fillGraphByLinearConss(
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
-   SCIPdebugMsg(scip, "Building graph with colored coefficient nodes for linear part.\n");
+   assert(nnodes == (int) G->get_nof_vertices());
+   assert(nusedcolors <= nnodes);
+
+   SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for linear part.\n");
 
    success = TRUE;
-
-   /* add nodes for variables */
-   for (int v = 0; v < matrixdata->npermvars; ++v)
-   {
-      const int color = matrixdata->permvarcolors[v];
-      assert( 0 <= color && color < matrixdata->nuniquevars );
-
-#ifndef NDEBUG
-      int node = (int) G->add_vertex((unsigned) color);
-      assert( node == v );
-#else
-      (void) G->add_vertex((unsigned) color);
-#endif
-
-      ++nnodes;
-   }
-   assert( (int) G->get_nof_vertices() == matrixdata->npermvars );
 
    /* add nodes for rhs of constraints */
    for (int c = 0; c < matrixdata->nrhscoef; ++c)
@@ -302,7 +330,7 @@ SCIP_RETCODE fillGraphByLinearConss(
       assert( 0 <= color && color < matrixdata->nuniquerhs );
 
 #ifndef NDEBUG
-      int node = (int) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+      int node = (int) G->add_vertex((unsigned) (nusedcolors + color));
       assert( node == matrixdata->npermvars + c );
 #else
       (void) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
@@ -311,6 +339,7 @@ SCIP_RETCODE fillGraphByLinearConss(
       ++nnodes;
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars + matrixdata->nrhscoef );
+   nusedcolors += matrixdata->nuniquerhs;
 
    /* Grouping of nodes depends on the number of nodes in the bipartite graph class.
     * If there are more variables than constraints, we group by constraints.
@@ -324,8 +353,6 @@ SCIP_RETCODE fillGraphByLinearConss(
       SCIPdebugMsg(scip, "Group intermediate nodes by variables.\n");
 
    /* "colored" edges based on all matrix coefficients - loop through ordered matrix coefficients */
-   nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
-
    int ninternodes;
    if ( groupByConstraints )
       ninternodes = matrixdata->nrhscoef;
@@ -469,9 +496,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
    assert(scip != NULL);
    assert(G != NULL);
+   assert(nnodes == (int) G->get_nof_vertices());
    assert(nnodes >= nusedcolors);
 
-   SCIPdebugMsg(scip, "Building graph with colored coefficient nodes for non-linear part.\n");
+   SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for non-linear part.\n");
 
    /* create maps for optypes, constants, sum coefficients and rhs to indices */
    SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype,
@@ -806,7 +834,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    return SCIP_OKAY;
 }
 
-
 /** return whether symmetry can be computed */
 SCIP_Bool SYMcanComputeSymmetry(void)
 {
@@ -866,10 +893,22 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* create bliss graph */
    bliss::Graph G(0);
 
+   /* create nodes corresponding to variables */
+   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
+
+   if( !success )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during creation of var nodes.\n");
+      return SCIP_OKAY;
+   }
+
+   assert(nnodes == matrixdata->npermvars);
+   assert(nusedcolors == matrixdata->nuniquevars);
+
    /* fill graph with nodes for variables and linear constraints */
    SCIP_CALL( fillGraphByLinearConss(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
 
-   if ( ! success )
+   if( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during linear part.\n");
       return SCIP_OKAY;
@@ -878,7 +917,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* add the nodes for expression constraints to the graph */
    SCIP_CALL( fillGraphByNonlinearConss(scip, &G, nnodes, nedges, nusedcolors, success) );
 
-   if ( ! success )
+   if( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during non-linear part.\n");
       return SCIP_OKAY;
