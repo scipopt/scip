@@ -151,9 +151,9 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 /** data struct to store arrays used for sorting rhs types */
 struct SYM_Sortrhstype
 {
-   SCIP_Real*               vals;            /**< array of values */
-   SYM_RHSSENSE*            senses;          /**< array of senses of rhs */
-   int                      nrhscoef;        /**< size of arrays (for debugging) */
+   SCIP_Real*            vals;            /**< array of values */
+   SYM_RHSSENSE*         senses;          /**< array of senses of rhs */
+   int                   nrhscoef;        /**< size of arrays (for debugging) */
 };
 typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
 

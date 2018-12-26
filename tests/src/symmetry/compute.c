@@ -419,7 +419,7 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
 
    /* skip test if no symmetry can be computed */
    if( !SYMcanComputeSymmetry() )
-   return;
+      return;
 
    /* setup problem:
     * min x1 + x2 + x3 + x4
@@ -897,7 +897,7 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
  *           x1^2 - 4x3                <=  0
  *                        x2^2 - 4x4   <=  0
  * x1*x2 + x1 + x2                     <=  1
- *     x1, ..., x4 binary
+ *     x1, x2 binary
  */
    SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
 

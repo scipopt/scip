@@ -41,7 +41,7 @@ struct SYM_Vartype
    int                   color;              /**< store color */
 };
 
-/** data of variables that are considered to be equivalent */
+/** data of operators that are considered to be equivalent */
 struct SYM_Optype
 {
    SCIP_CONSEXPR_EXPR*   expr;               /**< the underlying expression */

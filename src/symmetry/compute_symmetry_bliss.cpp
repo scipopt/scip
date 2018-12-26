@@ -274,6 +274,8 @@ SCIP_RETCODE fillGraphByLinearConss(
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
+   SCIPdebugMsg(scip, "Building graph with colored coefficient nodes for linear part.\n");
+
    success = TRUE;
 
    /* add nodes for variables */
@@ -422,9 +424,9 @@ SCIP_RETCODE fillGraphByLinearConss(
  *  Construct graph:
  *  - Each node of the expression trees gets a different node.
  *  - Each coefficient of a sum expression gets its own node connected to the node of the corresponding child.
- *  - Each constraint (with lhs and (!) rhs gets its own node connected to the corresponding node of the root expression.
+ *  - Each constraint (with lhs and (!) rhs) gets its own node connected to the corresponding node of the root expression.
  *
- *  note: in contrast to the linear part, lhs and rhs are treated together here, so that each unique combination of lhs
+ *  @note: In contrast to the linear part, lhs and rhs are treated together here, so that each unique combination of lhs
  *  and rhs gets its own node. This makes the implementation a lot simpler with the small downside, that different
  *  formulations of the same constraints would not be detected as equivalent, e.g. for
  *      0 <= x1 + x2 <= 1
@@ -469,15 +471,22 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    assert(G != NULL);
    assert(nnodes >= nusedcolors);
 
+   SCIPdebugMsg(scip, "Building graph with colored coefficient nodes for non-linear part.\n");
+
    /* create maps for optypes, constants, sum coefficients and rhs to indices */
-   SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype, SYMhashKeyEQOptype, SYMhashKeyValOptype, (void*) scip) );
-   assert( optypemap != NULL );
-   SCIP_CALL( SCIPhashtableCreate(&consttypemap, SCIPblkmem(scip), constarraysize, SYMhashGetKeyConsttype, SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
-   assert( consttypemap != NULL );
-   SCIP_CALL( SCIPhashtableCreate(&sumcoefmap, SCIPblkmem(scip), coefarraysize, SYMhashGetKeyConsttype, SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
-   assert( sumcoefmap != NULL );
-   SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), rhsarraysize, SYMhashGetKeyRhstype, SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
-   assert( rhstypemap != NULL );
+   SCIP_CALL( SCIPhashtableCreate(&optypemap, SCIPblkmem(scip), oparraysize, SYMhashGetKeyOptype,
+         SYMhashKeyEQOptype, SYMhashKeyValOptype, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&consttypemap, SCIPblkmem(scip), constarraysize, SYMhashGetKeyConsttype,
+         SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&sumcoefmap, SCIPblkmem(scip), coefarraysize, SYMhashGetKeyConsttype,
+         SYMhashKeyEQConsttype, SYMhashKeyValConsttype, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), rhsarraysize, SYMhashGetKeyRhstype,
+         SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
+
+   assert(optypemap != NULL);
+   assert(consttypemap != NULL);
+   assert(sumcoefmap != NULL);
+   assert(rhstypemap != NULL);
 
    /* allocate space for mappings from optypes, constants, sum coefficients and rhs to colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueoparray, oparraysize) );
@@ -522,13 +531,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                /* for constant expressions, get the color of its type (value) or assign a new one */
                else if( strcmp(opname, "val") == 0 )
                {
-                  SYM_CONSTTYPE *ct;
+                  SYM_CONSTTYPE* ct;
 
                   /* check whether we have to resize */
                   if ( nuniqueconsts >= constarraysize )
                   {
                      int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                     assert( newsize >= 0 );
+                     assert(newsize >= 0);
                      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
                      constarraysize = newsize;
                   }
@@ -547,7 +556,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     color= ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                     color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
                   }
                }
                /* for all other expressions, get the color of its operator type or assign a new one */
@@ -559,7 +568,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   if( nuniqueops >= oparraysize )
                   {
                      int newsize = SCIPcalcMemGrowSize(scip, nuniqueops+1);
-                     assert( newsize >= 0 );
+                     assert(newsize >= 0);
                      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueoparray, oparraysize, newsize) );
                      oparraysize = newsize;
                   }
@@ -595,7 +604,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   if ( nuniquerhs >= rhsarraysize )
                   {
                      int newsize = SCIPcalcMemGrowSize(scip, nuniquerhs+1);
-                     assert( newsize >= 0 );
+                     assert(newsize >= 0);
                      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize, newsize) );
                      rhsarraysize = newsize;
                   }
@@ -663,7 +672,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      if ( nuniquecoefs >= coefarraysize )
                      {
                         int newsize = SCIPcalcMemGrowSize(scip, nuniquecoefs+1);
-                        assert( newsize >= 0 );
+                        assert(newsize >= 0);
                         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize, newsize) );
                         coefarraysize = newsize;
                      }
@@ -707,7 +716,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      if ( nuniqueconsts >= constarraysize )
                      {
                         int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                        assert( newsize >= 0 );
+                        assert(newsize >= 0);
                         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
                         constarraysize = newsize;
                      }
