@@ -293,6 +293,8 @@ SCIP_RETCODE createVariableNodes(
 
       ++nnodes;
    }
+
+   return SCIP_OKAY;
 }
 
 /** Construct linear part of colored graph for symmetry computations
