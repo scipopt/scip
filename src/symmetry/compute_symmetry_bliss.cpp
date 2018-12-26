@@ -762,6 +762,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                ischildofsum.pop_back();
                currentlevel--;
 
+               /* When leaving the child of a sum expression, we have to pop again to get rid of the intermediate nodes
+                * used for the coefficients of summands
+                */
                if( !ischildofsum.empty() && ischildofsum[ischildofsum.size() - 1] )
                {
                   visitednodes.pop_back();
