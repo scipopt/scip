@@ -550,7 +550,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   if( !SCIPhashtableExists(consttypemap, (void *) ct))
                   {
                      SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
-                     ct->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                     ct->color = nusedcolors++;
                      color = ct->color;
                      nuniqueconsts++;
                   }
@@ -583,7 +583,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   if( !SCIPhashtableExists(optypemap, (void *) ot) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
-                     ot->color = nusedcolors + nuniqueconsts + nuniquecoefs + nuniqueops + nuniquerhs;
+                     ot->color = nusedcolors++;
                      color = ot->color;
                      nuniqueops++;
                   }
@@ -618,7 +618,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   if( !SCIPhashtableExists(rhstypemap, (void *) rt))
                   {
                      SCIP_CALL(SCIPhashtableInsert(rhstypemap, (void *) rt));
-                     rt->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                     rt->color = nusedcolors++;
                      parentcolor = rt->color;
                      nuniquerhs++;
                   }
@@ -685,7 +685,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
                      {
                         SCIP_CALL(SCIPhashtableInsert(sumcoefmap, (void *) ct));
-                        ct->color = nusedcolors + nuniqueops + nuniqueconsts + nuniquecoefs + nuniquerhs;
+                        ct->color = nusedcolors++;
                         color = ct->color;
                         nuniquecoefs++;
                      }
@@ -729,7 +729,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      if( !SCIPhashtableExists(consttypemap, (void *) ct))
                      {
                         SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
-                        ct->color = nusedcolors + nuniqueops + nuniquecoefs + nuniqueconsts + nuniquerhs;
+                        ct->color = nusedcolors++;
                         color = ct->color;
                         nuniqueconsts++;
                      }
