@@ -304,6 +304,9 @@ SCIP_RETCODE createVariableNodes(
  *    corresponding to the respective constraint and variable.
  *
  *  Each different variable, rhs, matrix coefficient gets a different color that is attached to the corresponding entries.
+ *
+ *  @pre This method assumes that the nodes corresponding to permutation variables are already in the graph and that
+ *  their node number is equal to their index.
  */
 static
 SCIP_RETCODE fillGraphByLinearConss(
@@ -463,6 +466,9 @@ SCIP_RETCODE fillGraphByLinearConss(
  *
  *  Each different constraint (sides), sum-expression coefficient, constant and operator type gets a
  *  different color that is attached to the corresponding entries.
+ *
+ *  @pre This method assumes that the nodes corresponding to permutation variables are already in the graph and that
+ *  their node number is equal to their index.
  */
 static
 SCIP_RETCODE fillGraphByNonlinearConss(
