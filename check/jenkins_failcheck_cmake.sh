@@ -185,12 +185,12 @@ if [ "${PERFORMANCE}" == "performance" ]; then
 fi
 
 SEED=0
-PERM=0
 while [ ${SEED} -le ${SEEDS} ]; do
   # get ending given by seed
   if [ "${SEED}" != "0" ]; then
     SEED_ENDING="-s${SEED}"
   fi
+  PERM=0
   while [ ${PERM} -le ${PERMUTE} ]; do
     # get ending given by permutation
     if [ "${PERM}" != "0" ]; then
@@ -299,33 +299,33 @@ while [ ${SEED} -le ${SEEDS} ]; do
         echo "Found new errors, sending emails."
         SUBJECT="FAIL ${SUBJECTINFO}"
         echo -e "There are newly failed instances.
-        The instances run with the following SCIP version and setting file:
+The instances run with the following SCIP version and setting file:
 
-        \`\`\`
-        BRANCH: $GITBRANCH
+\`\`\`
+BRANCH: $GITBRANCH
 
-        SCIP HEADER:
-        ${SCIP_HEADER}
+SCIP HEADER:
+${SCIP_HEADER}
 
-        SETTINGS FILE:
-        ${SETFILE}
-        \`\`\`
+SETTINGS FILE:
+${SETFILE}
+\`\`\`
 
-        Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
-        ${ERRORS_INFO}
+Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
+${ERRORS_INFO}
 
-        Here is the complete list of new fails:
-        ${ERRORINSTANCES}
+Here is the complete list of new fails:
+${ERRORINSTANCES}
 
-        The following instances are still failing:
-        ${STILLFAILINGDB}
+The following instances are still failing:
+${STILLFAILINGDB}
 
-        Finally, the err, out and res file can be found here:
-        $ERRFILE
-        $OUTFILE
-        $RESFILE
+Finally, the err, out and res file can be found here:
+$ERRFILE
+$OUTFILE
+$RESFILE
 
-        Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
       else
         echo "No new errors, sending no emails."
       fi
@@ -341,16 +341,16 @@ while [ ${SEED} -le ${SEEDS} ]; do
       SUBJECT="FIX ${SUBJECTINFO}"
       echo -e "Congratulations, see bottom for fixed instances!
 
-      The following instances are still failing:
-      ${STILLFAILINGDB}
+The following instances are still failing:
+${STILLFAILINGDB}
 
-      The err, out and res file can be found here:
-      $ERRFILE
-      $OUTFILE
-      $RESFILE
+The err, out and res file can be found here:
+$ERRFILE
+$OUTFILE
+$RESFILE
 
-      The following errors have been fixed:
-      ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+The following errors have been fixed:
+${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     fi
     rm ${STILLFAILING}
 
