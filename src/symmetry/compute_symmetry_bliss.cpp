@@ -517,8 +517,8 @@ SCIP_RETCODE fillGraphByNonlinearConss(
             /* upon entering an expression, check its type and add nodes and edges if neccessary */
             case SCIP_CONSEXPRITERATOR_ENTEREXPR:
             {
-               int node;
-               int parentnode;
+               int node = -1;
+               int parentnode = -1;
                int color = -1;
                const char* opname = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
@@ -650,10 +650,12 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                }
 
                /* store the new node so that it can be used as parentnode later */
+               assert(node != -1);
                visitednodes.push_back(node);
                ischildofsum.push_back(FALSE);
 
                /* connect the current node with its parent */
+               assert(parentnode != -1);
                G->add_edge((unsigned) node, (unsigned) parentnode);
                ++nedges;
 
