@@ -255,7 +255,7 @@ void blisshook(
 
 /** Creates the nodes in the graph that correspond to variables. Each variable type gets a unique color
  *
- *  @pre Graph should be empty when this is called
+ *  @pre graph should be empty when this is called
  */
 static
 SCIP_RETCODE createVariableNodes(
@@ -294,6 +294,7 @@ SCIP_RETCODE createVariableNodes(
       ++nnodes;
    }
 
+   nusedcolors = matrixdata->nuniquevars;
    return SCIP_OKAY;
 }
 
