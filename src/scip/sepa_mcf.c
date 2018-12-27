@@ -4329,6 +4329,7 @@ SCIP_RETCODE mcfnetworkExtract(
    if( !failed )
    {
       /* 3. extract network structure of flow conservation constraints. */
+      /* coverity[var_deref_model] */
       SCIP_CALL( extractFlow(scip, &mcfdata, MAXFLOWVARFLOWROWRATIO, &failed) );
       assert(mcfdata.plusflow != NULL);
       assert(mcfdata.minusflow != NULL);
