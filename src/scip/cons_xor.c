@@ -3638,6 +3638,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int                   nconss,             /**< number of constraints in constraint set */
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  nchgcoefs,          /**< pointer to add up the number of changed coefficients */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
    int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  naddconss,          /**< pointer to count number of added constraints */
@@ -3690,6 +3691,63 @@ SCIP_RETCODE detectRedundantConstraints(
       consdata0 = SCIPconsGetData(cons0);
 
       assert(consdata0 != NULL);
+
+      /* applyFixings() led to an empty constraint */
+      if( consdata0->nvars == 0 )
+      {
+         if( consdata0->rhs )
+         {
+            *cutoff = TRUE;
+            break;
+         }
+         else
+         {
+            /* fix integral variable if present */
+            if( consdata0->intvar != NULL && !consdata0->deleteintvar )
+            {
+               SCIP_Bool infeasible;
+               SCIP_Bool fixed;
+
+               SCIP_CALL( SCIPfixVar(scip, consdata0->intvar, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+
+               if( fixed )
+                  ++(*nfixedvars);
+            }
+
+            /* delete empty constraint */
+            SCIP_CALL( SCIPdelCons(scip, cons0) );
+            ++(*ndelconss);
+
+            continue;
+         }
+      }
+      else if( consdata0->nvars == 1 )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
+         /* fix remaining variable */
+         SCIP_CALL( SCIPfixVar(scip, consdata0->vars[0], (SCIP_Real) consdata0->rhs, &infeasible, &fixed) );
+         assert(!infeasible);
+
+         if( fixed )
+            ++(*nfixedvars);
+
+         /* fix integral variable if present */
+         if( consdata0->intvar != NULL && !consdata0->deleteintvar )
+         {
+            SCIP_CALL( SCIPfixVar(scip, consdata0->intvar, 0.0, &infeasible, &fixed) );
+            assert(!infeasible);
+            if( fixed )
+               ++(*nfixedvars);
+         }
+
+         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         ++(*ndelconss);
+
+         continue;
+      }
 
       /* sort the constraint */
       consdataSort(consdata0);
@@ -3893,6 +3951,15 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
          else
          {
+            /* fix integral variable if present */
+            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               if( fixed )
+                  ++(*nfixedvars);
+            }
+
             /* delete empty constraint */
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             ++(*ndelconss);
@@ -3908,6 +3975,15 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          if( fixed )
             ++(*nfixedvars);
+
+         /* fix integral variable if present */
+         if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+         {
+            SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+            assert(!infeasible);
+            if( fixed )
+               ++(*nfixedvars);
+         }
 
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          ++(*ndelconss);
@@ -3953,8 +4029,18 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(consdata0->sorted);
          }
 
-         if( redundant )
+         /* we can only fix the intvar if var0 == 1 - var1, because intvar will then always be 0 */
+         if( redundant && (consdata1->intvar == NULL || consdata1->deleteintvar || consdata1->rhs) )
          {
+            /* fix integral variable if present */
+            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               if( fixed )
+                  ++(*nfixedvars);
+            }
+
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             ++(*ndelconss);
          }
@@ -5164,7 +5250,8 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
       if( firstchange < nconss && conshdlrdata->presolusehashing )
       {
          /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs, naggrvars, ndelconss, naddconss, &cutoff) );
+         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs,
+               nfixedvars, naggrvars, ndelconss, naddconss, &cutoff) );
       }
       if( conshdlrdata->presolpairwise )
       {
