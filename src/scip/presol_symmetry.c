@@ -17,6 +17,7 @@
  * @brief  presolver for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
+ * @author Christopher Hojny
  *
  * This presolver computes symmetries of the problem and stores this information in adequate form. It does not
  * perform additional actions. The symmetry information can be accessed through external functions. However, the user
@@ -1154,7 +1155,6 @@ SCIP_RETCODE computeSymmetryGroup(
       /* updata data if nontrivial symmetry */
       if ( *nperms > 0 )
       {
-
          /* transpose symmetries matrix here if necessary */
          if ( transposedperms )
          {
@@ -1256,8 +1256,7 @@ SCIP_RETCODE computeComponents(
    assert( presoldata->componentblocked == NULL );
 
 #if SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-      "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
    /* get data */
@@ -1268,6 +1267,9 @@ SCIP_RETCODE computeComponents(
 
    npermvars = presoldata->npermvars;
    perms = presoldata->perms;
+   assert( npermvars > 0 );
+   assert( perms != NULL );
+
    SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
    ncomponents = npermvars;
 
@@ -1322,7 +1324,7 @@ SCIP_RETCODE computeComponents(
                representative = permtovarcomp[p];
             }
 
-            /* merge both component if they differ */
+            /* merge both components if they differ */
             if ( component1 != component2 )
             {
                SCIPdisjointsetUnion(componentstovar, component1, component2, TRUE);
@@ -1330,8 +1332,7 @@ SCIP_RETCODE computeComponents(
             }
 
             /* possibly merge new component and permvartocom[p] and ensure the latter
-             * to have the smallest value
-             */
+             * to have the smallest value */
             if ( representative != component1 && representative != component2 )
             {
                if ( representative > component1 )
@@ -1370,7 +1371,7 @@ SCIP_RETCODE computeComponents(
    /* get correct order of components array */
    SCIPsortIntInt(permtovarcomp, presoldata->components, nperms);
 
-   /* determine componentbegins and store for each permutation its component */
+   /* determine componentbegins and store components for each permutation */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->componentbegins, ncomponents + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
 
@@ -1416,8 +1417,7 @@ SCIP_RETCODE computeComponents(
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
 #if SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-      "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
 #endif
 
 #if SCIP_OUTPUT
@@ -1437,7 +1437,7 @@ SCIP_RETCODE computeComponents(
 }
 
 
-/* compute number of variables that are contained in a non-trivial orbit */
+/** compute number of variables that are contained in a non-trivial orbit */
 static
 SCIP_RETCODE computeNOrbitVars(
    SCIP*                 scip,               /**< SCIP instance */
