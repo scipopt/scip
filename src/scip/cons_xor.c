@@ -3692,57 +3692,47 @@ SCIP_RETCODE detectRedundantConstraints(
 
       assert(consdata0 != NULL);
 
-      /* applyFixings() led to an empty constraint */
-      if( consdata0->nvars == 0 )
+      /* applyFixings() led to an empty or trivial constraint */
+      if( consdata0->nvars <= 1 )
       {
-         if( consdata0->rhs )
+         if( consdata0->nvars == 0 )
          {
-            *cutoff = TRUE;
-            break;
+            /* the constraints activity cannot match an odd right hand side */
+            if( consdata0->rhs )
+            {
+               *cutoff = TRUE;
+               break;
+            }
          }
          else
          {
-            /* fix integral variable if present */
-            if( consdata0->intvar != NULL && !consdata0->deleteintvar )
-            {
-               SCIP_Bool infeasible;
-               SCIP_Bool fixed;
+            /* exactly 1 variable left. */
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
 
-               SCIP_CALL( SCIPfixVar(scip, consdata0->intvar, 0.0, &infeasible, &fixed) );
-               assert(!infeasible);
+            /* fix remaining variable */
+            SCIP_CALL( SCIPfixVar(scip, consdata0->vars[0], (SCIP_Real) consdata0->rhs, &infeasible, &fixed) );
+            assert(!infeasible);
 
-               if( fixed )
-                  ++(*nfixedvars);
-            }
+            if( fixed )
+               ++(*nfixedvars);
 
-            /* delete empty constraint */
-            SCIP_CALL( SCIPdelCons(scip, cons0) );
-            ++(*ndelconss);
-
-            continue;
          }
-      }
-      else if( consdata0->nvars == 1 )
-      {
-         SCIP_Bool infeasible;
-         SCIP_Bool fixed;
-
-         /* fix remaining variable */
-         SCIP_CALL( SCIPfixVar(scip, consdata0->vars[0], (SCIP_Real) consdata0->rhs, &infeasible, &fixed) );
-         assert(!infeasible);
-
-         if( fixed )
-            ++(*nfixedvars);
 
          /* fix integral variable if present */
          if( consdata0->intvar != NULL && !consdata0->deleteintvar )
          {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
             SCIP_CALL( SCIPfixVar(scip, consdata0->intvar, 0.0, &infeasible, &fixed) );
             assert(!infeasible);
+
             if( fixed )
                ++(*nfixedvars);
          }
 
+         /* delete empty constraint */
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          ++(*ndelconss);
 
