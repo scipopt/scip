@@ -599,7 +599,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                /* for all other expressions, get the color of its operator type or assign a new one */
                else
                {
-                  SYM_OPTYPE *ot;
+                  SYM_OPTYPE* ot;
 
                   /* check whether we have to resize */
                   if( nuniqueops >= oparraysize )
@@ -634,7 +634,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                if( SCIPexpriteratorGetParentDFS(it) == NULL )
                {
                   /* add the node corresponding to the constraint */
-                  SYM_RHSTYPE *rt;
+                  SYM_RHSTYPE* rt;
                   int parentcolor;
 
                   /* check whether we have to resize */
@@ -705,7 +705,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   /* iterate over children from last to first, such that visitednodes array is in correct order */
                   for( int j = SCIPgetConsExprExprNChildren(expr) - 1; j >= 0; --j )
                   {
-                     SYM_CONSTTYPE *ct;
+                     SYM_CONSTTYPE* ct;
 
                      /* check whether we have to resize */
                      if ( nuniquecoefs >= coefarraysize )
@@ -749,7 +749,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   SCIP_Real constval = SCIPgetConsExprExprSumConstant(expr);
                   if( constval != 0.0 )
                   {
-                     SYM_CONSTTYPE *ct;
+                     SYM_CONSTTYPE* ct;
 
                      /* check whether we have to resize */
                      if ( nuniqueconsts >= constarraysize )
