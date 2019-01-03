@@ -99,7 +99,8 @@ Fixed bugs
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
-- fixed handling of nonartificial parity variables when deleting redundant XOR constraints.
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints
+- earlier deletion of trivial XOR constraints (at most 1 operator left)
 
 Miscellaneous
 -------------
