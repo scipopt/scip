@@ -88,23 +88,23 @@ declare -A JOBS
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running on monday
-JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=1800 SETTINGS=default"
+JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
 JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on tuesday
-JOBS[2,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=1800 SETTINGS=default_${RANDOMSEED}"
+JOBS[2,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
 JOBS[2,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default_${RANDOMSEED}"
 
 # jobs running on wednesday
-JOBS[3,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=1800 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
+JOBS[3,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 JOBS[3,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
 
 # jobs running on thursday
-JOBS[4,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=1800 SETTINGS=heuraggr_${RANDOMSEED}"
+JOBS[4,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=heuraggr_${RANDOMSEED}"
 JOBS[4,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_heuraggr_${RANDOMSEED}"
 
 # jobs running on friday
-JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=1800 SETTINGS=default"
+JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
 JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on saturday
@@ -214,4 +214,3 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
-
