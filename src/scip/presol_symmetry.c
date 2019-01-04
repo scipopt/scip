@@ -453,12 +453,10 @@ SCIP_RETCODE collectCoefficients(
 }
 
 
-/** checks whether given permutations form a symmetry of a MIP
+/** checks whether given permutations form a symmetry of a MIP or MINLP
  *
  *  We need the matrix and rhs in the original order in order to speed up the comparison process. The matrix is needed
  *  in the right order to easily check rows. The rhs is used because of cache effects.
- *
- *  @TODO: extend this to MINLPs
  */
 static
 SCIP_RETCODE checkSymmetriesAreSymmetries(
