@@ -94,13 +94,15 @@ Fixed bugs
 - fixed bug when reading >= indicator constraints in MPS format
 - fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
 - fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
-- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
-  special case of an implication between two binary variables.
+- ignore implications added through SCIPaddVarImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables; also, use implications instead of cliques in the case
+  of a binary implied variable with nonbinary active representative
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
 - fixed handling of nonartificial parity variables when deleting redundant XOR constraints
 - earlier deletion of trivial XOR constraints (at most 1 operator left)
+-
 
 Miscellaneous
 -------------
