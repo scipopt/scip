@@ -670,12 +670,17 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             {
                SCIP_CONS* cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
 
-               found = SCIPisEQ(scip, SCIPgetRhsConsExpr(scip, cons2), SCIPgetRhsConsExpr(scip, permutedcons))
-                       && SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons2), SCIPgetLhsConsExpr(scip, permutedcons))
-                       && (SCIPcompareConsExprExprs(SCIPgetExprConsExpr(scip, cons2), permutedexpr) == 0);
+               if( SCIPisEQ(scip, SCIPgetRhsConsExpr(scip, cons2), SCIPgetRhsConsExpr(scip, permutedcons))
+                  && SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons2), SCIPgetLhsConsExpr(scip, permutedcons))
+                  && (SCIPcompareConsExprExprs(SCIPgetExprConsExpr(scip, cons2), permutedexpr) == 0) )
+               {
+                  found = TRUE;
+                  break;
+               }
             }
 
-            /* release copied constraint */
+            /* release copied constraint and expression because simplify captures it */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &permutedexpr) );
             SCIP_CALL( SCIPreleaseCons(scip, &permutedcons) );
 
             assert(found);
@@ -684,11 +689,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
                SCIPerrorMessage("Found permutation that is not a symmetry.\n");
                return SCIP_ERROR;
             }
-
-            /* reset varmap */
-            SCIP_CALL( SCIPhashmapRemoveAll(varmap) );
          }
       }
+
+      /* reset varmap */
+      SCIP_CALL( SCIPhashmapRemoveAll(varmap) );
    }
 
    SCIPhashmapFree(&varmap);
