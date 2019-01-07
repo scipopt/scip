@@ -668,7 +668,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             /* look for a constraint with same lhs, rhs and expression */
             for( j = 0; j < nexprconss; ++j )
             {
-               SCIP_CONS* cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
+               SCIP_CONS* cons2;
+
+               cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
 
                if( SCIPisEQ(scip, SCIPgetRhsConsExpr(scip, cons2), SCIPgetRhsConsExpr(scip, permutedcons))
                   && SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons2), SCIPgetLhsConsExpr(scip, permutedcons))
