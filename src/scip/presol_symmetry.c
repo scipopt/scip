@@ -490,6 +490,10 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    for (j = 0; j < matrixdata->nrhscoef; ++j)
       rhsmatbeg[j] = -1;
 
+   /* get info for non-linear part */
+   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   nexprconss = SCIPconshdlrGetNConss(exprconshdlr);
+
    /* create hashmaps for variable permutation and constraints in non-linear part array for occuring variables */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), matrixdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &occuringvars, matrixdata->npermvars) );
@@ -616,21 +620,19 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
       SCIPdebugMsg(scip, "Verifying automorphism group generator #%d for non-linear part ...\n", p);
 
-      /* get info for non-linear part */
-      exprconshdlr = SCIPfindConshdlr(scip, "expr");
-      nexprconss = SCIPconshdlrGetNConss(exprconshdlr);
-
       /* fill hashmap according to permutation */
       for( j = 0; j < matrixdata->npermvars; ++j )
       {
-         SCIP_CALL(SCIPhashmapInsert(varmap, matrixdata->permvars[j], matrixdata->permvars[P[j]]));
+         SCIP_CALL( SCIPhashmapInsert(varmap, matrixdata->permvars[j], matrixdata->permvars[P[j]]) );
       }
 
       /* check all non-linear constraints */
       for( i = 0; i < nexprconss; ++i )
       {
-         SCIP_CONS* cons1 = SCIPconshdlrGetConss(exprconshdlr)[i];
+         SCIP_CONS* cons1;
          int npermuted = 0;
+
+         cons1 = SCIPconshdlrGetConss(exprconshdlr)[i];
 
          SCIP_CALL( SCIPgetConsVars(scip, cons1, occuringvars, matrixdata->npermvars, &success) );
          assert(success);
