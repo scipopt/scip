@@ -4446,16 +4446,37 @@ SCIP_RETCODE createConsXorIntvar(
 
 /** tries to upgrade a linear constraint into an xor constraint
  *
- *  Assuming the only coefficients with an absolute value unequal to one is two in absolute value we can transform:
+ *  Assuming all variables are binary and have coefficients with an absolute value 1, except for an integer (or binary) variable
+ *  \f$z\f$ which has coefficient \f$a \in \{-2,2\}\f$ with absolute value 2 and appears only in this constraint,
+ *  we can transform:
  *  \f[
  *    \begin{array}{ll}
- *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = rhs \\
- *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} + a \cdot z = rhs + |I| \\
- *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} - 2 \cdot y = (rhs + |I|) mod 2 \\
- *                     & z \in [lb_z,ub_z] \Rightarrow y \in (\left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; lb_z : -ub_z), \left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; ub_z : -lb_z) ) \\
- *                     & z = (a = -2\; ?\; y - \left\lfloor \frac{rhs + |I|}{2} \right\rfloor\; :\; -y + \left\lfloor \frac{rhs + |I|}{2} \right\rfloor)
+ *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = r \\
+ *     \Leftrightarrow & \sum_{i \in I} \bar{x}_i + \sum_{j \in J} x_j + a \cdot z = r + |I| \\
+ *     \Leftrightarrow & \sum_{i \in I} \bar{x}_i + \sum_{j \in J} x_j - 2 \cdot y = (r + |I|) \text{ mod } 2,
  *    \end{array}
  *  \f]
+ *  where
+ *  \f[
+ *    y = \begin{cases}
+ *            \left\lfloor \frac{r + |I|}{2} \right\rfloor + z & \text{if }a = -2\\
+ *            \left\lfloor \frac{r + |I|}{2} \right\rfloor - z & \text{if }a = 2.
+ *        \end{cases}
+ *  \f]
+ *  If \f$a = -2\f$ and \f$z \in [\ell_z, u_z]\f$, then \f$y \in [\ell_y, u_y]\f$, where \f$\ell_y = \left\lfloor
+ *  \frac{r + |I|}{2} \right\rfloor + \ell_z\f$ and \f$u_y = \left\lfloor \frac{r + |I|}{2} \right\rfloor + u_z\f$.
+ *
+ *  If \f$a = 2\f$, then \f$\ell_y = \left\lfloor \frac{r + |I|}{2} \right\rfloor - u_z\f$ and \f$u_y = \left\lfloor
+ *  \frac{r + |I|}{2} \right\rfloor - \ell_z\f$.
+ *
+ *  Then consider the resulting XOR-constraint
+ *  \f[
+ *      \bigoplus_{i \in I} \bar{x}_i \oplus \bigoplus_{j \in j} x_j = (r + |I|) \text{ mod } 2.
+ *  \f]
+ *  If \f$\ell_y \leq 0\f$ and \f$u_y \geq (|I| + |J|)/2\f$, then the XOR constraint is a reformulation of the above
+ *  transformed constraint, otherwise it is a relaxation because the bounds on the \f$y\f$-variable may disallow
+ *  too many (or too few) operators set to 1. Therefore, the XOR constraint handler verifies in this case that the linear
+ *  equation holds, ie., that the \f$y\f$-variable has the correct value.
  */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
