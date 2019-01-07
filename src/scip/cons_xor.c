@@ -4370,8 +4370,9 @@ SCIP_RETCODE createConsXorIntvar(
 
 /** tries to upgrade a linear constraint into an xor constraint
  *
- *  Assuming all variables are binary and have coefficients with an absolute value 1, except for an integer variable
- *  \f$z\f$ which has coefficient \f$a\f$ with absolute value 2, we can transform:
+ *  Assuming all variables are binary and have coefficients with an absolute value 1, except for an integer (or binary) variable
+ *  \f$z\f$ which has coefficient \f$a \in \{-2,2\}\f$ with absolute value 2 and appears only in this constraint,
+ *  we can transform:
  *  \f[
  *    \begin{array}{ll}
  *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = r \\
@@ -4397,7 +4398,9 @@ SCIP_RETCODE createConsXorIntvar(
  *      \bigoplus_{i \in I} \bar{x}_i \oplus \bigoplus_{j \in j} x_j = (r + |I|) \text{ mod } 2.
  *  \f]
  *  If \f$\ell_y \leq 0\f$ and \f$u_y \geq (|I| + |J|)/2\f$, then the XOR constraint is a reformulation of the above
- *  transformed constraint, otherwise it is a relaxation.
+ *  transformed constraint, otherwise it is a relaxation because the bounds on the \f$y\f$-variable may disallow
+ *  too many (or too few) operators set to 1. Therefore, the XOR constraint handler verifies in this case that the linear
+ *  equation holds, ie., that the \f$y\f$-variable has the correct value.
  */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
