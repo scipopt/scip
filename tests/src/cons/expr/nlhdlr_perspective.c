@@ -154,7 +154,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nconvterms, 2, "Expecting 2 convex terms, got %d\n", nlhdlrexprdata->nconvterms);
-   cr_expect_eq(nlhdlrexprdata->nperspterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nperspterms);
+   cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
 
    scv = SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)x_1);
    cr_expect_not_null(scv, "x should be detected as a semicontinuous variable!\n");
