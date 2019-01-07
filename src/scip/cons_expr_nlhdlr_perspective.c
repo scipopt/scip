@@ -824,9 +824,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &((*nlhdlrexprdata)->nvarexprs)) );
 
       /* move the on/off terms to an array */
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->onoffterms, (*nlhdlrexprdata)->nonoffterms);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->onoffcoefs, (*nlhdlrexprdata)->nonoffterms);
-      SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->bvars, (*nlhdlrexprdata)->nonoffterms);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->onoffterms, (*nlhdlrexprdata)->nonoffterms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->onoffcoefs, (*nlhdlrexprdata)->nonoffterms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->bvars, (*nlhdlrexprdata)->nonoffterms) );
       nterm = 0;
       for( c = 0; c < SCIPhashmapGetNEntries(onoffterms); ++c )
       {
@@ -847,7 +847,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
                (*nlhdlrexprdata)->bvars[nterm] = bvar;
                nterm++;
             }
-            SCIPreleaseConsExprExpr(scip, &pexpr);
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &pexpr) );
          }
       }
    }
@@ -859,7 +859,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          if( entry != NULL )
          {
             pexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetImage(entry);
-            SCIPreleaseConsExprExpr(scip, &pexpr);
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &pexpr) );
          }
       }
       SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
