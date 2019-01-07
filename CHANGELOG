@@ -43,7 +43,7 @@ Interface changes
 
 ### Command line interface
 
-- warn about coefficients in MPS files with absolute larger than SCIP's infinity parameter
+- warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
 
 ### Interfaces to external software
 
