@@ -694,7 +694,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    }
 
    /* prepare the list of terms */
-   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) == 0 )
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
       children = SCIPgetConsExprExprChildren(expr);
       nchildren = SCIPgetConsExprExprNChildren(expr);
@@ -759,7 +759,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
    }
 
-   if( strcmp("sum", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) != 0 )
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
       SCIPfreeBlockMemoryArrayNull(scip, &children, 1);
       SCIPfreeBlockMemoryArrayNull(scip, &coefs, 1);
@@ -803,7 +803,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( *success )
    {
-      int nterm;
+      int nterm, nexpr;
 
       /* depending on curvature, set enforcemethods */
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
@@ -839,7 +839,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
             nchildren = SCIPgetConsExprExprNChildren(pexpr);
             coefs = SCIPgetConsExprExprSumCoefs(pexpr);
 
-            for( int nexpr = 0; nexpr < nchildren; ++nexpr )
+            for( nexpr = 0; nexpr < nchildren; ++nexpr )
             {
                assert(nterm < (*nlhdlrexprdata)->nonoffterms);
                (*nlhdlrexprdata)->onoffterms[nterm] = children[nexpr];
