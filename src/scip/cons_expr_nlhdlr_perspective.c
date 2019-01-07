@@ -495,8 +495,6 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata   /**< nlhdlr expression data */
    )
 {
-   SCIP_HASHMAPENTRY* entry;
-   SCIP_CONSEXPR_EXPR* expr;
    int c;
 
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convterms), nlhdlrexprdata->convtermssize);
@@ -835,7 +833,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(onoffterms, c);
          if( entry != NULL )
          {
-            SCIP_VAR* bvar = (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry);
+            bvar = (SCIP_VAR*)SCIPhashmapEntryGetOrigin(entry);
             pexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetImage(entry);
             children = SCIPgetConsExprExprChildren(pexpr);
             nchildren = SCIPgetConsExprExprNChildren(pexpr);
@@ -929,6 +927,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    SCIP_CONSEXPR_EXPR* pexpr;
    SCIP_Bool success;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_Real pcoef;
+   SCIP_VAR* bvar;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -977,9 +977,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    /* handle on/off terms */
    for( i = 0; i < nlhdlrexprdata->nonoffterms && success; ++i )
    {
-      SCIP_CONSEXPR_EXPR* pexpr = nlhdlrexprdata->onoffterms[i];
-      SCIP_Real pcoef = nlhdlrexprdata->onoffcoefs[i];
-      SCIP_VAR* bvar = nlhdlrexprdata->bvars[i];
+      pexpr = nlhdlrexprdata->onoffterms[i];
+      pcoef = nlhdlrexprdata->onoffcoefs[i];
+      bvar = nlhdlrexprdata->bvars[i];
       SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, pcoef, bvar, sol, &success) );
    }
 
