@@ -396,10 +396,14 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   while [ $PERM -le $PERMUTE ]; do
     LASTWEEK=$(grep -e ${OLDTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
     THISWEEK=$(grep -e ${NEWTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
+
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
+        URLSTR=$(geturl "${THISWEEK}
+${THISWEEK}")
+
         PERF_MAIL="${PERF_MAIL}
-Compare permutation ${PERM}: https://rubberband.zib.de/result/${LASTWEEK}?compare=$(geturl "${THISWEEK}")"
+Compare permutation ${PERM}: https://rubberband.zib.de/result/${URLSTR}"
       fi
     fi
     PERM=$((PERM + 1))
