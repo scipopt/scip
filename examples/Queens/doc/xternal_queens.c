@@ -29,8 +29,8 @@
  * program for solving it. The model is based on the one described in the
  * Zimpl documentation.
  *
- * The \f$n\f$-queens problem
- * ==========================
+ * The n-queens problem
+ * ====================
  *
  * The \f$n\f$-queens problem asks how to place \f$n\f$ queens on an \f$n \times n\f$
  * chess board in a way that no two queens interfere. In detail this means:
