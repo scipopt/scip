@@ -1951,15 +1951,19 @@ void consdataUpdateActivities(
    /* update the activity, if the current value is valid and there was a change in the finite part */
    if( validact && (delta != 0.0) )
    {
+      SCIP_Real curractivity;
+
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
       SCIPdbldblSum21((*activity), (*activityerr), (*activity), (*activityerr), delta);
       assert(!SCIPisInfinity(scip, -(*activity)) && !SCIPisInfinity(scip, *activity));
 
-      if( REALABS((*lastactivity)) < REALABS(*activity) )
+      curractivity = (*activity) + (*activityerr);
+
+      if( REALABS((*lastactivity)) < REALABS(curractivity) )
       {
-         (*lastactivity) = (*activity) + (*activityerr);
+         (*lastactivity) = curractivity;
       }
       else
       {
