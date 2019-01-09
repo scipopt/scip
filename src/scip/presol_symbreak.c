@@ -793,6 +793,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    int* componentbegins;
    int* vartocomponent;
    int ncomponents;
+   int usesymmetry;
 
    assert( presol != NULL );
    assert( scip != NULL );
@@ -808,6 +809,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       return SCIP_OKAY;
    }
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
 
    /* get symmetry information, if not already computed */
    if ( ! presoldata->computedsymmetry )
@@ -816,7 +818,13 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      if ( presoldata->detectorbitopes )
+      if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+      {
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &vartocomponent, &ncomponents) );
+      }
+      else if ( presoldata->detectorbitopes )
       {
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
                &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
@@ -871,7 +879,11 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* add symmetry breaking constraints */
    assert( ! presoldata->addedconss || presoldata->norbitopes > 0 );
 
-   SCIP_CALL( addSymmetryBreakingConstraints(scip, presol, components, componentbegins, ncomponents) );
+   /* if orbital fixing is used outside orbitopes, do not add further constraints */
+   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+   {
+      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol, components, componentbegins, ncomponents) );
+   }
 
    return SCIP_OKAY;
 }
@@ -917,12 +929,10 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
+   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK || usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
       presoldata->enabled = TRUE;
    else
-   {
       presoldata->enabled = FALSE;
-   }
 
    return SCIP_OKAY;
 }
@@ -1003,7 +1013,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
+   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK || usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
       presoldata->enabled = TRUE;
    else
    {

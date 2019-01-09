@@ -328,9 +328,9 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
       int componentidx;
       int j;
 
-      /* skip variables that are not affected by symmetry */
+      /* skip unaffected variables and blocked components */
       componentidx = vartocomponent[i];
-      if ( componentidx == -1 )
+      if ( componentidx < 0 || SCIPgetSymmetryComponentblocked(scip, componentidx) )
          continue;
 
       /* skip variable already contained in an orbit of a previous variable */
@@ -899,8 +899,8 @@ SCIP_RETCODE propagateOrbitalFixing(
 
       componentidx = vartocomponent[v];
 
-      /* skip unaffected variables */
-      if ( componentidx < 0 )
+      /* skip unaffected variables and blocked components */
+      if ( componentidx < 0 || SCIPgetSymmetryComponentblocked(scip, componentidx) )
          continue;
 
       pt = permstrans[v];
@@ -958,8 +958,8 @@ SCIP_RETCODE propagateOrbitalFixing(
 
       componentidx = vartocomponent[v];
 
-      /* skip unaffected variables */
-      if ( componentidx < 0 )
+      /* skip unaffected variables and blocked components */
+      if ( componentidx < 0 || SCIPgetSymmetryComponentblocked(scip, componentidx) )
          continue;
 
       pt = permstrans[v];
@@ -1084,14 +1084,13 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITALFIXING )
+   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITALFIXING || usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
       propdata->enabled = TRUE;
    else
       propdata->enabled = FALSE;
 
    return SCIP_OKAY;
 }
-
 
 /** deinitialization method of propagator (called before transformed problem is freed) */
 static

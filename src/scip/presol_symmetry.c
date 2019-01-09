@@ -1634,7 +1634,7 @@ SCIP_RETCODE determineSymmetry(
       {
          SCIP_CALL( computeNOrbitVars(scip, presoldata, TRUE) );
       }
-      else if ( usesymmetry == 1 )
+      else if ( usesymmetry == 1 || usesymmetry == 3 )
       {
          SCIP_CALL( computeNOrbitVars(scip, presoldata, FALSE) );
       }
@@ -1944,7 +1944,43 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *npermvars = presoldata->npermvars;
    *permvars = presoldata->permvars;
    *nperms = presoldata->nperms;
+
+   /* transpose perms matrix if necessary */
+   if ( presoldata->transposedperms != transposedperms )
+   {
+      int** transposedpermsmatrix;
+      int** permsmatrix;
+      int npermvarslocal;
+      int npermslocal;
+      int i;
+      int p;
+
+      permsmatrix = presoldata->perms;
+      npermvarslocal = presoldata->npermvars;
+      npermslocal = presoldata->nperms;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, npermvarslocal) );
+      for (i = 0; i < npermvarslocal; ++i)
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], npermslocal) );
+         for (p = 0; p < npermslocal; ++p)
+            transposedpermsmatrix[i][p] = permsmatrix[p][i];
+      }
+
+      /* free original perms matrix */
+      for (p = 0; p < npermslocal; ++p)
+      {
+         SCIPfreeBlockMemoryArray(scip, &permsmatrix[p], npermvarslocal);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &permsmatrix, npermslocal);
+
+      /* adjust matrix and transposition bool */
+      presoldata->perms = transposedpermsmatrix;
+      presoldata->transposedperms = transposedperms;
+   }
+
    *perms = presoldata->perms;
+
    if ( log10groupsize != NULL )
       *log10groupsize = presoldata->log10groupsize;
    if ( binvaraffected != NULL )
@@ -1952,7 +1988,11 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ncomponents != NULL || components != NULL || componentbegins != NULL || vartocomponent != NULL )
    {
-      SCIP_CALL( computeComponents(scip, presoldata, transposedperms) );
+      /* components might have been already computed if orbitopes and orbital fixing are both used */
+      if ( presoldata->ncomponents == -1 )
+      {
+         SCIP_CALL( computeComponents(scip, presoldata, transposedperms) );
+      }
 
       if ( components != NULL )
          *components = presoldata->components;
