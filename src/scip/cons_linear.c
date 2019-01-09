@@ -78,6 +78,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/dbldblarith.h"
 #include <ctype.h>
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -181,16 +182,20 @@ struct SCIP_ConsData
    SCIP_Real             minabsval;          /**< minimal absolute value of all coefficients */
    SCIP_Real             minactivity;        /**< minimal value w.r.t. the variable's local bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
+   SCIP_Real             minactivityerr;     /**< precision error for minactivity computation */
    SCIP_Real             maxactivity;        /**< maximal value w.r.t. the variable's local bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
+   SCIP_Real             maxactivityerr;     /**< precision error for maxactivity computation */
    SCIP_Real             lastminactivity;    /**< last minimal activity which was computed by complete summation
                                               *   over all contributing values */
    SCIP_Real             lastmaxactivity;    /**< last maximal activity which was computed by complete summation
                                               *   over all contributing values */
    SCIP_Real             glbminactivity;     /**< minimal value w.r.t. the variable's global bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
+   SCIP_Real             glbminactivityerr;  /**< precision error for glbminactivity computation */
    SCIP_Real             glbmaxactivity;     /**< maximal value w.r.t. the variable's global bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
+   SCIP_Real             glbmaxactivityerr;  /**< precision error for glbmaxactivity computation */
    SCIP_Real             lastglbminactivity; /**< last global minimal activity which was computed by complete summation
                                               *   over all contributing values */
    SCIP_Real             lastglbmaxactivity; /**< last global maximal activity which was computed by complete summation
@@ -963,7 +968,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->maxabsval = SCIP_INVALID;
    (*consdata)->minabsval = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
+   (*consdata)->minactivityerr = SCIP_INVALID;
    (*consdata)->maxactivity = SCIP_INVALID;
+   (*consdata)->maxactivityerr = SCIP_INVALID;
    (*consdata)->lastminactivity = SCIP_INVALID;
    (*consdata)->lastmaxactivity = SCIP_INVALID;
    (*consdata)->maxactdelta = SCIP_INVALID;
@@ -977,7 +984,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->maxactivityneghuge = -1;
    (*consdata)->maxactivityposhuge = -1;
    (*consdata)->glbminactivity = SCIP_INVALID;
+   (*consdata)->glbminactivityerr = SCIP_INVALID;
    (*consdata)->glbmaxactivity = SCIP_INVALID;
+   (*consdata)->glbmaxactivityerr = SCIP_INVALID;
    (*consdata)->lastglbminactivity = SCIP_INVALID;
    (*consdata)->lastglbmaxactivity = SCIP_INVALID;
    (*consdata)->glbminactivityneginf = -1;
@@ -1195,7 +1204,9 @@ void consdataInvalidateActivities(
    consdata->validminabsval = FALSE;
    consdata->hasnonbinvalid = FALSE;
    consdata->minactivity = SCIP_INVALID;
+   consdata->minactivityerr = SCIP_INVALID;
    consdata->maxactivity = SCIP_INVALID;
+   consdata->maxactivityerr = SCIP_INVALID;
    consdata->lastminactivity = SCIP_INVALID;
    consdata->lastmaxactivity = SCIP_INVALID;
    consdata->maxabsval = SCIP_INVALID;
@@ -1211,7 +1222,9 @@ void consdataInvalidateActivities(
    consdata->maxactivityneghuge = -1;
    consdata->maxactivityposhuge = -1;
    consdata->glbminactivity = SCIP_INVALID;
+   consdata->glbminactivityerr = SCIP_INVALID;
    consdata->glbmaxactivity = SCIP_INVALID;
+   consdata->glbmaxactivityerr = SCIP_INVALID;
    consdata->lastglbminactivity = SCIP_INVALID;
    consdata->lastglbmaxactivity = SCIP_INVALID;
    consdata->glbminactivityneginf = -1;
@@ -1287,21 +1300,22 @@ void consdataRecomputeMinactivity(
    int i;
    SCIP_Real bound;
 
-   consdata->minactivity = 0;
+   consdata->minactivity = 0.0;
+   consdata->minactivityerr = 0.0;
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetLbLocal(consdata->vars[i]) : SCIPvarGetUbLocal(consdata->vars[i]);
       if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
          && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
-         consdata->minactivity += consdata->vals[i] * bound;
+         SCIPdbldblSum21(consdata->minactivity, consdata->minactivityerr, consdata->minactivity, consdata->minactivityerr, consdata->vals[i] * bound);
    }
 
    /* the activity was just computed from scratch and is valid now */
    consdata->validminact = TRUE;
 
    /* the activity was just computed from scratch, mark it to be reliable */
-   consdata->lastminactivity = consdata->minactivity;
+   consdata->lastminactivity = consdata->minactivity + consdata->minactivityerr;
 }
 
 /** recompute the maxactivity of a constraint */
@@ -1321,14 +1335,14 @@ void consdataRecomputeMaxactivity(
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetUbLocal(consdata->vars[i]) : SCIPvarGetLbLocal(consdata->vars[i]);
       if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
          && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
-         consdata->maxactivity += consdata->vals[i] * bound;
+         SCIPdbldblSum21(consdata->maxactivity, consdata->maxactivityerr, consdata->maxactivity, consdata->maxactivityerr, consdata->vals[i] * bound);
    }
 
    /* the activity was just computed from scratch and is valid now */
    consdata->validmaxact = TRUE;
 
    /* the activity was just computed from scratch, mark it to be reliable */
-   consdata->lastmaxactivity = consdata->maxactivity;
+   consdata->lastmaxactivity = consdata->maxactivity + consdata->maxactivityerr;
 }
 
 /** recompute the global minactivity of a constraint */
@@ -1348,14 +1362,14 @@ void consdataRecomputeGlbMinactivity(
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetLbGlobal(consdata->vars[i]) : SCIPvarGetUbGlobal(consdata->vars[i]);
       if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
          && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
-         consdata->glbminactivity += consdata->vals[i] * bound;
+         SCIPdbldblSum21(consdata->glbminactivity, consdata->glbminactivityerr, consdata->glbminactivity, consdata->glbminactivityerr, consdata->vals[i] * bound);
    }
 
    /* the activity was just computed from scratch and is valid now */
    consdata->validglbminact = TRUE;
 
    /* the activity was just computed from scratch, mark it to be reliable */
-   consdata->lastglbminactivity = consdata->glbminactivity;
+   consdata->lastglbminactivity = consdata->glbminactivity + consdata->glbminactivityerr;
 }
 
 /** recompute the global maxactivity of a constraint */
@@ -1375,14 +1389,14 @@ void consdataRecomputeGlbMaxactivity(
       bound = (consdata->vals[i] > 0.0 ) ? SCIPvarGetUbGlobal(consdata->vars[i]) : SCIPvarGetLbGlobal(consdata->vars[i]);
       if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
          && !SCIPisHugeValue(scip, consdata->vals[i] * bound) && !SCIPisHugeValue(scip, -consdata->vals[i] * bound) )
-         consdata->glbmaxactivity += consdata->vals[i] * bound;
+         SCIPdbldblSum21(consdata->glbmaxactivity, consdata->glbmaxactivityerr, consdata->glbmaxactivity, consdata->glbmaxactivityerr, consdata->vals[i] * bound);
    }
 
    /* the activity was just computed from scratch and is valid now */
    consdata->validglbmaxact = TRUE;
 
    /* the activity was just computed from scratch, mark it to be reliable */
-   consdata->lastglbmaxactivity = consdata->glbmaxactivity;
+   consdata->lastglbmaxactivity = consdata->glbmaxactivity + consdata->glbmaxactivityerr;
 }
 
 /** calculates maximum absolute value of coefficients */
@@ -1591,6 +1605,7 @@ void consdataUpdateActivities(
    )
 {
    SCIP_Real* activity;
+   SCIP_Real* activityerr;
    SCIP_Real* lastactivity;
    int* activityposinf;
    int* activityneginf;
@@ -1608,7 +1623,9 @@ void consdataUpdateActivities(
    assert(global || (var != NULL));
    assert(consdata->validactivities);
    assert(consdata->minactivity < SCIP_INVALID);
+   assert(consdata->minactivityerr < SCIP_INVALID);
    assert(consdata->maxactivity < SCIP_INVALID);
+   assert(consdata->maxactivityerr < SCIP_INVALID);
    assert(consdata->lastminactivity < SCIP_INVALID);
    assert(consdata->lastmaxactivity < SCIP_INVALID);
    assert(consdata->minactivityneginf >= 0);
@@ -1620,7 +1637,9 @@ void consdataUpdateActivities(
    assert(consdata->maxactivityneghuge >= 0);
    assert(consdata->maxactivityposhuge >= 0);
    assert(consdata->glbminactivity < SCIP_INVALID);
+   assert(consdata->glbminactivityerr < SCIP_INVALID);
    assert(consdata->glbmaxactivity < SCIP_INVALID);
+   assert(consdata->glbmaxactivityerr < SCIP_INVALID);
    assert(consdata->lastglbminactivity < SCIP_INVALID);
    assert(consdata->lastglbmaxactivity < SCIP_INVALID);
    assert(consdata->glbminactivityneginf >= 0);
@@ -1648,6 +1667,7 @@ void consdataUpdateActivities(
          if( val > 0.0 )
          {
             activity = &(consdata->glbminactivity);
+            activityerr = &(consdata->glbminactivityerr);
             lastactivity = &(consdata->lastglbminactivity);
             activityposinf = &(consdata->glbminactivityposinf);
             activityneginf = &(consdata->glbminactivityneginf);
@@ -1658,6 +1678,7 @@ void consdataUpdateActivities(
          else
          {
             activity = &(consdata->glbmaxactivity);
+            activityerr = &(consdata->glbmaxactivityerr);
             lastactivity = &(consdata->lastglbmaxactivity);
             activityposinf = &(consdata->glbmaxactivityneginf);
             activityneginf = &(consdata->glbmaxactivityposinf);
@@ -1671,6 +1692,7 @@ void consdataUpdateActivities(
          if( val > 0.0 )
          {
             activity = &(consdata->glbmaxactivity);
+            activityerr = &(consdata->glbmaxactivityerr);
             lastactivity = &(consdata->lastglbmaxactivity);
             activityposinf = &(consdata->glbmaxactivityposinf);
             activityneginf = &(consdata->glbmaxactivityneginf);
@@ -1681,6 +1703,7 @@ void consdataUpdateActivities(
          else
          {
             activity = &(consdata->glbminactivity);
+            activityerr = &(consdata->glbminactivityerr);
             lastactivity = &(consdata->lastglbminactivity);
             activityposinf = &(consdata->glbminactivityneginf);
             activityneginf = &(consdata->glbminactivityposinf);
@@ -1704,6 +1727,7 @@ void consdataUpdateActivities(
          if( val > 0.0 )
          {
             activity = &(consdata->minactivity);
+            activityerr = &(consdata->minactivityerr);
             lastactivity = &(consdata->lastminactivity);
             activityposinf = &(consdata->minactivityposinf);
             activityneginf = &(consdata->minactivityneginf);
@@ -1714,6 +1738,7 @@ void consdataUpdateActivities(
          else
          {
             activity = &(consdata->maxactivity);
+            activityerr = &(consdata->maxactivityerr);
             lastactivity = &(consdata->lastmaxactivity);
             activityposinf = &(consdata->maxactivityneginf);
             activityneginf = &(consdata->maxactivityposinf);
@@ -1727,6 +1752,7 @@ void consdataUpdateActivities(
          if( val > 0.0 )
          {
             activity = &(consdata->maxactivity);
+            activityerr = &(consdata->maxactivityerr);
             lastactivity = &(consdata->lastmaxactivity);
             activityposinf = &(consdata->maxactivityposinf);
             activityneginf = &(consdata->maxactivityneginf);
@@ -1737,6 +1763,7 @@ void consdataUpdateActivities(
          else
          {
             activity = &(consdata->minactivity);
+            activityerr = &(consdata->minactivityerr);
             lastactivity = &(consdata->lastminactivity);
             activityposinf = &(consdata->minactivityneginf);
             activityneginf = &(consdata->minactivityposinf);
@@ -1927,12 +1954,12 @@ void consdataUpdateActivities(
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
        */
-      (*activity) = (*activity) + delta;
+      SCIPdbldblSum21((*activity), (*activityerr), (*activity), (*activityerr), delta);
       assert(!SCIPisInfinity(scip, -(*activity)) && !SCIPisInfinity(scip, *activity));
 
       if( REALABS((*lastactivity)) < REALABS(*activity) )
       {
-         (*lastactivity) = (*activity);
+         (*lastactivity) = (*activity) + (*activityerr);
       }
       else
       {
@@ -2324,7 +2351,9 @@ void consdataCalcActivities(
    consdata->maxabsval = 0.0;
    consdata->minabsval = (consdata->nvars == 0 ? 0.0 : REALABS(consdata->vals[0]));
    consdata->minactivity = 0.0;
+   consdata->minactivityerr = 0.0;
    consdata->maxactivity = 0.0;
+   consdata->maxactivityerr = 0.0;
    consdata->lastminactivity = 0.0;
    consdata->lastmaxactivity = 0.0;
    consdata->minactivityneginf = 0;
@@ -2336,7 +2365,9 @@ void consdataCalcActivities(
    consdata->maxactivityneghuge = 0;
    consdata->maxactivityposhuge = 0;
    consdata->glbminactivity = 0.0;
+   consdata->glbminactivityerr = 0.0;
    consdata->glbmaxactivity = 0.0;
+   consdata->glbmaxactivityerr = 0.0;
    consdata->lastglbminactivity = 0.0;
    consdata->lastglbmaxactivity = 0.0;
    consdata->glbminactivityneginf = 0;
@@ -2351,10 +2382,10 @@ void consdataCalcActivities(
    for( i = 0; i < consdata->nvars; ++i )
       consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i], FALSE);
 
-   consdata->lastminactivity = consdata->minactivity;
-   consdata->lastmaxactivity = consdata->maxactivity;
-   consdata->lastglbminactivity = consdata->glbminactivity;
-   consdata->lastglbmaxactivity = consdata->glbmaxactivity;
+   consdata->lastminactivity = consdata->minactivity + consdata->minactivityerr;
+   consdata->lastmaxactivity = consdata->maxactivity + consdata->maxactivityerr;
+   consdata->lastglbminactivity = consdata->glbminactivity + consdata->glbminactivityerr;
+   consdata->lastglbmaxactivity = consdata->glbmaxactivity + consdata->glbmaxactivityerr;
 }
 
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
@@ -2427,7 +2458,7 @@ void getMinActivity(
             consdataRecomputeGlbMinactivity(scip, consdata);
          assert(consdata->validglbminact);
 
-         tmpactivity = consdata->glbminactivity;
+         tmpactivity = consdata->glbminactivity + consdata->glbminactivityerr;
       }
       else
       {
@@ -2435,7 +2466,7 @@ void getMinActivity(
             consdataRecomputeMinactivity(scip, consdata);
          assert(consdata->validminact);
 
-         tmpactivity = consdata->minactivity;
+         tmpactivity = consdata->minactivity + consdata->minactivityerr;
       }
 
       /* we have no infinite and no neg. huge contributions, but pos. huge contributions;
@@ -2528,7 +2559,7 @@ void getMaxActivity(
             consdataRecomputeGlbMaxactivity(scip, consdata);
          assert(consdata->validglbmaxact);
 
-         tmpactivity = consdata->glbmaxactivity;
+         tmpactivity = consdata->glbmaxactivity + consdata->glbmaxactivityerr;
       }
       else
       {
@@ -2536,7 +2567,7 @@ void getMaxActivity(
             consdataRecomputeMaxactivity(scip, consdata);
          assert(consdata->validmaxact);
 
-         tmpactivity = consdata->maxactivity;
+         tmpactivity = consdata->maxactivity + consdata->maxactivityerr;
       }
 
       /* we have no infinite, and no pos. huge contributions, but neg. huge contributions;
@@ -5290,7 +5321,9 @@ SCIP_RETCODE tightenVarUb(
       SCIP_VARTYPE vartype;
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
-         SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newub);
+         SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos],
+         consdata->minactivity + consdata->minactivityerr,
+         consdata->maxactivity + consdata->maxactivityerr, consdata->lhs, consdata->rhs, newub);
 
       vartype = SCIPvarGetType(var);
 
@@ -5359,7 +5392,9 @@ SCIP_RETCODE tightenVarLb(
       SCIP_VARTYPE vartype;
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
-         SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
+         SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos],
+         consdata->minactivity + consdata->minactivityerr,
+         consdata->maxactivity + consdata->maxactivityerr, consdata->lhs, consdata->rhs, newlb);
 
       vartype = SCIPvarGetType(var);
 
@@ -5464,16 +5499,16 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real alpha;
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
-         if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
+         if( SCIPisFeasLT(scip, rhs, consdata->minactivity + consdata->minactivityerr) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity + consdata->minactivityerr, rhs);
 
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
 
-         slack = rhs - consdata->minactivity;
+         slack = rhs - (consdata->minactivity + consdata->minactivityerr);
 
          /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
           * it to zero
@@ -5513,16 +5548,16 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real alpha;
 
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
-         if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
+         if( SCIPisFeasLT(scip, consdata->maxactivity + consdata->maxactivityerr, lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity + consdata->maxactivityerr, lhs);
 
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
 
-         slack = consdata->maxactivity - lhs;
+         slack = (consdata->maxactivity + consdata->maxactivityerr) - lhs;
 
          /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
           * it to zero
@@ -5561,16 +5596,16 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real alpha;
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
-         if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
+         if( SCIPisFeasLT(scip, rhs, consdata->minactivity + consdata->minactivityerr) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, minactivity=%.15g > rhs=%.15g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity, rhs);
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->minactivity + consdata->minactivityerr, rhs);
 
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
 
-         slack = rhs - consdata->minactivity;
+         slack = rhs - (consdata->minactivity + consdata->minactivityerr);
 
          /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
           * it to zero
@@ -5609,16 +5644,16 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real alpha;
 
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
-         if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
+         if( SCIPisFeasLT(scip, consdata->maxactivity + consdata->maxactivityerr, lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
+               SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity + consdata->maxactivityerr, lhs);
 
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
 
-         slack = consdata->maxactivity - lhs;
+         slack = (consdata->maxactivity + consdata->maxactivityerr) - lhs;
 
          /* if the slack is zero in tolerances (or negative, but not enough to make the constraint infeasible), we set
           * it to zero
@@ -7981,7 +8016,7 @@ SCIP_RETCODE extractCliques(
              * influence to their bound forces all other variables to be at their minimal contribution, we can add these
              * implications
              */
-            if( finiterhs && finiteminact && SCIPisEQ(scip, consdata->glbminactivity, consdata->rhs - maxabscontrib) )
+            if( finiterhs && finiteminact && SCIPisEQ(scip, consdata->glbminactivity + consdata->glbminactivityerr, consdata->rhs - maxabscontrib) )
             {
                for( v = nvars - 1; v >= 0; --v )
                {
@@ -8022,7 +8057,7 @@ SCIP_RETCODE extractCliques(
              * influence to their bound forces all other variables to be at their minimal contribution, we can add these
              * implications
              */
-            if( finitelhs && finitemaxact && SCIPisEQ(scip, consdata->glbmaxactivity, consdata->lhs - maxabscontrib) )
+            if( finitelhs && finitemaxact && SCIPisEQ(scip, consdata->glbmaxactivity + consdata->glbmaxactivityerr, consdata->lhs - maxabscontrib) )
             {
                for( v = nvars - 1; v >= 0; --v )
                {
@@ -8195,7 +8230,7 @@ SCIP_RETCODE extractCliques(
          if( finiterhs && finitenegminact && nposbinvars >= 2 )
          {
             /* compute value that needs to be exceeded */
-            threshold = consdata->rhs - consdata->glbminactivity;
+            threshold = consdata->rhs - (consdata->glbminactivity + consdata->glbminactivityerr);
 
             i = 0;
             j = i + 1;
@@ -8344,7 +8379,7 @@ SCIP_RETCODE extractCliques(
          if( !stopped && !(*cutoff) && finitelhs && finiteposmaxact && nnegbinvars >= 2 )
          {
             /* compute value that needs to be deceeded */
-            threshold = consdata->lhs - consdata->glbmaxactivity;
+            threshold = consdata->lhs - (consdata->glbmaxactivity + consdata->glbmaxactivityerr);
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
@@ -8503,7 +8538,7 @@ SCIP_RETCODE extractCliques(
             BMSclearMemoryArray(values, nnegbinvars);
 
             /* compute value that needs to be exceeded */
-            threshold = consdata->rhs - consdata->glbminactivity;
+            threshold = consdata->rhs - (consdata->glbminactivity + consdata->glbminactivityerr);
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
@@ -8663,7 +8698,7 @@ SCIP_RETCODE extractCliques(
             BMSclearMemoryArray(values, nposbinvars);
 
             /* compute value that needs to be exceeded */
-            threshold = consdata->lhs - consdata->glbmaxactivity;
+            threshold = consdata->lhs - (consdata->glbmaxactivity +consdata->glbmaxactivityerr);
 
             i = 0;
             j = i + 1;
