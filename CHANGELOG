@@ -100,9 +100,12 @@ Fixed bugs
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
+- fixed the upgrade routine to XOR constraints: aggregate integer variable if its coefficient has the wrong sign
 - fixed handling of nonartificial parity variables when deleting redundant XOR constraints
 - earlier deletion of trivial XOR constraints (at most 1 operator left)
--
+- fixed wrong hashmap accesses and added sanity check for the correct hashmap type
+- avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
+- corrected the output of the first LP value in case of branch-and-price
 
 Miscellaneous
 -------------
