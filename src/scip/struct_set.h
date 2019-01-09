@@ -377,7 +377,8 @@ struct SCIP_Set
    SCIP_Bool             misc_allowstrongdualreds; /**< should strong dual reductions be allowed in propagation and presolving? */
    SCIP_Bool             misc_allowweakdualreds;  /**< should weak dual reductions be allowed in propagation and presolving? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
-   int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+   int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing;
+                                              *   3: orbitopes and orbital fixing) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
