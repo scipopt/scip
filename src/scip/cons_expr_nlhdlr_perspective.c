@@ -497,12 +497,9 @@ SCIP_RETCODE freeNlhdlrExprData(
 {
    int c;
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convterms), nlhdlrexprdata->convtermssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convcoefs), nlhdlrexprdata->convtermssize);
-
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->onoffterms), nlhdlrexprdata->nonoffterms);
-   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->onoffcoefs), nlhdlrexprdata->nonoffterms);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->bvars), nlhdlrexprdata->nonoffterms);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->onoffcoefs), nlhdlrexprdata->nonoffterms);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->onoffterms), nlhdlrexprdata->nonoffterms);
 
    if( nlhdlrexprdata->varexprs != NULL )
    {
@@ -512,6 +509,9 @@ SCIP_RETCODE freeNlhdlrExprData(
       }
       SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->varexprs, nlhdlrexprdata->nvarexprs);
    }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convcoefs), nlhdlrexprdata->convtermssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->convterms), nlhdlrexprdata->convtermssize);
 
    return SCIP_OKAY;
 }
@@ -687,10 +687,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    (*nlhdlrexprdata)->curvature = SCIPgetConsExprExprCurvature(expr);
    SCIPdebugMsg(scip, "expr %p is %s\n", expr, (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX ? "convex" : "concave");
 
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
    if( nlhdlrdata->scvars == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), nvars) );
+      SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), (*nlhdlrexprdata)->nvarexprs) );
    }
 
    /* prepare the list of terms */
@@ -702,10 +702,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    }
    else
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &children, 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, 1) );
       *children = expr;
       nchildren = 1;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &coefs, 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, 1) );
       *coefs = 1.0;
    }
    SCIP_CALL( SCIPhashmapCreate(&onoffterms, SCIPblkmem(scip), nchildren) );
@@ -716,7 +716,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
     */
    for( c = 0; c < nchildren; ++c )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, (*nlhdlrexprdata)->nvarexprs) );
       SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, children[c], varexprs, &nvars) );
       bvar = NULL;
       expr_is_onoff = TRUE;
@@ -756,13 +756,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       {
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
+      SCIPfreeBufferArray(scip, &varexprs);
    }
 
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &children, 1);
-      SCIPfreeBlockMemoryArrayNull(scip, &coefs, 1);
+      SCIPfreeBufferArray(scip, &coefs);
+      SCIPfreeBufferArray(scip, &children);
    }
 
    /* check curvature of the terms */
@@ -819,9 +819,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          SCIPdebugMsg(scip, "detected expr to be concave -> can enforce expr >= auxvar\n");
       }
       /* save varexprs to nlhdlrexprdata */
-      SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &(*nlhdlrexprdata)->nvarexprs) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
-      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &((*nlhdlrexprdata)->nvarexprs)) );
+      SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
 
       /* move the on/off terms to an array */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->onoffterms, (*nlhdlrexprdata)->nonoffterms) );
