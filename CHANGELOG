@@ -15,13 +15,8 @@ Performance improvements
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
 
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
-
-### New and changed callbacks
 
 ### Deleted and changed API methods and macros
 
@@ -45,26 +40,14 @@ Interface changes
 
 - warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
 
-### Interfaces to external software
-
 ### Changed parameters
 
 - default clock type for timing is now wallclock
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
 
 Unit tests
 ----------
 
 - added unit tests for exact knapsack solving and (weighted) median selection algorithms
-
-Testing
--------
 
 Build system
 ------------
@@ -74,8 +57,6 @@ Build system
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
 - new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
-
-### Makefile
 
 Fixed bugs
 ----------
