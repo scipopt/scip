@@ -4677,6 +4677,7 @@ SCIP_RETCODE nlpSolve(
    )
 {
    SCIP_Real sciptimelimit;
+   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -4727,8 +4728,8 @@ SCIP_RETCODE nlpSolve(
 
    /* set the NLP timelimit to the remaining time */
    SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM,
-      MAX(0.0, sciptimelimit - SCIPclockGetTime(stat->solvingtime))) ); /*lint !e666*/
+   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
 
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
