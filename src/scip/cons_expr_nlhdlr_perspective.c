@@ -217,10 +217,10 @@ SCIP_RETCODE addOnoffTerm(
 /** adds an expression to the array of convex expressions */
 static
 SCIP_RETCODE addConvTerm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
-   SCIP_Real             coef,               /**< coefficient of expr in the original expression */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression to be added */
+   SCIP*                           scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA*   nlhdlrexprdata,   /**< nonlinear handler expression data */
+   SCIP_Real                       coef,             /**< coefficient of expr in the original expression */
+   SCIP_CONSEXPR_EXPR*             expr              /**< expression to be added */
 )
 {
    int newsize;
@@ -290,7 +290,7 @@ SCIP_RETCODE addGradientLinearisation(
    }
 
    /* compute gradient cut */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
    for( i = 0; i < nvars; ++i )
    {
@@ -318,12 +318,7 @@ SCIP_RETCODE addGradientLinearisation(
          *success = FALSE;
          SCIPdebugMsg(scip, "evaluation error / too large values (%g %g) for %s in %p\n", derivative, val,
                       SCIPvarGetName(var), (void*)expr);
-         for( v = 0; v < nvars; ++v )
-         {
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
-         }
-         SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* - grad(g(x*))_i x*_i */
@@ -333,14 +328,15 @@ SCIP_RETCODE addGradientLinearisation(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef*derivative) );
    }
 
+   /* add constant */
+   SCIPaddRowprepConstant(rowprep, coef*constant);
+
+ TERMINATE:
    for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
    }
-   SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-
-   /* add constant */
-   SCIPaddRowprepConstant(rowprep, coef*constant);
+   SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }
@@ -379,10 +375,10 @@ SCIP_RETCODE addPerspectiveLinearisation(
     */
 
    SCIP_CALL( SCIPcreateSol(scip, &sol0, NULL) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNTotalVars(scip)) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals0, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals0, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "bvar = \n");
    SCIPprintVar(scip, bvar, NULL);
@@ -411,15 +407,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
    if( SCIPisInfinity(scip, REALABS(fval0)) )
    {
       *success = FALSE;
-      for(v = 0; v < nvars; ++v)
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
-      }
-      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
-      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval0, (void*)expr);
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* get f(sol) */
@@ -430,15 +419,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
    if( SCIPisInfinity(scip, REALABS(fval)) )
    {
       *success = FALSE;
-      for(v = 0; v < nvars; ++v)
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
-      }
-      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
-      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", fval, (void*)expr);
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* add (f(sol) - f(x0))z + f(x0) */
@@ -452,15 +434,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
    if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
    {
       *success = FALSE;
-      for(v = 0; v < nvars; ++v)
-      {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
-      }
-      SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
-      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    scalar_prod = 0.0;
@@ -476,14 +451,19 @@ SCIP_RETCODE addPerspectiveLinearisation(
 
       /* compute -(soli - x0i) f'xi(sol) */
       scalar_prod -= (SCIPgetSolVal(scip, sol, var) - vals0[v])*SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, var);
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
    }
-   SCIPfreeBlockMemoryArray(scip, &varexprs, SCIPgetNTotalVars(scip));
-   SCIPfreeBlockMemoryArray(scip, &vals0, nvars);
-   SCIPfreeBlockMemoryArray(scip, &vars, nvars);
 
    /* add -(sol - x0) \nabla f(sol)) z */
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bvar, coef*scalar_prod) );
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals0);
+   for(v = 0; v < nvars; ++v)
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
+   }
+   SCIPfreeBufferArray(scip, &varexprs);
 
    return SCIP_OKAY;
 }
@@ -796,6 +776,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
             {
                SCIPdebugMsg(scip, "Non-convex onoff term, curv %d, expr curv %d: detect will return false\n", child_curvature, (*nlhdlrexprdata)->curvature);
                *success = FALSE;
+               break;
             }
          }
       }
@@ -995,7 +976,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    if( success )
    {
       SCIP_Bool infeasible;
-      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "Separating sol point\n");
       for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
