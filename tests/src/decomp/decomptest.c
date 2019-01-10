@@ -35,6 +35,7 @@ static SCIP_VAR* vars[NVARS];
 static SCIP_CONS* conss[NCONSS];
 static int labels_vars[] = {SCIP_DECOMP_LINKVAR,0,0,1,1};
 static int labels_conss[] = {SCIP_DECOMP_LINKCONS, 0, 1};
+static int nblocks = 2; /* only blocks that aren't linking blocks are counted */
 static char strbuf1[1024];
 static char strbuf2[1024];
 
@@ -77,7 +78,7 @@ void setup(void)
 
 
    SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
-   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), TRUE) );
+   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE) );
 
    setupData();
 }
@@ -102,7 +103,7 @@ Test(decomptest, create_and_free)
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
    SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), TRUE) );
+   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), 1, TRUE) );
 
    SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
 }
