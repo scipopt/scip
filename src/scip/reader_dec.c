@@ -258,7 +258,9 @@ SCIP_RETCODE readDecomposition(
    /* create a decomposition and add it to the decomposition storage of SCIP */
    if( ! error )
    {
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), TRUE) );
+      char strbuf[SCIP_MAXSTRLEN];
+
+      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
       SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);
@@ -268,11 +270,16 @@ SCIP_RETCODE readDecomposition(
       SCIPdebugMsg(scip, "Using %d SCIP constraints for labeling variables.\n", nconss);
       SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, scip_conss, nconss) );
 
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+
       SCIP_CALL( SCIPdecompstoreAdd(decompstore, decomp) );
 
 
       /* display result */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Added decomposition <%s> with %d blocks to SCIP\n", filename, nblocks);
+
+      /* print decomposition statistics */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Decomposition statistics:\n%s\n", SCIPdecompPrintStats(decomp, strbuf));
    }
    else
    {

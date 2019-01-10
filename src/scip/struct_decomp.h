@@ -37,6 +37,12 @@ struct SCIP_Decomp
    SCIP_HASHMAP*         var2block;          /**< hash map from SCIP variables to block labels */
    SCIP_HASHMAP*         cons2block;         /**< hash map from SCIP constraints to block labels */
    SCIP_Real             score;              /**< score of this decomposition */
+   SCIP_Real             modularity;         /**< modularity score (comparison of within community edges and random decomposition) */
+   int                   idxlargestblock;    /**< index of the of the largest block (regarding the number of constraints) */
+   int                   idxsmallestblock;   /**< index of the smallest block (regarding the number of constraints) */
+   int*                  varssize;           /**< variable size for each block, sorted by increasing block label */
+   int*                  consssize;          /**< constraint size for each block, sorted by increasing block label */
+   int*                  labels;             /**< integer label for each block */
    int                   nblocks;            /**< the number of variable blocks without the linking block */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
    SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
