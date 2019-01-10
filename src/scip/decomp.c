@@ -46,6 +46,7 @@
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   nblocks,            /**< the number of blocks (without the linking block) */
    SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
    )
 {
@@ -56,8 +57,16 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_CALL( SCIPhashmapCreate(&(*decomp)->var2block, blkmem, INIT_MAP_SIZE) );
    SCIP_CALL( SCIPhashmapCreate(&(*decomp)->cons2block, blkmem, INIT_MAP_SIZE) );
 
-   (*decomp)->nblocks = 0;
+   /* we allocate one extra slot for the linking block */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->varssize, nblocks + 1) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->consssize, nblocks + 1) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->labels, nblocks + 1) );
+
+   (*decomp)->nblocks = nblocks;
    (*decomp)->score = -1.0;
+   (*decomp)->modularity = -1.0;
+   (*decomp)->idxsmallestblock = 0;
+   (*decomp)->idxlargestblock = 0;
    (*decomp)->haschanges = FALSE;
    (*decomp)->original = original;
 
@@ -79,6 +88,10 @@ void SCIPdecompFree(
    assert((*decomp)->var2block != NULL);
    SCIPhashmapFree(&(*decomp)->var2block);
    SCIPhashmapFree(&(*decomp)->cons2block);
+
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->varssize, (*decomp)->nblocks + 1);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->consssize, (*decomp)->nblocks + 1);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->labels, (*decomp)->nblocks + 1);
 
    BMSfreeBlockMemory(blkmem, decomp);
 }
@@ -225,6 +238,16 @@ SCIP_Bool SCIPdecompIsOriginal(
    assert(decomp != NULL);
 
    return decomp->original;
+}
+
+/** gets number of blocks of this decomposition */
+int SCIPdecompGetNBlocks(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->nblocks;
 }
 
 /** raises an error if the condition is not TRUE */
@@ -403,6 +426,298 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    SCIPfreeBufferArray(scip, &conslabels);
 
    return SCIP_OKAY;
+}
+
+/** count occurrences of label in array, starting from pos */
+static
+int countLabelFromPos(
+   int*                  labels,             /**< array of labels */
+   int                   pos,                /**< position to start counting from */
+   int                   nlabels             /**< the number of labels */
+   )
+{
+   int endpos = pos;
+   int currlabel;
+
+   assert(labels != NULL);
+   assert(pos < nlabels);
+
+   currlabel = labels[pos];
+
+   do
+   {
+      endpos++;
+   }
+   while( endpos < nlabels && labels[endpos] == currlabel );
+
+   return endpos - pos;
+}
+
+/** todo compute decomposition modularity */
+static
+SCIP_RETCODE computeModularity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Real*            modularity          /**< pointer to store modularity value */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_VAR** varbuf;
+   int* varslabels;
+   int* conslabels;
+   int* totaldegrees; /* the total degree for every block */
+   int* withinedges; /* the number of edges within each block */
+   int nnonzeroes = 0;
+   int nvars;
+   int nconss;
+   int c;
+   int b;
+
+   /* allocate buffer arrays to hold constraint and variable labels,  and store within-edges and total community degrees */
+   nvars = SCIPgetNVars(scip);
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, nvars) );
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &totaldegrees, decomp->nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &withinedges, decomp->nblocks + 1) );
+
+   SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+
+   /*
+    * loop over all nonzeroes, consider the labels of the incident nodes (cons and variable)
+    * and increase the corresponding counters
+    */
+   for( c = 0; c < nconss; ++c )
+   {
+      int nconsvars;
+      int conslabel;
+      int blockpos;
+      int varblockstart;
+      SCIP_Bool success;
+
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
+      SCIP_CALL( ensureCondition(success) );
+
+      if( nvars == 0 )
+         continue;
+
+      SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuf, nvars, &success) );
+      SCIP_CALL( ensureCondition(success) );
+
+      /* author bzfhende
+       *
+       * TODO replace the variables by their active representatives for transformed decompositions
+       */
+      SCIPdecompGetVarsLabels(decomp, varbuf, varslabels, nconsvars);
+
+      conslabel = conslabels[c];
+      /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
+      if( conslabel == SCIP_DECOMP_LINKCONS )
+         blockpos = 0;
+      else
+      {
+         SCIP_Bool found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
+         assert(found);
+      }
+
+      SCIPsortInt(varslabels, nconsvars);
+
+      /* increase the total degrees and nonzero (edge) counts */
+      totaldegrees[blockpos] += nconsvars;
+      nnonzeroes += nconsvars;
+
+      /* count occurences of labels (blocks) in the sorted labels array */
+      varblockstart = 0;
+      while( varblockstart < nconsvars )
+      {
+         int varblockpos;
+         int nblockvars = countLabelFromPos(varslabels, varblockstart, nconsvars);
+         SCIP_Bool found;
+
+         found = SCIPsortedvecFindInt(decomp->labels, varslabels[varblockstart], decomp->nblocks + 1, &varblockpos);
+         assert(found);
+
+         /* increase the number of within edges for variable and constraints from the same block */
+         if( varblockpos == blockpos )
+            withinedges[varblockpos] += nblockvars;
+
+         totaldegrees[varblockpos] += nblockvars;
+         varblockstart += nblockvars;
+      }
+   }
+
+   /* compute modularity */
+   *modularity = 0.0;
+   for( b = 1; b < decomp->nblocks + 1; ++b )
+   {
+      SCIP_Real expectedval;
+      expectedval = totaldegrees[b] / (2.0 * nnonzeroes);
+      expectedval = SQR(expectedval);
+      *modularity += (withinedges[b] / (SCIP_Real)nnonzeroes) - expectedval;
+   }
+
+   SCIPfreeBufferArray(scip, &withinedges);
+   SCIPfreeBufferArray(scip, &totaldegrees);
+   SCIPfreeBufferArray(scip, &varbuf);
+   SCIPfreeBufferArray(scip, &varslabels);
+   SCIPfreeBufferArray(scip, &conslabels);
+
+   return SCIP_OKAY;
+}
+
+/** compute decomposition statistics and store them in the decomp object */
+SCIP_RETCODE SCIPcomputeDecompStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_CONS** conss;
+   int* varslabels;
+   int* conslabels;
+   int nvars;
+   int nconss;
+   int varblockstart;
+   int consblockstart;
+   int currlabelidx;
+
+   assert(scip != NULL);
+   assert(decomp != NULL);
+
+   /* store variable and constraint labels in buffer arrays */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+  /* return if problem is empty
+   *
+   * TODO ensure that statistics reflect this correctly
+   */
+  if( nvars == 0 || nconss == 0 )
+  {
+     return SCIP_OKAY;
+  }
+
+  SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+  SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
+
+  SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+  SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+
+  /* sort both buffer arrays for quick counting */
+  SCIPsortInt(varslabels, nvars);
+  SCIPsortInt(conslabels, nconss);
+
+
+
+  decomp->labels[0] = SCIP_DECOMP_LINKVAR;
+
+  /* treat border (linking variables) first */
+  if( varslabels[0] == SCIP_DECOMP_LINKVAR )
+     decomp->varssize[0] = countLabelFromPos(varslabels, 0, nvars);
+  else
+     decomp->varssize[0] = 0;
+
+  currlabelidx = 1;
+  varblockstart = decomp->varssize[0];
+  assert(varblockstart == nvars || varslabels[varblockstart] > SCIP_DECOMP_LINKVAR);
+
+   /* loop over the variables count the occurrences, storing also the integer labels */
+  while( varblockstart < nvars )
+  {
+     decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varblockstart, nvars);
+
+     decomp->labels[currlabelidx] = varslabels[varblockstart];
+     varblockstart += decomp->varssize[currlabelidx];
+     currlabelidx++;
+  }
+
+
+
+  /* count border constraints and store their number */
+  if( conslabels[0] == SCIP_DECOMP_LINKCONS )
+     decomp->consssize[0] = countLabelFromPos(conslabels, 0, nconss);
+  else
+     decomp->consssize[0] = 0;
+
+
+  consblockstart = decomp->consssize[0];
+  assert(consblockstart == nconss || conslabels[consblockstart] >= 0);
+
+  /* loop over remaining, non-border constraints */
+  decomp->idxsmallestblock = decomp->idxlargestblock = -1;
+  currlabelidx = 1;
+  while( consblockstart < nconss )
+  {
+     assert(conslabels[consblockstart] == SCIP_DECOMP_LINKCONS ||
+           conslabels[consblockstart] == decomp->labels[currlabelidx]);
+
+     decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, consblockstart, nconss);
+
+     /* update index to largest and smallest constraint blocks (don't consider border for this statistic) */
+     if( decomp->idxlargestblock == -1 )
+     {
+        decomp->idxlargestblock = decomp->idxsmallestblock = currlabelidx;
+     }
+     else if( decomp->consssize[currlabelidx] > decomp->consssize[decomp->idxlargestblock] )
+        decomp->idxlargestblock = currlabelidx;
+     else if( decomp->consssize[currlabelidx] < decomp->consssize[decomp->idxsmallestblock] )
+        decomp->idxsmallestblock = currlabelidx;
+
+     consblockstart += decomp->consssize[currlabelidx];
+     currlabelidx++;
+  }
+
+  SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
+
+  SCIPfreeBufferArray(scip, &conslabels);
+  SCIPfreeBufferArray(scip, &varslabels);
+
+   return SCIP_OKAY;
+}
+
+/** print decomposition statistics into string buffer */
+char* SCIPdecompPrintStats(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   char*                 strbuf              /**< string buffer storage */
+   )
+{
+   char* ptr;
+
+   assert(decomp != NULL);
+   assert(strbuf != NULL);
+
+   ptr = strbuf;
+
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Decomposition with %d blocks.\n",
+            decomp->nblocks);
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Largest block: Block %d with %d constraints and %d variables\n",
+            decomp->nblocks == 0 ? -1 : decomp->labels[decomp->idxlargestblock],
+            decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxlargestblock],
+            decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxlargestblock]);
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Smallest block: Block %d with %d constraints and %d variables\n",
+            decomp->nblocks == 0 ? 0 : decomp->labels[decomp->idxsmallestblock],
+            decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxsmallestblock],
+            decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxsmallestblock]);
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Border has %d constraints and %d variables\n",
+            decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->consssize[0] : 0,
+            decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->varssize[0] : 0
+            );
+
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Modularity: %.3f\n",
+            decomp->modularity);
+
+   return strbuf;
 }
 
 /** create a decomposition storage */
@@ -643,8 +958,7 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 1. query the decomposition labels of the original variables and set them for the transformed variables
        * that have original counterparts
        */
-
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), original) );
+      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), SCIPdecompGetNBlocks(origdecomp), original) );
 
       SCIPdecompGetVarsLabels(origdecomp, origvars, varslabels, nvarsoriginal);
 

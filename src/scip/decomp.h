@@ -39,6 +39,7 @@ EXTERN
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   nblocks,            /**< the number of blocks (without the linking block) */
    SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
    );
 
@@ -52,6 +53,12 @@ void SCIPdecompFree(
 /** returns TRUE if decomposition is in the original space */
 EXTERN
 SCIP_Bool SCIPdecompIsOriginal(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets number of blocks of this decomposition */
+EXTERN
+int SCIPdecompGetNBlocks(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
@@ -116,18 +123,24 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    int                   nconss              /**< number of constraints */
    );
 
+/** compute decomposition statistics and store them in the decomp object */
+EXTERN
+SCIP_RETCODE SCIPcomputeDecompStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** print decomposition statistics into string buffer */
+EXTERN
+char* SCIPdecompPrintStats(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   char*                 strbuf              /**< string buffer storage */
+   );
+
 /* author bzfhende
  *
  * TODO query if a variable is a linking variable
  */
-
-/* author bzfhende
- *
- * TODO transform method for a decomposition
- */
-
-
-
 
 /* author bzfhende
  *
