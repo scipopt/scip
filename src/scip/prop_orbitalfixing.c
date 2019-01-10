@@ -424,6 +424,7 @@ SCIP_RETCODE getSymmetries(
    SCIP_Bool recompute = FALSE;
    SCIP_VAR** permvars;
    int v;
+   int usesymmetry;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -486,8 +487,11 @@ SCIP_RETCODE getSymmetries(
       recompute = TRUE;
    }
 
-   /* now possibly (re)compute symmetries */
-   if ( propdata->nperms < 0 )
+   /* now possibly (re)compute symmetries or deactivate OF */
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+      propdata->enabled = FALSE;
+   else if ( propdata->nperms < 0 )
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
             &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL,
