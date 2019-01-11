@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans, 
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans,
          source->probinitsol, source->probexitsol, source->probcopy, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 
@@ -555,6 +555,12 @@ SCIP_RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
+      /* todo exip: wrap this */
+      if( set->misc_exactsolve && source->vars[v]->exactdata != NULL )
+      {
+          SCIP_CALL( SCIPvarAddExactData(targetvar, blkmem, source->vars[v]->exactdata->lbglb,
+            source->vars[v]->exactdata->ubglb, source->vars[v]->exactdata->obj ) );
+      }
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
@@ -590,7 +596,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
-    * cutoff bound if primal solution is already known 
+    * cutoff bound if primal solution is already known
     */
    SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
 
@@ -1466,7 +1472,7 @@ void SCIPprobSetObjIntegral(
    prob->objisintegral = TRUE;
 }
 
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
