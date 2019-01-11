@@ -74,6 +74,7 @@
 #include "scip/implics.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
 #include "scip/misc.h"
@@ -440,6 +441,10 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPeventqueueCreate(&scip->eventqueue) );
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPlpexCreate(&scip->lpex, scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
+   }
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
@@ -2104,7 +2109,12 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
 
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPlpexFree(&scip->lpex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+   }
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
