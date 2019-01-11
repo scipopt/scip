@@ -116,6 +116,8 @@ SCIP_RETCODE readDecomposition(
    int* labels;
    int nconss;
    int consptr;
+   int nblockscounted;
+
    DEC_SECTION section;
 
    SCIP_DECOMP* decomp;
@@ -158,6 +160,7 @@ SCIP_RETCODE readDecomposition(
    /* start parsing the file */
    section = DEC_SECTION_INIT;
    consptr = 0;
+   nblockscounted = 0;
    while( !SCIPfeof(file) && !error )
    {
       char buffer[SCIP_MAXSTRLEN];
@@ -182,6 +185,12 @@ SCIP_RETCODE readDecomposition(
 
          nread = sscanf(buffer, "BLOCK %1018d\n", &currblock);
          if( nread < 1 )
+         {
+            error = TRUE;
+            break;
+         }
+         /* count number of block manually. If it is different from the number of specified blocks, throw an error */
+         else if( ++nblockscounted > nblocks )
          {
             error = TRUE;
             break;
@@ -254,6 +263,14 @@ SCIP_RETCODE readDecomposition(
 
    /* close input file */
    SCIPfclose(file);
+
+   /* compare specified and actual number of blocks; stop on mismatch */
+   if( nblockscounted != nblocks )
+   {
+      SCIPerrorMessage("Error: Block number specification is wrong: Specified %d blocks, counted %d.\n",
+         nblocks, nblockscounted);
+      error = TRUE;
+   }
 
    /* create a decomposition and add it to the decomposition storage of SCIP */
    if( ! error )
