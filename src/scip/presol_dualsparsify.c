@@ -675,7 +675,7 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
             SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
-   printf("%d, %d, %s, %s\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx2]), SCIPvarGetName(vars[colidx2]) );
+//   printf("%d, %d, %s, %s\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx2]), SCIPvarGetName(vars[colidx2]) );
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
@@ -930,10 +930,77 @@ SCIP_Bool isHoleExist(
    assert(SCIPisIntegral(scip, scale));
    assert(SCIPvarIsIntegral(vars[colidx1]));
    assert(SCIPvarIsIntegral(vars[colidx2]));
+   
+   if( SCIPisEQ(scip, REALABS(scale), 1.0) )
+      return FALSE;
+   {
+      SCIP_Real lb1;
+      SCIP_Real ub1;
+      SCIP_Real lb2;
+      SCIP_Real ub2;
 
-//   SCIP_Real val1 = scale;
+      lb1 = SCIPvarGetLbGlobal(vars[colidx1]);
+      ub1 = SCIPvarGetUbGlobal(vars[colidx1]);
+      lb2 = SCIPvarGetLbGlobal(vars[colidx2]);
+      ub2 = SCIPvarGetUbGlobal(vars[colidx2]);
+
+      
+      if( SCIPisInfinity(scip, -lb1) || SCIPisInfinity(scip, ub1) || 
+               SCIPisInfinity(scip, -lb2) || SCIPisInfinity(scip, ub2) )
+         return TRUE;
+      else
+      {
+         SCIP_Real mergeval;
+         SCIP_Real mergeub;
+         SCIP_Bool foundhole;
+
+         assert(SCIPisIntegral(scip, lb1));
+         assert(SCIPisIntegral(scip, ub1));
+         assert(SCIPisIntegral(scip, lb2));
+         assert(SCIPisIntegral(scip, ub2));
+
+         mergeval = lb2;
+         mergeub = ub2;
+
+         if( scale < 0 )
+         {
+            mergeval += scale*ub1;
+            mergeub += scale*lb1;
+         }
+         else
+         {
+            mergeval += scale*lb1;
+            mergeub += scale*ub1;
+         }
+
+         foundhole = FALSE; 
+         while( SCIPfeasRound(scip, mergeval) <= SCIPfeasRound(scip, mergeub) )
+         {
+            SCIP_Real col1val = lb1;
+            
+            foundhole = TRUE;
+            while( SCIPfeasRound(scip, col1val) <= SCIPfeasRound(scip, ub1) )
+            {
+               SCIP_Real col2val = mergeval - col1val*scale;
+
+               if( SCIPisGE(scip, col2val, lb2) && SCIPisLE(scip, col2val, ub2) )
+               {
+                  foundhole = FALSE;
+                  break;
+               }
+
+               col1val += 1;
+            }
+            if( foundhole )
+               break;
+            
+            mergeval += 1;
+         }
+         return foundhole;
+      }
 
 
+   }
 }
 
 
@@ -1049,6 +1116,7 @@ SCIP_RETCODE cancelColHash(
             SCIP_VAR* implcolvar;
             SCIP_Real implcollb;
             SCIP_Real implcolub;
+            SCIP_Bool implcolisbin;
             SCIP_Real scale;
             SCIP_Real cancelrate;
             int i1,i2;
@@ -1095,6 +1163,7 @@ SCIP_RETCODE cancelColHash(
             implcolvar = vars[implcolconspair->colindex];
             implcollb = SCIPvarGetLbGlobal(implcolvar);
             implcolub = SCIPvarGetUbGlobal(implcolvar);
+            implcolisbin = (SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY);
 
             scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
 
@@ -1107,7 +1176,7 @@ SCIP_RETCODE cancelColHash(
                {
                   if( (SCIPvarGetType(implcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
-                  if( !SCIPisEQ(scip, REALABS(scale), 1.0) )
+                  if( isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
                   {
                      /*TODO: can do more*/
                      continue;
@@ -1127,8 +1196,16 @@ SCIP_RETCODE cancelColHash(
             nintfillin = 0;
             nbinfillin = 0;
             abortpair = FALSE;
+
             while( a < cancelcollen && b < implcollen )
             {
+               /* the constraints is knapsack constraints, we need to avoid this case. Otherwise, it will output some error. */
+               if(implcolisbin && (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) == SCIPfindConshdlr(scip, "knapsack")))
+               {
+                  abortpair = TRUE;
+                  break;
+               }
+
                if( cancelcolinds[a] == implcolinds[b] )
                {
                   SCIP_Real newcoef;
@@ -1379,7 +1456,6 @@ SCIP_RETCODE cancelColHash(
          cancelcollen = tmpcollen;
 
          SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx, bestcand, TRUE, -bestscale) );
-         break;
       }
       else
          break;
