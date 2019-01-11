@@ -40,6 +40,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/decomp.h"
 #include "scip/heur_gins.h"
 #include "scip/heuristics.h"
 #include "scip/pub_heur.h"
@@ -167,6 +168,7 @@ struct SCIP_HeurData
 #endif
    int                   nrelaxedconstraints; /**< number of constraints that were relaxed */
    int                   nfailures;           /**< counter for the number of unsuccessful runs of this heuristic */
+   int                   lastblockuseddecomp; /**< last block label used from decomposition */
    SCIP_Longint          nextnodenumber;      /**< the next node number at which the heuristic should be called again */
 };
 
@@ -379,6 +381,32 @@ SCIP_Bool isVariableInNeighborhood(
    return (distances[SCIPvarGetProbindex(var)] != -1 && distances[SCIPvarGetProbindex(var)] <= maxdistance);
 }
 
+/** get fixing value of variable */
+static
+SCIP_Real getFixVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution in main SCIP for fixing values */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real fixval;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   fixval = SCIPgetSolVal(scip, sol, var);
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   assert(SCIPisLE(scip, lb, ub));
+
+   /* due to dual reductions, it may happen that the solution value is not in the variable's domain anymore */
+   if( SCIPisLT(scip, fixval, lb) )
+      fixval = lb;
+   else if( SCIPisGT(scip, fixval, ub) )
+      fixval = ub;
+
+   return fixval;
+}
+
 /** fixes variables in subproblem based on long breadth-first distances in variable graph */
 static
 SCIP_RETCODE fixNonNeighborhoodVariables(
@@ -411,26 +439,15 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
       /* fix all variables that are too far away from this variable according to maxdistance */
       if( distances[i] == -1 || distances[i] > maxdistance )
       {
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
+         SCIP_Real fixval;
 
-         solval = SCIPgetSolVal(scip, sol, vars[i]);
-         lb = SCIPvarGetLbGlobal(vars[i]);
-         ub = SCIPvarGetUbGlobal(vars[i]);
-         assert(SCIPisLE(scip, lb, ub));
-
-         /* due to dual reductions, it may happen that the solution value is not in the variable's domain anymore */
-         if( SCIPisLT(scip, solval, lb) )
-            solval = lb;
-         else if( SCIPisGT(scip, solval, ub) )
-            solval = ub;
+         fixval = getFixVal(scip, sol, vars[i]);
 
          /* perform the bound change */
-         if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
+         if( !SCIPisInfinity(scip, REALABS(fixval)) )
          {
             fixedvars[*nfixings] = vars[i];
-            fixedvals[*nfixings] = solval;
+            fixedvals[*nfixings] = fixval;
             ++(*nfixings);
          }
       }
@@ -784,6 +801,162 @@ SCIP_RETCODE selectNextVariable(
    return SCIP_OKAY;
 }
 
+/** check if enough fixings have been found */
+static
+SCIP_Bool checkFixingrate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int                   nfixings            /**< actual number of fixings */
+   )
+{
+   int fixthreshold;
+   int nvars = SCIPgetNVars(scip);
+   int nbinvars = SCIPgetNBinVars(scip);
+   int nintvars = SCIPgetNIntVars(scip);
+   fixthreshold = (int)(heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
+
+   /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here;
+    * we also terminate if no discrete variables are left
+    */
+   if( nfixings < fixthreshold )
+   {
+      SCIPdebugMsg(scip, "Fixed %d < %d variables in gins heuristic, stopping\n", nfixings, fixthreshold);
+
+      return FALSE;
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "Fixed enough (%d >= %d) variables in gins heuristic\n", nfixings, fixthreshold);
+
+      return TRUE;
+   }
+}
+
+/** determine the variable fixings based on a decomposition */
+static
+SCIP_RETCODE determineVariableFixingsDecomp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition in transformed space */
+   SCIP_VAR**            fixedvars,          /**< buffer to store variables that should be fixed */
+   SCIP_Real*            fixedvals,          /**< buffer to store fixing values for fixed variables */
+   int*                  nfixings,           /**< pointer to store the number of fixed variables */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
+   )
+{
+
+   SCIP_VAR** vars;
+   SCIP_VAR** varscopy;
+   SCIP_SOL* sol;
+   int* varslabels;
+   int nvars;
+   int currblockstart;
+   int currblockend;
+
+   assert(scip != NULL);
+   assert(decomp != NULL);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   sol = SCIPgetBestSol(scip);
+
+   /* get variable labels for all variables, including continuous. Sort the variables by label. */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nvars) );
+
+   SCIPdecompGetVarsLabels(decomp, varscopy, varslabels, nvars);
+
+   SCIPsortIntPtr(varslabels, (void **)varscopy, nvars);
+
+   /* get the last block that was used by the heuristic. Search for it, and continue with the next block. */
+   if( heurdata->lastblockuseddecomp == INT_MIN )
+   {
+      currblockstart = 0;
+   }
+   else
+   {
+      SCIP_Bool found;
+      found = SCIPsortedvecFindInt(varslabels, heurdata->lastblockuseddecomp, nvars, &currblockstart);
+      assert(found);
+
+      /* increase the start pointer until we reach the beginning of a new block */
+      do
+      {
+         currblockstart++;
+      }
+      while( currblockstart < nvars && varslabels[currblockstart] == heurdata->lastblockuseddecomp );
+
+      /* reset the pointer if we reached the end */
+      if( currblockstart == nvars )
+         currblockstart = 0;
+   }
+   /* author bzfhende
+    *
+    * TODO compute and sort the blocks with highest potential for fixing
+    */
+
+   currblockend = currblockstart;
+   do
+   {
+      currblockend++;
+   } while( currblockend < nvars && varslabels[currblockend] == varslabels[currblockstart]);
+   heurdata->lastblockuseddecomp = varslabels[currblockstart];
+
+   /* author bzfhende
+    *
+    * TODO this block could also be far too small to be processed alone; extend it by more blocks.
+    */
+
+   /* finish if this block has too many variables */
+   if( currblockend - currblockstart > (1 - heurdata->minfixingrate) * nvars )
+      *success = FALSE;
+   else
+   {
+      /* fix all discrete/continuous variables that are not part of this block */
+      int v;
+      int startposs[] = {0, currblockend};
+      int endposs[] = {currblockstart, nvars};
+      int p;
+
+      SCIPdebugMsg(scip, "Fix %s variables outside of block %d\n",
+         heurdata->fixcontvars ? "all" : "discrete",
+         varslabels[currblockstart]);
+
+      /* iterate through all variables outside the unfixed block */
+      for( p = 0; p < 2; ++p )
+      {
+         /* fix variables outside of this block */
+         for( v = startposs[p]; v < endposs[p]; ++v )
+         {
+            SCIP_VAR* var = varscopy[v];
+
+            assert(varslabels[v] != varslabels[currblockstart]);
+            if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               SCIP_Real fixval;
+
+               fixval = getFixVal(scip, sol, var);
+
+               /* perform the bound change */
+               if( !SCIPisInfinity(scip, REALABS(fixval)) )
+               {
+                  fixedvars[*nfixings] = var;
+                  fixedvals[*nfixings] = fixval;
+                  ++(*nfixings);
+               }
+            }
+         }
+      }
+
+      *success = checkFixingrate(scip, heurdata, *nfixings);
+   }
+
+   SCIPfreeBufferArray(scip, &varscopy);
+   SCIPfreeBufferArray(scip, &varslabels);
+
+   return SCIP_OKAY;
+}
+
 /** determines the graph-induced variable fixings */
 static
 SCIP_RETCODE determineVariableFixings(
@@ -801,10 +974,10 @@ SCIP_RETCODE determineVariableFixings(
    int* distances;
    SCIP_VGRAPH* vargraph;
    SCIP_VAR* selvar;
+   SCIP_DECOMPSTORE* decompstore;
    int nvars;
    int nbinvars;
    int nintvars;
-   int fixthreshold;
 
    int selvarmaxdistance;
 
@@ -818,17 +991,34 @@ SCIP_RETCODE determineVariableFixings(
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
 
+   decompstore = SCIPgetDecompstore(scip);
+   assert(decompstore != NULL);
+   /* determine the variable fixings based on latest user decomposition */
+   if( rollinghorizon == NULL && SCIPdecompstoreGetNDecomps(decompstore) > 0 )
+   {
+      /* TODO coming soon: better selection than last decomposition that has been input */
+      SCIP_DECOMP* decomp = SCIPdecompstoreGetDecomps(decompstore)[SCIPdecompstoreGetNDecomps(decompstore) - 1];
+
+      /* don't use trivial decompositions */
+      if( SCIPdecompGetNBlocks(decomp) > 0 )
+      {
+         SCIP_CALL( determineVariableFixingsDecomp(scip, decomp, fixedvars, fixedvals, nfixings, heurdata, success) );
+
+         if( *success )
+            return SCIP_OKAY;
+      }
+   }
+
+
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
-   /* create variable graph */
-   SCIPdebugMsg(scip, "Creating variable constraint graph\n");
-
    /* get the saved variable graph, or create a new one */
    if( rollinghorizon != NULL )
    {
       if( rollinghorizon->niterations == 0 )
       {
+         /* create variable graph */
+         SCIPdebugMsg(scip, "Creating variable constraint graph\n");
          SCIP_CALL( SCIPvariableGraphCreate(scip, &rollinghorizon->variablegraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
       }
       else
@@ -838,6 +1028,8 @@ SCIP_RETCODE determineVariableFixings(
    }
    else
    {
+      /* create variable graph */
+      SCIPdebugMsg(scip, "Creating variable constraint graph\n");
       SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
    }
 
@@ -880,16 +1072,7 @@ SCIP_RETCODE determineVariableFixings(
       SCIP_CALL( fixNonNeighborhoodVariables(scip, heurdata, rollinghorizon, sol, vars, fixedvars, fixedvals, distances,
             selvarmaxdistance, nfixings) );
 
-      fixthreshold = (int)(heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
-
-      /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here;
-       * we also terminate if no discrete variables are left
-       */
-      if( *nfixings < fixthreshold )
-      {
-         SCIPdebugMsg(scip, "Fixed %d < %d variables in gins heuristic, stopping", *nfixings, fixthreshold);
-         *success = FALSE;
-      }
+     *success = checkFixingrate(scip, heurdata, *nfixings);
    }
 
    SCIPfreeBufferArray(scip, &distances);
@@ -1221,6 +1404,7 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->nsubmips = 0;
    heurdata->nfailures = 0;
    heurdata->nextnodenumber = 0;
+   heurdata->lastblockuseddecomp = INT_MIN; /* cannot use -1 because this is defined for linking variables */
 
 #ifdef SCIP_STATISTIC
    resetHistogram(heurdata->conscontvarshist);
