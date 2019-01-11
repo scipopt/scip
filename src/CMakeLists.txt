@@ -308,6 +308,7 @@ set(scipsources
     scip/scip_tree.c
     scip/scip_validation.c
     scip/scip_var.c
+    scip/scip_varex.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c

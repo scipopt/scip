@@ -1,5 +1,3 @@
-
-
 cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
@@ -283,6 +281,11 @@ if(SOPLEX_FOUND)
         set(lpi lpi/lpi_spx1.cpp)
     else()
         set(lpi lpi/lpi_spx2.cpp)
+    endif()
+    if(GMP_FOUND)
+        if(SOPLEX_GMP)
+            add_definitions(-DSOPLEX_WITH_GMP)
+        endif()
     endif()
 endif()
 
