@@ -13636,6 +13636,8 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
                newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+         /* the global ps objval can be set directly because the global and local bounds have to be the same here (see below) */
+         lp->glbpseudoobjval = lp->pseudoobjval;
       }
    }
    else
