@@ -18,11 +18,12 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/reader_zpl.h"
 
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -82,9 +83,6 @@ extern "C" {
 #define READER_DESC             "file reader for ZIMPL model files"
 #define READER_EXTENSION        "zpl"
 
-#ifdef WITH_EXACTSOLVE
-#define LARGEBOUND              1e+06
-#endif
 /*
  * LP construction interface of ZIMPL
  */
@@ -109,6 +107,8 @@ SCIP_ReaderData
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
 
+
+/** convert between scips_rational and zimpl's numb type */
 static
 SCIP_Rational* RcreateNumb(
    BMS_BLKMEM*           mem,
@@ -224,6 +224,7 @@ bool xlp_conname_exists(
    /* check if constraint with the given name already exists */
    return (SCIPfindCons(readerdata->scip, name) != NULL);
 }
+
 
 /** method creates a constraint and is called directly from ZIMPL
  *
@@ -483,6 +484,8 @@ SCIP_RETCODE addConsTerm(
 
                scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
                scipvalrat = RcreateNumb(SCIPblkmem(scip), mono_get_coeff(term_get_element(term, i)));
+
+               //Rprint(scipvalrat);
 
                SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
                Rdelete(SCIPblkmem(scip), &scipvalrat);
@@ -1021,7 +1024,7 @@ SCIP_RETCODE addVar(
       switch( bound_get_type(upper) )
       {
       case BOUND_VALUE:
-         ubrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(lower));
+         ubrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(upper));
          ub = RgetRealRelax(ubrat, SCIP_ROUND_UPWARDS);
          break;
       case BOUND_INFTY:
@@ -1108,10 +1111,10 @@ SCIP_RETCODE addVar(
       SCIPdebugMessage("zimpl reader: added new variable");
       SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
-      SCIPdebug(SCIPprintVar(scip, var, NULL));
+      /* SCIPdebug(SCIPprintVar(scip, var, NULL));
       RtoString(lbrat, strlb);
       RtoString(ubrat, strub);
-      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub);
+      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub); */
       Rdelete(SCIPblkmem(scip), &lbrat);
       Rdelete(SCIPblkmem(scip), &ubrat);
    }
@@ -1537,8 +1540,10 @@ void xlp_addtocost(
 
       SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
          RgetRealRelax(scipvalrat, SCIP_ROUND_NEAREST) );
-      RtoString(scipvalrat, str);
+      SCIPdebug(RtoString(scipvalrat, str));
       SCIPdebugMessage(" (<%s> as exact) \n", str);
+
+      readerdata->retcode = SCIPchgVarObjExact(scip, scipvar, scipvalrat);
 
       Rdelete(SCIPblkmem(scip), &scipvalrat);
    }
@@ -1657,7 +1662,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-      if( !zpl_read(filename, TRUE, (void*)readerdata) )
+      if( !zpl_read(filename, FALSE, (void*)readerdata) )
          readerdata->readerror = TRUE;
       else
       {
@@ -1750,7 +1755,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-      if( !zpl_read_with_args(argv, argc, TRUE, (void*)readerdata) )
+      if( !zpl_read_with_args(argv, argc, FALSE, (void*)readerdata) )
          readerdata->readerror = TRUE;
 
       /* free argument memory */
@@ -1830,7 +1835,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
