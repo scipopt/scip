@@ -6530,14 +6530,14 @@ SCIP_RETCODE propagateConstraintSides(
     * also add a [-feastol,feastol] range around constraint sides to cope with numerics */
    for( c = 0; c < nconss; ++c )
    {
+      /* skip (just) deleted or disabled constraints */
+      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       if( consdata->exprgraphnode == NULL )
-         continue;
-
-      /* skip (just) deleted or disabled constraints */
-      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
          continue;
 
       roundmode = SCIPintervalGetRoundingMode();
