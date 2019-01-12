@@ -8195,9 +8195,8 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
    tryupgrades = havegraphchange;
 
-   /* remove fix vars, do some algebraic manipulation, etc; this loop need to finish, even if a cutoff is found because data
-    * might be unconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc)
-    */
+   /* remove fixed vars, do some algebraic manipulation, etc; this loop needs to finish, even if a cutoff is found, because data
+    * might be inconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc) */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
