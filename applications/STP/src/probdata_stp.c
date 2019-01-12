@@ -3824,10 +3824,28 @@ void initReceivedSubproblem(
       if( nodestate[k] == BRANCH_STP_VERTEX_TERM && !Is_term(graph->term[k]) )
       {
          SCIPdebugMessage("UG make term: %d \n", k);
-         graph_knot_chg(graph, k, 0);
+
+         if( graph_pc_isPcMw(graph) )
+         {
+            if( Is_pterm(graph->term[k]) )
+            {
+               enforcePterm(graph, k);
+            }
+            else if( graph_pc_isRootedPcMw(graph) )
+            {
+               graph->prize[k] = FARAWAY;
+               graph_knot_chg(graph, k, 0);
+            }
+         }
+         else
+         {
+            graph_knot_chg(graph, k, 0);
+         }
       }
       else if( nodestate[k] == BRANCH_STP_VERTEX_KILLED )
       {
+         assert(!Is_term(graph->term[k]));
+
          for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
          {
             if( graph->cost[e] < BLOCKED )
@@ -3836,8 +3854,25 @@ void initReceivedSubproblem(
             if( graph->cost[flipedge(e)] < BLOCKED )
                graph->cost[flipedge(e)] = BLOCKED;
          }
+
+         if( Is_pterm(graph->term[k]) )
+         {
+            const int twinterm = graph_pc_getTwinTerm(graph, k);
+            const int root2twin = graph_pc_getRoot2PtermEdge(graph, k);
+            const int k2twin = graph->term2edge[k];
+
+            assert(graph_pc_isPcMw(graph));
+            assert(k2twin >= 0 && graph->tail[k2twin] == k && graph->head[k2twin] == twinterm);
+            assert(root2twin >= 0 && graph->head[root2twin] == twinterm);
+            assert(SCIPisEQ(scip, graph->cost[root2twin], graph->prize[k]));
+
+            graph->cost[root2twin] = 1.0;
+            graph->prize[k] = 1.0;
+
+            graph->cost[k2twin] = 0.0;
+         }
       }
-   }
+   } /* for k = 0 : nnnodes */
 
    SCIPfreeBufferArray(scip, &nodestate);
 

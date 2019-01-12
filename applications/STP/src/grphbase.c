@@ -1011,11 +1011,11 @@ void enforcePterm(
    assert(graph->term2edge[pterm] >= 0 && Is_term(graph->term[term]));
    assert(graph->cost[root2term] == graph->prize[pterm]);
 
-   /* don't change because of weird prizeum in reuduce.c */
+   /* don't change because of weird prize sum in reduce.c */
    if( graph->prize[pterm] < BLOCKED )
    {
-      graph->prize[pterm] = BLOCKED - 1;
-      graph->cost[root2term] = BLOCKED - 1;
+      graph->prize[pterm] = BLOCKED - 1.0;
+      graph->cost[root2term] = BLOCKED - 1.0;
    }
 }
 

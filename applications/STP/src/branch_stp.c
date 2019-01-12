@@ -773,10 +773,6 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          {
             assert(graph_pc_isPcMw(graph));
             graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert));
-#ifdef WITH_UG
-            printf("currently not supported, as ancestors will be killed; not sure, whether this is actually a problem");
-            return SCIP_ERROR;
-#endif
          }
          else
          {
