@@ -6241,14 +6241,14 @@ SCIP_RETCODE propagateBoundsCons(
    assert(result != NULL);
    assert(nchgbds != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
    if( !SCIPconsIsMarkedPropagate(cons) )
       return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
