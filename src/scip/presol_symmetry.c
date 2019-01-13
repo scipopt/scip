@@ -1845,8 +1845,9 @@ SCIP_RETCODE transposePerms(
 {
    int** transposedpermsmatrix;
    int** perms;
-   int nrows;
-   int ncols;
+   int nperms;
+   int npermvars;
+   int nmaxperms;
    SCIP_Bool transposed;
    int i;
    int j;
@@ -1857,32 +1858,48 @@ SCIP_RETCODE transposePerms(
    assert( perms != NULL );
 
    transposed = presoldata->transposedperms;
+   nperms = presoldata->nperms;
+   npermvars = presoldata->npermvars;
+   nmaxperms = presoldata->nmaxperms;
+
+   /* compute transposed perms matrix */
    if ( transposed )
    {
-      nrows = presoldata->npermvars;
-      ncols = presoldata->nperms;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, nmaxperms) );
+      for (i = 0; i < nperms; ++i)
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], npermvars) );
+      }
+      for (i = 0; i < nperms; ++i)
+      {
+         for (j = 0; j < npermvars; ++j)
+            transposedpermsmatrix[i][j] = perms[j][i];
+      }
    }
    else
    {
-      nrows = presoldata->nperms;
-      ncols = presoldata->npermvars;
-   }
-
-   /* compute transposed perms matrix */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, ncols) );
-   for (i = 0; i < nrows; ++i)
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], nrows) );
-      for (j = 0; j < ncols; ++j)
-         transposedpermsmatrix[j][i] = perms[i][j];
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, npermvars) );
+      for (i = 0; i < npermvars; ++i)
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], nmaxperms) );
+         for (j = 0; j < nperms; ++j)
+            transposedpermsmatrix[i][j] = perms[j][i];
+      }
    }
 
    /* free original perms matrix */
-   for (i = 0; i < nrows; ++i)
+   if ( transposed )
    {
-      SCIPfreeBlockMemoryArray(scip, &perms[i], ncols);
+      for(i = 0; i < presoldata->npermvars; ++i)
+         SCIPfreeBlockMemoryArray(scip, &perms[i], presoldata->nmaxperms);
+      SCIPfreeBlockMemoryArray(scip, &perms, npermvars);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &perms, nrows);
+   else
+   {
+      for (i = 0; i < presoldata->nperms; ++i)
+         SCIPfreeBlockMemoryArray(scip, &perms[i], npermvars);
+      SCIPfreeBlockMemoryArray(scip, &perms, presoldata->nmaxperms);
+   }
 
    /* adjust matrix and transposition bool */
    presoldata->perms = transposedpermsmatrix;
