@@ -2019,7 +2019,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *nperms = presoldata->nperms;
 
    /* transpose perms matrix if necessary */
-   if ( presoldata->transposedperms != transposedperms )
+   if ( presoldata->transposedperms != transposedperms && *nperms > 0 )
    {
       SCIP_CALL( transposePerms(scip, presoldata) );
    }
