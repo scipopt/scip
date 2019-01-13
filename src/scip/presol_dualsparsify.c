@@ -1176,7 +1176,7 @@ SCIP_RETCODE cancelColHash(
                {
                   if( (SCIPvarGetType(implcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
-                  if( isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
+                  if( SCIPisIntegral(scip, scale) && isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
                   {
                      /*TODO: can do more*/
                      continue;
@@ -1331,6 +1331,11 @@ SCIP_RETCODE cancelColHash(
             while( b < implcollen )
             {
                ++b;
+               if(implcolisbin && (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) == SCIPfindConshdlr(scip, "knapsack")))
+               {
+                  abortpair = TRUE;
+                  break;
+               }
                if( SCIPvarIsIntegral(cancelvar) )
                {
                   if( SCIPvarIsBinary(cancelvar) && ++nbinfillin > maxbinfillin )
@@ -1344,6 +1349,9 @@ SCIP_RETCODE cancelColHash(
                      break;
                }
             }
+
+            if( abortpair )
+               continue;
 
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
