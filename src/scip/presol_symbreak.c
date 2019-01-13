@@ -880,7 +880,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( ! presoldata->addedconss || presoldata->norbitopes > 0 );
 
    /* if orbital fixing is used outside orbitopes, do not add further constraints */
-   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
    {
       SCIP_CALL( addSymmetryBreakingConstraints(scip, presol, components, componentbegins, ncomponents) );
    }
