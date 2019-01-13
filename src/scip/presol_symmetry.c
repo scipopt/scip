@@ -1836,6 +1836,60 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 }
 
 
+/** transpose permutations matrix */
+SCIP_RETCODE transposePerms(
+   SCIP_PRESOLDATA*      presoldata          /**< data of symmetries presolver */
+   )
+{
+   int** transposedpermsmatrix;
+   int** perms;
+   int nrows;
+   int ncols;
+   SCIP_Bool transposed;
+   int i;
+   int j;
+
+   assert( presoldata != NULL );
+
+   perms = presoldata->perms;
+   assert( permsmatrix != NULL );
+
+   transposed = presoldata->transposedperms;
+   if ( transposed )
+   {
+      nrows = presoldata->npermvars;
+      ncols = presoldata->nperms;
+   }
+   else
+   {
+      nrows = presoldata->nperms;
+      ncols = presoldata->npermvars;
+   }
+
+   /* compute transposed perms matrix */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, ncols) );
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], nrows) );
+      for (j = 0; j < ncols; ++j)
+         transposedpermsmatrix[j][i] = perms[i][j];
+   }
+
+   /* free original perms matrix */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIPfreeBlockMemoryArray(scip, &perms[i], ncols);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &perms, nrows);
+
+   /* adjust matrix and transposition bool */
+   presoldata->perms = transposedpermsmatrix;
+   presoldata->transposedperms = ! transposed;
+
+   return SCIP_OKAY;
+}
+
+
 /** return symmetry group generators */
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1948,37 +2002,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    /* transpose perms matrix if necessary */
    if ( presoldata->transposedperms != transposedperms )
    {
-      int** transposedpermsmatrix;
-      int** permsmatrix;
-      int npermvarslocal;
-      int npermslocal;
-      int i;
-      int p;
-
-      permsmatrix = presoldata->perms;
-      npermvarslocal = presoldata->npermvars;
-      npermslocal = presoldata->nperms;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix, npermvarslocal) );
-      for (i = 0; i < npermvarslocal; ++i)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transposedpermsmatrix[i], npermslocal) );
-         for (p = 0; p < npermslocal; ++p)
-            transposedpermsmatrix[i][p] = permsmatrix[p][i];
-      }
-
-      /* free original perms matrix */
-      for (p = 0; p < npermslocal; ++p)
-      {
-         SCIPfreeBlockMemoryArray(scip, &permsmatrix[p], npermvarslocal);
-      }
-      SCIPfreeBlockMemoryArrayNull(scip, &permsmatrix, npermslocal);
-
-      /* adjust matrix and transposition bool */
-      presoldata->perms = transposedpermsmatrix;
-      presoldata->transposedperms = transposedperms;
+      SCIP_CALL( transposePerms(presoldata) );
    }
-
    *perms = presoldata->perms;
 
    if ( log10groupsize != NULL )
