@@ -424,14 +424,15 @@ SCIP_RETCODE getSymmetries(
    SCIP_Bool recompute = FALSE;
    SCIP_VAR** permvars;
    int v;
-   int usesymmetry;
 
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   /* free symmetries after a restart to recompute them later */
+   /* free symmetries after a restart to recompute them later or deactivate OF if used together with orbitopes */
    if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
+      int usesymmetry;
+
       /* reset symmetry information */
       assert( propdata->npermvars > 0 );
       assert( propdata->permvarmap != NULL );
@@ -485,13 +486,15 @@ SCIP_RETCODE getSymmetries(
       propdata->nmovedpermvars = 0;
 
       recompute = TRUE;
+
+      /* deactivate OF after a restart if used together with orbitopes */
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+      if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+         propdata->enabled = FALSE;
    }
 
    /* now possibly (re)compute symmetries or deactivate OF */
-   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
-      propdata->enabled = FALSE;
-   else if ( propdata->nperms < 0 )
+   if ( propdata->nperms < 0 )
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute, TRUE,
             &(propdata->npermvars), &permvars, &(propdata->nperms), &(propdata->permstrans), NULL, NULL,
