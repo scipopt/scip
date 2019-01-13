@@ -1837,7 +1837,9 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 
 
 /** transpose permutations matrix */
+static
 SCIP_RETCODE transposePerms(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata          /**< data of symmetries presolver */
    )
 {
@@ -1852,7 +1854,7 @@ SCIP_RETCODE transposePerms(
    assert( presoldata != NULL );
 
    perms = presoldata->perms;
-   assert( permsmatrix != NULL );
+   assert( perms != NULL );
 
    transposed = presoldata->transposedperms;
    if ( transposed )
@@ -2002,7 +2004,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    /* transpose perms matrix if necessary */
    if ( presoldata->transposedperms != transposedperms )
    {
-      SCIP_CALL( transposePerms(presoldata) );
+      SCIP_CALL( transposePerms(scip, presoldata) );
    }
    *perms = presoldata->perms;
 
