@@ -434,6 +434,9 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->origlogfile = NULL;
    (*probdata)->intlogfile = NULL;
    (*probdata)->origintlogfile = NULL;
+   (*probdata)->nedges = -1;
+   (*probdata)->nnodes = -1;
+   (*probdata)->nterms = -1;
 
    (*probdata)->ug = FALSE;
    (*probdata)->nSolvers = 0;
