@@ -114,6 +114,12 @@ then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
 
+    DECOMP=${INSTANCE%%.mps.gz}.dec
+    echo $DECOMP
+    if test -f $DECOMP
+    then
+	echo read $DECOMP            >> $TMPFILE
+    fi
     # set objective limit: optimal solution value from solu file, if existent
     if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
