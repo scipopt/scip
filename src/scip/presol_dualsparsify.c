@@ -1169,7 +1169,7 @@ SCIP_RETCODE cancelColHash(
             /* due to some unknown knapsack constraint reason, I block the variable here*/
             if( implcolisbin )
             {
-//               continue;
+               continue;
             }
 
             scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
