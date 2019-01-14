@@ -1163,7 +1163,14 @@ SCIP_RETCODE cancelColHash(
             implcolvar = vars[implcolconspair->colindex];
             implcollb = SCIPvarGetLbGlobal(implcolvar);
             implcolub = SCIPvarGetUbGlobal(implcolvar);
-            implcolisbin = (SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY);
+            implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
+                              (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
+
+            /* due to some unknown knapsack constraint reason, I block the variable here*/
+            if( implcolisbin )
+            {
+//               continue;
+            }
 
             scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
 
@@ -1391,11 +1398,20 @@ SCIP_RETCODE cancelColHash(
          SCIP_Real* implcolvals;
          int* implcolinds;
          int implcollen;
+         SCIP_Real implcollb;
+         SCIP_Real implcolub;
+         SCIP_VAR* implcolvar;
+         SCIP_Bool implcolisbin;
          int tmpcollen;
-
+   
+         implcolvar = vars[bestcand];
          implcolvals = SCIPmatrixGetColValPtr(matrix, bestcand);
          implcolinds = SCIPmatrixGetColIdxPtr(matrix, bestcand);
          implcollen = SCIPmatrixGetColNNonzs(matrix, bestcand);
+         implcollb = SCIPvarGetLbGlobal(implcolvar);
+         implcolub = SCIPvarGetUbGlobal(implcolvar);
+         implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
+                           (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
 
          a = 0;
          b = 0;
@@ -1404,6 +1420,7 @@ SCIP_RETCODE cancelColHash(
 
          while( a < cancelcollen && b < implcollen )
          {
+            assert(!implcolisbin || (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) != SCIPfindConshdlr(scip, "knapsack")));
             if( cancelcolinds[a] == implcolinds[b] )
             {
                SCIP_Real val = cancelcolvals[a] + bestscale * implcolvals[b];
@@ -1446,6 +1463,7 @@ SCIP_RETCODE cancelColHash(
 
          while( b < implcollen )
          {
+            assert(!implcolisbin || (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) != SCIPfindConshdlr(scip, "knapsack")));
             tmpinds[tmpcollen] = implcolinds[b];
             tmpvals[tmpcollen] = implcolvals[b] * bestscale;
             ++nchgcoef;
