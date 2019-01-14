@@ -6241,14 +6241,14 @@ SCIP_RETCODE propagateBoundsCons(
    assert(result != NULL);
    assert(nchgbds != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
    if( !SCIPconsIsMarkedPropagate(cons) )
       return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -6530,14 +6530,14 @@ SCIP_RETCODE propagateConstraintSides(
     * also add a [-feastol,feastol] range around constraint sides to cope with numerics */
    for( c = 0; c < nconss; ++c )
    {
+      /* skip (just) deleted or disabled constraints */
+      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       if( consdata->exprgraphnode == NULL )
-         continue;
-
-      /* skip (just) deleted or disabled constraints */
-      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
          continue;
 
       roundmode = SCIPintervalGetRoundingMode();
@@ -8195,9 +8195,8 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
    tryupgrades = havegraphchange;
 
-   /* remove fix vars, do some algebraic manipulation, etc; this loop need to finish, even if a cutoff is found because data
-    * might be unconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc)
-    */
+   /* remove fixed vars, do some algebraic manipulation, etc; this loop needs to finish, even if a cutoff is found, because data
+    * might be inconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc) */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
