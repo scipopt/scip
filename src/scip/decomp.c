@@ -150,7 +150,6 @@ void SCIPdecompGetVarsLabels(
          labels[i] = SCIPhashmapGetImageInt(decomp->var2block, (void *)vars[i]);
       else
          labels[i] = SCIP_DECOMP_LINKVAR;
-
    }
 }
 
@@ -291,7 +290,7 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    {
       int nconsvars;
       int v;
-      int nlinkingvars;
+      int nlinkingvars = 0;
       int conslabel;
       int requiredsize;
 
@@ -306,6 +305,17 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
       {
          SCIP_CALL( SCIPgetActiveVars(scip, varbuffer, &nconsvars, twicenvars, &requiredsize) );
          assert(nconsvars <= twicenvars);
+      }
+      else
+      {
+         for( v = 0; v < nconsvars; ++v )
+         {
+            assert(SCIPvarIsActive(varbuffer[v]) || SCIPvarIsNegated(varbuffer[v]));
+
+         /* some constraint handlers such as indicator may already return inactive variables */
+         if( SCIPvarIsNegated(varbuffer[v]) )
+            varbuffer[v] = SCIPvarGetNegatedVar(varbuffer[v]);
+         }
       }
 
       SCIPdecompGetVarsLabels(decomp, varbuffer, varlabels, nconsvars);
@@ -405,7 +415,11 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       {
          SCIP_VAR* var = varbuffer[v];
 
-         assert(SCIPvarIsActive(var));
+         assert(SCIPvarIsActive(var) || (SCIPdecompIsOriginal(decomp) && SCIPvarIsNegated(var)));
+
+         /* some constraint handlers such as indicator may already return inactive variables */
+         if( SCIPvarIsNegated(var) )
+            var = SCIPvarGetNegatedVar(var);
 
          if( SCIPhashmapExists(decomp->var2block, (void *)var) )
          {
@@ -584,6 +598,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    int varblockstart;
    int consblockstart;
    int currlabelidx;
+   int varidx;
+   int considx;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -616,34 +632,69 @@ SCIP_RETCODE SCIPcomputeDecompStats(
 
 
   decomp->labels[0] = SCIP_DECOMP_LINKVAR;
-
   /* treat border (linking variables) first */
   if( varslabels[0] == SCIP_DECOMP_LINKVAR )
      decomp->varssize[0] = countLabelFromPos(varslabels, 0, nvars);
   else
      decomp->varssize[0] = 0;
 
-  currlabelidx = 1;
-  varblockstart = decomp->varssize[0];
-  assert(varblockstart == nvars || varslabels[varblockstart] > SCIP_DECOMP_LINKVAR);
-
-   /* loop over the variables count the occurrences, storing also the integer labels */
-  while( varblockstart < nvars )
-  {
-     decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varblockstart, nvars);
-
-     decomp->labels[currlabelidx] = varslabels[varblockstart];
-     varblockstart += decomp->varssize[currlabelidx];
-     currlabelidx++;
-  }
-
-
-
   /* count border constraints and store their number */
   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
      decomp->consssize[0] = countLabelFromPos(conslabels, 0, nconss);
   else
      decomp->consssize[0] = 0;
+
+
+  /* merge labels (except for border at position 0) since neither variable nor constraint labels by themselves need to be complete */
+  currlabelidx = 1;
+  varidx = decomp->varssize[0];
+  considx = decomp->consssize[0];
+
+  while( varidx < nvars || considx < nconss )
+  {
+      int varlabel;
+      int conslabel;
+
+      varlabel = varidx < nvars ? varslabels[varidx] : INT_MAX;
+      assert(varlabel != 0);
+      conslabel = considx < nconss ? conslabels[considx] : INT_MAX;
+
+      /* store the smaller of the two current labels */
+      decomp->labels[currlabelidx++] = MIN(varlabel, conslabel);
+
+      /* increment the variable or constraint indices or both, depending on one label being strictly smaller */
+      if( varlabel <= conslabel )
+         varidx += countLabelFromPos(varslabels, varidx, nvars);
+
+      if( conslabel <= varlabel )
+         considx += countLabelFromPos(conslabels, considx, nconss);
+  }
+
+
+  currlabelidx = 1;
+  varblockstart = decomp->varssize[0];
+  assert(varblockstart == nvars || varslabels[varblockstart] > SCIP_DECOMP_LINKVAR);
+   /* loop over the variables count the occurrences, storing also the integer labels */
+  while( varblockstart < nvars )
+  {
+     assert(currlabelidx < decomp->nblocks + 1);
+     assert(decomp->labels[currlabelidx] <= varslabels[varblockstart]);
+
+     /* check if the current label is present in the variable labels */
+     if( decomp->labels[currlabelidx] < varslabels[varblockstart] )
+     {
+        decomp->varssize[currlabelidx] = 0;
+     }
+     else
+     {
+        /* increment variable block start */
+        decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varblockstart, nvars);
+        varblockstart += decomp->varssize[currlabelidx];
+     }
+     currlabelidx++;
+  }
+
+
 
 
   consblockstart = decomp->consssize[0];
@@ -654,10 +705,19 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   currlabelidx = 1;
   while( consblockstart < nconss )
   {
-     assert(conslabels[consblockstart] == SCIP_DECOMP_LINKCONS ||
-           conslabels[consblockstart] == decomp->labels[currlabelidx]);
+     assert(currlabelidx < decomp->nblocks + 1);
+     assert(decomp->labels[currlabelidx] <= conslabels[consblockstart]);
 
-     decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, consblockstart, nconss);
+     /* the current label may not be present in the conslabels */
+     if( decomp->labels[currlabelidx] < conslabels[consblockstart] )
+     {
+        decomp->consssize[currlabelidx] = 0;
+     }
+     else
+     {
+        /* count the number of occurrences and store it */
+        decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, consblockstart, nconss);
+     }
 
      /* update index to largest and smallest constraint blocks (don't consider border for this statistic) */
      if( decomp->idxlargestblock == -1 )
