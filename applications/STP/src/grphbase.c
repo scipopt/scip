@@ -3723,12 +3723,9 @@ SCIP_RETCODE graph_sol_getOrg(
 )
 {
    STP_Bool* orgnodearr;
-   STP_Bool* transnodearr = NULL;
-
    IDX** const ancestors = transgraph->ancestors;
 
    const int transnedges = transgraph->edges;
-   const int transnnodes = transgraph->knots;
    const int orgnnodes = orggraph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(transgraph);
 
@@ -3737,21 +3734,6 @@ SCIP_RETCODE graph_sol_getOrg(
    assert(transgraph->stp_type == orggraph->stp_type);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orgnodearr, orgnnodes) );
-
-   if( pcmw )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &transnodearr, transnnodes) );
-
-      for( int k = 0; k < transnnodes; k++ )
-         transnodearr[k] = FALSE;
-
-      for( int e = 0; e < transnedges; e++ )
-         if( transsoledge[e] == CONNECT )
-         {
-            transnodearr[transgraph->tail[e]] = TRUE;
-            transnodearr[transgraph->head[e]] = TRUE;
-         }
-   }
 
    for( int k = 0; k < orgnnodes; k++ )
       orgnodearr[k] = FALSE;
@@ -3765,12 +3747,18 @@ SCIP_RETCODE graph_sol_getOrg(
 
    if( pcmw )
    {
+      // potentially single-vertex solution?
+      if( graph_pc_isRootedPcMw(transgraph) && transgraph->terms == 1 && graph_pc_nFixedTerms(orggraph) == 1 )
+         orgnodearr[orggraph->source] = TRUE;
+
       SCIP_CALL( graph_sol_markPcancestors(scip, transgraph->pcancestors, orggraph->tail, orggraph->head, orgnnodes,
             orgnodearr, NULL, NULL, NULL, NULL ) );
    }
 
    for( int e = 0; e < orggraph->edges; e++ )
       orgsoledge[e] = UNKNOWN;
+
+
 
    /* prune solution (in original graph) */
    if( pcmw )
@@ -3779,7 +3767,6 @@ SCIP_RETCODE graph_sol_getOrg(
       SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, 0, orgsoledge, orgnodearr) );
 
    SCIPfreeBufferArray(scip, &orgnodearr);
-   SCIPfreeBufferArrayNull(scip, &transnodearr);
 
    assert(graph_sol_valid(scip, orggraph, orgsoledge));
 
