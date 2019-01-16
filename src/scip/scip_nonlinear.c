@@ -489,7 +489,7 @@ void SCIPaddBilinMcCormick(
       constant = -constant;
    }
 
-   SCIPdebugMsg(scip, "%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx,
+   SCIPdebugMsg(scip, "%.15g * x[%.15g,%.15g] * y[%.15g,%.15g] %c= %.15g * x %+.15g * y %+.15g\n", bilincoef, lbx, ubx,
       lby, uby, overestimate ? '<' : '>', coefx, coefy, constant);
 
    *lincoefx    += coefx;
