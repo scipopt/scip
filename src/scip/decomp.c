@@ -656,7 +656,6 @@ SCIP_RETCODE SCIPcomputeDecompStats(
       int conslabel;
 
       varlabel = varidx < nvars ? varslabels[varidx] : INT_MAX;
-      assert(varlabel != 0);
       conslabel = considx < nconss ? conslabels[considx] : INT_MAX;
 
       /* store the smaller of the two current labels */
