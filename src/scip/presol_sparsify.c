@@ -183,6 +183,7 @@ SCIP_RETCODE cancelRow(
    int bestnfillin;
    SCIP_Real mincancelrate;
    SCIP_Bool rowiseq;
+   SCIP_Bool swapped = FALSE;
    SCIP_CONS* cancelcons;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
@@ -564,6 +565,7 @@ SCIP_RETCODE cancelRow(
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelrowinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
          cancelrowlen = tmprowlen;
+         swapped = !swapped;
       }
       else
          break;
@@ -619,10 +621,20 @@ SCIP_RETCODE cancelRow(
    }
 
    SCIPfreeBufferArray(scip, &locks);
-   SCIPfreeBufferArray(scip, &tmpvals);
-   SCIPfreeBufferArray(scip, &tmpinds);
-   SCIPfreeBufferArray(scip, &cancelrowvals);
-   SCIPfreeBufferArray(scip, &cancelrowinds);
+   if( !swapped )
+   {
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+      SCIPfreeBufferArray(scip, &cancelrowvals);
+      SCIPfreeBufferArray(scip, &cancelrowinds);
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &cancelrowvals);
+      SCIPfreeBufferArray(scip, &cancelrowinds);
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+   }
 
    return SCIP_OKAY;
 }
@@ -735,7 +747,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )

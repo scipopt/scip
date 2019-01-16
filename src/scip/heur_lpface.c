@@ -802,16 +802,18 @@ SCIP_RETCODE setupSubscipLpface(
 
    if( heurdata->uselprows )
    {
+      SCIP_Bool valid;
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
+      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
       /* create the subproblem */
       SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
+      SCIPsetSubscipDepth(subscip, SCIPgetSubscipDepth(scip) + 1);
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
@@ -821,7 +823,7 @@ SCIP_RETCODE setupSubscipLpface(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

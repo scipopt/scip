@@ -358,22 +358,41 @@ void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** inserts element at the end of the queue */
+/** inserts pointer element at the end of the queue */
 EXTERN
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
    );
 
-/** removes and returns the first element of the queue */
+/** inserts unsigned integer element at the end of the queue */
+EXTERN
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
+   );
+
+/** removes and returns the first element of the queue, or NULL if no element exists */
 EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
-/** returns the first element of the queue without removing it */
+/** removes and returns the first unsigned integer element of the queue, or UNIT_MAX if no element exists */
+EXTERN
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 EXTERN
 void* SCIPqueueFirst(
+   SCIP_QUEUE*           queue               /**< queue */
+   );
+
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
+EXTERN
+unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
@@ -778,6 +797,14 @@ SCIP_RETCODE SCIPhashmapInsert(
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
 EXTERN
+SCIP_RETCODE SCIPhashmapInsertInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+EXTERN
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -791,7 +818,14 @@ void* SCIPhashmapGetImage(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
+EXTERN
+int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 EXTERN
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -806,6 +840,16 @@ SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
+   );
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
+ *  new origin->image pair
+ */
+EXTERN
+SCIP_RETCODE SCIPhashmapSetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   int                   image               /**< new image for origin */
    );
 
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
@@ -878,6 +922,12 @@ void* SCIPhashmapEntryGetImage(
 
 /** gives the image of the hashmap entry */
 EXTERN
+int SCIPhashmapEntryGetImageInt(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
+   );
+
+/** gives the image of the hashmap entry */
+EXTERN
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
@@ -887,6 +937,13 @@ EXTERN
 void SCIPhashmapEntrySetImage(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    void*                 image               /**< new image */
+   );
+
+/** sets integer image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImageInt(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   int                   image               /**< new image */
    );
 
 /** sets real image of a hashmap entry */
@@ -1614,10 +1671,10 @@ void SCIPbtSetRoot(
  */
 
 /*
- * Disjoined Set data structure
+ * disjoint set data structure
  */
 
-/** clears the disjoint set (union find) structure \p uf */
+/** clears the disjoint set (union find) structure \p djset */
 EXTERN
 void SCIPdisjointsetClear(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */

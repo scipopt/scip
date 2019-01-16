@@ -73,7 +73,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
-#include "scip/misc.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -554,7 +553,7 @@ int varGetNodeSOS1(
    if ( ! SCIPhashmapExists(conshdlrdata->varhash, var) )
       return -1;
 
-   return (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+   return SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
 }
 
 
@@ -1256,7 +1255,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* save new clique */
          assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] <= nsos1vars );
          assert( *ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
-         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
          {
             vars[j] = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, newclique[j]);
@@ -1540,7 +1539,7 @@ SCIP_RETCODE getSOS1Implications(
    assert( implnodes != NULL );
    assert( node >= 0 );
    assert( vars[node] != NULL );
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, vars[node]) == node );
+   assert( SCIPhashmapGetImageInt(implhash, vars[node]) == node );
 
    /* get node of variable in the conflict graph (-1 if variable is no SOS1 variable) */
    sos1node = varGetNodeSOS1(conshdlrdata, vars[node]);
@@ -1807,6 +1806,8 @@ SCIP_RETCODE presolRoundConsSOS1(
  *  we perform the following additional presolving steps
  *
  *  - Search for larger SOS1 constraints in the conflict graph
+ *
+ *  @todo Use one long array for storing cliques.
  */
 static
 SCIP_RETCODE presolRoundConssSOS1(
@@ -1859,12 +1860,14 @@ SCIP_RETCODE presolRoundConssSOS1(
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
+
+   /* Use block memory for cliques, because sizes might be quite different and allocation interfers with workingset. */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliquesizes, csize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques, csize) );
 
    /* get constraint indices and sort them in descending order of their lengths */
    for (c = 0; c < nconss; ++c)
@@ -2040,7 +2043,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                /* add directed edges to the vertex-clique graph */
                assert( cliquesize >= 0 && cliquesize <= nsos1vars );
                assert( ncliques < csize );
-               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
                for (j = 0; j < cliquesize; ++j)
                {
                   cliques[ncliques][j] = newclique[j];
@@ -2056,13 +2059,14 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* free buffer arrays */
    for (c = ncliques-1; c >= 0; --c)
-      SCIPfreeBufferArrayNull(scip, &cliques[c]);
-   SCIPfreeBufferArrayNull(scip, &cliques);
+      SCIPfreeBlockMemoryArray(scip, &cliques[c], cliquesizes[c]);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliques, csize);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliquesizes, csize);
+
    SCIPfreeBufferArrayNull(scip, &comsucc);
    SCIPfreeBufferArrayNull(scip, &lengthconss);
    SCIPfreeBufferArrayNull(scip, &indconss);
    SCIPfreeBufferArrayNull(scip, &newclique);
-   SCIPfreeBufferArrayNull(scip, &cliquesizes);
    SCIPfreeBufferArrayNull(scip, &consweights);
    SCIPfreeBufferArrayNull(scip, &consvars);
    SCIPdigraphFree(&vertexcliquegraph);
@@ -2174,7 +2178,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
    }
 
    /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
+   assert( nonznode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
    succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
@@ -2198,7 +2202,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasPositive(scip, data->lbimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2218,7 +2222,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasNegative(scip, data->ubimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2321,15 +2325,15 @@ SCIP_RETCODE updateArcData(
    }
 
    /* get successor information */
-   indv = (int) (size_t) SCIPhashmapGetImage(implhash, varv); /* get index of x_v in implication graph */
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indv]) == indv );
+   indv = SCIPhashmapGetImageInt(implhash, varv); /* get index of x_v in implication graph */
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indv]) == indv );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, indv);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, indv);
    succ = SCIPdigraphGetSuccessors(implgraph, indv);
 
    /* search for nodew in existing successors. If this is the case then check whether the lower implication bound may be updated ... */
-   indw = (int) (size_t) SCIPhashmapGetImage(implhash, varw);
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indw]) == indw );
+   indw = SCIPhashmapGetImageInt(implhash, varw);
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indw]) == indw );
    for (s = 0; s < nsucc; ++s)
    {
       if ( succ[s] == indw )
@@ -2731,9 +2735,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       SCIP_DIGRAPH* conflictgraphlin;
       int** cliquecovers = NULL;           /* clique covers of indices of variables in linear constraint */
       int* cliquecoversizes = NULL;        /* size of each cover */
-      int ncliquecovers;
+      SCIP_VAR* sosvar = NULL;
       SCIP_Real* cliquecovervals = NULL;
+      SCIP_Real constant;
       int* varincover = NULL;              /* varincover[i] = cover of SOS1 index i */
+      int ncliquecovers;
+      int requiredsize;
 
       int v;
       int i;
@@ -2743,140 +2750,91 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       if ( c < nlinearconss )
       {
          SCIP_VAR** origlinvars;
-         int noriglinvars;
          SCIP_Real* origlinvals;
-         SCIP_Real origrhs;
-         SCIP_Real origlhs;
-         SCIP_Real constant;
-         int requiredsize;
 
          /* get data of linear constraint */
-         noriglinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         ntrafolinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         if ( ntrafolinvars < 1 )
+            continue;
+
          origlinvars = SCIPgetVarsLinear(scip, linearconss[c]);
          origlinvals = SCIPgetValsLinear(scip, linearconss[c]);
-         origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
-         origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
-
-         if ( noriglinvars < 1 )
-            continue;
          assert( origlinvars != NULL );
          assert( origlinvals != NULL );
 
          /* copy variables and coefficients of linear constraint */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, noriglinvars) );
-         ntrafolinvars = noriglinvars;
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, ntrafolinvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, ntrafolinvars) );
 
-         /* transform linear constraint */
-         constant = 0.0;
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, noriglinvars, &constant, &requiredsize, TRUE) );
-         if( requiredsize > ntrafolinvars )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize) );
-
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
-            assert( requiredsize <= ntrafolinvars );
-         }
-         trafolhs = origlhs - constant;
-         traforhs = origrhs - constant;
+         trafolhs = SCIPgetLhsLinear(scip, linearconss[c]);
+         traforhs = SCIPgetRhsLinear(scip, linearconss[c]);
       }
       else
       {
-         SCIP_VAR* var;
+         sosvar = SCIPnodeGetVarSOS1(conflictgraph, c - nlinearconss);
 
-         var = SCIPnodeGetVarSOS1(conflictgraph, c-nlinearconss);
-
-         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_Real constant;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            constant = SCIPvarGetAggrConstant(var);
-            trafolinvars[0] = SCIPvarGetAggrVar(var);
-            trafolinvals[0] = SCIPvarGetAggrScalar(var);
-            trafolinvars[1] = var;
-            trafolinvals[1] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = 2;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            SCIP_Real* scalars;
-            SCIP_VAR** agrvars;
-            SCIP_Real constant;
-            int nagrvars;
-
-            nagrvars = SCIPvarGetMultaggrNVars(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, nagrvars+1) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, nagrvars+1) );
-
-            agrvars = SCIPvarGetMultaggrVars(var);
-            scalars = SCIPvarGetMultaggrScalars(var);
-            constant = SCIPvarGetMultaggrConstant(var);
-
-            for (v = 0; v < nagrvars; ++v)
-            {
-               trafolinvars[v] = agrvars[v];
-               trafolinvals[v] = scalars[v];
-            }
-            trafolinvars[nagrvars] = var;
-            trafolinvals[nagrvars] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = nagrvars + 1;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
-         {
-            SCIP_VAR* negvar;
-            SCIP_Real negcons;
-
-            /* get negation variable and negation offset */
-            negvar = SCIPvarGetNegationVar(var);
-            negcons = SCIPvarGetNegationConstant(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            trafolinvars[0] = negvar;
-            trafolinvars[1] = var;
-            trafolinvals[0] = 1.0;
-            trafolinvals[1] = 1.0;
-            trafolhs = negcons;
-            traforhs = negcons;
-            ntrafolinvars = 2;
-         }
-         else
+         if ( SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_AGGREGATED
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_MULTAGGR
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_NEGATED )
             continue;
+
+         /* store variable so it will be transformed to active variables below */
+         ntrafolinvars = 1;
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, ntrafolinvars + 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, ntrafolinvars + 1) );
+
+         trafolinvars[0] = sosvar;
+         trafolinvals[0] = 1.0;
+
+         trafolhs = 0.0;
+         traforhs = 0.0;
       }
+      assert( ntrafolinvars >= 1 );
+
+      /* transform linear constraint */
+      constant = 0.0;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize, TRUE) );
+      if( requiredsize > ntrafolinvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize + 1) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert( requiredsize <= ntrafolinvars );
+      }
+      if( !SCIPisInfinity(scip, -trafolhs) )
+         trafolhs -= constant;
+      if( !SCIPisInfinity(scip,  traforhs) )
+         traforhs -= constant;
 
       if ( ntrafolinvars == 0 )
       {
-         SCIPfreeBufferArray(scip, &trafolinvars);
          SCIPfreeBufferArray(scip, &trafolinvals);
+         SCIPfreeBufferArray(scip, &trafolinvars);
          continue;
+      }
+
+      /* possibly add sos1 variable to create aggregation/multiaggregation/negation equality */
+      if ( sosvar != NULL )
+      {
+         trafolinvals[ntrafolinvars] = -1.0;
+         trafolinvars[ntrafolinvars] = sosvar;
+         ++ntrafolinvars;
       }
 
       /* compute lower and upper bounds of each term a_i * x_i of transformed constraint */
       for (v = 0; v < ntrafolinvars; ++v)
       {
-         SCIP_Real lb = SCIPvarGetLbLocal(trafolinvars[v]);
-         SCIP_Real ub = SCIPvarGetUbLocal(trafolinvars[v]);
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         lb = SCIPvarGetLbLocal(trafolinvars[v]);
+         ub = SCIPvarGetUbLocal(trafolinvars[v]);
 
          if ( trafolinvals[v] < 0.0 )
-         {
-            SCIP_Real temp;
+            SCIPswapReals(&lb, &ub);
 
-            temp = lb;
-            lb = ub;
-            ub = temp;
-         }
-
-         assert(!SCIPisInfinity(scip, REALABS(trafolinvals[v])));
+         assert( ! SCIPisInfinity(scip, REALABS(trafolinvals[v])) );
 
          if ( SCIPisInfinity(scip, REALABS(lb)) || SCIPisInfinity(scip, REALABS(lb * trafolinvals[v])) )
             trafolbs[v] = -SCIPinfinity(scip);
@@ -3028,7 +2986,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3228,7 +3186,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables (i.e., which SOS1 variables are nonzero if x_v is nonzero) */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3373,12 +3331,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
    } /* end for every linear constraint */
 
    /* free buffer arrays */
-   SCIPfreeBufferArrayNull(scip, &sos1linvars);
    SCIPfreeBufferArrayNull(scip, &trafolbs);
    SCIPfreeBufferArrayNull(scip, &trafoubs);
    SCIPfreeBufferArrayNull(scip, &coveredvars);
    SCIPfreeBufferArrayNull(scip, &varindincons);
    SCIPfreeBufferArrayNull(scip, &implnodes);
+   SCIPfreeBufferArrayNull(scip, &sos1linvars);
 
    return SCIP_OKAY;
 }
@@ -3429,8 +3387,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-      assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+      assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
       totalvars[ntotalvars++] = var;
    }
 
@@ -3442,8 +3400,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-         assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+         assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
          totalvars[ntotalvars++] = var;
       }
    }
@@ -3856,7 +3814,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->implgraph, nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -3872,8 +3830,8 @@ SCIP_RETCODE initImplGraphSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-      assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+      assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
       implvars[nimplnodes++] = var;
    }
 
@@ -3885,8 +3843,8 @@ SCIP_RETCODE initImplGraphSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-         assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+         assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
          implvars[nimplnodes++] = var;
       }
    }
@@ -5145,7 +5103,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
+                           SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5457,7 +5415,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
+            SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
          }
 
          vars = consdata->vars;
@@ -6491,12 +6449,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    if ( rowlb != NULL )
    {
       SCIP_Bool useboundvar;
-      int cnt;
+      int cnt = 0;
       int j;
 
       /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
        * case then the bound constraint can be strengthened */
-      cnt = 0;
       locallbs = local;
       useboundvar = strengthen;
       for (j = 0; j < nnodes; ++j)
@@ -6525,7 +6482,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
                {
                   locallbs = TRUE;
-                  val = SCIPvarGetUbLocal(var);
+                  val = SCIPvarGetLbLocal(var);
                }
             }
          }
@@ -8770,7 +8727,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->conflictgraph, cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -8813,8 +8770,8 @@ SCIP_RETCODE initConflictgraph(
 
                /* insert node number to hash map */
                assert( ! SCIPhashmapExists(conshdlrdata->varhash, var) );
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) cntsos) );/*lint !e571*/
-               assert( cntsos == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->varhash, var, cntsos) );
+               assert( cntsos == SCIPhashmapGetImageInt(conshdlrdata->varhash, var) );
                assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
                /* create node data */
@@ -9003,7 +8960,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
@@ -9900,8 +9857,8 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }

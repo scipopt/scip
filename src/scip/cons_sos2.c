@@ -2100,8 +2100,8 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }

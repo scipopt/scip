@@ -13,7 +13,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @file main.cpp
+ * @file PolySCIP/src/main.cpp
  * @brief PolySCIP main file
  * @author Sebastian Schenker
  *

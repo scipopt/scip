@@ -323,11 +323,13 @@ set(instances_Stochastic
    "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
    "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
    "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
+    "instances/Stochastic/sslp_5_25_5.smps\;-100.6"
    )
 
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
 #

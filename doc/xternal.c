@@ -179,6 +179,7 @@
  * - @subpage MAKE    "Installation information using Makefiles"
  * - @subpage LPI         "Available implementations of the LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
+ * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
  */
 
 /**@page PROGRAMMING Programming with SCIP
@@ -224,7 +225,7 @@
  */
 
 /**@page AUTHORS SCIP Authors
- * <a class="el" href="http://scip.zib.de/#developers">Developers</a>
+ * <a class="el" href="/index.php#developers">Developers</a>
  *
  */
 
@@ -619,22 +620,20 @@
  * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
  * ---------------------|--------------------------------|------------------------|--------------------------------------------|
  * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
- * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list           |
- * GMP                  | on, off                        | GMP=[true, false]      |                                            |
+ * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
+ * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
+ * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_INCLUDE_DIR and BLISS_LIBRARY |
+ * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
- * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
- * SYM                  | bliss, none                    | --                     |                                            |
+ * ..._DIR              | <custom/path/to/.../package>   | --                     | e.g. IPOPT_DIR, CPLEX_DIR, WORHP_DIR, Readline_DIR ...  |
  * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
  * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
- * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
- * GMP_DIR              | <path/to/GMP/installation>     | --                     |                                            |
- * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
+ * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
  * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
  * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
  * DEBUGSOL             | on, off                        | DEBUGSOL=[true,false]  | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
- * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
- * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0           |
- * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked                     |
  * LPSCHECK             | on, off                        | LPSCHECK=[true,false]  | double check SoPlex results with CPLEX     |
  * NOBLKMEM             | on, off                        | NOBLKMEM=[true,false]  |                                            |
  * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
@@ -834,19 +833,22 @@
  *
  * The \SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
- * - <code>all (or no target)</code> Build \SCIP library and binary.
+ * - <code>all</code> (or no target) Build \SCIP library and binary.
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
- * - <code>check or test</code> Runs the check script, see \ref TEST.
- *
+ * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
+ * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
+ *   which contains all the detected warnings.
+ * - <code>tags</code> Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
+
  * The \SCIP makefiles are structured as follows.
  *
  * - <code>Makefile</code> This is the basic makefile in the \SCIP root directory. It loads
  *   additional makefile information depending on the parameters set.
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
- *   that use \SCIP, for instance, the examples.
+ *   that use \SCIP, for instance, the example.
  * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
  *   definitions. If you have an unsupported compiler, you can copy one of these and modify it
  *   accordingly.
@@ -986,7 +988,7 @@
  *     - The \ref VRP_MAIN "Vehicle Routing Problem Example" is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
  *     - The \ref BINPACKING_MAIN "Binpacking Example"
- *       and the \ref APPLICATIONS_COLORING "Coloring application" are
+ *       and the \ref COLORING_MAIN "Coloring application" are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The \ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
@@ -1044,80 +1046,14 @@
  *  \SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
  *  in the source code distribution.
  *
- *  - @subpage OTHERPLUGINS Extending SCIP by custom plugins
- *  - @subpage BRANCHANDPRICE Branch-and-price
- *  - @subpage BENDERSDECOMP Benders' decomposition
- *  - @subpage BRANCHANDCUT Branch-and-cut
- *  - @subpage CALLABLELIBRARY Callable library
- */
-
-/**@page BRANCHANDPRICE Branch-and-price
- *
  * <table>
  *  <tr>
- *  <td>
- *  @subpage BINPACKING_MAIN "Binpacking"
- *  </td>
- *  <td>
- *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
- *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  <td colspan="2">
+ *  <b>
+ *  Callable library
+ *  </b>
  *  </td>
  *  </tr>
- *  <tr>
- *  <td>
- *  @subpage VRP_MAIN Vehicle Routing
- *  </td>
- *  <td>
- *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
- *  programming algorithm.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page BENDERSDECOMP Benders' decomposition
- *
- *  <table>
- *  <tr>
- *  <td>
- *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
- *  </td>
- *  <td>
- *  A stochastic programming problem that demonstrates the use of the Benders' decomposition frameowork within SCIP.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page BRANCHANDCUT Branch-and-cut
- *
- *  <table>
- *  <tr>
- *  <td>
- *  @subpage LOP_MAIN "Linear Ordering"
- *  </td>
- *  <td>
- *  An example for implementing a constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage TSP_MAIN "The TSP example"
- *  </td>
- *  <td>
- *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
- *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
- *  </td>
- *  </tr>
- *  </table>
- *
- */
-
-/**@page CALLABLELIBRARY Callable library
- *
- *  <table>
  *  <tr>
  *  <td>
  *  @subpage CALLABLELIBRARY_MAIN "Callable Library Example"
@@ -1136,18 +1072,19 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
+ *  @subpage QUEENS_MAIN "The n-Queens Problem"
  *  </td>
  *  <td>
- *  An example showing the use of \SCIP as callable library.
+ *  Using SCIP's callable library for solving the n-queens problem.
  *  </td>
  *  </tr>
- *  </table>
- */
-
- /**@page OTHERPLUGINS Extending SCIP by custom plugins
- *
- *  <table>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Extending SCIP by custom plugins
+ *  </b>
+ *  </td>
+ *  </tr>
  *  <tr>
  *  <td>
  *  @subpage EVENTHDLR_MAIN "Event handler"
@@ -1172,55 +1109,71 @@
  *  An example about using custom relaxators.
  *  </td>
  *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Branch-and-cut
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage LOP_MAIN "Linear Ordering"
+ *  </td>
+ *  <td>
+ *  An example for implementing a constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage TSP_MAIN "The TSP example"
+ *  </td>
+ *  <td>
+ *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
+ *  demonstrate the usage of \SCIP as a branch-and-cut-framework for solving traveling salesman problem instances.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Branch-and-price
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage BINPACKING_MAIN "Binpacking"
+ *  </td>
+ *  <td>
+ *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
+ *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage VRP_MAIN "Vehicle Routing"
+ *  </td>
+ *  <td>
+ *  A solver for a simple capacity-constrained vehicle routing problem, which is based on pricing tours via a dynamic
+ *  programming algorithm.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td colspan="2">
+ *  <b>
+ *  Benders' decomposition
+ *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage SCFLP_MAIN "Stochastic capacitated facility location problem"
+ *  </td>
+ *  <td>
+ *  A stochastic programming problem that demonstrates the use of the Benders' decomposition framework within SCIP.
+ *  </td>
+ *  </tr>
  *  </table>
- */
-
-/** @page APPLICATIONS_COLORING Coloring
- *
- * An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
- *
- * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/Coloring"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_CYCLECLUSTERING Cycle Clustering
- *
- * Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
- *
- * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/CycleClustering"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_MINIISC MinIISC
- *
- *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *
- * The documentation of this application can be accessed
- * <a href="http://scip.zib.de/doc/applications/MinIISC"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_POLYSCIP PolySCIP
- *
- *  A solver for multi-objective optimization problems.
- *
- * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_SCHEDULER Scheduler
- *
- *  A solver for scheduling problems.
- *
- * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>here</b></a>.
- */
-
-/** @page APPLICATIONS_STP Steiner Tree Problem
- *
-*  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
- *
- * The documentation of this application can be accessed
- *  <a href="http://scip.zib.de/doc/applications/STP"><b>here</b></a>.
  */
 
 /** @page APPLICATIONS Application projects
@@ -1231,7 +1184,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_COLORING
+ *  @subpage COLORING_MAIN
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
@@ -1239,7 +1192,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_CYCLECLUSTERING
+ *  @subpage CYCLECLUSTERING_MAIN
  *  </td>
  *  <td>
  *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
@@ -1247,7 +1200,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_MINIISC
+ *  @subpage MINIISC_MAIN
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
@@ -1255,7 +1208,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_POLYSCIP
+ *  @subpage POLYSCIP_MAIN
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -1272,7 +1225,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_SCHEDULER
+ *  @subpage SCHEDULER_MAIN
  *  </td>
  *  <td>
  *  A solver for scheduling problems.
@@ -1280,7 +1233,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage APPLICATIONS_STP
+ *  @subpage STP_MAIN
  *  </td>
  *  <td>
  *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
@@ -1303,12 +1256,12 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="/index.php#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="/index.php#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
@@ -1355,7 +1308,7 @@
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
  * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
- * <a href="http://scip.zib.de/doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
+ * <a href="/doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
@@ -1400,7 +1353,7 @@
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
- * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
+ * loaded some meta-parameter settings (also see <a href="FAQ.php#howtochangebehaviour">the FAQ</a>), to apply primal heuristics
  * more aggressively. \SCIP shows us, which single parameters it changed therefore. Additionally, for pedagogical purposes,
  * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
  * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
@@ -1433,7 +1386,7 @@
  *
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section <a href="FAQ.php#faq_usingscipasastandalonesolver">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
  *
  */
 
@@ -4754,16 +4707,7 @@
  * In case you want to add a dialog to the <b>root dialog</b>, you just use the following
  * lines of code to get/create the root dialog.
  *
- * \code
- * SCIP_DIALOG* root;
- *
- * root = SCIPgetRootDialog(scip);
- * if( root == NULL )
- * {
- *    SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
- * }
- * assert( root != NULL );
- * \endcode
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogCreate}
  *
  * Therefore, in this case you do not have to worry about the calls of
  * SCIPincludeDialogDefault() and SCIPincludeDefaultPlugins() .
@@ -4779,32 +4723,7 @@
  * (S)he copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
  * Then, (s)he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
  * src/scip/dialog_default.c:
- * \code
- * SCIP_RETCODE SCIPincludeDialogDrawgraph(
- *    SCIP*                 scip
- *    )
- * {
- *    SCIP_DIALOG* root;
- *    SCIP_DIALOG* dialog;
- *
- *    root = SCIPgetRootDialog(scip);
- *    if( root == NULL )
- *    {
- *       SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
- *    }
- *    assert( root != NULL );
- *
- *    if( !SCIPdialogHasEntry(root, "drawgraph") )
- *    {
- *       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDrawgraph, NULL, NULL,
- *             "drawgraph", "draws the graph for the current problem instance", FALSE, NULL) );
- *       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
- *       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
- *    }
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogInclude}
  *
  * Using this code, it is even possible to call SCIPincludeDialogDrawgraph() before including the default dialog plugins,
  * and you can also call it multiple times without causing inconsistencies in the dialog structure.
@@ -4842,22 +4761,8 @@
  *
  * If you are using dialog data, you have to implement this method in order to free the dialog data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_DIALOGFREE(dialogFreeMydialog)
- * {
- *    SCIP_DIALOGDATA* dialogdata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogFree}
  *
- *    dialogdata = SCIPdialogGetData(dialog);
- *    assert(dialogdata != NULL);
- *
- *    SCIPfreeMemory(scip, &dialogdata);
- *
- *    SCIPdialogSetData(dialog, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your dialog data, remember to free this memory
  * before freeing the dialog data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -5024,22 +4929,8 @@
  *
  * If you are using display column data, you have to implement this method in order to free the display column data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
- * {
- *    SCIP_DISPDATA* dispdata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDispFree}
  *
- *    dispdata = SCIPdispGetData(disp);
- *    assert(dispdata != NULL);
- *
- *    SCIPfreeMemory(scip, &dispdata);
- *
- *    SCIPdispSetData(disp, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your display column data, remember to free this memory
  * before freeing the display column data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -5768,22 +5659,8 @@
  *
  * If you are using statistics table data, you have to implement this method in order to free the statistics table data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
- * {
- *    SCIP_TABLEDATA* tabledata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetTableFree}
  *
- *    tabledata = SCIPtableGetData(table);
- *    assert(tabledata != NULL);
- *
- *    SCIPfreeMemory(scip, &tabledata);
- *
- *    SCIPtableSetData(disp, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your statistics table data, remember to free this memory
  * before freeing the statistics table data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -6619,13 +6496,13 @@
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
  * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
- * decomposition. Such problems are given by
+ * decomposition. In a purely mixed-integer linear setting, such problems are given by
  *
  * \f[
  *  \begin{array}[t]{rllclcl}
  *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *    \text{subject to} & \displaystyle & Ax & & & = & b \\
  *         & \\
  *         & \displaystyle & Tx & + & Hy & = & h \\
  *         & \\
@@ -6645,7 +6522,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *    \text{subject to} & \displaystyle & Hy  = h - T\bar{x} \\
  *         & \\
  *         & & y \in \mathbb{R}^{m} \\
  *  \end{array}
@@ -6678,7 +6555,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & c^{T}x + \varphi \\
  *         & \\
- *    subject \ to & \displaystyle & Ax = b \\
+ *    \text{subject to} & \displaystyle & Ax = b \\
  *         & \\
  *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
  *         & \\
@@ -6691,7 +6568,23 @@
  *
  * @section BENDERFRAMEWORK Overview
  *
- * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented.
+ *
+ * The current framework can be used to handle a Benders Decomposition of CIPs of the form
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *    \text{subject to} & \displaystyle & g(x & , & y) & \in & [\ell,u] \\
+ *         & & x & & & \in & X \\
+ *         & & & & y & \in & Y \\
+ *  \end{array}
+ * \f]
+ * when either
+ * - the subproblem is convex: \f$g_i(x,y)\f$ convex on \f$X\times Y\f$ if \f$u_i<\infty\f$, \f$g_i(x,y)\f$ concave on \f$X\times Y\f$ if \f$\ell_i>-\infty\f$, and \f$Y=\mathbb{R}^m\f$, or
+ * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
+ *
+ * This framework can be used in four different
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
@@ -6853,22 +6746,7 @@
  *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
  *
  *  An example code is:
- *  \code
- *  SCIP_RETCODE dosomething(
- *     SCIP*                 scip
- *     )
- *  {
- *     int nvars;
- *     int* array;
- *
- *     nvars = SCIPgetNVars(scip);
- *     SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nvars) );
- *
- *     do something ...
- *
- *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
- *  }
- *  \endcode
+ *  @refsnippet{tests/src/misc/snippets.c,SnippetArrayAllocAndFree}
  *  @n
  *
  *  @section BUFMEM Buffer memory
@@ -7391,7 +7269,7 @@
  *
  */
 
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -8055,7 +7933,7 @@
  *
  */
 
-/**@defgroup CONSHDLRS  Constraint Handler
+/**@defgroup CONSHDLRS  Constraint Handlers
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the default constraint handlers of \SCIP
  *

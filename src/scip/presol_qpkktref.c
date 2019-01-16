@@ -441,7 +441,7 @@ SCIP_RETCODE createKKTDualCons(
    if( SCIPhashmapExists(varhash, var) )
    {
       int ind;
-      ind = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+      ind = SCIPhashmapGetImageInt(varhash, var);
       *dualcons = dualconss[ind];
    }
    else
@@ -498,8 +498,8 @@ SCIP_RETCODE createKKTDualCons(
       }
 
       /* add variable in map  */
-      SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) *ndualconss) );/*lint !e571*/
-      assert( *ndualconss == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(varhash, var, (*ndualconss)) );
+      assert( *ndualconss == SCIPhashmapGetImageInt(varhash, var) );
 
       /* create a new linear constraint */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "KKTref_%s", SCIPvarGetName(var));
@@ -1249,8 +1249,8 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
                vars, vals, lhs, rhs, nvars, varhash, dualconss, ndualconss, naddconss) );
       }
 
-      SCIPfreeBufferArrayNull(scip, &vars);
       SCIPfreeBufferArrayNull(scip, &vals);
+      SCIPfreeBufferArrayNull(scip, &vars);
    }
 
    return SCIP_OKAY;
@@ -1479,7 +1479,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
          /* get dual constraint associated to variable (has already been created in function
           * presolveAddKKTQuadQuadraticTerms() */
          assert( SCIPhashmapExists(varhash, var) );
-         ind = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+         ind = SCIPhashmapGetImageInt(varhash, var);
          dualcons = dualconss[ind];
          assert( dualcons != NULL );
 

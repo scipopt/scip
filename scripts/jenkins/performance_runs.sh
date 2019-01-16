@@ -21,6 +21,10 @@
 
 echo "This is performance_runs.sh running."
 
+# arguments and defaults
+# Find out what day of week it is: mon-1 .. sun-7
+: ${DAY_OF_WEEK:=$(date +%u)}
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
@@ -50,17 +54,31 @@ export MODE=performance
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
 
 export CRITERION_DIR=""
-export IPOPT_DIR=/optimi/usr/sw/ipopt
-export BLISS_DIR=/optimi/usr/sw/bliss
-
-# Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=`date +%u`
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
+export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
 # create required directory
 mkdir -p settings
+
+#######################
+### Update Branches ###
+#######################
+
+BRANCHNAME=${GITBRANCH}
+if [ "${GITBRANCH}" == "bugfix" ]; then
+  BRANCHNAME="v60-bugfix"
+fi
+#if [ "${DAY_OF_WEEK}" == "6" ]; then
+#  git checkout ${BRANCHNAME}
+#  git pull
+#  git checkout performance-${GITBRANCH}
+#  git merge ${BRANCHNAME} --ff-only
+#  git push
+#  git checkout ${BRANCHNAME}
+#fi
 
 ####################################
 ### jobs configuration variables ###
@@ -72,26 +90,36 @@ mkdir -p settings
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
+#  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 
-RANDOMSEED=`date +%Y%m%d`
+RANDOMSEED=$(date +%Y%m%d)
 
 # use associative arrays, this requires bash4
 # declaration
 declare -A JOBS
 declare -A TRIGGER
 
+# for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance"
-JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
-TRIGGER[6,1]="https://adm_timo:0bf48f6ec4dfdebe4276d217c026c607@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
+JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=2"
+JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
-JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=sap-next-release-pure-diff PERFORMANCE=performance"
+
+SAPSETTINGS=sap-next-release-pure-diff
+
+if [ "${GITBRANCH}" != "master" ]; then
+  SAPSETTINGS=sap-600-pure-diff
+fi
+
+JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-600-pure-diff.set settings/.
 
 
 #########################
@@ -166,8 +194,8 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_default.set q"
 
   # create more required symlinks
-  ln -fs /optimi/kombadon/IP check/
-  ln -fs /optimi/kombadon/MINLP check/
+  ln -fs /nfs/optimi/kombadon/IP check/
+  ln -fs /nfs/optimi/kombadon/MINLP check/
 
   #######################
   ### Submit Testruns ###
@@ -175,7 +203,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
 
   for i in `seq 1 ${TODAYS_N_JOBS}`; do
     FLAGS=${TODAYS_JOBS[$i]}
-    for j in "EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+    for j in "SEED EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
       unset $j
     done
     export ${FLAGS}

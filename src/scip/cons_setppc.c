@@ -2980,7 +2980,7 @@ SCIP_RETCODE collectCliqueData(
             usefulvars[*nusefulvars] = var;
             ++(*nusefulvars);
             varindex = *nusefulvars;
-            SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) varindex) );
+            SCIP_CALL( SCIPhashmapInsertInt(vartoindex, (void*) var, varindex) );
 
             /* get the maximal number of occurances of this variable, if this variables  */
             tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
@@ -2990,8 +2990,8 @@ SCIP_RETCODE collectCliqueData(
          }
          else
          {
-            assert(SCIPhashmapGetImage(vartoindex, (void*) var) != NULL);
-            varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
+            assert(SCIPhashmapExists(vartoindex, (void*) var));
+            varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var);
          }
 
          /* the number of occurances of a variable is not limited by the locks (so maybe we have to increase memory),
@@ -3036,8 +3036,8 @@ void deleteCliqueDataEntry(
    assert(varnconss != NULL);
    assert(varconsidxs != NULL);
 
-   assert(SCIPhashmapGetImage(vartoindex, (void*) var) != NULL);
-   varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
+   assert(SCIPhashmapExists(vartoindex, (void*) var));
+   varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var);
 
    /* remove entry of variable at the given position */
    for( i = 0; i < varnconss[varindex]; ++i )
@@ -3093,7 +3093,7 @@ SCIP_RETCODE addCliqueDataEntry(
        */
       SCIPsortedvecInsertDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, addvar, nusefulvars, NULL);
       varindex = *nusefulvars;
-      SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) addvar, (void*) (size_t) varindex) );
+      SCIP_CALL( SCIPhashmapInsertInt(vartoindex, (void*) addvar, varindex) );
 
       assert(varconsidxs[varindex] == NULL);
 
@@ -3103,7 +3103,7 @@ SCIP_RETCODE addCliqueDataEntry(
    }
    else
    {
-      varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) addvar);
+      varindex = SCIPhashmapGetImageInt(vartoindex, (void*) addvar);
 
       /* grow the needed memory if we added a variable */
       if( varnconss[varindex] == maxnvarconsidx[varindex] )
@@ -5126,7 +5126,7 @@ SCIP_RETCODE preprocessCliques(
 
 	 assert(SCIPhashmapExists(vartoindex, (void*) var0));
 
-	 varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var0);
+	 varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var0);
 	 for( v1 = varnconss[varindex] - 1; v1 >= 0 ; --v1 )
 	    ++(countofoverlapping[varconsidxs[varindex][v1]]);
       }
@@ -5269,7 +5269,7 @@ SCIP_RETCODE preprocessCliques(
 
             assert(SCIPhashmapExists(vartoindex, (void*) var0));
 
-            varindex = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var0);
+            varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var0);
             for( i = varnconss[varindex] - 1; i >= 0 ; --i )
                ++(countofoverlapping[varconsidxs[varindex][i]]);
          }
@@ -5913,7 +5913,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                if( !SCIPhashmapExists(vartoindex, (void*) negvar) )
                {
                   ++nhashmapentries;
-                  SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) nhashmapentries) );
+                  SCIP_CALL( SCIPhashmapInsertInt(vartoindex, (void*) var, nhashmapentries) );
 
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
@@ -5923,7 +5923,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                }
 
                assert(SCIPhashmapExists(vartoindex, (void*) negvar));
-               image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) negvar);
+               image = SCIPhashmapGetImageInt(vartoindex, (void*) negvar);
                assert(image > 0 && image <= nhashmapentries);
 
                consindex = considxs[image - 1];
@@ -6008,6 +6008,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                else
                {
                   /* perform aggregation on variables resulting from a set-packing constraint */
+                  /* coverity[copy_paste_error] */
                   if( multaggridx == c )
                   {
                      SCIP_CALL( multiAggregateBinvar(scip, linearconshdlrexist, aggrconsdata->vars, aggrconsdata->nvars, varindex, &infeasible, &aggregated) );
@@ -6055,7 +6056,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             /* if we have two times the same variable in a set-partitioning constraint, we cannot aggregate this */
             if( SCIPhashmapExists(vartoindex, (void*) var) )
             {
-               image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
+               image = SCIPhashmapGetImageInt(vartoindex, (void*) var);
                assert(image > 0 && image <= nhashmapentries);
 
                assert(0 <= considxs[image - 1] && considxs[image - 1] < nconss);
@@ -6079,7 +6080,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                   assert(!SCIPhashmapExists(vartoindex, (void*) var));
 
                   ++nhashmapentries;
-                  SCIP_CALL( SCIPhashmapInsert(vartoindex, (void*) var, (void*) (size_t) nhashmapentries) );
+                  SCIP_CALL( SCIPhashmapInsertInt(vartoindex, (void*) var, nhashmapentries) );
 
                   considxs[nhashmapentries - 1] = c;
                   posincons[nhashmapentries - 1] = v;
@@ -6101,7 +6102,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             assert(!chgtype[c]);
             assert(SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)));
-            image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) SCIPvarGetNegatedVar(var));
+            image = SCIPhashmapGetImageInt(vartoindex, (void*) SCIPvarGetNegatedVar(var));
             assert(image > 0 && image <= nhashmapentries);
 
             consindex = considxs[image - 1];
@@ -6352,6 +6353,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
          /* delete cons0 */
@@ -8170,7 +8172,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8209,11 +8211,11 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
     */
    if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
       && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
-         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip)
+         || (conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip)
                && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
       SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
-            && SCIPallowDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            && SCIPallowStrongDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
             naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )

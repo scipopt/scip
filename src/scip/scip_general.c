@@ -41,10 +41,6 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef WITH_ZLIB
-#include <zlib.h>
-#endif
-
 #include "lpi/lpi.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
@@ -119,6 +115,9 @@
 
 #include "scip/pub_message.h"
 
+#ifdef SCIP_WITH_ZLIB
+#include <zlib.h>
+#endif
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -316,7 +315,7 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
 #endif
 

@@ -155,8 +155,8 @@
                                            *   removed afterwards? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
-#define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
-#define MAXSCALEDCOEFINTEGER        1e+05 /**< maximal coefficient value after scaling if all variables are of integral
+#define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEFINTEGER            0 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
 
@@ -729,6 +729,8 @@ SCIP_RETCODE consCatchEvent(
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
          | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
+
+   consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
 
    return SCIP_OKAY;
 }
@@ -4171,7 +4173,6 @@ SCIP_RETCODE normalizeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Longint scm;
    SCIP_Longint nominator;
@@ -4211,8 +4212,6 @@ SCIP_RETCODE normalizeCons(
    /* get coefficient arrays */
    vals = consdata->vals;
    nvars = consdata->nvars;
-   vars = consdata->vars;
-   assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
    if( nvars == 0 )
@@ -4221,7 +4220,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* get maximal and minimal absolute coefficient */
@@ -4273,9 +4271,7 @@ SCIP_RETCODE normalizeCons(
          /* get new consdata information, because scaleCons() might have deleted variables */
          vals = consdata->vals;
          nvars = consdata->nvars;
-         vars = consdata->vars;
 
-         assert(nvars == 0 || vars != NULL);
          assert(nvars == 0 || vals != NULL);
       }
    }
@@ -4287,7 +4283,6 @@ SCIP_RETCODE normalizeCons(
       return SCIP_OKAY;
    }
 
-   assert(vars != NULL);
    assert(vals != NULL);
 
    /* calculate the maximal multiplier for common divisor calculation:
@@ -4299,39 +4294,15 @@ SCIP_RETCODE normalizeCons(
    epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
-   maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
 
    if( !consdata->hasnonbinvalid )
       consdataCheckNonbinvar(consdata);
 
    /* if all variables are of integral type we will allow a greater multiplier */
    if( !consdata->hascontvar )
-   {
-      if( SCIPvarGetType(vars[nvars - 1]) != SCIP_VARTYPE_CONTINUOUS )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER / MAX(maxabsval, 1.0))); /*lint !e835*/
    else
-   {
-      SCIP_Bool foundcont;
-
-      foundcont = FALSE;
-
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            foundcont = TRUE;
-            break;
-         }
-      }
-
-      if( !foundcont )
-      {
-         maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER/(MAX(maxabsval, 1.0))));
-      }
-   }
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEF / MAX(maxabsval, 1.0))); /*lint !e835*/
 
    /*
     * multiplication with +1 or -1
@@ -4630,6 +4601,11 @@ SCIP_RETCODE applyFixings(
    {
       SCIP_Real lhssubtrahend;
       SCIP_Real rhssubtrahend;
+
+      /* if an unmodifiable row has been added to the LP, then we cannot apply fixing anymore (cannot change a row)
+       * this should not happen, as applyFixings is called in addRelaxation() before creating and adding a row
+       */
+      assert(consdata->row == NULL || !SCIProwIsInLP(consdata->row) || SCIProwIsModifiable(consdata->row));
 
       lhssubtrahend = 0.0;
       rhssubtrahend = 0.0;
@@ -7450,6 +7426,16 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->row == NULL )
    {
+      if( !SCIPconsIsModifiable(cons) )
+      {
+         /* replace all fixed variables by active counterparts, as we have no chance to do this anymore after the row has been added to the LP
+          * removing this here will make test cons/linear/fixedvar.c fail (as of 2018-12-03)
+          */
+         SCIP_CALL( applyFixings(scip, cons, cutoff) );
+         if( *cutoff )
+            return SCIP_OKAY;
+      }
+
       /* convert consdata object into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }
@@ -16311,7 +16297,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* apply dual presolving for variables that appear in only one constraint */
-         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
          {
             SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
          }
@@ -16333,7 +16319,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* singleton column stuffing */
       if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) &&
-         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowDualReds(scip) )
+         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( presolStuffing(scip, cons, conshdlrdata->singletonstuffing,
                conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds) );
@@ -16445,7 +16431,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && !SCIPisStopped(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }

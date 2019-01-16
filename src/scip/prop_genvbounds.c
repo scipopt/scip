@@ -1660,11 +1660,12 @@ SCIP_RETCODE sortGenVBounds(
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
-   SCIPfreeBufferArray(scip, &(genvboundssorted));
 
    /* free strong component arrays */
    SCIPfreeBufferArray(scip, &strongcompstartidx);
    SCIPfreeBufferArray(scip, &strongcomponents);
+
+   SCIPfreeBufferArray(scip, &(genvboundssorted));
 
    /* free digraph */
    SCIPdigraphFree(&graph);
@@ -2319,7 +2320,7 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -2517,7 +2518,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run if propagation w.r.t. current objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -2755,7 +2756,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          int componentidx;
 
          /* get its index */
-         componentidx = ((int)(size_t) SCIPhashmapGetImage(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e776*/
+         componentidx = (SCIPhashmapGetImageInt(propdata->startmap, (void*)(size_t) (component + 1))) - 1; /*lint !e571 !e776*/
          assert(componentidx >= 0);
          assert(propdata->startcomponents[componentidx] == component);
 
@@ -2773,8 +2774,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
          propdata->startindices[componentidx] = startidx;
 
          /* store component in hashmap */
-         SCIP_CALL( SCIPhashmapInsert(propdata->startmap, (void*)(size_t) (component + 1),
-               (void*)(size_t) (componentidx + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->startmap, (void*)(size_t) (component + 1), componentidx + 1) ); /*lint !e571 !e776*/
 
          /* increase number of starting indices */
          propdata->nindices++;

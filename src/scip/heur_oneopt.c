@@ -280,7 +280,7 @@ static
 SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_HEUR*            heur,               /**< oneopt heuristic */
    SCIP_VAR**            vars,               /**< SCIP variables */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
    SCIP_SOL*             bestsol,            /**< incumbent solution */
@@ -307,7 +307,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    /* copy complete SCIP instance */
    *valid = FALSE;
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, FALSE, TRUE, valid) );
    SCIP_CALL( SCIPtransformProb(subscip) );
 
    /* get variable image */

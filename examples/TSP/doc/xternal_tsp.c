@@ -108,4 +108,9 @@
  * Iterate over the remaining variables in nonincreasing order of their LP value \f$ x_e \f$  and add
  * the corresponding edge \f$ e \f$ ,
  * if it does not close a subtour.
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

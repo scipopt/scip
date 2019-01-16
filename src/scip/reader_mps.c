@@ -965,10 +965,13 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+   SCIP_Bool     usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
    var = NULL;
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != 0 )
@@ -1001,7 +1004,16 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+         /* check whether we have seen this variable before, this would not allowed */
+         if( usevartable && SCIPfindVar(scip, colname) != NULL )
+         {
+            SCIPerrorMessage("Coeffients of column <%s> don't appear consecutively (line: %d)\n",
+               colname, mpsi->lineno);
+
+            return SCIP_READERROR;
+         }
 
          /* if the file type is a cor file, the the variable name must be stored */
          SCIP_CALL( addVarNameToStorage(scip, varnames, varnamessize, nvarnames, colname) );
@@ -1034,6 +1046,12 @@ SCIP_RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
+            /* warn the user in case the coefficient is infinite */
+            if( SCIPisInfinity(scip, REALABS(val)) )
+            {
+               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
+            }
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
@@ -1881,6 +1899,7 @@ SCIP_RETCODE readSOS(
             case 2: 
                SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
                break;
+            /* coverity[dead_error_begin] */
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
@@ -2515,7 +2534,7 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* correct linear constraint and create new name */
-      if ( ! SCIPisInfinity(scip, -lhs) )
+      if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
          /* we have added lhs above and only need the rhs */
          SCIP_CALL( SCIPchgLhsLinear(scip, lincons, -SCIPinfinity(scip) ) );
@@ -4423,6 +4442,7 @@ SCIP_RETCODE SCIPwriteMps(
                rowvals[1] = -1.0;
 
                /* compute maximal length for rowname */
+               /* coverity[negative_returns] */
                n = (int) log10((double)nrowvars) + 1 + l;
 
                /* assure maximal allowed value */

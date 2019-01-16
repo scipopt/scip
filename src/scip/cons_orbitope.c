@@ -56,6 +56,24 @@
  *   <tr><td>lastones     </td><td>\\alpha </td></tr>
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
+ *
+ * Orbitopal fixing for the full (sub-)orbitope and application to the Unit Commitment Problem@n
+ * Pascale Bendotti, Pierre Fouilhoux, and Cecile Rottner,@n
+ * Optimization Online: http://www.optimization-online.org/DB_HTML/2017/10/6301.html
+ *
+ * Two linear time propagation algorithms for full orbitopes are described in this paper, a static
+ * version and a dynamic one. We implemented the static version as well as a modified version of
+ * the dynamic one. The reason for the latter is to simplify the compatibility with full orbitope
+ * cutting planes.
+ *
+ * Polytopes associated with symmetry handling@n
+ * Christopher Hojny and Marc E. Pfetsch,@n
+ * Math. Program. (2018)
+ *
+ * In this paper, a linear time separation algorithm for orbisacks (full orbitopes with two columnes)
+ * is described. We use this algorithm for every pair of adjacent columns within the orbitope as well
+ * as a version that is adapted to the reordering based on the dynamic full orbitope propagation
+ * algorithm to ensure validity of binary points via cutting planes.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -67,6 +85,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -91,8 +110,8 @@
 #define CONSHDLR_SEPAPRIORITY    +40100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -1005200 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -1005200 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             5 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ             5 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -106,7 +125,7 @@
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 #define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
-
+#define DEFAULT_USEDYNAMICPROP     TRUE /**< whether we use a dynamic version of the propagation routine */
 
 /*
  * Data structures
@@ -118,6 +137,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
    SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
+   SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
 };
 
 /** constraint data for orbitope constraints */
@@ -125,6 +145,7 @@ struct SCIP_ConsData
 {
    SCIP_VAR***           vars;               /**< matrix of variables on which the symmetry acts            */
    SCIP_VAR**            tmpvars;            /**< temporary storage for variables                           */
+   SCIP_HASHMAP*         rowindexmap;        /**< map of variables to row index in orbitope matrix */
    SCIP_Real**           vals;               /**< LP-solution for those variables                           */
    SCIP_Real*            tmpvals;            /**< temporary storage for values                              */
    SCIP_Real**           weights;            /**< SC weight table                                           */
@@ -134,6 +155,10 @@ struct SCIP_ConsData
    SCIP_ORBITOPETYPE     orbitopetype;       /**< type of orbitope constraint                               */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                           */
    SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already globally been fixed to zero?  */
+   int*                  roworder;           /**< order of orbitope rows if dynamic propagation for full orbitopes
+                                              *   is used. */
+   SCIP_Bool*            rowused;            /**< whether a row has been considered in roworder */
+   int                   nrowsused;          /**< number of rows that have already been considered in roworder */
 };
 
 
@@ -145,7 +170,8 @@ struct SCIP_ConsData
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata            /**< pointer to orbitope constraint data */
+   SCIP_CONSDATA**       consdata,           /**< pointer to orbitope constraint data */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    int i;
@@ -154,6 +180,11 @@ SCIP_RETCODE consdataFree(
 
    assert( consdata != NULL );
    assert( *consdata != NULL );
+
+   if ( usedynamicprop && (*consdata)->rowindexmap != NULL )
+   {
+      SCIPhashmapFree(&((*consdata)->rowindexmap));
+   }
 
    p = (*consdata)->nspcons;
    q = (*consdata)->nblocks;
@@ -165,6 +196,11 @@ SCIP_RETCODE consdataFree(
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);     /*lint !e866*/
    }
 
+   if ( usedynamicprop )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->rowused), p);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->roworder), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
@@ -188,7 +224,8 @@ SCIP_RETCODE consdataCreate(
    int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
-   SCIP_Bool             resolveprop         /**< should propagation be resolved?                         */
+   SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    int i;
@@ -202,6 +239,13 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
+
+   if ( usedynamicprop )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rowused, nspcons) );
+   }
 
    for (i = 0; i < nspcons; ++i)
    {
@@ -209,7 +253,14 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e866*/
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
+      (*consdata)->roworder[i] = i;
+
+      if ( usedynamicprop )
+      {
+         (*consdata)->rowused[i] = FALSE;
+      }
    }
+   (*consdata)->nrowsused = 0;
 
    (*consdata)->tmpvals = NULL;
    (*consdata)->tmpvars = NULL;
@@ -234,6 +285,10 @@ SCIP_RETCODE consdataCreate(
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
+            if ( usedynamicprop )
+            {
+               SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
+            }
          }
       }
    }
@@ -1013,7 +1068,7 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 
    *nfixedvars = 0;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1340,149 +1395,330 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 }
 
 
-/** propagation of full orbitopes (called recursively) */
+/* Compute dynamic order of rows based on the branching decisions, i.e., the row of the first branching variable
+ * determines the first row in the new ordering, the row of the second branching variable determines the second
+ * row in the new ordering if it differs from the row of the first branching variable, and so on.
+ *
+ * The roworder array stores this reordering, where acutally only the first maxrowlabel entries encode the
+ * reordering.
+ */
 static
-SCIP_RETCODE propagateFullOrbitope(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to be processed */
-   SCIP_VAR***           vars,               /**< variable matrix */
-   int                   firstcol,           /**< first column to consider */
-   int                   lastcol,            /**< last column to consider + 1 */
-   int                   currow,             /**< current row */
-   int                   nrows,              /**< number of rows */
-   int                   ncols,              /**< number of columns */
-   int*                  nfixedvars,         /**< pointer to store the number of variables fixed during propagation */
-   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
+SCIP_RETCODE computeDynamicRowOrder(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_HASHMAP*         rowindexmap,        /**< map of variables to indices in orbitope vars matrix */
+   SCIP_Bool*            rowused,            /**< bitset marking whether a row has been considered in the new order */
+   int*                  roworder,           /**< reordering of the rows w.r.t. branching decisions */
+   int                   nrows,              /**< number of rows in orbitope */
+   int                   ncols,              /**< number of columns in orbitope */
+   int*                  maxrowlabel         /**< maximum row label in ordering */
    )
 {
-   int lastone;
-   int firstzero = -1;
    int i;
-   int j;
-   int l;
-   SCIP_Bool tightened;
-   int inferinfo;
+   SCIP_NODE* node;
+   int* branchdecisions;
+   int nbranchdecision;
 
    assert( scip != NULL );
-   assert( cons != NULL );
-   assert( vars != NULL );
-   assert( 0 <= firstcol && firstcol < lastcol );
-   assert( infeasible != NULL );
-   assert( nfixedvars != NULL );
+   assert( rowindexmap != NULL );
+   assert( roworder != NULL );
    assert( nrows > 0 );
-   assert( ncols > 0 );
+   assert( maxrowlabel != NULL );
 
-   /* possibly stop recursion */
-   if ( *infeasible || currow >= nrows )
-      return SCIP_OKAY;
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchdecisions, nrows * ncols) );
+   nbranchdecision = 0;
 
-   /* init indicators of 1-entry position */
-   lastone = firstcol - 1;
+   /* get current node */
+   node = SCIPgetCurrentNode(scip);
 
-   /* iterate over entries of current row and perform orbitope propagation */
-   for (j = firstcol; j < lastcol; ++j)
+   /* follow path to the root (in the root no domains were changed due to branching) */
+   while ( SCIPnodeGetDepth(node) != 0 )
    {
-      assert( vars[currow][j] != NULL );
+      SCIP_BOUNDCHG* boundchg;
+      SCIP_DOMCHG* domchg;
+      SCIP_VAR* branchvar;
+      int nboundchgs;
 
-      if ( SCIPvarGetLbLocal(vars[currow][j]) > 0.5 )
+      /* get domain changes of current node */
+      domchg = SCIPnodeGetDomchg(node);
+      assert( domchg != NULL );
+
+      /* loop through all bound changes */
+      nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
+      for (i = 0; i < nboundchgs; ++i)
       {
-         /* fix all variables smaller than j to 1; we iterate backwards to guarantee correcteness of infeasibility detection */
-         for (l = j - 1; l > lastone; --l)
+         /* get bound change info */
+         boundchg = SCIPdomchgGetBoundchg(domchg, i);
+         assert( boundchg != NULL );
+
+         /* branching decisions have to be in the beginning of the bound change array */
+         if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
+            break;
+
+         /* get corresponding branching variable */
+         branchvar = SCIPboundchgGetVar(boundchg);
+
+         /* we only consider binary variables */
+         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
          {
-            /* check again since fixing previous entries may have modified the current entry */
-            if ( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 && SCIPvarGetUbLocal(vars[currow][l]) > 0.5 )
+            int rowidx;
+
+            /* make sure that branching variable is present in the orbitope */
+            if ( ! SCIPhashmapExists(rowindexmap, (void*) branchvar) )
+               continue;
+
+            rowidx = (int) (size_t) SCIPhashmapGetImage(rowindexmap, (void*) branchvar);
+            branchdecisions[nbranchdecision++] = rowidx;
+         }
+      }
+
+      node = SCIPnodeGetParent(node);
+   }
+
+   /* Insert branching decisions of current path into global row order.
+    * Iterate in reverse order over branching decisions to get the path
+    * from the root to the current node.
+    */
+   for (i = nbranchdecision - 1; i >= 0; --i)
+   {
+      if ( ! rowused[branchdecisions[i]] )
+      {
+         roworder[*maxrowlabel] = branchdecisions[i];
+         rowused[branchdecisions[i]] = TRUE;
+         *maxrowlabel += 1;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &branchdecisions);
+
+   return SCIP_OKAY;
+}
+
+
+/* Compute lexicographically minimal face of the hypercube w.r.t. some coordinate fixing */
+static
+SCIP_RETCODE findLexMinFace(
+   SCIP_VAR***           vars,               /**< variable matrix */
+   int**                 lexminfixes,        /**< fixings characterzing lex-min face */
+   int*                  roworder,           /**< dynamic row order */
+   int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or
+                                              *   NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
+                                              *   detected or NULL (if in resprop) */
+   int                   m,                  /**< number of rows in vars */
+   int                   n,                  /**< number of columns in vars */
+   int                   nrowsused,          /**< number of rows considered in propagation */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
+   SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
+   )
+{
+   int i;
+   int j;
+   *infeasible = FALSE;
+
+   assert( vars != NULL );
+   assert( lexminfixes != NULL );
+   assert( !resprop || minfixedrowlexmin != NULL );
+   assert( m > 0 );
+   assert( n > 0 );
+   assert( nrowsused > 0 );
+   assert( nrowsused <= m );
+   assert( infeasible != NULL );
+
+   /* iterate over columns in reverse order and find the lexicographically minimal face
+    * of the hypercube containing lexminfixes
+    */
+   for (j = n - 2; j >= 0; --j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
+      for (i = 0; i < nrowsused; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
+         {
+            assert( lexminfixes[i][j + 1] == 0 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexminfixes[i][j] != lexminfixes[i][j + 1] && lexminfixes[i][j] != 2 )
+         {
+            assert( lexminfixes[i][j + 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
             {
-               tightened = FALSE;
-               inferinfo = currow * ncols + l;
-
-               SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
-               if ( tightened )
-                  ++(*nfixedvars);
-            }
-            /* since we iterate backwards, we have (vars[currow][l], vars[currow][l + 1]) = (0, 1) -> infeasible */
-            else if ( SCIPvarGetUbLocal(vars[currow][l]) < 0.5 )
-            {
-               assert( l < lastcol -1 );
-
-               if ( SCIPisConflictAnalysisApplicable(scip) )
-               {
-                  int col2 = l + 1;
-
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-
-                  for (i = 0; i <= currow; ++i)
-                  {
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][l]) );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][col2]) );
-                  }
-
-                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-               }
                *infeasible = TRUE;
 
                return SCIP_OKAY;
             }
          }
 
-         lastone = j;
-      }
-      else if ( SCIPvarGetUbLocal(vars[currow][j]) < 0.5 )
-      {
-         firstzero = j;
-
-         /* fix all remaining entries to 0 */
-         for (l = j + 1; l < lastcol; ++l)
+         if ( lexminfixes[i][j] == 2 )
          {
-            if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
+            if ( minfixed == -1 )
+               lexminfixes[i][j] = lexminfixes[i][j + 1];
+            else
+               lexminfixes[i][j] = 0;
+         }
+      }
+
+      /* ensure that column j is lexicographically not smaller than column j + 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+#ifndef NDEBUG
+         int origrow;
+
+         assert( maxdiscriminating >= 0 );
+         assert( maxdiscriminating < nrowsused );
+
+         origrow = roworder[maxdiscriminating];
+
+         if ( resprop )
+         {
+            assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
+         }
+         else
+         {
+            assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
+         }
+#endif
+
+         lexminfixes[maxdiscriminating][j] = 1;
+      }
+
+      if ( resprop )
+      {
+         /* store minimum fixed row */
+         if ( minfixed == -1 )
+            minfixedrowlexmin[j] = nrowsused - 1;
+         else
+            minfixedrowlexmin[j] = minfixed;
+
+         /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
+          * the minimum fixed row of column n-1 is determined by column n-2 */
+         if ( minfixedrowlexmin[j + 1] < minfixedrowlexmin[j] )
+            minfixedrowlexmin[j + 1] = minfixedrowlexmin[j];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/* Compute lexicographically maximal face of the hypercube w.r.t. some coordinate fixing */
+static
+SCIP_RETCODE findLexMaxFace(
+   SCIP_VAR***           vars,               /**< variable matrix */
+   int**                 lexmaxfixes,        /**< fixings characterzing lex-max face */
+   int*                  roworder,           /**< dynamic row order */
+   int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or
+                                              *   NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
+                                              *   detected or NULL (if in resprop) */
+   int                   m,                  /**< number of rows in vars */
+   int                   n,                  /**< number of columns in vars */
+   int                   nrowsused,          /**< number of rows considered in propagation */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
+   SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
+   )
+{
+   int i;
+   int j;
+   *infeasible = FALSE;
+
+   assert( vars != NULL );
+   assert( lexmaxfixes != NULL );
+   assert( !resprop || minfixedrowlexmax != NULL );
+   assert( m > 0 );
+   assert( n > 0 );
+   assert( nrowsused > 0 );
+   assert( nrowsused <= m );
+   assert( infeasible != NULL );
+
+   for (j = 1; j < n; ++j)
+   {
+      int maxdiscriminating = m;
+      int minfixed = -1;
+
+      /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
+      for (i = 0; i < nrowsused; ++i)
+      {
+         /* is row i j-discriminating? */
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
+         {
+            assert( lexmaxfixes[i][j - 1] == 1 );
+
+            maxdiscriminating = i;
+         }
+
+         /* is row i j-fixed? */
+         if ( minfixed == -1 && lexmaxfixes[i][j - 1] != lexmaxfixes[i][j] && lexmaxfixes[i][j] != 2 )
+         {
+            assert( lexmaxfixes[i][j - 1] != 2 );
+
+            minfixed = i;
+
+            /* detect infeasibility */
+            if ( maxdiscriminating > minfixed )
             {
-               tightened = FALSE;
-               inferinfo = currow * ncols + l;
-
-               SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], FALSE, cons, inferinfo, infeasible, &tightened) );
-
-               if ( tightened )
-                  ++(*nfixedvars);
-            }
-            /* -> infeasible */
-            else if ( SCIPvarGetLbLocal(vars[currow][l]) > 0.5 )
-            {
-               assert( l > 0 );
-
-               if ( SCIPisConflictAnalysisApplicable(scip) )
-               {
-                  int col2 = l - 1;
-
-                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-
-                  for (i = 0; i <= currow; ++i)
-                  {
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][col2]) );
-                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][l]) );
-                  }
-
-                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-               }
                *infeasible = TRUE;
 
                return SCIP_OKAY;
             }
          }
 
-         break;
+         if ( lexmaxfixes[i][j] == 2 )
+         {
+            if ( minfixed == -1 )
+               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+            else
+               lexmaxfixes[i][j] = 1;
+         }
       }
-   }
 
-   /* The orbitope can be split into the sub orbitopes w.r.t. the 1-entries (firstcol, ..., lastone) and the 0-entries
-    * (firstzero, ..., lastcol - 1). Furthermore, avoid trivial cases, i.e., the sub-orbitopes contain only one
-    * column. */
-   if ( lastone > firstcol )
-   {
-      SCIP_CALL( propagateFullOrbitope(scip, cons, vars, firstcol, lastone + 1, currow + 1, nrows, ncols, nfixedvars, infeasible) );
-   }
+      /* ensure that column j is lexicographically not greater than column j - 1 */
+      if ( minfixed > -1 && maxdiscriminating < m )
+      {
+#ifndef NDEBUG
+         int origrow;
 
-   if ( firstzero >= 0 && firstzero < lastcol - 1 )
-   {
-      SCIP_CALL( propagateFullOrbitope(scip, cons, vars, firstzero, lastcol, currow + 1, nrows, ncols, nfixedvars, infeasible) );
+         assert( maxdiscriminating >= 0 );
+         assert( maxdiscriminating < nrowsused );
+
+         origrow = roworder[maxdiscriminating];
+
+         if ( resprop )
+         {
+            assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
+         }
+         else
+         {
+            assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
+         }
+#endif
+
+         lexmaxfixes[maxdiscriminating][j] = 0;
+      }
+
+      if ( resprop )
+      {
+         /* store minimum fixed row */
+         if ( minfixed == -1 )
+            minfixedrowlexmax[j] = nrowsused - 1;
+         else
+            minfixedrowlexmax[j] = minfixed;
+
+         /* columns 1, ..., n-2 are contained in two columns (take the minimum) and
+          * the minimum fixed row of column 0 is determined by column 1 */
+         if ( minfixedrowlexmax[j - 1] < minfixedrowlexmax[j] )
+            minfixedrowlexmax[j - 1] = minfixedrowlexmax[j];
+      }
    }
 
    return SCIP_OKAY;
@@ -1495,10 +1731,20 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
-   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   SCIP_Bool             dynamic             /**< whether we use a dynamic propagation routine */
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int** lexminfixes;
+   int** lexmaxfixes;
+   int* roworder;
+   int nrowsused;
+   int i;
+   int j;
+   int m;
+   int n;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1509,7 +1755,11 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    *infeasible = FALSE;
 
    /* @todo Can the following be removed? */
-   if ( ! SCIPallowDualReds(scip) )
+   if ( ! SCIPallowStrongDualReds(scip) )
+      return SCIP_OKAY;
+
+   /* do nothing if we use dynamic propagation and if we are in a probing node */
+   if ( dynamic && SCIPinProbing(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -1519,7 +1769,128 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    assert( consdata->vars != NULL );
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
-   SCIP_CALL( propagateFullOrbitope(scip, cons, consdata->vars, 0, consdata->nblocks, 0, consdata->nspcons, consdata->nblocks, nfixedvars, infeasible) );
+   m = consdata->nspcons;
+   n = consdata->nblocks;
+   vars = consdata->vars;
+
+   /* determine order of orbitope rows dynamically by branching decisions */
+   if ( dynamic )
+   {
+      SCIP_CALL( computeDynamicRowOrder(scip, consdata->rowindexmap, consdata->rowused,
+            consdata->roworder, m, n, &(consdata->nrowsused)) );
+
+      /* if no branching variable is contained in the full orbitope */
+      if ( consdata->nrowsused == 0 )
+         return SCIP_OKAY;
+
+      nrowsused = consdata->nrowsused;
+   }
+   else
+      nrowsused = m;
+   roworder = consdata->roworder;
+
+   /* Initialize lexicographically minimal matrix by fixed entries at the current node.
+    * Free entries in the last column are set to 0.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
+   }
+
+   for (i = 0; i < nrowsused; ++i)
+   {
+      int origrow;
+
+      origrow = roworder[i];
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 )
+            lexminfixes[i][j] = 1;
+         else if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 || j == n - 1 )
+            lexminfixes[i][j] = 0;
+         else
+            lexminfixes[i][j] = 2;
+      }
+   }
+
+   /* find lexicographically minimal face of hypercube containing lexmin fixes */
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, NULL, infeasible, m, n,
+         nrowsused, NULL, FALSE) );
+
+   if ( *infeasible == TRUE )
+      goto FREELEXMIN;
+
+   /* Initialize lexicographically maximal matrix by fixed entries at the current node.
+    * Free entries in the first column are set to 1.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
+   }
+
+   for (i = 0; i < nrowsused; ++i)
+   {
+      int origrow;
+
+      origrow = roworder[i];
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetUbLocal(vars[origrow][j]) < 0.5 )
+            lexmaxfixes[i][j] = 0;
+         else if ( SCIPvarGetLbLocal(vars[origrow][j]) > 0.5 || j == 0 )
+            lexmaxfixes[i][j] = 1;
+         else
+            lexmaxfixes[i][j] = 2;
+      }
+   }
+
+   /* find lexicographically maximal face of hypercube containing lexmax fixes */
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, NULL, infeasible, m, n,
+         nrowsused, NULL, FALSE) );
+
+   if ( *infeasible )
+      goto FREELEXMAX;
+
+   /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
+    * row to the corresponding value in lexminfixes (or lexmaxfixes).
+    */
+   for (j = 0; j < n; ++j)
+   {
+      for (i = 0; i < nrowsused; ++i)
+      {
+         int origrow;
+
+         origrow = roworder[i];
+
+         if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
+            break;
+
+         if ( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 && SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 )
+         {
+            SCIP_Bool success;
+
+            SCIP_CALL( SCIPinferBinvarCons(scip, vars[origrow][j], (SCIP_Bool) lexminfixes[i][j],
+                  cons, 0, infeasible, &success) );
+
+            if ( success )
+               *nfixedvars += 1;
+         }
+      }
+   }
+
+ FREELEXMAX:
+   for (i = 0; i < nrowsused; ++i)
+      SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
+   SCIPfreeBufferArray(scip, &lexmaxfixes);
+
+ FREELEXMIN:
+   for (i = 0; i < nrowsused; ++i)
+      SCIPfreeBufferArray(scip, &lexminfixes[i]);
+   SCIPfreeBufferArray(scip, &lexminfixes);
 
    return SCIP_OKAY;
 }
@@ -1531,7 +1902,8 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
-   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1549,13 +1921,197 @@ SCIP_RETCODE propagateCons(
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars) );
+      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars, usedynamicprop) );
    }
    else
    {
       assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING );
       SCIP_CALL( propagatePackingPartitioningCons(scip, cons, infeasible, nfixedvars) );
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** Propagation conflict resolving method of propagator
+ *
+ *  In this function we use that all variable reductions that can be found by the propagation algorithm
+ *  are only due to the fixed variables that are in or above the minimum fixed row of each pair of adjacent
+ *  columns of the lexmin and lexmax matrices.
+ *
+ *  Since the storage of an integer is not enough to store the complete information about the fixing,
+ *  we have to use the linear time algorithm for finding the lexmin and lexmax
+ *  matrices and determine from this the minimum fixed rows.
+ */
+static
+SCIP_RETCODE resolvePropagationFullOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of the corresponding constraint */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
+   int                   inferinfo,          /**< inference information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int** lexminfixes;
+   int** lexmaxfixes;
+   int* roworder;
+   int* minfixedrowlexmin;
+   int* minfixedrowlexmax;
+   int i;
+   int j;
+   int m;
+   int n;
+   int nrowsused;
+   SCIP_Bool dynamic;
+   SCIP_Bool terminate;
+
+   *result = SCIP_DIDNOTFIND;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+   assert( result != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+   assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   dynamic = conshdlrdata->usedynamicprop;
+   m = consdata->nspcons;
+   n = consdata->nblocks;
+   vars = consdata->vars;
+
+   if ( dynamic )
+   {
+      assert( consdata->roworder != NULL );
+      assert( consdata->nrowsused > 0 );
+
+      nrowsused = consdata->nrowsused;
+   }
+   else
+      nrowsused = m;
+   roworder = consdata->roworder;
+
+
+   assert( inferinfo <= consdata->nspcons );
+
+   /* Initialize lexicographically minimal matrix by fixed entries at the current node.
+    * Free entries in the last column are set to 0.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
+   }
+
+   /* store minimum fixed row for each column */
+   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmin, n) );
+   minfixedrowlexmin[n - 1] = -1;
+
+   for (i = 0; i < nrowsused; ++i)
+   {
+      int origrow;
+
+      origrow = roworder[i];
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 )
+            lexminfixes[i][j] = 1;
+         else if ( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 || j == n - 1 )
+            lexminfixes[i][j] = 0;
+         else
+            lexminfixes[i][j] = 2;
+      }
+   }
+
+   /* find lexicographically minimal face of hypercube containing lexmin fixes */
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, minfixedrowlexmin, &terminate, m, n,
+         nrowsused, bdchgidx, TRUE) );
+
+   if ( terminate )
+      goto FREELEXMIN;
+
+   /* Initialize lexicographically maximal matrix by fixed entries at the current node.
+    * Free entries in the first column are set to 1.
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrowsused) );
+   for (i = 0; i < nrowsused; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
+   }
+
+   /* store minimum fixed row for each column */
+   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmax, n) );
+   minfixedrowlexmax[0] = -1;
+
+   for (i = 0; i < nrowsused; ++i)
+   {
+      int origrow;
+
+      origrow = roworder[i];
+
+      for (j = 0; j < n; ++j)
+      {
+         if ( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
+            lexmaxfixes[i][j] = 0;
+         else if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 || j == 0 )
+            lexmaxfixes[i][j] = 1;
+         else
+            lexmaxfixes[i][j] = 2;
+      }
+   }
+
+   /* find lexicographically maximal face of hypercube containing lexmax fixes */
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, minfixedrowlexmax, &terminate, m, n,
+         nrowsused, bdchgidx, TRUE) );
+
+   if ( terminate )
+      goto FREELEXMAX;
+
+   /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
+    * row to the corresponding value in lexminfixes (or lexmaxfixes).
+    */
+   for (j = 0; j < n; ++j)
+   {
+      int ub = MAX(minfixedrowlexmin[j], minfixedrowlexmax[j]);
+
+      for (i = 0; i <= ub; ++i)
+      {
+         int origrow;
+
+         origrow = roworder[i];
+
+         if ( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 ||
+            SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 )
+         {
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[origrow][j]) );
+            *result = SCIP_SUCCESS;
+         }
+      }
+   }
+
+ FREELEXMAX:
+   SCIPfreeBufferArray(scip, &minfixedrowlexmax);
+   for (i = 0; i < nrowsused; ++i)
+      SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
+   SCIPfreeBufferArray(scip, &lexmaxfixes);
+
+ FREELEXMIN:
+   SCIPfreeBufferArray(scip, &minfixedrowlexmin);
+   for (i = 0; i < nrowsused; ++i)
+      SCIPfreeBufferArray(scip, &lexminfixes[i]);
+   SCIPfreeBufferArray(scip, &lexminfixes);
 
    return SCIP_OKAY;
 }
@@ -1850,93 +2406,6 @@ SCIP_RETCODE resolvePropagation(
             }
          }
       }
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** Propagation conflict resolving method of propagator for full orbitope constraints */
-static
-SCIP_RETCODE resolvePropagationFullOrbitopes(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
-   int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
-   )
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR*** vars;
-   int ncols;
-   int inferrow;
-   int infercol;
-   int i;
-   int col2;
-
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( infervar != NULL );
-   assert( bdchgidx != NULL );
-   assert( result != NULL );
-
-   *result = SCIP_DIDNOTFIND;
-
-   consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
-
-   vars = consdata->vars;
-   ncols = consdata->nblocks;
-
-   infercol = inferinfo % ncols;
-   inferrow = (int) inferinfo / ncols;
-
-   assert( inferrow < consdata->nspcons );
-
-   /* reason for 1-fixing */
-   if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 &&  SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
-   {
-      assert( infercol < ncols - 1 );
-
-      col2 = infercol + 1;
-
-      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 1 was the fixing of columns %d and %d as well as x[%d][%d] = 1.\n",
-         SCIPvarGetIndex(infervar), infercol, col2, inferrow, col2);
-
-      for (i = 0; i < inferrow; ++i)
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i][infercol], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i][col2], bdchgidx) );
-      }
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[inferrow][col2], bdchgidx) );
-
-      *result = SCIP_SUCCESS;
-
-      return SCIP_OKAY;
-   }
-   else if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 &&  SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
-   {
-      assert( infercol > 0 );
-
-      col2 = infercol - 1;
-
-      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of columns %d and %d as well as x[%d][%d] = 0.\n",
-         SCIPvarGetIndex(infervar), col2, infercol, inferrow, col2);
-
-      for (i = 0; i < inferrow; ++i)
-      {
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i][col2], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i][infercol], bdchgidx) );
-      }
-      SCIP_CALL( SCIPaddConflictUb(scip, vars[inferrow][col2], bdchgidx) );
-
-      *result = SCIP_SUCCESS;
-
-      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -2241,6 +2710,151 @@ SCIP_RETCODE checkFullOrbitopeSolution(
 }
 
 
+/** separate orbisack cover inequalities */
+static
+SCIP_RETCODE separateCoversOrbisack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to process */
+   SCIP_SOL*             sol,                /**< solution to separate (NULL for the LP solution) */
+   SCIP_Bool             dynamic,            /**< whether we use a dynamic row order */
+   int*                  ngen,               /**< pointer to store number of generated cuts */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility has been detected */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int* roworder;
+   int nrowsused;
+   int nrows;
+   int ncols;
+   int i;
+   int j;
+   int origrow;
+   SCIP_Real rhs;
+   SCIP_Real lhs;
+   SCIP_Real* coeffs1;
+   SCIP_Real* coeffs2;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( ngen != NULL );
+   assert( infeasible != NULL );
+
+   *ngen = 0;
+   *infeasible = FALSE;
+
+   /* get basic data */
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   vars = consdata->vars;
+   nrows = consdata->nspcons;
+   ncols = consdata->nblocks;
+   nrowsused = dynamic ? consdata->nrowsused : nrows;
+   roworder = consdata->roworder;
+
+   /* allocate memory for cover inequalities */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coeffs1, nrowsused) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coeffs2, nrowsused) );
+
+   lhs = 0.0;
+   rhs = 0.0;
+
+   /* separate orbisack cover inequalities for adjacent columns */
+   for (j = 0; j < ncols - 1 && ! *infeasible; ++j)
+   {
+      SCIP_Real rowval;
+
+      for (i = 0; i < nrowsused; ++i)
+      {
+         origrow = roworder[i];
+
+         assert( origrow >= 0 );
+         assert( origrow < nrows );
+
+         rowval = SCIPgetSolVal(scip, sol, vars[origrow][j + 1]) - SCIPgetSolVal(scip, sol, vars[origrow][j]);
+
+         /* check whether cover inequality is violated */
+         if ( SCIPisEfficacious(scip, rowval + lhs - rhs) )
+         {
+            SCIP_ROW* row;
+            int k;
+
+            /* set coefficients for current inequality */
+            coeffs1[i] = -1.0;
+            coeffs2[i] = 1.0;
+
+            /* add violated orbisack cover inequality */
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+            for (k = 0; k <= i; ++k)
+            {
+               int origrow2;
+
+               origrow2 = roworder[k];
+
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[origrow2][j], coeffs1[k]) );
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[origrow2][j + 1], coeffs2[k]) );
+            }
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+#ifdef SCIP_DEBUG
+            SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+            *ngen += 1;
+            if ( *infeasible )
+               break;
+
+            /* reset coefficients for next inequality */
+            coeffs1[i] = 0.0;
+            coeffs2[i] = 0.0;
+         }
+
+         /* add argmax( 1 - vals[i][0], vals[i][1] ) as coefficient and ensure that both vars1[0] and vars2[0] are
+          * contained in the LIFTED cover inequality */
+         rowval = SCIPgetSolVal(scip, sol, vars[origrow][j]) + SCIPgetSolVal(scip, sol, vars[origrow][j + 1]);
+         if ( SCIPisEfficacious(scip, 1.0 - rowval) )
+         {
+            coeffs1[i] = -1.0;
+            coeffs2[i] = 0.0;
+            lhs -= SCIPgetSolVal(scip, sol, vars[origrow][j]);
+
+            /* apply lifting? */
+            if ( i == 0 )
+            {
+               coeffs2[i] = 1.0;
+               lhs += SCIPgetSolVal(scip, sol, vars[origrow][j + 1]);
+            }
+         }
+         else
+         {
+            coeffs1[i] = 0.0;
+            coeffs2[i] = 1.0;
+            lhs += SCIPgetSolVal(scip, sol, vars[origrow][j]);
+            rhs += 1.0;
+
+            /* apply lifting? */
+            if ( i == 0 )
+            {
+               coeffs1[i] = -1.0;
+               lhs -= SCIPgetSolVal(scip, sol, vars[origrow][j]);
+               rhs -= 1.0;
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &coeffs1);
+   SCIPfreeBufferArray(scip, &coeffs2);
+
+   return SCIP_OKAY;
+}
+
+
 /** separate or enforce constraints */
 static
 SCIP_RETCODE separateConstraints(
@@ -2271,12 +2885,6 @@ SCIP_RETCODE separateConstraints(
       int nconsfixedvars = 0;
       int nconscuts = 0;
       SCIP_ORBITOPETYPE orbitopetype;
-      SCIP_VAR*** vars;
-      SCIP_VAR** vars1;
-      SCIP_VAR** vars2;
-      int nrows;
-      int i;
-      int j;
 
       assert( conss[c] != NULL );
 
@@ -2294,34 +2902,12 @@ SCIP_RETCODE separateConstraints(
       if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
          SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
+         nfixedvars += nconsfixedvars;
       }
       else if ( conshdlrdata->sepafullorbitope )
       {
-         assert( consdata->nspcons > 0 );
-         assert( consdata->vars != NULL );
-
-         nrows = consdata->nspcons;
-         vars = consdata->vars;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nrows) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nrows) );
-
-         /* iterate over adjacent columns of orbitope and separate inequalities for the corresponding orbisacks */
-         for (j = 1; j < consdata->nblocks && ! infeasible; ++j)
-         {
-            for (i = 0; i < nrows; ++i)
-            {
-               vars1[i] = vars[i][j - 1];
-               vars2[i] = vars[i][j];
-            }
-
-            SCIP_CALL( SCIPseparateCoversOrbisack(scip, conss[c], sol, vars1, vars2, nrows, &infeasible, &nconscuts) );
-         }
-
-         SCIPfreeBufferArray(scip, &vars2);
-         SCIPfreeBufferArray(scip, &vars1);
+         SCIP_CALL( separateCoversOrbisack(scip, conss[c], sol, conshdlrdata->usedynamicprop, &nconscuts, &infeasible) );
       }
-      nfixedvars += nconsfixedvars;
       ncuts += nconscuts;
 
       /* stop after the useful constraints if we found cuts of fixed variables */
@@ -2341,7 +2927,7 @@ SCIP_RETCODE separateConstraints(
    }
    else if ( ncuts > 0 )
    {
-      SCIPdebugMsg(scip, "Separated %d SCIs.\n", ncuts);
+      SCIPdebugMsg(scip, "Separated %dinequalities.\n", ncuts);
       *result = SCIP_SEPARATED;
    }
    else
@@ -2394,10 +2980,15 @@ SCIP_DECL_CONSFREE(consFreeOrbitope)
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   SCIP_CALL( consdataFree(scip, consdata) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->usedynamicprop) );
 
    return SCIP_OKAY;
 }
@@ -2406,6 +2997,7 @@ SCIP_DECL_CONSDELETE(consDeleteOrbitope)
 static
 SCIP_DECL_CONSTRANS(consTransOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
@@ -2415,12 +3007,15 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
-         sourcedata->orbitopetype, sourcedata->resolveprop) );
+         sourcedata->orbitopetype, sourcedata->resolveprop, conshdlrdata->usedynamicprop) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -2619,6 +3214,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 static
 SCIP_DECL_CONSPROP(consPropOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int nfixedvars = 0;
    int c;
@@ -2630,6 +3226,9 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 
    *result = SCIP_DIDNOTRUN;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* propagate all useful constraints */
    for (c = 0; c < nusefulconss && !infeasible; ++c)
    {
@@ -2637,7 +3236,7 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 
       SCIPdebugMsg(scip, "Propagation of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars, conshdlrdata->usedynamicprop) );
    }
 
    /* return the correct result */
@@ -2665,6 +3264,7 @@ SCIP_DECL_CONSPROP(consPropOrbitope)
 static
 SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible = FALSE;
    int noldfixedvars;
    int c;
@@ -2677,6 +3277,9 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    *result = SCIP_DIDNOTRUN;
    noldfixedvars = *nfixedvars;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* propagate all useful constraints */
    for (c = 0; c < nconss && !infeasible; ++c)
    {
@@ -2686,7 +3289,7 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
       SCIPdebugMsg(scip, "Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed) );
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
    }
 
@@ -2734,7 +3337,7 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitopes(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
@@ -2905,7 +3508,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
    /* free space; only up to row i if copying failed */
    assert( 0 <= i && i <= nspcons );
-   for (k = 0; k < i; ++k)
+   for (k = i - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -3033,7 +3636,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-   for (k = 0; k < nspcons; ++k)
+   for (k = nspcons - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -3143,6 +3746,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
          "Whether check routine returns always SCIP_FEASIBLE.",
          &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usedynamicprop",
+         "Whether we use a dynamic version of the propagation routine.",
+         &conshdlrdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3261,7 +3868,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype, resolveprop) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype,
+         resolveprop, conshdlrdata->usedynamicprop) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

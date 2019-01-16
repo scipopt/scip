@@ -665,6 +665,15 @@ int SCIPgetNParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether plugins with sub-SCIPs that could cause recursion have been disabled
+ *
+ *  @return the value of the variable set->subscipsoff
+ */
+EXTERN
+SCIP_Bool SCIPgetSubscipsOff(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

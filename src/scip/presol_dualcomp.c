@@ -535,7 +535,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -544,7 +544,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    assert(presoldata != NULL);
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )

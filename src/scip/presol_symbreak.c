@@ -37,7 +37,6 @@
 #include "blockmemshell/memory.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_symresack.h"
-#include "scip/misc.h"
 #include "scip/presol_symbreak.h"
 #include "scip/presol_symmetry.h"
 #include "scip/pub_cons.h"
@@ -151,7 +150,7 @@ SCIP_RETCODE computeComponents(
    else
    {
       /* init array that assigns to each permutation its component of the group */
-      SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
+      SCIP_CALL( SCIPcreateDisjointset(scip, &componentstoperm, nperms) );
       ncomponents = nperms;
 
       /* check whether two permutations belong to the same component */
@@ -255,7 +254,7 @@ SCIP_RETCODE computeComponents(
    }
 
    if ( presoldata->norbits != 1 )
-      SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
+      SCIPfreeDisjointset(scip, &componentstoperm);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->componentblocked), ncomponents) );
    for (i = 0; i < ncomponents; ++i)
@@ -999,7 +998,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
             &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
             &(presoldata->log10groupsize), &(presoldata->binvaraffected)) );
 
@@ -1022,7 +1021,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
-            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
+            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms,
                   presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
          }
 
@@ -1395,17 +1394,14 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
-   SCIP_Shortbool*       activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    )
 {
    SCIP_Shortbool* varadded;
-   int* curorbit;
+   int orbitidx = 0;
    int i;
-   int curorbitsize;
-   int beginneworbit = 0;
 
    assert( scip != NULL );
    assert( permvars != NULL );
@@ -1416,7 +1412,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    assert( norbits != NULL );
 
    /* init data structures*/
-   SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
 
    /* initially, every variable is contained in no orbit */
@@ -1427,54 +1422,53 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    *norbits = 0;
    for (i = 0; i < npermvars; ++i)
    {
-      /* if variable is not contained in an orbit of a previous variable */
-      if ( ! varadded[i] )
+      int beginorbitidx;
+      int j;
+
+      /* skip variable already contained in an orbit of a previous variable */
+      if ( varadded[i] )
+         continue;
+
+      /* store first variable */
+      beginorbitidx = orbitidx;
+      orbits[orbitidx++] = i;
+      varadded[i] = TRUE;
+
+      /* iterate over variables in curorbit and compute their images */
+      j = beginorbitidx;
+      while ( j < orbitidx )
       {
-         int j;
-         int p;
          int curelem;
          int image;
+         int p;
 
-         /* compute and store orbit if it is non-trivial */
-         curorbit[0] = i;
-         curorbitsize = 1;
-         varadded[i] = TRUE;
+         curelem = orbits[j];
 
-         /* iterate over variables in curorbit and compute their images */
-         for (j = 0; j < curorbitsize; ++j)
+         for (p = 0; p < nperms; ++p)
          {
-            curelem = curorbit[j];
+            image = perms[p][curelem];
 
-            for (p = 0; p < nperms; ++p)
+            /* found new element of the orbit of i */
+            if ( ! varadded[image] )
             {
-               if ( activeperms == NULL || activeperms[p] )
-               {
-                  image = perms[p][curelem];
-
-                  /* found new element of the orbit of i */
-                  if ( ! varadded[image] )
-                  {
-                     curorbit[curorbitsize++] = image;
-                     varadded[image] = TRUE;
-                  }
-               }
+               orbits[orbitidx++] = image;
+               assert( orbitidx <= npermvars );
+               varadded[image] = TRUE;
             }
          }
-
-         if ( curorbitsize > 1 )
-         {
-            orbitbegins[*norbits] = beginneworbit;
-            for (j = 0; j < curorbitsize; ++j)
-               orbits[beginneworbit++] = curorbit[j];
-
-            ++(*norbits);
-         }
+         ++j;
       }
+
+      /* if the orbit is trivial, reset storage, otherwise store orbit */
+      if ( orbitidx <= beginorbitidx + 1 )
+         orbitidx = beginorbitidx;
+      else
+         orbitbegins[(*norbits)++] = beginorbitidx;
    }
 
    /* store end in "last" orbitbegins entry */
    assert( *norbits < npermvars );
-   orbitbegins[*norbits] = beginneworbit;
+   orbitbegins[*norbits] = orbitidx;
 
 #ifdef SCIP_OUTPUT
    printf("Orbits (total number: %d):\n", *norbits);
@@ -1491,7 +1485,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &varadded);
-   SCIPfreeBufferArray(scip, &curorbit);
 
    return SCIP_OKAY;
 }

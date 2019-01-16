@@ -174,7 +174,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -202,7 +202,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
+FLAGS		+=	-DSCIP_WITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -422,7 +422,7 @@ ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
 $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true.)
 endif
-FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
+FLAGS		+=	-DSCIP_WITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/include/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/include/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
@@ -931,14 +931,14 @@ ifeq ($(FILES),)
 			do \
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif
 
@@ -1144,12 +1144,12 @@ cleanbin:       | $(BINDIR)
 
 depend:
 # We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
-# but contain all LPI's that use the WITH_LPSCHECK define.
-		@echo `grep -l "WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
-		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
-		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
-		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
-		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+# but contain all LPI's that use the SCIP_WITH_LPSCHECK define.
+		@echo `grep -l "SCIP_WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
+		@echo `grep -l "SCIP_WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
+		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
+		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
+		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
 
@@ -1171,11 +1171,11 @@ endif
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
+		$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)
-		-$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 

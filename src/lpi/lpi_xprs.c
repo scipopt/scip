@@ -2559,6 +2559,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: Xpress solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of Xpress is XPRS_LP_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -2573,7 +2578,9 @@ SCIP_Bool SCIPlpiIsStable(
       if( retcode != 0 || pinfeas )
          return FALSE;
    }
-   else if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+#endif
+
+   if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
    {
       /* presolved problem was solved to optimality but infeasibilities were introduced by postsolve */
       return FALSE;
@@ -3668,7 +3675,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       * dval=0   No time limit
       */
       assert( dval > 0.0 );
-      ival = (int) -floor(dval);
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
       break;

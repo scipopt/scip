@@ -1186,14 +1186,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
+      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialvars);
-   SCIPfreeBufferArray(scip, monomialexps);
    SCIPfreeBufferArray(scip, monomialcoefs);
    SCIPfreeBufferArray(scip, monomialnvars);
+   SCIPfreeBufferArray(scip, monomialexps);
+   SCIPfreeBufferArray(scip, monomialvars);
 }
 
 /** increases usage counter of variable
@@ -3099,8 +3099,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL ) /*lint !e774*/
-         *cutoff = FALSE;
+      *cutoff = FALSE;
 
       if( conflict != NULL )
          *conflict = FALSE;
@@ -6714,18 +6713,25 @@ SCIP_RETCODE SCIPaddVarImplication(
    /* transform implication containing two binary variables to clique */
    if( SCIPvarIsBinary(implvar) )
    {
-      SCIP_VAR* vars[2];
-      SCIP_Bool vals[2];
-
       assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
       assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
 
-      vars[0] = var;
-      vars[1] = implvar;
-      vals[0] = varfixing;
-      vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+      /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
+         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
+               )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
 
-      SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+      }
 
       return SCIP_OKAY;
    }
@@ -6884,11 +6890,11 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
+            SCIP_CALL( SCIPhashmapInsertInt(classidx2newlabel, (void*)(size_t)currentlabel, classidx) ); /*lint !e571*/
          }
          else
          {
-            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+            localclassidx = SCIPhashmapGetImageInt(classidx2newlabel, (void*)(size_t)currentlabel); /*lint !e571*/
          }
       }
       assert(localclassidx - 1 >= 0);
@@ -7679,7 +7685,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
 	 {
             assert(id1 >= 0);
-	    SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1), fclose(gmlfile) );
+	    SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
@@ -7706,7 +7712,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
 	    {
                assert(id2 >= 0);
-	       SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1), fclose(gmlfile) );
+	       SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
@@ -8472,8 +8478,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 
 /** returns whether dual reductions are allowed during propagation and presolving
  *
- *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ *  @deprecated Please use SCIPallowStrongDualReds()
  */
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -8481,17 +8486,49 @@ SCIP_Bool SCIPallowDualReds(
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
 }
 
-/** returns whether propagation w.r.t. current objective is allowed */
+/** returns whether strong dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
+ *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
+ *        locks.
+ */
+SCIP_Bool SCIPallowStrongDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
+}
+
+/** returns whether propagation w.r.t. current objective is allowed
+ *
+ *  @deprecated Please use SCIPallowWeakDualReds()
+ */
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** returns whether weak dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ */
+SCIP_Bool SCIPallowWeakDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** marks the variable that it must not be multi-aggregated

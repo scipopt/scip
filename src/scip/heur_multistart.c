@@ -117,10 +117,10 @@ int getVarIndex(
    assert(var != NULL);
    assert(SCIPhashmapExists(varindex, (void*)var));
 
-   return (int)(size_t)SCIPhashmapGetImage(varindex, (void*)var);
+   return SCIPhashmapGetImageInt(varindex, (void*)var);
 }
 #else
-#define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
+#define getVarIndex(varindex,var) (SCIPhashmapGetImageInt((varindex), (void*)(var)))
 #endif
 
 /** samples and stores random points; stores points which have a better objective value than the current incumbent
@@ -277,11 +277,12 @@ SCIP_RETCODE computeGradient(
       SCIP_VAR* var1;
       SCIP_VAR* var2;
 
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
+      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
+
       var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
       var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
 
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
       assert(getVarIndex(varindex, var1) >= 0 && getVarIndex(varindex, var1) < SCIPgetNVars(scip));
       assert(getVarIndex(varindex, var2) >= 0 && getVarIndex(varindex, var2) < SCIPgetNVars(scip));
 
@@ -475,8 +476,8 @@ TERMINATE:
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
-   SCIPfreeBufferArray(scip, &grad);
    SCIPfreeBufferArray(scip, &updatevec);
+   SCIPfreeBufferArray(scip, &grad);
 
    return SCIP_OKAY;
 }
@@ -829,7 +830,7 @@ SCIP_RETCODE applyHeur(
    /* create an unique mapping of all variables to 0,..,SCIPgetNVars(scip)-1 */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(varindex, (void*)SCIPgetVars(scip)[i], i) );
    }
 
    /* compute estimated costs of computing a gradient for each nlrow */

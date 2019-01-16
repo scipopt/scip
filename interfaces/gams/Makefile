@@ -50,7 +50,7 @@ MAINNAME	=	gamsscip
 MAINCOBJ	=	reader_gmo.o event_solvetrace.o GamsSolveTrace.o
 MAINCSRC	=	$(addprefix $(SRCDIR)/,$(MAINCOBJ:.o=.c))
 # C++ sources
-MAINCXXOBJ	=	GamsScip.o GamsSolver.o GamsOptions.o
+MAINCXXOBJ	=	GamsScip.o GamsSolver.o
 MAINCXXSRC	=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
 # C sources in GAMS I/O directory
 MAINGOBJ	=	gdxcc.o gevmcc.o gmomcc.o optcc.o
@@ -91,7 +91,7 @@ lint:		$(MAINCSRC) $(MAINCXXSRC)
 			do \
 			echo $$i; \
 			$(LINT) lint/scip.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
 $(MAINSHORTLINK):	$(MAINFILE)
