@@ -1796,7 +1796,10 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    {
       int v;
 
-      SCIPhashmapFree(&presoldata->permvarmap);
+      if ( presoldata->permvarmap != NULL )
+      {
+         SCIPhashmapFree(&presoldata->permvarmap);
+      }
 
       /* free variables */
       for (v = 0; v < presoldata->npermvars; ++v)
