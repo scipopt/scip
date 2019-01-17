@@ -102,7 +102,7 @@
 #define READER_EXTENSION        "cap"
 
 
-#define DEFAULT_USEBENDERS      FALSE
+#define DEFAULT_USEBENDERS       TRUE
 #define DEFAULT_NUMSCENARIOS      250
 #define DEFAULT_RANDOMSEED          1
 #define DEFAULT_QUADCOSTS       FALSE   /**< should the problem be formulated with quadratic costs */

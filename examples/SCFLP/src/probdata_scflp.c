@@ -340,6 +340,9 @@ SCIP_RETCODE createMasterproblem(
    char name[SCIP_MAXSTRLEN];
    assert(scip != NULL);
 
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "Creating the master problem\n============\n");
+
    /* adding the sufficient capacity constraints */
    maxdemand = 0;
    for( i = 0; i < nscenarios; i++)
@@ -371,6 +374,9 @@ SCIP_RETCODE createMasterproblem(
       /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
    }
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "master problem has %d binary variables and 1 constraint\n\n", nfacilities);
 
    return SCIP_OKAY;
 }
@@ -409,6 +415,9 @@ SCIP_RETCODE createSubproblems(
 
 
    assert(scip != NULL);
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "Creating the subproblems\n============\n");
 
    /* adds the capacity constraints to the scenario */
    for( i = 0; i < nfacilities; i++ )
@@ -514,6 +523,10 @@ SCIP_RETCODE createSubproblems(
          }
       }
    }
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "%d subproblems have been created.\neach subproblem has %d continuous variables and %d constraint\n\n",
+      nscenarios, ncustomers*nfacilities + nfacilities, nfacilities + ncustomers);
 
    return SCIP_OKAY;
 }
