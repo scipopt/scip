@@ -99,9 +99,8 @@
 #define DEFAULT_BESTSOLLIMIT   3         /* limit on number of improving incumbent solutions in sub-CIP */
 #define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search? */
 
-#define DEFAULT_VIOLPENALTY   100       /* the penalty for violating the trust region */
+#define DEFAULT_VIOLPENALTY   100.0     /* the penalty for violating the trust region */
 #define DEFAULT_OBJMINIMPROVE 1e-2      /* the minimum improvement in the objective function value */
-#define DEFAULT_NWAITCALLS    3         /* the number of calls to wait before resolving with the same solution */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Trustregion"
