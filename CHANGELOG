@@ -21,6 +21,10 @@ Features
 - additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
   instances, e.g., when used in UG
 
+- Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It build upon the successful trust region approaches
+  applied to Benders' decomposition.
+
 Performance improvements
 ------------------------
 
