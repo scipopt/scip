@@ -1818,7 +1818,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsevents, presoldata->npermvars);
 
       /* free permstrans matrix*/
-      assert( presoldata->permstrans != NULL );
+      assert( presoldata->permstrans != NULL || presoldata->nperms == 0 );
       for (i = 0; i < presoldata->npermvars; ++i)
       {
          SCIPfreeBlockMemoryArray(scip, &presoldata->permstrans[i], presoldata->nmaxperms);
@@ -1828,7 +1828,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
 
    if ( ISSYMRETOPESACTIVE(presoldata->usesymmetry) )
    {
-      assert( presoldata->perms != NULL );
+      assert( presoldata->perms != NULL || presoldata->nperms == 0 );
       for (i = 0; i < presoldata->nperms; ++i)
       {
          SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
@@ -2146,12 +2146,12 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( perms != NULL )
    {
       *perms = presoldata->perms;
-      assert( *perms != NULL );
+      assert( *perms != NULL || *nperms == 0 );
    }
    if ( permstrans != NULL )
    {
       *permstrans = presoldata->permstrans;
-      assert( *permstrans != NULL );
+      assert( *permstrans != NULL || *nperms == 0 );
    }
 
    if ( log10groupsize != NULL )
