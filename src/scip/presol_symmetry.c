@@ -2198,11 +2198,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->bg0list, presoldata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->bg1, presoldata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->bg1list, presoldata->npermvars) );
-      *permvarmap = presoldata->permvarmap;
-      *bg0 = presoldata->bg0;
-      *bg0list = presoldata->bg0list;
-      *bg1 = presoldata->bg1;
-      *bg1list = presoldata->bg1list;
 
       for (v = 0; v < presoldata->npermvars; ++v)
       {
@@ -2227,6 +2222,16 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       }
       assert( presoldata->nbg1 == 0 );
    }
+   if ( permvarmap != NULL )
+      *permvarmap = presoldata->permvarmap;
+   if ( bg0 != NULL )
+      *bg0 = presoldata->bg0;
+   if ( bg0list != NULL )
+      *bg0list = presoldata->bg0list;
+   if ( bg1 != NULL )
+      *bg1 = presoldata->bg1;
+   if ( bg1list != NULL )
+      *bg1list = presoldata->bg1list;
 
    return SCIP_OKAY;
 }
