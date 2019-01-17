@@ -365,6 +365,7 @@ SCIP_RETCODE getSymmetries(
       assert( propdata->inactiveperms != NULL );
 
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
 
       propdata->nperms = -1;
       propdata->permstrans = NULL;
