@@ -62,7 +62,7 @@ endforeach()
 #
 # add a test for every quadratic instance
 #
-if(${IPOPT_FOUND})
+if(${IPOPT_FOUND} AND (NOT ${MOSEK_FOUND}))
    foreach(instance ${quadinstances})
        list(GET instance 0 basename)
        list(GET instance 1 optval)
