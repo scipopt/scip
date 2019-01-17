@@ -857,8 +857,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       /* storing whether the lnscheck should be performed */
       targetbenders->lnscheck = benders->lnscheck;
       targetbenders->lnsmaxdepth = benders->lnsmaxdepth;
-      targetbenders->lnsmaxmaxcalls = benders->lnsmaxmaxcalls;
-      targetbenders->lnsmaxmaxcallsroot = benders->lnsmaxmaxcallsroot;
+      targetbenders->lnsmaxcalls = benders->lnsmaxcalls;
+      targetbenders->lnsmaxcallsroot = benders->lnsmaxcallsroot;
 
       /* storing whether the Benders' copy required thread safety */
       targetbenders->threadsafe = threadsafe;
