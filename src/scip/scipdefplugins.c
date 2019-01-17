@@ -174,6 +174,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
    SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
+   SCIP_CALL( SCIPincludeHeurTrustregion(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );

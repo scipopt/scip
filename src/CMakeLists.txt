@@ -126,6 +126,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -557,6 +558,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
