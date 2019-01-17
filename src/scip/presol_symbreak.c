@@ -68,6 +68,9 @@
 #define DEFAULT_DETECTORBITOPES     FALSE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
+#define ISSYMRETOPESACTIVE(x)      ((x & 1) > 0)
+#define ISORBITALFIXINGACTIVE(x)   ((x & 2) > 0)
+
 /*
  * Data structures
  */
@@ -818,23 +821,27 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+      if ( ISORBITALFIXINGACTIVE(usesymmetry) )
       {
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE, FALSE,
-               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
-               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &vartocomponent, &ncomponents) );
+         assert( ISSYMRETOPESACTIVE(usesymmetry) );
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), NULL,
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &vartocomponent, &ncomponents,
+               NULL, NULL, NULL, NULL, NULL) );
       }
       else if ( presoldata->detectorbitopes )
       {
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
-               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
-               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &vartocomponent, &ncomponents) );
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), NULL,
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins, &vartocomponent, &ncomponents,
+               NULL, NULL, NULL, NULL, NULL) );
       }
       else
       {
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, FALSE,
-               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms),
-               &(presoldata->log10groupsize), &(presoldata->binvaraffected), NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
+               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), NULL,
+               &(presoldata->log10groupsize), &(presoldata->binvaraffected), NULL, NULL, NULL, NULL,
+               NULL, NULL, NULL, NULL, NULL) );
       }
 
       presoldata->computedsymmetry = TRUE;
@@ -929,7 +936,7 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK || usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+   if ( ISSYMRETOPESACTIVE(usesymmetry) )
       presoldata->enabled = TRUE;
    else
       presoldata->enabled = FALSE;
@@ -1013,7 +1020,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK || usesymmetry == (int) SYM_HANDLETYPE_ORBITOPESORBITALFIXING )
+   if ( ISSYMRETOPESACTIVE(usesymmetry) )
       presoldata->enabled = TRUE;
    else
    {
