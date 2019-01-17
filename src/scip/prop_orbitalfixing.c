@@ -392,7 +392,7 @@ SCIP_RETCODE getSymmetries(
          propdata->enabled = FALSE;
    }
 
-   /* now possibly (re)compute symmetries or deactivate OF */
+   /* now possibly (re)compute symmetries */
    if ( propdata->nperms < 0 )
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute,
