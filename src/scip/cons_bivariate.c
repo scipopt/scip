@@ -1334,7 +1334,7 @@ SCIP_RETCODE solveDerivativeEquation(
    {
       SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
 
-      /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g grad = %g\n", s, lb, ub, fval, grad); */
+      /* SCIPdebugMsg(scip, "s = %.15g [%g,%g] f(s) = %g grad = %g\n", s, lb, ub, fval, grad); */
 
       if( !SCIPisFinite(grad) )
       {
@@ -1355,7 +1355,7 @@ SCIP_RETCODE solveDerivativeEquation(
 
          SCIP_CALL( SCIPexprintGrad(exprinterpreter, f, &s, TRUE, &fval, &grad) );
 
-         /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g grad = %g (perturbed by %g)\n", s, lb, ub, fval, grad, iter <= 65 ? 0.1 / (1<<iter) : 1e-20); */
+         /* SCIPdebugMsg(scip, "s = %.15g [%g,%g] f(s) = %g grad = %g (perturbed by %g)\n", s, lb, ub, fval, grad, iter <= 65 ? 0.1 / (1<<iter) : 1e-20); */
 
          assert(SCIPisFinite(grad));
       }
@@ -1371,7 +1371,7 @@ SCIP_RETCODE solveDerivativeEquation(
       /* coverity[callee_ptr_arith] */
       SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
 
-      /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
+      /* SCIPdebugMsg(scip, "s = %.15g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
 
       if( !SCIPisFinite(hess) )
       {

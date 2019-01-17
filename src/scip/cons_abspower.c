@@ -1499,7 +1499,7 @@ SCIP_RETCODE tightenBounds(
             /* only check if new fixing value is consistent with variable bounds, otherwise cutoff */
             if( SCIPisLT(scip, bounds.sup, SCIPvarGetUbLocal(var)) || SCIPisGT(scip, bounds.inf, SCIPvarGetLbLocal(var)) )
             {
-               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.20g,%.20g] to [%.20g,%.20g]\n",
+               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.15g,%.15g] to [%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bounds.inf, bounds.sup);
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
@@ -1629,7 +1629,7 @@ void computeBoundsZ(
          zbnds->sup = bnd / consdata->zcoef;
    }
 
-   SCIPdebugMsg(scip, "given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
+   SCIPdebugMsg(scip, "given x = [%.15g, %.15g], computed z = [%.15g, %.15g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *zbnds));
@@ -1682,7 +1682,7 @@ void computeBoundsX(
       xbnds->inf = bnd - consdata->xoffset;
    }
 
-   SCIPdebugMsg(scip, "given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
+   SCIPdebugMsg(scip, "given z = [%.15g, %.15g], computed x = [%.15g, %.15g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *xbnds));
@@ -3651,7 +3651,7 @@ SCIP_RETCODE generateSecantCut(
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
    {
-      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.15g,%.15g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
    }
 
@@ -5568,7 +5568,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
             SCIPerrorMessage("failed to compute root for exponent %g\n", consdata->exponent);
             return SCIP_ERROR;
          }
-         SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", consdata->exponent, root, polyval);
+         SCIPdebugMsg(scip, "root for %g is %.15g, certainty = %g\n", consdata->exponent, root, polyval);
          /* @todo cache root value?? (they are actually really fast to compute...) */
 
          consdata->root = root;

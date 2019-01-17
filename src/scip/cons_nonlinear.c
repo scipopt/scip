@@ -6141,7 +6141,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    }
    if( tightened )
    {
-      SCIPdebugMsg(scip, "%stightened lower bound of variable <%s> in constraint <%s> to %.20g\n", SCIPinProbing(scip) ? "in probing " : "", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "??", bnd);  /*lint !e585*/
+      SCIPdebugMsg(scip, "%stightened lower bound of variable <%s> in constraint <%s> to %.15g\n", SCIPinProbing(scip) ? "in probing " : "", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "??", bnd);  /*lint !e585*/
       ++*nchgbds;
       *result = SCIP_REDUCEDDOM;
       if( cons != NULL )
@@ -6284,7 +6284,7 @@ SCIP_RETCODE propagateBoundsCons(
    if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
        (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
-      SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
+      SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.15g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
       *result = SCIP_CUTOFF;
@@ -8628,7 +8628,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
          for( j = 0; j < consdata->nexprtrees; ++j )
          {
             if( j > 0 || consdata->nonlincoefs[j] != 1.0 )
-               SCIPinfoMessage(scip, file, " %+.20g ", consdata->nonlincoefs[j]);
+               SCIPinfoMessage(scip, file, " %+.15g ", consdata->nonlincoefs[j]);
             SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[j], SCIPgetMessagehdlr(scip), file) );
          }
       }
@@ -8648,7 +8648,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
       for( j = 0; j < consdata->nlinvars; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->lincoefs[j], SCIPvarGetName(consdata->linvars[j]),
+         SCIPinfoMessage(scip, file, " %+.15g <%s>[%c] ", consdata->lincoefs[j], SCIPvarGetName(consdata->linvars[j]),
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_BINARY ? 'B' :
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_INTEGER ? 'I' :
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
