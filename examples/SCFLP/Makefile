@@ -72,7 +72,7 @@ MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(CMAINOBJ))
 MAINOBJFILES	+=	$(addprefix $(OBJDIR)/,$(CXXMAINOBJ))
 
-EXECUTABLE = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))$(MAINFILE)
+CLUSTERMAINFILE = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))$(MAINFILE)
 
 #-----------------------------------------------------------------------------
 # External libraries
@@ -146,13 +146,24 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
 .PHONY: testcluster
-testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/configuration_tmpfile_setup_scflp.sh check/evalcheck_cluster.sh check/check.awk check/run.sh
+testcluster:	$(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) \
-		$(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
+		$(SHELL) ./check_cluster.sh $(TEST) $(CLUSTERMAINFILE) $(SETTINGS) \
+		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) \
+		$(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: tags
 tags:
