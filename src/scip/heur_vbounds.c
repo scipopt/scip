@@ -740,6 +740,12 @@ SCIP_RETCODE createNewSol(
    assert( subvars != NULL );
    assert( subsol != NULL );
 
+   *success = FALSE;
+
+   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
+      return SCIP_OKAY;
+
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -790,7 +796,8 @@ SCIP_RETCODE setupAndSolveSubscip(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, FALSE,
+         TRUE, NULL) );
 
    if( heurdata->copycuts )
    {

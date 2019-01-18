@@ -1,15 +1,25 @@
-@page RN70 Release notes for SCIP 7.0
+@page RNNEXT Release notes for SCIP NEXT
 
-@section RN700 SCIP 7.0.0
+@section RNNEXT SCIP NEXT
 *************************
 
 Features
 --------
 
+- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart.
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
 
 - extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
   scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
+- extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
+  when the subproblem is convex nonlinear.
+
+- extended Benders framework to create copies of Benders decompositions that can be used in a multithreading environment
+
+- additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
+  instances, e.g., when used in UG
 
 Performance improvements
 ------------------------
@@ -24,6 +34,15 @@ Performance improvements
 - consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
   up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
   with Benders' decomposition.
+
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
+
 
 Examples and applications
 -------------------------
@@ -43,12 +62,29 @@ Interface changes
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
+    SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
+  + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
+    argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
+  - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+
+- new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
+  SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
+  parallel. Setting this argument to TRUE has a performance cost.
+
+- new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
 
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
+- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
+  SCIPbendersGetStoredCutOrigData().
+- added SCIPisConvexAbspower()
 
 ### Command line interface
 
@@ -56,6 +92,7 @@ Interface changes
 
 ### Changed parameters
 
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
@@ -64,6 +101,8 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
+  checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
 
@@ -75,6 +114,14 @@ Interface changes
   chosen closer to the middle of the candidates domain if the variables local domain is still similar to its
   global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
   domain.
+
+- Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
+  High values sacrifice performance for stability.
+
+- Added parameters benders/<bendersname>/lnsmaxcalls and benders/<bendersname>/lnsmaxcallsroot to the Benders'
+  decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
+  branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
+  parameters only have effect if the lnscheck parameter is set to TRUE.
 
 ### Data structures
 
@@ -108,6 +155,8 @@ Build system
 Fixed bugs
 ----------
 
+- fix and improve memory handling in symmetry computation
+
 Miscellaneous
 -------------
 
@@ -122,20 +171,13 @@ Known bugs
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
-  restart or not. Previously one could just turn off symmetry computation after a restart.
 - when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
 Performance improvements
 ------------------------
 
-- improved performance of orbital fixing in several ways:
-  store permutations in transposed form to improve cache efficency;
-  reverse order to speed up filtering of permutations;
-  handle variables globally fixed to 1 in list;
-  use event handler to catch global fixings;
-  speed up orbit computations;
-  change handling of restarts;
+- try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
+  compute greedy solution by weighted median selection.
 
 Examples and applications
 -------------------------
@@ -147,11 +189,11 @@ Interface changes
 
 ### Deleted and changed API methods and macros
 
-- The proprocessor macro NO_CONFIG_HEADER now needs to be defined when
+- The preprocessor macro NO_CONFIG_HEADER now needs to be defined when
   including SCIP header files from a SCIP build or installation that
   has been build via the Makefile-only build system.
 
-- The following proprocessor macros have been renamed:
+- The following preprocessor macros have been renamed:
   WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
   to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
   to SCIP_NO_STRTOK_R, ROUNDING_FE to SCIP_ROUNDING_FE, ROUNDING_FP to
@@ -165,11 +207,12 @@ Interface changes
 
 ### Command line interface
 
+- warn about coefficients in MPS files with absolute larger than SCIP's infinity parameter
+
 ### Interfaces to external software
 
 ### Changed parameters
 
-- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - default clock type for timing is now wallclock
 
 ### New parameters
@@ -181,6 +224,8 @@ Deleted files
 
 Unit tests
 ----------
+
+- added unit tests for exact knapsack solving and (weighted) median selection algorithms
 
 Testing
 -------
@@ -202,7 +247,6 @@ Fixed bugs
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
-- fix and improve memory handling in symmetry computation
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
 - fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
@@ -211,9 +255,19 @@ Fixed bugs
 - fixed incorrect handling of fixed variables when transfer of cuts from LNS heuristic for Benders' decomposition
 - fix returning local infeasible status by Ipopt interface if Ipopt finds problem locally infeasible
 - skip attempt to apply fixings in linear constraint handler during solving stage as LP rows cannot change anymore
+- fixed bug when reading >= indicator constraints in MPS format
+- fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
+- fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
+- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables.
+- fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
+- fixed some special cases in SCIPselect/SCIPselectWeighted methods
+- relaxed too strict assertion in Zirounding heuristic
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints.
 
 Miscellaneous
 -------------
+- do not scale linear constraints to integral coefficients
 
 Known bugs
 ----------

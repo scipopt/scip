@@ -12,43 +12,63 @@
 
 CB_BASENAME="clusterbench_${CB_ID}"
 
+# prepare database
+# last benchmarkrun is in database
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
+touch ${RBDB}
+
 cd ${CB_OUTPUTDIR}
 
-# glue the .err and .out files
-#   the .err file is just the concatenation of individual .err files
-cat */check*.err > ${CB_BASENAME}.err
-#   the .out file is the concatenation of individual .meta and .out files
-#   where the .meta file comes directly before its respective .out file
-ls */check*.{meta,out} | sort | xargs cat > ${CB_BASENAME}.out
+for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
+  QBASENAME="${Q}_${CB_BASENAME}"
+  QDIRS="${Q}/*"
+  # glue the .err and .out files
+  #   the .err file is just the concatenation of individual .err files
+  cat ${QDIRS}/check*.err > ${QBASENAME}.err
+  #   the .out file is the concatenation of individual .meta and .out files
+  #   where the .meta file comes directly before its respective .out file
+  ls ${QDIRS}/check*.{meta,out} | sort | xargs cat > ${QBASENAME}.out
 
-# copy one settings file for rubberband upload, as all should be created equal by clusterbench.sh
-ls */check*.set | head -n 1 | xargs cat > ${CB_BASENAME}.set
+  # copy one settings file for rubberband upload, as all should be created equal by clusterbench.sh
+  ls ${QDIRS}/check*.set | head -n 1 | xargs cat > ${QBASENAME}.set
 
-OUTPUT="jenkins_collect_benchmark_${CB_ID}.tmp"
+  OUTPUT="jenkins_collect_benchmark_${CB_ID}.tmp"
 
-# upload to rubberband, and collect rubberbandid
-rbcli up ${CB_BASENAME}.* > ${OUTPUT}
-RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  # upload to rubberband, and collect rubberbandid
+  rbcli up ${QBASENAME}.* > ${OUTPUT}
+  RBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  # only save id if run by adm_timo
+  if [ "${USER}" == "adm_timo" ]; then
+    echo "${CB_ID} ${RBID} queue=${Q}" >> ${RBDB}
+  else
+    echo "Queue=${Q}: https://rubberband.zib.de/result/${RBID}"
+  fi
 
-# clean up
-rm ${OUTPUT}
+  # clean up
+  rm ${OUTPUT}
+done
 
 # if this is run by adm_timo then we want to save the rubberband id in the database
 # and send an email
 # otherwise just print the rubberband url in slurmlog
 if [ "${USER}" == "adm_timo" ]; then
-  # last benchmarkrun is in database
-  RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
-  touch ${RBDB}
-  LASTRUN=`tail ${RBDB} -n 1`
+  # get the last clusterbench id
+  OLDCB_ID=$(grep -P "queue=$Q($| )" ${RBDB} |tail -n 2|head -n 1|cut -d ' ' -f 2)
 
-  # construct rubberband link and mailtext
-  RBSTR="${RBID}?compare=${LASTRUN}"
+  MAILTEXT="The results of the clusterbenchmark are ready."
 
-  # save comma seperated string of ids in database
-  echo ${RBID} >> ${RBDB}
-
-  MAILTEXT="The results of the clusterbenchmark are ready. Take a look at https://rubberband.zib.de/result/${RBSTR}"
+  # add a comparison for all queues
+  for Q in $(echo ${QUEUE} | sed -e 's/,/ /g'); do
+    LASTWEEK=$(grep -e ${OLDCB_ID} ${RBDB}|grep -P "queue=$Q($| )" |cut -d ' ' -f 2)
+    THISWEEK=$(grep -e ${CB_ID} ${RBDB}|grep -P "queue=$Q($| )" |cut -d ' ' -f 2)
+    if [ "${LASTWEEK}" != "" ]; then
+      if [ "${THISWEEK}" != "" ]; then
+        # construct rubberband link and mailtext
+        MAILTEXT="${MAILTEXT}
+Compare queue ${Q}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISWEEK}"
+      fi
+    fi
+  done
 
   # send email with cluster results
   EMAILFROM="adm_timo <timo-admin@zib.de>"
@@ -56,7 +76,5 @@ if [ "${USER}" == "adm_timo" ]; then
 
   SUBJECT="CLUSTERBENCHMARK"
   echo -e "${MAILTEXT}" | mailx -s "${SUBJECT}" -r "${EMAILFROM}" ${EMAILTO}
-else
-  echo "Finished, have a look at https://rubberband.zib.de/result/${RBID}"
 fi
 

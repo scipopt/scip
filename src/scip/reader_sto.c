@@ -190,12 +190,16 @@ SCIP_RETCODE freeScenarioTree(
    STOSCENARIO**         scenariotree        /**< the scenario tree */
    )
 {
+   int nchildren;
    int i;
 
    assert(scip != NULL);
 
    SCIPdebugMessage("Freeing scenario <%s> in stage <%s>\n", (*scenariotree)->name,
       (*scenariotree)->stagename);
+
+   /* storing the number of children before starting the recursive freeing */
+   nchildren = (*scenariotree)->nchildren;
 
    while( (*scenariotree)->nchildren > 0 )
    {
@@ -217,11 +221,13 @@ SCIP_RETCODE freeScenarioTree(
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
 
+   /* freeing the subproblem SCIP instances */
    for( i = (*scenariotree)->nsubproblems - 1; i >= 0; i-- )
       SCIP_CALL( SCIPfree(&(*scenariotree)->subproblems[i]) );
 
-   if( (*scenariotree)->nsubproblems > 0 )
-      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
+   /* freeing the array that stores the subproblems */
+   if( nchildren > 0 )
+      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, nchildren);
 
    SCIPfreeBlockMemory(scip, scenariotree);
 
@@ -1947,6 +1953,7 @@ static
 SCIP_RETCODE addScenarioVarsToProb(
    SCIP*                 scip,               /**< the SCIP data structure */
    STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_HASHMAP*         varmap,             /**< the variable map from the original to the subproblem variables */
    SCIP_VAR**            vars,               /**< the variables of the core problem associated with this scenario */
    int                   nvars               /**< the number of variables for this scenario */
    )
@@ -1993,6 +2000,10 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIPdebugMessage("Adding variable <%s>\n", name);
 
       SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* inserting the scenario variable into the hashmap */
+      SCIP_CALL( SCIPhashmapInsert(varmap, vars[i], var) );
+
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
@@ -2118,7 +2129,9 @@ SCIP_RETCODE getScenarioDecompVar(
 static
 SCIP_RETCODE addScenarioConsToProb(
    SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 scenarioscip,       /**< the scenario SCIP data structure */
    STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_HASHMAP*         varmap,             /**< the variable map from the original to the subproblem variables */
    SCIP_CONS**           conss,              /**< the constraints of the core problem associated with this scenario */
    int                   nconss,             /**< the number of constraints for this scenario */
    SCIP_Bool             decomp              /**< is the problem being decomposed */
@@ -2130,6 +2143,7 @@ SCIP_RETCODE addScenarioConsToProb(
    SCIP_Bool varadded;
 
    assert(scip != NULL);
+   assert(scenarioscip != NULL);
    assert(scenario != NULL);
    assert(conss != NULL);
 
@@ -2138,25 +2152,37 @@ SCIP_RETCODE addScenarioConsToProb(
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
+      SCIP_VAR** consvars = NULL;
       int nconsvars;
+      SCIP_Bool success;
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
 
-      /* creating a linear constraint as a copy of the original constraint. */
-      getScenarioEntityName(name, SCIPconsGetName(conss[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 0, NULL, NULL, SCIPgetLhsLinear(scip, conss[i]),
-            SCIPgetRhsLinear(scip, conss[i]), SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]),
-            SCIPconsIsEnforced(conss[i]), SCIPconsIsChecked(conss[i]), SCIPconsIsMarkedPropagate(conss[i]),
-            SCIPconsIsLocal(conss[i]), SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]),
-            SCIPconsIsRemovable(conss[i]), SCIPconsIsStickingAtNode(conss[i])) );
+      /* getting the number of variables in the constraints */
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success) );
 
-      consvars = SCIPgetVarsLinear(scip, conss[i]);
-      consvals = SCIPgetValsLinear(scip, conss[i]);
-      nconsvars = SCIPgetNVarsLinear(scip, conss[i]);
+      if( success )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success) );
+      }
 
+      /* if the get variable callback is not implemented for the constraint, then the success flag will be returned as
+       * FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned
+       */
+      if( !success )
+      {
+         SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
+            SCIPconsGetName(conss[i]));
+
+         /* freeing buffer memory */
+         SCIPfreeBufferArrayNull(scip, consvars);
+
+         return SCIP_READERROR;
+      }
+
+      assert(consvars != NULL);
       for( j = 0; j < nconsvars; j++ )
       {
          SCIP_VAR* scenariovar;
@@ -2166,19 +2192,50 @@ SCIP_RETCODE addScenarioConsToProb(
          varadded = FALSE;
 
          if( decomp )
-            SCIP_CALL( getScenarioDecompVar(scip, scenario, consvars[j], &scenariovar, &varadded) );
+            SCIP_CALL( getScenarioDecompVar(scenarioscip, scenario, consvars[j], &scenariovar, &varadded) );
          else
-            SCIP_CALL( findScenarioVar(scip, scenario, consvars[j], &scenariovar) );
+            SCIP_CALL( findScenarioVar(scenarioscip, scenario, consvars[j], &scenariovar) );
 
          if( scenariovar != NULL )
-            SCIP_CALL( SCIPaddCoefLinear(scip, cons, scenariovar, consvals[j]) );
+         {
+            /* checking whether the variable is in the variable hashmap. If it doesn't exist, then it is added to the
+             * variable hashmap
+             */
+            if( !SCIPhashmapExists(varmap, consvars[j]) )
+            {
+               SCIP_CALL( SCIPhashmapInsert(varmap, consvars[j], scenariovar) );
+            }
+         }
 
          if( varadded )
-         SCIP_CALL( SCIPreleaseVar(scip, &scenariovar) );
+         {
+            SCIP_CALL( SCIPreleaseVar(scenarioscip, &scenariovar) );
+         }
       }
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* creating a linear constraint as a copy of the original constraint. */
+      getScenarioEntityName(name, SCIPconsGetName(conss[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+
+      /* copying the constraint from the original SCIP to the stochastic program */
+      SCIP_CALL( SCIPgetConsCopy(scip, scenarioscip, conss[i], &cons, SCIPconsGetHdlr(conss[i]), varmap, NULL, name,
+            SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
+            SCIPconsIsChecked(conss[i]), SCIPconsIsMarkedPropagate(conss[i]), SCIPconsIsLocal(conss[i]),
+            SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
+            SCIPconsIsStickingAtNode(conss[i]), TRUE, &success) );
+
+      /* freeing the cons vars buffer array */
+      SCIPfreeBufferArray(scip, &consvars);
+
+      /* if the copy failed, then the scenarios can not be created. */
+      if( !success )
+      {
+         SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
+            SCIPconsGetName(conss[i]));
+         return SCIP_READERROR;
+      }
+
+      SCIP_CALL( SCIPaddCons(scenarioscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scenarioscip, &cons) );
    }
 
    return SCIP_OKAY;
@@ -2194,11 +2251,13 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 {
    SCIP* scenarioscip;
    SCIP_BENDERS* benders;
+   SCIP_HASHMAP* varmap;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_Real probability;
    int nconss;
    int nvars;
+   int nmastervars;
    int nentries;
    int stagenum;
    int i;
@@ -2223,6 +2282,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    vars = SCIPtimGetStageVars(scip, stagenum);
    nvars = SCIPtimGetStageNVars(scip, stagenum);
 
+   nmastervars = SCIPgetNVars(scip);
+
    /* this if 0 will be removed when the stochastic reader is merged with the Benders' branch */
    if( decomp )
    {
@@ -2246,7 +2307,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
-         SCIP_CALL( createScenarioSubproblemArray(scenarioscip, scenario) );
+         SCIP_CALL( createScenarioSubproblemArray(scip, scenario) );
    }
    else
       scenarioscip = scip;
@@ -2254,11 +2315,17 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    /* adding the scenarioscip to the scenario */
    setScenarioScip(scenario, scenarioscip);
 
+   /* creating the variable hashmap to copy the constraints */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scenarioscip), nmastervars) );
+
    /* adding the variables to the scenario */
-   SCIP_CALL( addScenarioVarsToProb(scenarioscip, scenario, vars, nvars) );
+   SCIP_CALL( addScenarioVarsToProb(scenarioscip, scenario, varmap, vars, nvars) );
 
    /* adding the constraints to the scenario */
-   SCIP_CALL( addScenarioConsToProb(scenarioscip, scenario, conss, nconss, decomp) );
+   SCIP_CALL( addScenarioConsToProb(scip, scenarioscip, scenario, varmap, conss, nconss, decomp) );
+
+   /* destroying the hashmap */
+   SCIPhashmapFree(&varmap);
 
    /* add the variables and constraints of the child scenarios */
    for( i = 0; i < getScenarioNChildren(scenario); i++ )
@@ -2513,8 +2580,6 @@ SCIP_RETCODE buildDecompProblem(
    /* disabling aggregation since it can affect the mapping between the master and subproblem variables */
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotaggr", TRUE) );
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotmultaggr", TRUE) );
-
-   SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
 
    return SCIP_OKAY;
 }

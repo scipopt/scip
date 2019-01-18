@@ -536,8 +536,8 @@ SCIP_RETCODE selectBranchVar(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &candssorted);
    SCIPfreeBufferArray(scip, &candsorigidx);
+   SCIPfreeBufferArray(scip, &candssorted);
 
    return SCIP_OKAY;
 }

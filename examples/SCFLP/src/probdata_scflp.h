@@ -39,7 +39,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nsubproblems,       /**< the number of Benders' decomposition subproblems */
-   SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
+   SCIP_Bool             usebenders,         /**< will Benders' decomposition be used to solve the problem */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    );
 
 /** returns the number of facilities */

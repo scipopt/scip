@@ -37,7 +37,6 @@
 #include "blockmemshell/memory.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_symresack.h"
-#include "scip/misc.h"
 #include "scip/presol_symbreak.h"
 #include "scip/presol_symmetry.h"
 #include "scip/pub_cons.h"

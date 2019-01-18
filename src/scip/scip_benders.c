@@ -677,7 +677,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    assert(scip->set != NULL);
    assert(benders != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, auxviol, type, checkint) );
 
@@ -859,7 +859,6 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    )
@@ -871,7 +870,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
+  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, solvecip, objective) );
 
    return SCIP_OKAY;
 }
@@ -1344,9 +1343,9 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
@@ -1355,13 +1354,94 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    )
 {
    assert(scip != NULL);
-   assert(benderscut != NULL);
+   assert(benders != NULL);
    assert(vars != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBendersCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, vars, vals, lhs, rhs, nvars) );
+   SCIP_CALL( SCIPbendersStoreCut(benders, scip->set, vars, vals, lhs, rhs, nvars) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a constraint in the input SCIP instance that corresponds to the given vars and vals arrays */
+static
+SCIP_RETCODE createAndApplyStoredBendersCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_VAR**            vars,               /**< the variables from the source constraint */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the source constriant */
+   SCIP_Real             lhs,                /**< the LHS of the source constraint */
+   SCIP_Real             rhs,                /**< the RHS of the source constraint */
+   int                   nvars,              /**< the number of variables in the source constraint */
+   int                   consindex           /**< the store index for the constraint */
+   )
+{
+   SCIP_CONS* cons;
+   char consname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* setting the name of the transferred cut */
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "transferredbenderscut_%d", consindex);
+
+   /* creating a linear constraint given the input parameters */
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, nvars, vars, vals, lhs, rhs) );
+   SCIP_CALL( SCIPsetConsRemovable(scip, cons, TRUE) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int naddedcuts;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   /* retrieving the number of stored Benders' cuts */
+   naddedcuts =  SCIPbendersGetNStoredCuts(benders);
+
+   /* looping over all added cuts to construct the cut for the input SCIP instance */
+   for( i = 0; i < naddedcuts; i++ )
+   {
+      /* collecting the variable information from the constraint */
+      SCIP_CALL( SCIPbendersGetStoredCutData(benders, i, &vars, &vals, &lhs, &rhs, &nvars) );
+
+      if( nvars > 0 )
+      {
+         /* create and apply the cut to be transferred from the sub SCIP to the source SCIP */
+         SCIP_CALL( createAndApplyStoredBendersCut(scip, vars, vals, lhs, rhs, nvars, i) );
+      }
+   }
 
    return SCIP_OKAY;
 }

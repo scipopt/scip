@@ -521,6 +521,12 @@ SCIP_RETCODE createNewSol(
    assert(subsol != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
+   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
+      return SCIP_OKAY;
+
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -901,7 +907,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, FALSE,
+            TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
@@ -1075,8 +1082,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* free conflict variables */
-   SCIPfreeBufferArrayNull(scip, &onefixvars);
    SCIPfreeBufferArrayNull(scip, &onefixvals);
+   SCIPfreeBufferArrayNull(scip, &onefixvars);
 
    /* freeing solution */
    if( sol != NULL )

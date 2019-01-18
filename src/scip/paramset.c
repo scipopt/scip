@@ -3998,6 +3998,9 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
    }
 
+   /* marking that the sub-SCIPs have been deactivated */
+   set->subscipsoff = TRUE;
+
    return SCIP_OKAY;
 }
 

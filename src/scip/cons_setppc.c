@@ -2990,7 +2990,7 @@ SCIP_RETCODE collectCliqueData(
          }
          else
          {
-            assert(SCIPhashmapGetImage(vartoindex, (void*) var) != NULL);
+            assert(SCIPhashmapExists(vartoindex, (void*) var));
             varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var);
          }
 
@@ -3036,7 +3036,7 @@ void deleteCliqueDataEntry(
    assert(varnconss != NULL);
    assert(varconsidxs != NULL);
 
-   assert(SCIPhashmapGetImage(vartoindex, (void*) var) != NULL);
+   assert(SCIPhashmapExists(vartoindex, (void*) var));
    varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var);
 
    /* remove entry of variable at the given position */

@@ -329,7 +329,7 @@ set(instances_Stochastic
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
-    "instances/Stochastic/qf_rrtailassign_0_5.smps\;1734.0"
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
 #
