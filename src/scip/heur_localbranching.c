@@ -673,8 +673,6 @@ SCIP_RETCODE SCIPlocalbranchingSetWorkingLimits(
    SCIP_Bool             useuct              /**< should the uct node selector be used? */
    )
 {
-   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
-
    assert(scip != NULL);
    assert(subscip != NULL);
 
