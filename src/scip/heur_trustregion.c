@@ -51,6 +51,7 @@
 #include "scip/cons_linear.h"
 #include "scip/heuristics.h"
 #include "scip/heur_trustregion.h"
+#include "scip/heur_localbranching.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -250,51 +251,6 @@ SCIP_RETCODE addTrustRegionConstraints(
 }
 
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< SCIP data structure  of the original problem */
-   SCIP*                 subscip,            /**< SCIP data structure  of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< the Trustregion heuristic */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
-   )
-{
-   SCIP_VAR** vars;
-   int nvars;
-   SCIP_SOL* newsol;
-   SCIP_Real* subsolvals;
-
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
-
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -387,7 +343,7 @@ SCIP_DECL_HEURINIT(heurInitTrustregion)
    return SCIP_OKAY;
 }
 
-/** todo setup And Solve Subscip */
+/** sets up and solves the sub SCIP for the Trust Region heuristic */
 static
 SCIP_RETCODE setupAndSolveSubscipTrustregion(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -454,80 +410,9 @@ SCIP_RETCODE setupAndSolveSubscipTrustregion(
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-   /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-   /* set limits for the subproblem */
-   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = nsubnodes;
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-   /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
-   }
-
-   /* activate uct node selection at the top of the tree */
-   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
-   }
-
-   /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-   }
-
-   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
-   if( !SCIPisParamFixed(subscip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
-   }
-
-   /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
-   }
+   SCIP_CALL( SCIPlocalbranchingSetWorkingLimits(scip, subscip, nsubnodes, heurdata->bestsollimit,
+         heurdata->useuct) );
 
    SCIP_CALL( addTrustRegionConstraints(scip, subscip, subvars, heurdata) );
 
@@ -565,66 +450,16 @@ SCIP_RETCODE setupAndSolveSubscipTrustregion(
    SCIPdebugMsg(scip, "trust region used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
       SCIPgetNNodes(subscip), nsubnodes);
 
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
+   /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
+   SCIP_CALL( SCIPlocalbranchingCheckAndAddSolution(scip, subscip, heur, subvars, result) );
+
+   /* checking the status of the subscip */
+   heurdata->callstatus = WAITFORNEWSOL;
+   if( SCIPgetStatus(subscip) == SCIP_STATUS_NODELIMIT || SCIPgetStatus(subscip) == SCIP_STATUS_STALLNODELIMIT
+      || SCIPgetStatus(subscip) == SCIP_STATUS_TOTALNODELIMIT )
    {
-      SCIP_SOL** subsols;
-      int nsubsols;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-
-         if( success )
-            break;
-      }
-      if( success )
-      {
-         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
-         *result = SCIP_FOUNDSOL;
-      }
-   }
-
-   /* check the status of the sub-MIP */
-   switch( SCIPgetStatus(subscip) )
-   {
-   case SCIP_STATUS_OPTIMAL:
-   case SCIP_STATUS_BESTSOLLIMIT:
-      heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately be installed at next call */
-      SCIPdebugMsg(scip, " -> found new solution\n");
-      break;
-
-   case SCIP_STATUS_NODELIMIT:
-   case SCIP_STATUS_STALLNODELIMIT:
-   case SCIP_STATUS_TOTALNODELIMIT:
       heurdata->callstatus = EXECUTE;
       heurdata->curminnodes *= 2;
-      break;
-
-   case SCIP_STATUS_INFEASIBLE:
-   case SCIP_STATUS_INFORUNBD:
-      heurdata->callstatus = WAITFORNEWSOL;
-      break;
-
-   case SCIP_STATUS_UNKNOWN:
-   case SCIP_STATUS_USERINTERRUPT:
-   case SCIP_STATUS_TERMINATE:
-   case SCIP_STATUS_TIMELIMIT:
-   case SCIP_STATUS_MEMLIMIT:
-   case SCIP_STATUS_GAPLIMIT:
-   case SCIP_STATUS_SOLLIMIT:
-   case SCIP_STATUS_RESTARTLIMIT:
-   case SCIP_STATUS_UNBOUNDED:
-   default:
-      heurdata->callstatus = WAITFORNEWSOL;
-      SCIPdebugMsg(scip, " -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
-      break;
    }
 
  TERMINATE:

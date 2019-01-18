@@ -41,6 +41,26 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets the working limits for the auxiliary problem */
+EXTERN
+SCIP_RETCODE SCIPlocalbranchingSetWorkingLimits(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< the subproblem created by localbranching */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
+   int                   bestsollimit,       /**< the limit on the number of best solutions found */
+   SCIP_Bool             useuct              /**< should the uct node selector be used? */
+   );
+
+/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
+EXTERN
+SCIP_RETCODE SCIPlocalbranchingCheckAndAddSolution(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< the subproblem created by localbranching */
+   SCIP_HEUR*            heur,               /**< localbranching heuristic */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem */
+   SCIP_RESULT*          result              /**< result pointer */
+   );
+
 #ifdef __cplusplus
 }
 #endif

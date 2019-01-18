@@ -96,6 +96,17 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
+/** creates a new solution for the original problem by copying the solution from the subproblem */
+EXTERN
+SCIP_RETCODE SCIPheuristicsCreateNewSol(
+   SCIP*                 scip,               /**< SCIP data structure  of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure  of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_HEUR*            heur,               /**< the heuristic where the solution was found */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
