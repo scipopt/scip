@@ -101,7 +101,7 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
-- added parameter benders/default/cutcheck to enable the generation of Benders' decomposition cuts during solution
+- added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
   checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
@@ -117,6 +117,11 @@ Interface changes
 
 - Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
   High values sacrifice performance for stability.
+
+- Added parameters benders/<bendersname>/lnsmaxcalls and benders/<bendersname>/lnsmaxcallsroot to the Benders'
+  decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
+  branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
+  parameters only have effect if the lnscheck parameter is set to TRUE.
 
 ### Data structures
 
