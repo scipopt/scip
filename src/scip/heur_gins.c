@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   heur_gins.c
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
@@ -128,6 +128,23 @@ struct RollingHorizon
 };
 typedef struct RollingHorizon ROLLINGHORIZON;
 
+/** data structure to enable GINS to solve multiple decompositions in a sequential process */
+struct DecompHorizon
+{
+   SCIP_DECOMP*          decomp;             /**< decomposition data structure used for this horizon */
+   SCIP_VAR**            vars;               /**< variables sorted by block indices */
+   int*                  blocklabels;        /**< sorted block labels of all variable blocks that satisfy the requirements */
+   int*                  varblockend;        /**< block end indices in sorted variables array (position of first variable of next block) */
+   SCIP_Bool*            suitable;           /**< TRUE if a block is suitable */
+   int                   iterations;         /**< the number of iterations with this decomp horizon */
+   int                   nsuitableblocks;    /**< the total number of suitable blocks */
+   int                   lastblocklabel;     /**< label of last block used */
+   int                   nblocks;            /**< the number of available variable blocks, only available after initialization */
+   int                   memsize;            /**< storage size of the used arrays */
+   SCIP_Bool             init;               /**< has the decomposition horizon been initialized? */
+};
+typedef struct DecompHorizon DECOMPHORIZON;
+
 /** primal heuristic data */
 struct SCIP_HeurData
 {
@@ -214,6 +231,285 @@ void addHistogramEntry(
 
 #endif
 
+/** create a decomp horizon data structure */
+static
+SCIP_RETCODE decompHorizonCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON**       decomphorizon,      /**< pointer to store decomposition horizon */
+   SCIP_DECOMP*          decomp              /**< decomposition in transformed space */
+   )
+{
+   DECOMPHORIZON* decomphorizonptr;
+   int nblocks;
+   int memsize;
+
+   assert(scip != NULL);
+   assert(decomphorizon != NULL);
+   assert(decomp != NULL);
+
+   nblocks = SCIPdecompGetNBlocks(decomp);
+
+   assert(nblocks >= 1);
+   /* account for the border and an additional */
+
+   SCIP_CALL( SCIPallocMemory(scip, decomphorizon) );
+   decomphorizonptr = *decomphorizon;
+   decomphorizonptr->decomp = decomp;
+   decomphorizonptr->memsize = memsize = nblocks + 1;
+
+   /* allocate storage for block related information */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->blocklabels, memsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->varblockend, memsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->suitable, memsize) );
+
+   /* initialize data later */
+   decomphorizonptr->init = FALSE;
+   decomphorizonptr->vars = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** free a decomp horizon data structure */
+static
+void decompHorizonFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON**       decomphorizon       /**< pointer to decomposition horizon that should be freed */
+   )
+{
+   DECOMPHORIZON* decomphorizonptr;
+
+   assert(scip != NULL);
+   assert(decomphorizon != NULL);
+
+   /* empty horizon */
+   if( *decomphorizon == NULL )
+      return;
+
+
+   decomphorizonptr = *decomphorizon;
+   SCIPfreeMemoryArrayNull(scip, &decomphorizonptr->vars);
+
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->blocklabels);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->varblockend);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->suitable);
+
+   SCIPfreeMemory(scip, decomphorizon);
+}
+
+/** check if another run should be performed within the current decomposition horizon */
+static
+SCIP_Bool decompHorizonRunAgain(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON*        decomphorizon       /**< decomposition horizon data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(decomphorizon != NULL);
+
+   return decomphorizon->iterations < decomphorizon->nsuitableblocks;
+}
+
+/** return TRUE if the decomposition horizon has already been initialized, FALSE otherwise */
+static
+SCIP_Bool decompHorizonIsInitialized(
+   DECOMPHORIZON*        decomphorizon       /**< decomposition horizon data structure */
+   )
+{
+   assert(decomphorizon != NULL);
+
+   return decomphorizon->init;
+}
+
+/** initialize decomposition horizon data structure by setting up data structures and analyzing blocks */
+static
+SCIP_RETCODE decompHorizonInitialize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data structure */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR** varscopy;
+   SCIP_SOL* sol;
+   int* varlabels;
+   int nvars;
+   int currblockstart = 0;
+   int blockpos = 0;
+   int nstblblocks;
+   int ncontvarsscip;
+
+   SCIP_DECOMP* decomp = decomphorizon->decomp;
+
+   assert(scip != NULL);
+   assert(decomp != NULL);
+   assert(! SCIPdecompIsOriginal(decomp));
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   sol = SCIPgetBestSol(scip);
+   ncontvarsscip = SCIPgetNContVars(scip) + SCIPgetNImplVars(scip);
+
+   assert(vars != NULL);
+   assert(sol != NULL);
+
+   /* get variable labels from decomposition */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
+   SCIPduplicateMemoryArray(scip, &varscopy, vars, nvars);
+   SCIPdecompGetVarsLabels(decomp, varscopy, varlabels, nvars);
+
+   /*  sort labels and variables */
+   SCIPsortIntPtr(varlabels, (void **)varscopy, nvars);
+   decomphorizon->vars = varscopy;
+
+   blockpos = 0;
+   currblockstart = 0;
+   nstblblocks = 0;
+   /* loop over blocks, and check if they are suitable or not for the improvement heuristic */
+   while( currblockstart < nvars )
+   {
+      int ncontvars;
+      int blocklabel;
+      int currblockend;
+      int ndiscretevars;
+      int nfixedvars;
+      SCIP_Bool suitable;
+      assert(blockpos < decomphorizon->memsize);
+
+      blocklabel = varlabels[currblockstart];
+      currblockend = currblockstart;
+      ncontvars = 0;
+
+      /* determine the block size and the variable types */
+      do
+      {
+         if( SCIPvarGetType(varscopy[currblockend]) >= SCIP_VARTYPE_IMPLINT )
+            ++ncontvars;
+
+         currblockend++;
+      }
+      while (currblockend < nvars && varlabels[currblockend] == blocklabel);
+
+      ndiscretevars = currblockend - currblockstart - ncontvars;
+
+      if( heurdata->fixcontvars )
+         nfixedvars = nvars - (currblockend - currblockstart);
+      else
+         nfixedvars = nvars - ncontvarsscip - ndiscretevars;
+
+      suitable = (ndiscretevars > 0) && nfixedvars > heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : nvars - ncontvarsscip);
+
+      decomphorizon->suitable[blockpos] = suitable;
+      decomphorizon->blocklabels[blockpos] = blocklabel;
+      decomphorizon->varblockend[blockpos] = currblockend;
+      currblockstart = currblockend;
+      nstblblocks += (suitable);
+
+      blockpos++;
+   }
+
+   /* not necessarily all blocks have variables; store number of available blocks */
+   decomphorizon->nblocks = blockpos;
+   decomphorizon->nsuitableblocks = nstblblocks;
+   decomphorizon->iterations = 0;
+
+   /* author bzfhende
+    *
+    * TODO compute and sort the blocks with highest potential for fixing
+    */
+
+   SCIPfreeBufferArray(scip, &varlabels);
+
+   decomphorizon->init = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** query the start and end of the next suitable block after the last @p lastblockused
+ *
+ *  @return TRUE if next suitable block could be found, otherwise FALSE
+ */
+static
+SCIP_Bool decompHorizonNext(
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
+   int                   lastblockused,      /**< label of last used block, or INT_MIN if none has been used, yet */
+   int*                  blockstart,         /**< pointer to store start position in variables of next suitable block */
+   int*                  blockend,           /**< pointer to store start position of the block that follows next suitable block */
+   int*                  nextblocklabel      /**< pointer to store label of the next suitable block */
+   )
+{
+   SCIP_Bool found;
+   int pos;
+   int firstpos;
+   assert(decomphorizon != NULL);
+   assert(blockstart != NULL);
+   assert(blockend != NULL);
+   assert(nextblocklabel != NULL);
+
+   assert(decomphorizon->init);
+
+   if( decomphorizon->nsuitableblocks == 0 )
+   {
+      return FALSE;
+   }
+
+   ++decomphorizon->iterations;
+
+   /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
+   found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
+
+   if( !found )
+      firstpos = -1;
+
+   pos = (firstpos + 1) % decomphorizon->nblocks;
+
+   while( pos < decomphorizon->nblocks && !decomphorizon->suitable[pos] )
+      pos++;
+
+   if( pos == decomphorizon->nblocks )
+   {
+      pos = 0;
+      while( pos < firstpos && !decomphorizon->suitable[pos] )
+         pos++;
+   }
+
+   assert(pos == firstpos || (0 <= pos && decomphorizon->nblocks > pos && (decomphorizon->suitable[pos] || pos == 0)));
+
+   /* the next suitable block position has been discovered */
+   if( pos != firstpos && decomphorizon->suitable[pos] )
+   {
+      *blockend = decomphorizon->varblockend[pos];
+      *blockstart = pos == 0 ? 0 : decomphorizon->varblockend[pos - 1];
+      *nextblocklabel = decomphorizon->blocklabels[pos];
+
+      return TRUE;
+   }
+   else
+   {
+      /* no next, suitable block exists */
+      *blockstart = *blockend = -1;
+      *nextblocklabel = -100;
+
+      return FALSE;
+   }
+
+   /* author bzfhende
+    *
+    * TODO this block could also be far too small to be processed alone; extend it by more blocks.
+    */
+}
+
+/** get the variables of this decomposition horizon */
+static
+SCIP_VAR** decomphorizonGetVars(
+   DECOMPHORIZON*        decomphorizon       /**< decomposition horizon data structure */
+   )
+{
+   assert(decomphorizon != NULL);
+   assert(decomphorizon->init);
+
+   return decomphorizon->vars;
+}
+
 /** create a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonCreate(
@@ -240,14 +536,17 @@ SCIP_RETCODE rollingHorizonCreate(
 
 /** free a rolling horizon data structure */
 static
-SCIP_RETCODE rollingHorizonFree(
+void rollingHorizonFree(
    SCIP*                 scip,               /**< SCIP data structure */
    ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
    assert(scip != NULL);
    assert(rollinghorizon != NULL);
-   assert(*rollinghorizon != NULL);
+
+   /* empty rolling horizon */
+   if( *rollinghorizon == NULL )
+      return;
 
    if( (*rollinghorizon)->variablegraph != NULL )
    {
@@ -257,7 +556,6 @@ SCIP_RETCODE rollingHorizonFree(
    SCIPfreeBlockMemoryArray(scip, &(*rollinghorizon)->distances, (*rollinghorizon)->distancessize);
    SCIPfreeBlockMemoryArray(scip, &(*rollinghorizon)->used, (*rollinghorizon)->distancessize);
    SCIPfreeBlockMemory(scip, rollinghorizon);
-   return SCIP_OKAY;
 }
 
 /** is there potential to run another iteration of the rolling horizon approach? */
@@ -836,7 +1134,7 @@ SCIP_Bool checkFixingrate(
 static
 SCIP_RETCODE determineVariableFixingsDecomp(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECOMP*          decomp,             /**< decomposition in transformed space */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
    SCIP_VAR**            fixedvars,          /**< buffer to store variables that should be fixed */
    SCIP_Real*            fixedvals,          /**< buffer to store fixing values for fixed variables */
    int*                  nfixings,           /**< pointer to store the number of fixed variables */
@@ -845,74 +1143,39 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    )
 {
 
-   SCIP_VAR** vars;
-   SCIP_VAR** varscopy;
    SCIP_SOL* sol;
-   int* varslabels;
+   SCIP_Bool hasnext;
    int nvars;
    int currblockstart;
    int currblockend;
+   int currblocklabel;
 
    assert(scip != NULL);
-   assert(decomp != NULL);
+   assert(decomphorizon != NULL);
 
-   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    sol = SCIPgetBestSol(scip);
 
-   /* get variable labels for all variables, including continuous. Sort the variables by label. */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nvars) );
-
-   SCIPdecompGetVarsLabels(decomp, varscopy, varslabels, nvars);
-
-   SCIPsortIntPtr(varslabels, (void **)varscopy, nvars);
-
-   /* get the last block that was used by the heuristic. Search for it, and continue with the next block. */
-   if( heurdata->lastblockuseddecomp == INT_MIN )
+   /* initialize the decomposition horizon first for the current variables */
+   if( ! decompHorizonIsInitialized(decomphorizon) )
    {
-      currblockstart = 0;
+      SCIP_CALL( decompHorizonInitialize(scip, decomphorizon, heurdata) );
    }
-   else
+
+   /* query the next suitable block */
+   hasnext = decompHorizonNext(decomphorizon, heurdata->lastblockuseddecomp, &currblockstart, &currblockend, &currblocklabel);
+
+   if( ! hasnext )
    {
-      SCIP_Bool found;
-      found = SCIPsortedvecFindInt(varslabels, heurdata->lastblockuseddecomp, nvars, &currblockstart);
-      assert(found);
+      SCIPdebugMsg(scip, "Could not find a suitable block that follows %d\n",
+               heurdata->lastblockuseddecomp);
 
-      /* increase the start pointer until we reach the beginning of a new block */
-      do
-      {
-         currblockstart++;
-      }
-      while( currblockstart < nvars && varslabels[currblockstart] == heurdata->lastblockuseddecomp );
-
-      /* reset the pointer if we reached the end */
-      if( currblockstart == nvars )
-         currblockstart = 0;
-   }
-   /* author bzfhende
-    *
-    * TODO compute and sort the blocks with highest potential for fixing
-    */
-
-   currblockend = currblockstart;
-   do
-   {
-      currblockend++;
-   } while( currblockend < nvars && varslabels[currblockend] == varslabels[currblockstart]);
-   heurdata->lastblockuseddecomp = varslabels[currblockstart];
-
-   /* author bzfhende
-    *
-    * TODO this block could also be far too small to be processed alone; extend it by more blocks.
-    */
-
-   /* finish if this block has too many variables */
-   if( currblockend - currblockstart > (1 - heurdata->minfixingrate) * nvars )
       *success = FALSE;
+   }
    else
    {
       /* fix all discrete/continuous variables that are not part of this block */
+      SCIP_VAR** vars;
       int v;
       int startposs[] = {0, currblockend};
       int endposs[] = {currblockstart, nvars};
@@ -920,7 +1183,9 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
       SCIPdebugMsg(scip, "Fix %s variables outside of block %d\n",
          heurdata->fixcontvars ? "all" : "discrete",
-         varslabels[currblockstart]);
+         currblocklabel);
+
+      vars = decomphorizonGetVars(decomphorizon);
 
       /* iterate through all variables outside the unfixed block */
       for( p = 0; p < 2; ++p )
@@ -928,9 +1193,8 @@ SCIP_RETCODE determineVariableFixingsDecomp(
          /* fix variables outside of this block */
          for( v = startposs[p]; v < endposs[p]; ++v )
          {
-            SCIP_VAR* var = varscopy[v];
+            SCIP_VAR* var = vars[v];
 
-            assert(varslabels[v] != varslabels[currblockstart]);
             if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
             {
                SCIP_Real fixval;
@@ -949,12 +1213,39 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       }
 
       *success = checkFixingrate(scip, heurdata, *nfixings);
+
+      heurdata->lastblockuseddecomp = currblocklabel;
    }
 
-   SCIPfreeBufferArray(scip, &varscopy);
-   SCIPfreeBufferArray(scip, &varslabels);
-
    return SCIP_OKAY;
+}
+
+/** choose a decomposition from the store or return NULL if none exists/no decomposition was suitable */
+static
+SCIP_DECOMP* chooseDecomp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   SCIP_DECOMPSTORE* decompstore;
+   SCIP_DECOMP** decomps;
+   int ndecomps;
+   int currdecomp;
+
+   /* TODO coming soon: better selection than last nontrivial decomposition that has been input */
+   decompstore = SCIPgetDecompstore(scip);
+   ndecomps = SCIPdecompstoreGetNDecomps(decompstore);
+   decomps = SCIPdecompstoreGetDecomps(decompstore);
+   currdecomp = ndecomps;
+
+   while( --currdecomp >= 0 )
+   {
+      if( SCIPdecompGetNBlocks(decomps[currdecomp]) > 0 )
+         return decomps[currdecomp];
+
+   }
+
+   return NULL;
 }
 
 /** determines the graph-induced variable fixings */
@@ -966,6 +1257,7 @@ SCIP_RETCODE determineVariableFixings(
    int*                  nfixings,           /**< pointer to store the number of fixed variables */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    ROLLINGHORIZON*       rollinghorizon,     /**< rolling horizon data structure to save relevant information, or NULL if not needed */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
    )
 {
@@ -993,22 +1285,15 @@ SCIP_RETCODE determineVariableFixings(
 
    decompstore = SCIPgetDecompstore(scip);
    assert(decompstore != NULL);
+
    /* determine the variable fixings based on latest user decomposition */
-   if( rollinghorizon == NULL && SCIPdecompstoreGetNDecomps(decompstore) > 0 )
+   if( decomphorizon != NULL )
    {
-      /* TODO coming soon: better selection than last decomposition that has been input */
-      SCIP_DECOMP* decomp = SCIPdecompstoreGetDecomps(decompstore)[SCIPdecompstoreGetNDecomps(decompstore) - 1];
+      SCIP_CALL( determineVariableFixingsDecomp(scip, decomphorizon, fixedvars, fixedvals, nfixings, heurdata, success) );
 
-      /* don't use trivial decompositions */
-      if( SCIPdecompGetNBlocks(decomp) > 0 )
-      {
-         SCIP_CALL( determineVariableFixingsDecomp(scip, decomp, fixedvars, fixedvals, nfixings, heurdata, success) );
-
-         if( *success )
-            return SCIP_OKAY;
-      }
+      if( *success )
+         return SCIP_OKAY;
    }
-
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -1454,6 +1739,8 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    SCIP_VAR** fixedvars;
    SCIP_Real* fixedvals;
    ROLLINGHORIZON* rollinghorizon;           /* data structure for rolling horizon approach */
+   DECOMPHORIZON* decomphorizon;             /* data structure for processing multiple blocks of a decomposition */
+   SCIP_DECOMP* decomp;
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
 
    int nvars;                                /* number of original problem's variables */
@@ -1514,16 +1801,23 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nvars) );
 
-   /* only create a rolling horizon data structure if we need to keep it */
-   if( heurdata->userollinghorizon )
+   rollinghorizon = NULL;
+   decomphorizon = NULL;
+   decomp = chooseDecomp(scip, heurdata);
+   if( decomp != NULL )
+   {
+      SCIP_CALL( decompHorizonCreate(scip, &decomphorizon, decomp) );
+   }
+   /* only create a horizon data structure if we need it */
+   if( decomphorizon == NULL && heurdata->userollinghorizon )
+   {
       SCIP_CALL( rollingHorizonCreate(scip, &rollinghorizon) );
-   else
-      rollinghorizon = NULL;
+   }
 
    do
    {
       /* create a new problem, by fixing all variables except for a small neighborhood */
-      SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata, rollinghorizon, &success) );
+      SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata, rollinghorizon, decomphorizon, &success) );
 
       /* terminate if it was not possible to create the subproblem */
       if( !success )
@@ -1597,12 +1891,16 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( SCIPfree(&subscip) );
 
       /* check if we want to run another rolling horizon iteration */
-      runagain = (*result == SCIP_FOUNDSOL) && heurdata->userollinghorizon;
+      runagain = heurdata->userollinghorizon;
       if( runagain )
       {
-         assert(rollinghorizon != NULL);
+         assert(rollinghorizon != NULL || decomphorizon != NULL);
          SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain ) );
-         runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata);
+
+         if( rollinghorizon != NULL )
+            runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*result == SCIP_FOUNDSOL);
+         else if( decomphorizon != NULL )
+            runagain = runagain && decompHorizonRunAgain(scip, decomphorizon);
       }
    }
    while( runagain );
@@ -1616,8 +1914,9 @@ TERMINATE:
    /* only free the rolling horizon data structure if we need to keep it */
    if( heurdata->userollinghorizon )
    {
-      SCIP_CALL( rollingHorizonFree(scip, &rollinghorizon) );
+      rollingHorizonFree(scip, &rollinghorizon);
    }
+   decompHorizonFree(scip, &decomphorizon);
 
    SCIPfreeBufferArray(scip, &fixedvals);
    SCIPfreeBufferArray(scip, &fixedvars);
