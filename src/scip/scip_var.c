@@ -5129,10 +5129,10 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -5245,10 +5245,10 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
