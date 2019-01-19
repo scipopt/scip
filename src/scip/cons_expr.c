@@ -1053,7 +1053,7 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", nlhdlrinterval.inf, nlhdlrinterval.sup);
 #ifdef SCIP_DEBUG
                   SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
-                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
+                  SCIPdebugMsgPrint(scip, " (was [%g,%g]) by nlhdlr <%s>\n", expr->activity.inf, expr->activity.sup, nlhdlr->name);
 #endif
 
                   /* intersect with interval */
@@ -1197,7 +1197,7 @@ SCIP_RETCODE reversePropQueue(
 #ifdef SCIP_DEBUG
             SCIPdebugMsg(scip, "call reverse propagation for ");
             SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
-            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->interval.inf, expr->interval.sup, nlhdlr->name);
+            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->activity.inf, expr->activity.sup, nlhdlr->name);
 #endif
 
             nreds = 0;
@@ -1214,7 +1214,7 @@ SCIP_RETCODE reversePropQueue(
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "call reverse propagation for ");
          SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
-         SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->interval.inf, expr->interval.sup, expr->exprhdlr->name);
+         SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->activity.inf, expr->activity.sup, expr->exprhdlr->name);
 #endif
 
          /* call the reverseprop of the exprhdlr */
@@ -1370,7 +1370,7 @@ SCIP_RETCODE propConss(
          if( cutoff )
          {
             SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
-               SCIPconsGetName(cons));
+               SCIPconsGetName(conss[i]));
          }
       #endif
 
