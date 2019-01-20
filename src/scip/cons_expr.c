@@ -8266,7 +8266,6 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(reversepropqueue != NULL);
    assert(infeasible != NULL);
    assert(nreductions != NULL);
 
