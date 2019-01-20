@@ -49,6 +49,9 @@ void setup(void)
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
 
+   /* disable relaxing variable bounds in activity evaluation */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
@@ -206,6 +209,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr);
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
@@ -224,6 +228,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr);
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
