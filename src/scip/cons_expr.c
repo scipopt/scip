@@ -1479,7 +1479,7 @@ SCIP_RETCODE propConss(
       for( i = 0; i < nconss; ++i )
       {
          SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-         SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_INTERVAL | SCIP_CONSEXPR_PRINTDOT_EXPRSTRING);
+         SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_ACTIVITY | SCIP_CONSEXPR_PRINTDOT_EXPRSTRING);
          SCIPprintConsExprExprDot(scip, dotdata, SCIPconsGetData(conss[i])->expr);
          SCIPprintConsExprExprDotFinal(scip, &dotdata);
       }
@@ -9249,12 +9249,12 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
          SCIPinfoMessage(scip, dotdata->file, "\\n");
       }
 
-      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
+      if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_ACTIVITY )
       {
          /* print activity */
          SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->activity.inf, expr->activity.sup);
 
-         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
+         if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG) == SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG )
          {
             /* print also activity eval tag */
             SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->activitytag);
