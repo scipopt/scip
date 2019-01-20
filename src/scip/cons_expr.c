@@ -9998,6 +9998,24 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    return SCIP_OKAY;
 }
 
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * \note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+void SCIPincrementConsExprCurBoundsTag(
+   SCIP_CONSHDLR*          conshdlr          /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
+}
+
 /** adds branching score to an expression
  *
  * Adds a score to the expression-specific branching score.

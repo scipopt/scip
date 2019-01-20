@@ -778,6 +778,17 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * \note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+EXTERN
+void SCIPincrementConsExprCurBoundsTag(
+   SCIP_CONSHDLR*          conshdlr          /**< expression constraint handler */
+   );
+
 /** adds branching score to an expression
  *
  * Adds a score to the expression-specific branching score.
