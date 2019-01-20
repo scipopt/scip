@@ -1722,7 +1722,6 @@ SCIP_RETCODE detectNlhdlr(
    for( h = 0; h < conshdlrdata->nnlhdlrs && !*infeasible; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
-      SCIP_INTERVAL interval;
 
       nlhdlr = conshdlrdata->nlhdlrs[h];
       assert(nlhdlr != NULL);
@@ -1773,26 +1772,14 @@ SCIP_RETCODE detectNlhdlr(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* let nlhdlr evaluate current expression
-          * we do this here, because we want to call reverseprop after detect (if called from initlp),
-          * but some nlhdlr (i.e., quadratic) require that its inteval has been called before
+         /* call reverse propagation of nlhdlr
+          * This can ensure that just created auxiliary variables take only values that are within the domain of functions that use them,
+          * e.g., sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
+          * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
+          * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
+          * NOTE: This assumes that reverseprop of the nlhdlr can be called before a preceding inteval call.
           */
-         interval = expr->activity;
-         SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &interval, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr)) );
-         SCIPdebugMsg(scip, "nlhdlr <%s> computed interval [%g,%g]\n", SCIPgetConsExprNlhdlrName(nlhdlr), interval.inf, interval.sup);
-         /* tighten bounds of expression interval and the auxiliary variable */
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, TRUE, NULL, infeasible, &ntightenings) );
-
-         if( !*infeasible )
-         {
-            /* call reverse propagation of nlhdlr
-             * This can ensure that just created auxiliary variables take only values that are within the domain of functions that use them,
-             * e.g., sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
-             * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
-             * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
-             */
-            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
-         }
+         SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, NULL, infeasible, &ntightenings, FALSE) );
       }
    }
 

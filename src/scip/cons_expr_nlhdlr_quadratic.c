@@ -1086,6 +1086,11 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
       return SCIP_OKAY;
 
+   /* ensure that partial activities as stored in nlhdlrexprdata are correct
+    * FIXME/TODO: Do this only if necessary, i.e., move into separate function, compare with conshdlr curboundstag,lastboundrelax or so
+    */
+   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &quadactivity, NULL, NULL) );
+
    /* propagate linear part in rhs = expr's interval - quadratic activity; first, reconstruct the quadratic activity */
    SCIPintervalSetBounds(&quadactivity,
          nlhdlrexprdata->nneginfinityquadact > 0 ? -SCIP_INTERVAL_INFINITY : nlhdlrexprdata->minquadfiniteact,
