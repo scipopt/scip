@@ -1019,9 +1019,16 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
-            if( expr->activitytag >= conshdlrdata->lastboundrelax )
+            /* start with existing activity of expression, if it is still valid (though not necessarily tight)
+             * and we are not collecting expressions for reverse propagation
+             * the reason for the latter is that expr->activity might currently store bounds from the previous
+             * reverse propagation and we want to collect those expressions for the next reverse propagation
+             * where the forward propagation does not already provide as good activity as those given by
+             * previous reverse propagation (i.e., expressions where there is potential for reverse propagation
+             * because we know tighter bounds on the expression than what is given by forward propagation)
+             */
+            if( reversepropqueue == NULL && expr->activitytag >= conshdlrdata->lastboundrelax )
             {
-               /* start with existing activity of expression, if it is still valid (though not necessarily tight) */
                interval = expr->activity;
             }
             else
@@ -1078,24 +1085,37 @@ SCIP_RETCODE forwardPropExpr(
                SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
             }
 
-            if( expr->auxvar != NULL )
+            /* intersect with previously known interval; if tightening, then add to reversepropqueue */
             {
-               SCIP_INTERVAL auxvarbounds;
-               auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
+               SCIP_INTERVAL previnterval;
 
-               /* it would be odd if the domain of an auxiliary variable were empty */
-               assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
+               if( expr->activitytag >= conshdlrdata->lastboundrelax )
+                  previnterval = expr->activity;
+               else
+                  SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &previnterval);
 
-               /* if bounds on auxiliary variable allow a further tightening, then reversepropagation
+               if( expr->auxvar != NULL )
+               {
+                  SCIP_INTERVAL auxvarbounds;
+                  auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
+
+                  /* it would be odd if the domain of an auxiliary variable were empty */
+                  assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
+
+                  SCIPintervalIntersect(&previnterval, previnterval, auxvarbounds);
+               }
+
+               /* if previnterval allow a further tightening, then reversepropagation
                 * might provide tighter bounds for children, thus add this expression to the reversepropqueue
                 * TODO we might want to require a mimimal tightening?
                 */
-               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, auxvarbounds) && !expr->inqueue )
+               if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval) && !expr->inqueue )
                {
                   SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
                   expr->inqueue = TRUE;
                }
-               SCIPintervalIntersect(&interval, interval, auxvarbounds);
+
+               SCIPintervalIntersect(&interval, interval, previnterval);
             }
 
             /* check whether the resulting interval is empty */
@@ -1454,6 +1474,16 @@ SCIP_RETCODE propConss(
 
       /* do this only for the first round */
       allexprs = FALSE;
+
+#if 0
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
+         SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_INTERVAL | SCIP_CONSEXPR_PRINTDOT_EXPRSTRING);
+         SCIPprintConsExprExprDot(scip, dotdata, SCIPconsGetData(conss[i])->expr);
+         SCIPprintConsExprExprDotFinal(scip, &dotdata);
+      }
+#endif
    }
    while( success && ++roundnr < conshdlrdata->maxproprounds );
 
@@ -2196,7 +2226,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
-      SCIPdebugMsg(scip, "  propagate and simplify %s again\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "  mark <%s> for propagate and simplify\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
       consdata->issimplified = FALSE;
 
