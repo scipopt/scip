@@ -6488,6 +6488,10 @@ static
 SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 {  /*lint --e{715}*/
 
+   /* TODO it would be good to skip this if the problem has been found infeasible
+    * if found infeasible by our boundtightenings, then some expressions could have an empty activity,
+    * which could confuse curvature computing methods
+    */
    if( nconss > 0 )
    {
       SCIP_Bool infeasible;
@@ -10475,7 +10479,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* ensure activites are uptodate */
+   /* ensure activities are uptodate */
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
