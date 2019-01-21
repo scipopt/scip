@@ -3151,6 +3151,7 @@ SCIP_RETCODE canonicalizeConstraints(
             }
             else
             {
+               SCIP_CALL( addLocks(scip, conss[i], nlockspos[i], nlocksneg[i]) );
                SCIP_CALL( SCIPdelCons(scip, conss[i]) );
                if( ndelconss != NULL )
                   ++*ndelconss;
@@ -3206,11 +3207,17 @@ SCIP_RETCODE canonicalizeConstraints(
        */
       for( i = 0; i < nconss; ++i )
       {
+         if( SCIPconsIsDeleted(conss[i]) )
+            continue;
+
          SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
          SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
       }
       for( i = 0; i < nconss; ++i )
       {
+         if( SCIPconsIsDeleted(conss[i]) )
+            continue;
+
          SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
          SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
       }
@@ -3219,6 +3226,9 @@ SCIP_RETCODE canonicalizeConstraints(
    /* restore locks */
    for( i = 0; i < nconss; ++i )
    {
+      if( SCIPconsIsDeleted(conss[i]) )
+         continue;
+
       SCIP_CALL( addLocks(scip, conss[i], nlockspos[i], nlocksneg[i]) );
    }
 
