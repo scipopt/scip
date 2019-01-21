@@ -6487,37 +6487,20 @@ SCIP_DECL_CONSINITPRE(consInitpreExpr)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 {  /*lint --e{715}*/
+   SCIP_Bool infeasible;
 
-   /* TODO it would be good to skip this if the problem has been found infeasible
-    * if found infeasible by our boundtightenings, then some expressions could have an empty activity,
-    * which could confuse curvature computing methods
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   /* simplify constraints and replace common subexpressions */
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, NULL) );
+   /* currently SCIP does not offer to communicate this,
+    * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs, which it doesn't do in EXITPRESOLVE stage
     */
-   if( nconss > 0 )
-   {
-      SCIP_Bool infeasible;
-      int i;
+   assert(!infeasible);
 
-      /* simplify constraints and replace common subexpressions */
-      SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, NULL) );
-      /* currently SCIP does not offer to communicate this,
-       * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs, which it doesn't do in EXITPRESOLVE stage
-       */
-      assert(!infeasible);
-
-      /* call curvature detection of expression handlers */
-      for( i = 0; i < nconss; ++i )
-      {
-         SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
-         assert(consdata != NULL);
-         assert(consdata->expr != NULL);
-
-         /* evaluate all expressions for curvature check */
-         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
-      }
-
-      /* tell SCIP that we have something nonlinear */
-      SCIPenableNLP(scip);
-   }
+   /* tell SCIP that we have something nonlinear */
+   SCIPenableNLP(scip);
 
    return SCIP_OKAY;
 }
@@ -6528,27 +6511,39 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   int c;
    int i;
 
-   for( c = 0; c < nconss; ++c )
+   /* skip a number of initializations if we are already infeasible
+    * if infeasibility was found by our boundtightening, then curvature check may also fail as some exprhdlr (e.g., pow)
+    * assumes nonempty activities in expressions
+    */
+   if( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
    {
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-      assert(consdata != NULL);
+      SCIP_CONSDATA* consdata;
+      int c;
 
-      /* check for a linear variable that can be increase or decreased without harming feasibility */
-      consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
-
-      /* add nlrow representation to NLP, if NLP had been constructed */
-      if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+      for( c = 0; c < nconss; ++c )
       {
-         if( consdata->nlrow == NULL )
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+         assert(consdata != NULL);
+         assert(consdata->expr != NULL);
+
+         /* check for a linear variable that can be increase or decreased without harming feasibility */
+         consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
+
+         /* call curvature detection of expression handlers */
+         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
+
+         /* add nlrow representation to NLP, if NLP had been constructed */
+         if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
-            SCIP_CALL( createNlRow(scip, conss[c]) );
-            assert(consdata->nlrow != NULL);
+            if( consdata->nlrow == NULL )
+            {
+               SCIP_CALL( createNlRow(scip, conss[c]) );
+               assert(consdata->nlrow != NULL);
+            }
+            SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
          }
-         SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
 
