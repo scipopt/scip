@@ -84,7 +84,7 @@ SCIP_RETCODE createAndDetect(
 {
    SCIP_Bool infeasible;
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, cons, "cons", rootexpr, -10.0, 10.0) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, cons, "cons", rootexpr, -100.0, 100.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, *cons, 1, 0) );
    SCIP_CALL( SCIPinitlpCons(scip, *cons, &infeasible) );
    SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
@@ -413,7 +413,8 @@ Test(nlhdlrbilinear, inteval_corner)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -1.0, 7.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
@@ -450,7 +451,8 @@ Test(nlhdlrbilinear, inteval_single_line)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
@@ -494,7 +496,8 @@ Test(nlhdlrbilinear, inteval_three_lines)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 0.1, 3.5, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
@@ -535,7 +538,8 @@ Test(nlhdlrbilinear, inteval_parallel)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 1.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
@@ -575,7 +579,8 @@ Test(nlhdlrbilinear, reverseprop_single)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, -1.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
    cr_expect(SCIPisEQ(scip, activity.inf, -1.0));
    cr_expect(SCIPisEQ(scip, activity.sup, 0.0));
@@ -625,7 +630,8 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 0.7, 0.1, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
@@ -682,7 +688,8 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 1.0, 0.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
