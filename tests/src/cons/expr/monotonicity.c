@@ -50,6 +50,11 @@ void setup(void)
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
 
+   /* disable relaxing variable bounds in activity evaluation
+    * (relaxes a bound M_PI to M_PI + epsilon, which weakens monotonicity computations
+    */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
@@ -127,6 +132,9 @@ SCIP_RETCODE chgBounds(
    cr_assert(lb <= ub);
    SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lb) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, var, ub) );
+
+   SCIPincrementConsExprCurBoundsTag(conshdlr);
+
    return SCIP_OKAY;
 }
 
@@ -145,10 +153,8 @@ SCIP_RETCODE testMonotonicity(
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
 
    /* check curvature */
-   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "expect %d, got %d",
+   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "got %d, expected %d",
       SCIPgetConsExprExprMonotonicity(scip, expr, i), expectedres);
-
-   assert(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres);
 
    return SCIP_OKAY;
 }
