@@ -20,8 +20,8 @@
  * @author Ambros Gleixner
  *
  * TODO: 1. allowing to add constraints
- *       2. checkholes: done
- *       3. use implied bounds information
+ *       2. checkholes: @done
+ *       3. use implied bounds information @done
  *       4. knapsack constraint (unknown error)
  *
  * This presolver attempts to cancel non-zero entries of the constraint
@@ -73,6 +73,7 @@
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
+#define DEFAULT_ISCLIQUEUSED         TRUE    /**< should clique information used to generate strong cuts */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 #define MINSCALE                    0.001    /**< minimal allowed scale for cancelling non-zeros */
@@ -87,6 +88,7 @@
 /*
  * Data structures
  */
+
 
 /** presolver data */
 struct SCIP_PresolData
@@ -106,6 +108,7 @@ struct SCIP_PresolData
    SCIP_Bool             enablecopy;         /**< should dualsparsify presolver be copied to sub-SCIPs? */
    SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
+   SCIP_Bool             iscliqueused;       /**< should clique information used to generate strong cuts */
    int                   naggregated;
 
    int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
@@ -605,7 +608,7 @@ SCIP_Bool isLowerBoundImplied(
 }
 
 
-/* add variable colidx1 to variable colidx2 */
+/* y = weght1*var[colidx1] + var[colidx2] */
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -615,7 +618,8 @@ SCIP_RETCODE aggregation(
    int                   colidx1,            /**< one of the indexes of column to try non-zero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try non-zero cancellation for */
    SCIP_Bool             isimpliedfree,      /**< is the aggregated variable implied free? */
-   SCIP_Real             weight1             /**< weight variable one in the aggregated expression */
+   SCIP_Real             weight1,            /**< weight variable one in the aggregated expression */
+   SCIP_Bool             iscliqueused        /**< is this aggregation used the clique information */
       )
 {
    SCIP_VAR* tmpvars[2];
@@ -630,6 +634,9 @@ SCIP_RETCODE aggregation(
    SCIP_Bool infeasible;
    SCIP_Bool aggregated;
    SCIP_VARTYPE newvartype;
+   SCIP_Real constant;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
 
    assert( !SCIPisZero(scip, weight1) );
 
@@ -638,40 +645,72 @@ SCIP_RETCODE aggregation(
 
    (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "dualsparsifyvar_%d", presoldata->naggregated);
 
-   if( weight1 > 0 )
+   constant = 0.0;
+   if( !iscliqueused )
    {
-      if(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
-         newlb = -SCIPinfinity(scip);
-      else
-         newlb = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
+      if( weight1 > 0 )
+      {
+         if(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
+            newlb = -SCIPinfinity(scip);
+         else
+            newlb = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
 
-      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
-         newub = SCIPinfinity(scip);
+         if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
+            newub = SCIPinfinity(scip);
+         else
+            newub = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+      }
+
       else
-         newub = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+      {
+         if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
+            newlb = -SCIPinfinity(scip);
+         else
+            newlb = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
+
+         if(SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
+            newub = SCIPinfinity(scip);
+         else
+            newub = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+      }
+      if( SCIPvarIsIntegral(aggregatedvar) )
+      {
+         newvartype = (SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_IMPLINT) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_INTEGER;
+      }
+      else
+      {
+         newvartype = SCIP_VARTYPE_CONTINUOUS;
+      }
+
+      lhs = SCIPvarGetLbGlobal(vars[colidx2]);
+      rhs = SCIPvarGetUbGlobal(vars[colidx2]);
    }
-
    else
    {
-      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
-         newlb = -SCIPinfinity(scip);
+      assert( SCIPisEQ(scip, REALABS(weight1), 1.0) );
+      newvartype = SCIP_VARTYPE_BINARY;
+      newlb = 0.0;
+      newub = 1.0;
+      lhs = 0.0;
+      rhs = 1.0;
+      if( SCIPisEQ(scip, weight1, 1.0) )
+      {
+         if( SCIPvarsHaveCommonClique(vars[colidx1], FALSE, vars[colidx2], FALSE, TRUE) )
+         {
+            constant = 1.0;
+         }
+      }
       else
-         newlb = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
-
-      if(SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
-         newub = SCIPinfinity(scip);
-      else
-         newub = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+      {
+         if( SCIPvarsHaveCommonClique(vars[colidx1], TRUE, vars[colidx2], FALSE, TRUE) )
+         {
+            constant = -1.0;
+         }
+      }
+      lhs -= constant;
+      rhs -= constant;
    }
 
-   if( SCIPvarIsIntegral(aggregatedvar) )
-   {
-      newvartype = (SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_IMPLINT) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_INTEGER;
-   }
-   else
-   {
-      newvartype = SCIP_VARTYPE_CONTINUOUS;
-   }
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
             SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
@@ -683,19 +722,20 @@ SCIP_RETCODE aggregation(
    coefs[0] = -weight1;
    coefs[1] = 1;
 
-   SCIP_CALL( SCIPmultiaggregateVar(scip, aggregatedvar, 2, tmpvars, coefs, 0.0, &infeasible, &aggregated) );
+   SCIP_CALL( SCIPmultiaggregateVar(scip, aggregatedvar, 2, tmpvars, coefs, constant, &infeasible, &aggregated) );
    assert(!infeasible);
    assert(aggregated);
 
    vars[colidx2] = newvar;
 
-   if( !isimpliedfree )
+   if( iscliqueused )
+
+   if( !isimpliedfree || iscliqueused )
    {
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, newconsname, 2, tmpvars, coefs,
-               SCIPvarGetLbGlobal(vars[colidx2]), SCIPvarGetUbGlobal(vars[colidx2]),
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
 
@@ -891,7 +931,7 @@ SCIP_RETCODE cancelCol(
                   SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
 
             /* aggregate variable one */
-            SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx2, colidx1, isimpliedfree1, 1.0/maxratio) );
+            SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx2, colidx1, isimpliedfree1, 1.0/maxratio, FALSE) );
 
             if( !isimpliedfree1 )
                *naddconss += 1;
@@ -907,7 +947,7 @@ SCIP_RETCODE cancelCol(
                   SCIPmatrixGetColName(matrix, colidx1), SCIPmatrixGetColName(matrix, colidx2));
 
             /* aggregate variable two */
-            SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx1, colidx2, isimpliedfree2, maxratio) );
+            SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx1, colidx2, isimpliedfree2, maxratio, FALSE) );
 
             if( !isimpliedfree2 )
                *naddconss += 1;
@@ -1045,6 +1085,7 @@ SCIP_RETCODE cancelColHash(
    SCIP_VAR* cancelvar;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
+   SCIP_Bool cancelisbin;
 
    colisimpl = isimpliedfrees[colidx];
 
@@ -1072,6 +1113,8 @@ SCIP_RETCODE cancelColHash(
 
    cancellb = SCIPvarGetLbGlobal(cancelvar);
    cancelub = SCIPvarGetUbGlobal(cancelvar);
+   cancelisbin = ((SCIPvarGetType(cancelvar) == SCIP_VARTYPE_BINARY) ||
+                     (SCIPvarIsIntegral(cancelvar) && SCIPisZero(scip, cancellb) && SCIPisZero(scip, cancelub-1.0)));
 
    nchgcoef = 0;
    nretrieves = 0;
@@ -1079,6 +1122,7 @@ SCIP_RETCODE cancelColHash(
    {
       SCIP_Real bestscale;
       int bestcand;
+      SCIP_Bool bestiscliqueused;
       int i;
       int j;
       COLCONSPAIR colconspair;
@@ -1088,6 +1132,7 @@ SCIP_RETCODE cancelColHash(
       bestcand = -1;
       bestnfillin = 0;
       bestcancelrate = 0.0;
+      bestiscliqueused = FALSE;
 
       for( i = 0; i < cancelcollen; ++i )
       {
@@ -1125,6 +1170,7 @@ SCIP_RETCODE cancelColHash(
             SCIP_Bool abortpair;
             SCIP_Real rowlhs;
             SCIP_Real rowrhs;
+            SCIP_Real iscliqueused;
 
             i1 = tmpinds[i];
             i2 = tmpinds[j];
@@ -1167,14 +1213,37 @@ SCIP_RETCODE cancelColHash(
             implcolub = SCIPvarGetUbGlobal(implcolvar);
             implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
                               (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
+ 
+            scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
+            iscliqueused = FALSE;
 
             /* TODO: due to some unknown knapsack constraint reason, I block the variable here*/
             if( implcolisbin )
             {
-               continue;
+               if( !presoldata->iscliqueused )
+                  continue;
+               if( !cancelisbin )
+               {
+                  continue;
+               }
+               else
+               {
+                  if(SCIPisEQ(scip, scale, 1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, TRUE, TRUE) ||
+                           SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, FALSE, TRUE)))
+                  {
+                     iscliqueused = TRUE;
+                  }
+                  else if(SCIPisEQ(scip, scale, -1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, FALSE, TRUE) ||
+                           SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, TRUE, TRUE)))
+                  {
+                     iscliqueused = TRUE;
+                  }
+                  else
+                  {
+                     continue;
+                  }
+               }
             }
-
-            scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
 
             if( REALABS(scale) > MAXSCALE )
                continue;
@@ -1385,6 +1454,7 @@ SCIP_RETCODE cancelColHash(
                bestcand = implcolconspair->colindex;
                bestscale = scale;
                bestcancelrate = cancelrate;
+               bestiscliqueused = iscliqueused;
 
                /* stop looking if the current candidate does not create any fill-in or alter coefficients */
                if( cancelrate == 1.0 )
@@ -1428,12 +1498,8 @@ SCIP_RETCODE cancelColHash(
          {
             conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
-            if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
-            {
-               printf("**********error*********\n");
-            }
-
             assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
+
             if( cancelcolinds[a] == implcolinds[b] )
             {
                SCIP_Real val = cancelcolvals[a] + bestscale * implcolvals[b];
@@ -1478,10 +1544,6 @@ SCIP_RETCODE cancelColHash(
          {
             conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
-            if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
-            {
-               printf("**********error*********\n");
-            }
             assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
             tmpinds[tmpcollen] = implcolinds[b];
             tmpvals[tmpcollen] = implcolvals[b] * bestscale;
@@ -1499,8 +1561,7 @@ SCIP_RETCODE cancelColHash(
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
          cancelcollen = tmpcollen;
-
-         SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx, bestcand, TRUE, -bestscale) );
+         SCIP_CALL( aggregation(scip, presoldata, matrix, vars, colidx, bestcand, TRUE, -bestscale, bestiscliqueused) );
       }
       else
          break;
@@ -2132,6 +2193,16 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "presolving/dualsparsify/waitingfac",
          "number of calls to wait until next execution as a multiple of the number of useless calls",
          &presoldata->waitingfac, TRUE, DEFAULT_WAITINGFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualsparsify/preserveintcoefs",
+         "should we forbid cancellations that destroy integer coefficients?",
+         &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualsparsify/iscliqueused",
+         "should clique information used to generate strong cuts",
+         &presoldata->iscliqueused, TRUE, DEFAULT_ISCLIQUEUSED, NULL, NULL) );
 
    return SCIP_OKAY;
 }
