@@ -50,6 +50,8 @@ Build system
 
 Fixed bugs
 ----------
+- fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
+  skipped because an optimal solution was found
 
 Miscellaneous
 -------------
