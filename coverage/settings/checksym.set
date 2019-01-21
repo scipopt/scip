@@ -7,4 +7,3 @@ misc/usesymmetry = 1
 # Should all symmetries be checked after computation?
 # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
 presolving/symmetry/checksymmetries = TRUE
-
