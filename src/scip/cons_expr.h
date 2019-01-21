@@ -846,7 +846,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
@@ -859,7 +860,8 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** sets the curvature of an expression */

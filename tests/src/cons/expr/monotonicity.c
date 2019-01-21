@@ -94,6 +94,7 @@ SCIP_RETCODE createExpr(
    SCIP_CONSEXPR_EXPR* origexpr;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    /* release previous expression */
    if( expr != NULL )
@@ -105,7 +106,7 @@ SCIP_RETCODE createExpr(
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
 
    /* simplify expression */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr, &changed, &infeasible) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* check name of the corresponding expression handler */

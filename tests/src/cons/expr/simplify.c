@@ -132,6 +132,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real values[2];
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
@@ -151,7 +152,8 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    fprintf(stderr,"simplifying!\n");
 #endif
    /* simplify */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
+   cr_assert_not(infeasible);
 
 #if 0
    fprintf(stderr,"done simplifying!\n");
@@ -178,9 +180,10 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
          values[1], SCIPgetConsExprExprValue(simplified));
 
    /* test that the same expression is obtained when simplifying again */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again, &changed, &infeasible) );
    cr_expect_eq(SCIPcompareConsExprExprs(simplified, simplified_again), 0);
    cr_expect_not(changed);
+   cr_assert_not(infeasible);
 
    /* release expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

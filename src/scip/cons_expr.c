@@ -2724,7 +2724,8 @@ SCIP_RETCODE reformulateConsExprExpr(
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_Bool               simplify,         /**< should the expression be simplified or reformulated? */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -2733,6 +2734,8 @@ SCIP_RETCODE reformulateConsExprExpr(
    assert(scip != NULL);
    assert(rootexpr != NULL);
    assert(simplified != NULL);
+   assert(changed != NULL);
+   assert(infeasible != NULL);
 
    /* simplify bottom up
     * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
@@ -2743,6 +2746,7 @@ SCIP_RETCODE reformulateConsExprExpr(
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
    *changed = FALSE;
+   *infeasible = FALSE;
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
@@ -2780,7 +2784,19 @@ SCIP_RETCODE reformulateConsExprExpr(
                {
                   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &refexpr) );
                   if( expr != refexpr )
+                  {
+                     SCIP_INTERVAL activity;
+
                      *changed = TRUE;
+
+                     /* make sure valid activities are available for the new expr (and its children)
+                      * we might expect them to be present in nlhdlr detect later
+                      */
+                     SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE) );
+
+                     if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+                        *infeasible = TRUE;
+                  }
                }
                else
                {
@@ -2827,7 +2843,18 @@ SCIP_RETCODE reformulateConsExprExpr(
                      /* stop calling other nonlinear handlers as soon as the reformulation was successful */
                      if( refexpr != expr )
                      {
+                        SCIP_INTERVAL activity;
+
                         *changed = TRUE;
+
+                        /* make sure valid activities are available for the new expr (and its children)
+                         * we might expect them to be present in nlhdlr detect later
+                         */
+                        SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, refexpr, &activity, TRUE) );
+
+                        if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+                           *infeasible = TRUE;
+
                         break;
                      }
                   }
@@ -3077,7 +3104,7 @@ SCIP_RETCODE canonicalizeConstraints(
          SCIP_Bool changed;
 
          changed = FALSE;
-         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified, &changed) );
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified, &changed, infeasible) );
          consdata->issimplified = TRUE;
 
          if( changed )
@@ -3103,6 +3130,9 @@ SCIP_RETCODE canonicalizeConstraints(
              */
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
          }
+
+         if( *infeasible )
+            break;
 
          /* scale constraint sides */
          SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
@@ -3137,7 +3167,7 @@ SCIP_RETCODE canonicalizeConstraints(
 
          if( consdata->expr != NULL )
          {
-            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr, &changed) );
+            SCIP_CALL( SCIPreformulateConsExprExpr(scip, conshdlr, consdata->expr, &refexpr, &changed, infeasible) );
 
             if( changed )
                havechange = TRUE;
@@ -3160,6 +3190,9 @@ SCIP_RETCODE canonicalizeConstraints(
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &refexpr) );
             }
          }
+
+         if( *infeasible )
+            break;
       }
    }
 
@@ -10402,13 +10435,14 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
 )
 {
    assert(rootexpr != NULL);
    assert(simplified != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified, changed) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, TRUE, simplified, changed, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -10424,13 +10458,14 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    )
 {
    assert(rootexpr != NULL);
    assert(refrootexpr != NULL);
 
-   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr, changed) );
+   SCIP_CALL( reformulateConsExprExpr(scip, conshdlr, rootexpr, FALSE, refrootexpr, changed, infeasible) );
 
    return SCIP_OKAY;
 }
