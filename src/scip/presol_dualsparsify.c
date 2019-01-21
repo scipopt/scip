@@ -20,8 +20,9 @@
  * @author Ambros Gleixner
  *
  * TODO: 1. allowing to add constraints
- *       2. checkholes
+ *       2. checkholes: done
  *       3. use implied bounds information
+ *       4. knapsack constraint (unknown error)
  *
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled variables to other variables.
@@ -933,6 +934,7 @@ SCIP_Bool isHoleExist(
    
    if( SCIPisEQ(scip, REALABS(scale), 1.0) )
       return FALSE;
+
    {
       SCIP_Real lb1;
       SCIP_Real ub1;
@@ -977,7 +979,7 @@ SCIP_Bool isHoleExist(
          while( SCIPfeasRound(scip, mergeval) <= SCIPfeasRound(scip, mergeub) )
          {
             SCIP_Real col1val = lb1;
-            
+ 
             foundhole = TRUE;
             while( SCIPfeasRound(scip, col1val) <= SCIPfeasRound(scip, ub1) )
             {
@@ -998,8 +1000,6 @@ SCIP_Bool isHoleExist(
          }
          return foundhole;
       }
-
-
    }
 }
 
@@ -1043,6 +1043,8 @@ SCIP_RETCODE cancelColHash(
    SCIP_Real mincancelrate;
    SCIP_Bool colisimpl;
    SCIP_VAR* cancelvar;
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
 
    colisimpl = isimpliedfrees[colidx];
 
@@ -1166,7 +1168,7 @@ SCIP_RETCODE cancelColHash(
             implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
                               (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
 
-            /* due to some unknown knapsack constraint reason, I block the variable here*/
+            /* TODO: due to some unknown knapsack constraint reason, I block the variable here*/
             if( implcolisbin )
             {
                continue;
@@ -1207,7 +1209,9 @@ SCIP_RETCODE cancelColHash(
             while( a < cancelcollen && b < implcollen )
             {
                /* the constraints is knapsack constraints, we need to avoid this case. Otherwise, it will output some error. */
-               if(implcolisbin && (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) == SCIPfindConshdlr(scip, "knapsack")))
+               conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+               conshdlrname = SCIPconshdlrGetName(conshdlr);
+               if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
                {
                   abortpair = TRUE;
                   break;
@@ -1338,7 +1342,9 @@ SCIP_RETCODE cancelColHash(
             while( b < implcollen )
             {
                ++b;
-               if(implcolisbin && (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) == SCIPfindConshdlr(scip, "knapsack")))
+               conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+               conshdlrname = SCIPconshdlrGetName(conshdlr);
+               if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
                {
                   abortpair = TRUE;
                   break;
@@ -1420,7 +1426,14 @@ SCIP_RETCODE cancelColHash(
 
          while( a < cancelcollen && b < implcollen )
          {
-            assert(!implcolisbin || (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) != SCIPfindConshdlr(scip, "knapsack")));
+            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+            conshdlrname = SCIPconshdlrGetName(conshdlr);
+            if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
+            {
+               printf("**********error*********\n");
+            }
+
+            assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
             if( cancelcolinds[a] == implcolinds[b] )
             {
                SCIP_Real val = cancelcolvals[a] + bestscale * implcolvals[b];
@@ -1463,7 +1476,13 @@ SCIP_RETCODE cancelColHash(
 
          while( b < implcollen )
          {
-            assert(!implcolisbin || (SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b])) != SCIPfindConshdlr(scip, "knapsack")));
+            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+            conshdlrname = SCIPconshdlrGetName(conshdlr);
+            if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
+            {
+               printf("**********error*********\n");
+            }
+            assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
             tmpinds[tmpcollen] = implcolinds[b];
             tmpvals[tmpcollen] = implcolvals[b] * bestscale;
             ++nchgcoef;
