@@ -710,8 +710,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    /* test reverse propagation */
    {
       SCIP_QUEUE* queue;
-      SCIP_Bool infeasible = FALSE;
       int nreductions = 0;
+      infeasible = FALSE;
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
       SCIPintervalSet(&expr->activity, 35);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
