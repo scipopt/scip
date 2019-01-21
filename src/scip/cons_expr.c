@@ -1019,15 +1019,18 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
-            /* start with existing activity of expression, if it is still valid (though not necessarily tight)
-             * and we are not collecting expressions for reverse propagation
+            /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
+            if( expr->activitytag < conshdlrdata->lastboundrelax )
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
+
+            /* start with existing activity of expression if we are not collecting expressions for reverse propagation
              * the reason for the latter is that expr->activity might currently store bounds from the previous
              * reverse propagation and we want to collect those expressions for the next reverse propagation
              * where the forward propagation does not already provide as good activity as those given by
              * previous reverse propagation (i.e., expressions where there is potential for reverse propagation
              * because we know tighter bounds on the expression than what is given by forward propagation)
              */
-            if( reversepropqueue == NULL && expr->activitytag >= conshdlrdata->lastboundrelax )
+            if( reversepropqueue == NULL )
             {
                interval = expr->activity;
             }
@@ -1386,13 +1389,13 @@ SCIP_RETCODE propConss(
          ntightenings = 0;
          SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
 
-      #ifdef SCIP_DEBUG
+#ifdef SCIP_DEBUG
          if( cutoff )
          {
             SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
                SCIPconsGetName(conss[i]));
          }
-      #endif
+#endif
 
          if( !cutoff && consdata->expr->auxvar == NULL )
          {
@@ -9913,6 +9916,20 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
+
+   /* the code below assumes that current activity is valid
+    * if it turns out that we cannot ensure that, then we should change code
+    */
+#ifndef NDEBUG
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(expr->activitytag >= conshdlrdata->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->activity));
+   }
+#endif
+
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity));
 
    oldlb = SCIPintervalGetInf(expr->activity);

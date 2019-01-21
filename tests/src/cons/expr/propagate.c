@@ -686,11 +686,11 @@ Test(propagate, forwardprop_uses_expressions_bounds)
     */
    expr->children[0]->activity.inf = -1.0; expr->children[0]->activity.sup = 0.2;
    expr->children[1]->activity.inf = -1.0; expr->children[1]->activity.sup = 0.2;
-   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    expr->children[0]->activitytag = conshdlrdata->curboundstag;
    expr->children[1]->activitytag = conshdlrdata->curboundstag;
 
-   /* new interval should be [0,1] intersected with [-2, 0.4]; note that it is important to have the activitytag
+   /* new interval should be [0,2] intersected with [-2, 0.4]; note that it is important to have the activitytag
     * set to curboundstag; otherwise the explicitly set intervals are going to be overwritten
     */
    SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
