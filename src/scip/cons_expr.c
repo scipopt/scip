@@ -6395,6 +6395,9 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* make sure current acitivity tags in expressions are invalid, because we start catching variable events only now */
+   conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
+
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
