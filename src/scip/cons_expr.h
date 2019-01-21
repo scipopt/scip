@@ -786,7 +786,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
  */
 EXTERN
 void SCIPincrementConsExprCurBoundsTag(
-   SCIP_CONSHDLR*          conshdlr          /**< expression constraint handler */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
 
 /** adds branching score to an expression

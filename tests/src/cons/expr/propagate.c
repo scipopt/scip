@@ -686,7 +686,7 @@ Test(propagate, forwardprop_uses_expressions_bounds)
     */
    expr->children[0]->activity.inf = -1.0; expr->children[0]->activity.sup = 0.2;
    expr->children[1]->activity.inf = -1.0; expr->children[1]->activity.sup = 0.2;
-   SCIPincrementConsExprCurBoundsTag(conshdlr);
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
    expr->children[0]->activitytag = conshdlrdata->curboundstag;
    expr->children[1]->activitytag = conshdlrdata->curboundstag;
 

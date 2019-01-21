@@ -134,7 +134,7 @@ SCIP_RETCODE chgBounds(
    SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lb) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, var, ub) );
 
-   SCIPincrementConsExprCurBoundsTag(conshdlr);
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
 
    return SCIP_OKAY;
 }

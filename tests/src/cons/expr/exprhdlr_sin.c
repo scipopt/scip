@@ -207,7 +207,7 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sinexpr, sol, 0) );
-      SCIPincrementConsExprCurBoundsTag(conshdlr);
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, sinexpr, &interval, FALSE) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
@@ -220,7 +220,7 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sinexpr, sol, 0) );
-      SCIPincrementConsExprCurBoundsTag(conshdlr);
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, sinexpr, &interval, FALSE) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));

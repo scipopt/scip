@@ -10026,7 +10026,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
  *   This method is used by some unittests.
  */
 void SCIPincrementConsExprCurBoundsTag(
-   SCIP_CONSHDLR*          conshdlr          /**< expression constraint handler */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -10034,7 +10035,11 @@ void SCIPincrementConsExprCurBoundsTag(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
+   ++conshdlrdata->curboundstag;
+   assert(conshdlrdata->curboundstag > 0);
+
+   if( boundrelax )
+      conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 }
 
 /** adds branching score to an expression
