@@ -1095,6 +1095,17 @@ SCIP_RETCODE forwardPropExpr(
                SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
             }
 
+            /* if expression is integral, then we try to tighten the interval bounds a bit
+             * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             */
+            if( expr->isintegral )
+            {
+               if( interval.inf > -SCIP_INTERVAL_INFINITY )
+                  interval.inf = ceil(interval.inf);
+               if( interval.sup <  SCIP_INTERVAL_INFINITY )
+                  interval.sup = floor(interval.sup);
+            }
+
             /* intersect with previously known interval; if tightening, then add to reversepropqueue */
             {
                SCIP_INTERVAL previnterval;
@@ -9972,6 +9983,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
    newlb = SCIPintervalGetInf(expr->activity);
    newub = SCIPintervalGetSup(expr->activity);
+
+   /* TODO if expression is integral, then round newlb, newub */
 
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
