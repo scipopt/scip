@@ -326,9 +326,9 @@ void getFeasiblePointsBilinear(
    SCIP_CONSEXPR_EXPR* child1;
    SCIP_CONSEXPR_EXPR* child2;
    SCIP_INTERVAL expractivity;
-   SCIP_VAR* x;
-   SCIP_VAR* y;
    SCIP_Real ineqs[12];
+   SCIP_INTERVAL boundsx;
+   SCIP_INTERVAL boundsy;
    SCIP_Real lbx;
    SCIP_Real ubx;
    SCIP_Real lby;
@@ -369,16 +369,13 @@ void getFeasiblePointsBilinear(
    assert(child1 != NULL && child2 != NULL);
    assert(child1 != child2);
 
-   x = SCIPgetConsExprExprAuxVar(child1);
-   y = SCIPgetConsExprExprAuxVar(child2);
-   assert(x != NULL && y != NULL);
-   assert(x != y);
-
    /* collect bounds of children */
-   lbx = SCIPvarGetLbLocal(x);
-   ubx = SCIPvarGetUbLocal(x);
-   lby = SCIPvarGetLbLocal(y);
-   uby = SCIPvarGetUbLocal(y);
+   boundsx = SCIPgetConsExprExprActivity(scip, child1);
+   boundsy = SCIPgetConsExprExprActivity(scip, child2);
+   lbx = boundsx.inf;
+   ubx = boundsx.sup;
+   lby = boundsy.inf;
+   uby = boundsy.sup;
 
    /* corner points that satisfy all inequalities */
    for( i = 0; i < 4; ++i )
