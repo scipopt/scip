@@ -6550,10 +6550,15 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
    if( nconss == 0 )
       return SCIP_OKAY;
 
+   /* skip some extra work if already known to be infeasible */
+   if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+      return SCIP_OKAY;
+
    /* simplify constraints and replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, NULL) );
    /* currently SCIP does not offer to communicate this,
-    * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs, which it doesn't do in EXITPRESOLVE stage
+    * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
+    * or if a constraint expression became constant
     */
    assert(!infeasible);
 
