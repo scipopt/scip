@@ -2301,7 +2301,7 @@ SCIP_RETCODE updateAuxiliaryVarLowerbound(
 
 /** performs cut strengthening by using an interior solution to generate cuts */
 static
-SCIP_RETCODE performInteriorSolCutStrenghtening(
+SCIP_RETCODE performInteriorSolCutStrengthening(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -3106,7 +3106,7 @@ SCIP_RETCODE SCIPbendersExec(
 
       benders->strengthenround = TRUE;
       /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
-      SCIP_CALL( performInteriorSolCutStrenghtening(benders, set, sol, type, checkint, FALSE, infeasible, auxviol,
+      SCIP_CALL( performInteriorSolCutStrengthening(benders, set, sol, type, checkint, FALSE, infeasible, auxviol,
             &skipsolve, result) );
       benders->strengthenround = FALSE;
 
@@ -3370,7 +3370,7 @@ TERMINATE:
 
       benders->strengthenround = TRUE;
       /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
-      SCIP_CALL( performInteriorSolCutStrenghtening(benders, set, sol, type, checkint, TRUE, infeasible, auxviol,
+      SCIP_CALL( performInteriorSolCutStrengthening(benders, set, sol, type, checkint, TRUE, infeasible, auxviol,
             &skipsolve, &perturbresult) );
       benders->strengthenround = FALSE;
 
