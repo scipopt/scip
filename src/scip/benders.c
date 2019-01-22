@@ -49,9 +49,11 @@
 #define SCIP_DEFAULT_CUTSASCONSS           TRUE  /** should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_LNSCHECK              TRUE  /** should the Benders' decomposition be used in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXDEPTH             -1  /** maximum depth at which the LNS check is performed */
+#define SCIP_DEFAULT_LNSMAXCALLS             10  /** the maximum number of Benders' decomposition calls in LNS heuristics */
+#define SCIP_DEFAULT_LNSMAXCALLSROOT          0  /** the maximum number of root node Benders' decomposition calls in LNS heuristics */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
 #define SCIP_DEFAULT_UPDATEAUXVARBOUND    FALSE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
-#define SCIP_DEFAULT_AUXVARSIMPLINT        TRUE  /** set the auxiliary variables as implint if the subproblem objective is integer */
+#define SCIP_DEFAULT_AUXVARSIMPLINT       FALSE  /** set the auxiliary variables as implint if the subproblem objective is integer */
 #define SCIP_DEFAULT_CUTCHECK              TRUE  /** should cuts be generated during the checking of solutions? */
 #define SCIP_DEFAULT_STRENGTHENMULT         0.5  /** the convex combination multiplier for the cut strengthening */
 #define SCIP_DEFAULT_NOIMPROVELIMIT           5  /** the maximum number of cut strengthening without improvement */
@@ -858,6 +860,9 @@ SCIP_RETCODE SCIPbendersCopyInclude(
 
       /* storing whether the lnscheck should be performed */
       targetbenders->lnscheck = benders->lnscheck;
+      targetbenders->lnsmaxdepth = benders->lnsmaxdepth;
+      targetbenders->lnsmaxcalls = benders->lnsmaxcalls;
+      targetbenders->lnsmaxcallsroot = benders->lnsmaxcallsroot;
 
       /* storing whether the Benders' copy required thread safety */
       targetbenders->threadsafe = threadsafe;
@@ -1000,6 +1005,16 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "maximum depth at which the LNS check is performed (-1: no limit)", &(*benders)->lnsmaxdepth, TRUE,
          SCIP_DEFAULT_LNSMAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnsmaxcalls", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "the maximum number of Benders' decomposition calls in LNS heuristics (-1: no limit)", &(*benders)->lnsmaxcalls,
+         TRUE, SCIP_DEFAULT_LNSMAXCALLS, -1, INT_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnsmaxcallsroot", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "the maximum number of root node Benders' decomposition calls in LNS heuristics (-1: no limit)",
+         &(*benders)->lnsmaxcallsroot, TRUE, SCIP_DEFAULT_LNSMAXCALLSROOT, -1, INT_MAX, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutsasconss", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -3003,7 +3018,10 @@ SCIP_RETCODE SCIPbendersExec(
     */
    if( benders->iscopy && set->subscipsoff
       && (!benders->lnscheck
-         || (benders->lnsmaxdepth > -1 && SCIPgetDepth(benders->sourcescip) > benders->lnsmaxdepth)) )
+         || (benders->lnsmaxdepth > -1 && SCIPgetDepth(benders->sourcescip) >= benders->lnsmaxdepth)
+         || (benders->lnsmaxcalls > -1 && SCIPbendersGetNCalls(benders) >= benders->lnsmaxcalls)
+         || (type != SCIP_BENDERSENFOTYPE_CHECK && SCIPgetDepth(set->scip) == 0 && benders->lnsmaxcallsroot > -1
+            && SCIPbendersGetNCalls(benders) >= benders->lnsmaxcallsroot)) )
    {
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
