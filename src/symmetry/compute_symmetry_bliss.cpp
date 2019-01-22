@@ -123,15 +123,13 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyConsttype)
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQConsttype)
 {
-   SCIP* scip;
    SYM_CONSTTYPE* k1;
    SYM_CONSTTYPE* k2;
 
-   scip = (SCIP*) userptr;
    k1 = (SYM_CONSTTYPE*) key1;
    k2 = (SYM_CONSTTYPE*) key2;
 
-   return SCIPisEQ(scip, k1->value, k2->value);
+   return k1->value == k2->value;
 }
 
 /** returns the hash value of the key */
@@ -161,18 +159,16 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
 {
-   SCIP* scip;
    SYM_RHSTYPE* k1;
    SYM_RHSTYPE* k2;
 
-   scip = (SCIP*) userptr;
    k1 = (SYM_RHSTYPE*) key1;
    k2 = (SYM_RHSTYPE*) key2;
 
-   if( !SCIPisEQ(scip, k1->lhs, k2->lhs) )
+   if( k1->lhs != k2->lhs )
       return FALSE;
 
-   return SCIPisEQ(scip, k1->rhs, k2->rhs);
+   return k1->rhs == k2->rhs;
 }
 
 /** returns the hash value of the key */
