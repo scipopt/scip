@@ -99,6 +99,7 @@
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
 #define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
+#define DEFAULT_USEDECOMP    TRUE           /**< should user decompositions be considered, if available? */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #endif
@@ -175,6 +176,7 @@ struct SCIP_HeurData
                                               *   ignored by connectivity graph? */
    SCIP_Bool             userollinghorizon;  /**< should the heuristic solve a sequence of sub-MIP's around the first
                                               *   selected variable */
+   SCIP_Bool             usedecomp;          /**< should user decompositions be considered, if available? */
    char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or
                                               *   (p)seudo solution */
    int                   maxseendistance;    /**< maximum of all distances between two variables */
@@ -1804,7 +1806,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    rollinghorizon = NULL;
    decomphorizon = NULL;
    decomp = chooseDecomp(scip, heurdata);
-   if( decomp != NULL )
+   if( decomp != NULL && heurdata->usedecomp )
    {
       SCIP_CALL( decompHorizonCreate(scip, &decomphorizon, decomp) );
    }
@@ -1860,6 +1862,9 @@ SCIP_DECL_HEUREXEC(heurExecGins)
        * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      SCIPdebugMsg(scip, "GINS subscip stats: %.2f sec., %" SCIP_LONGINT_FORMAT " nodes, status:%d\n",
+         SCIPgetSolvingTime(subscip), SCIPgetNTotalNodes(subscip), SCIPgetStatus(subscip));
 
       /* transfer variable statistics from sub-SCIP */
       SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
@@ -2018,6 +2023,10 @@ SCIP_RETCODE SCIPincludeHeurGins(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rollhorizonlimfac",
          "limiting percentage for variables already used in sub-SCIPs to terminate rolling horizon approach",
          &heurdata->rollhorizonlimfac, TRUE, DEFAULT_ROLLHORIZONLIMFAC, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedecomp",
+         "should user decompositions be considered, if available?",
+         &heurdata->usedecomp, TRUE, DEFAULT_USEDECOMP, NULL, NULL) );
 
    return SCIP_OKAY;
 }
