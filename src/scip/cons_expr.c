@@ -975,7 +975,14 @@ SCIP_RETCODE forwardPropExpr(
 
    /* if value is up-to-date, then nothing to do */
    if( rootexpr->activitytag == conshdlrdata->curboundstag )
+   {
+      SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
+
+      if( infeasible != NULL && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
+         *infeasible = TRUE;
+
       return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
@@ -1388,6 +1395,7 @@ SCIP_RETCODE propConss(
 
          ntightenings = 0;
          SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
+         assert(cutoff == SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
 #ifdef SCIP_DEBUG
          if( cutoff )
@@ -1633,6 +1641,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
       SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, NULL, cutoff, NULL) );
+      assert(*cutoff == SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
