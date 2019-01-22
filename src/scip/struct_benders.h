@@ -125,6 +125,9 @@ struct SCIP_Benders
    SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
    SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
    SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
+   int                   nstrengthencuts;    /**< the number of strengthened cuts found */
+   int                   nstrengthencalls;   /**< the number of calls to the strengthening round */
+   int                   nstrengthenfails;   /**< the number of calls to the strengthening round that fail to find cuts */
 
    /* solving process information */
    int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */

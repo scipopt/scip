@@ -2301,6 +2301,7 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
 {
    SCIP_SOL* sepapoint;
    SCIP_VAR** vars;
+   int prevcutsfound;
    int nvars;
    int i;
 
@@ -2403,6 +2404,9 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
       SCIP_CALL( SCIPsetSolVal(set->scip, sepapoint, vars[i], newsolval) );
    }
 
+   /* storing the number of cuts found */
+   prevcutsfound = SCIPbendersGetNCutsFound(benders);
+
    /* calling the subproblem solving method to generate cuts from the separation solution */
    SCIP_CALL( SCIPsolveBendersSubproblems(set->scip, benders, sepapoint, result, infeasible, auxviol, type, checkint) );
 
@@ -2412,6 +2416,14 @@ SCIP_RETCODE performInteriorSolCutStrenghtening(
    /* if constraints were added, then the main Benders' solving loop is skipped. */
    if( !infeasible && ((*result) == SCIP_CONSADDED || (*result) == SCIP_SEPARATED) )
       (*skipsolve) = TRUE;
+
+   /* capturing cut strengthening statistics */
+   benders->nstrengthencalls++;
+   benders->nstrengthencuts += (SCIPbendersGetNCutsFound(benders) - prevcutsfound);
+
+   /* if no cuts were added, then the strengthening round is marked as failed */
+   if( SCIPbendersGetNCutsFound(benders) == prevcutsfound )
+      benders->nstrengthenfails++;
 
    /* freeing the sepapoint solution */
    SCIP_CALL( SCIPfreeSol(set->scip, &sepapoint) );
@@ -4834,6 +4846,36 @@ int SCIPbendersGetNCutsFound(
    assert(benders != NULL);
 
    return benders->ncutsfound;
+}
+
+/** gets the number of cuts found from the strengthening round */
+int SCIPbendersGetNStrengthenCutsFound(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthencuts;
+}
+
+/** gets the number of calls to the strengthening round */
+int SCIPbendersGetNStrengthenCalls(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthencalls;
+}
+
+/** gets the number of calls to the strengthening round that fail */
+int SCIPbendersGetNStrengthenFails(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthenfails;
 }
 
 /** gets time in seconds used in this Benders' decomposition for setting up for next stages */

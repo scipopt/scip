@@ -106,6 +106,21 @@ int SCIPbendersGetNCutsFound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** gets the number of cuts found from the strengthening round */
+int SCIPbendersGetNStrengthenCutsFound(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** gets the number of calls to the strengthening round */
+int SCIPbendersGetNStrengthenCalls(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** gets the number of calls to the strengthening round that fail */
+int SCIPbendersGetNStrengthenFails(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** gets time in seconds used in this Benders' decomposition for setting up for next stages */
 EXTERN
 SCIP_Real SCIPbendersGetSetupTime(
