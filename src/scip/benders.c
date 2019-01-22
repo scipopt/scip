@@ -2410,7 +2410,9 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
             SCIP_CALL( SCIPsetSolVal(set->scip, benders->corepoint, vars[i], newsolval) );
          }
 
-         /* if the number of iterations without improvement exceeds 2*noimprovelimit, then perturbation is performed */
+         /* if the number of iterations without improvement is less than 2*noimprovelimit, then perturbation is
+          * performed
+          */
          if( perturbsol || benders->noimprovecount <= 2*benders->noimprovelimit )
             newsolval += benders->perturbeps;
       }
