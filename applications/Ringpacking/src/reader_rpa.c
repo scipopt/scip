@@ -95,7 +95,7 @@
 
 /* default values of parameters */
 #define DEFAULT_VERIFICATION_NLPTILIMSOFT    1e+20     /**< soft time limit for each verification NLP */
-#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  1000L     /**< soft node limit for each verification NLP */
+#define DEFAULT_VERIFICATION_NLPNODELIMSOFT  100L      /**< soft node limit for each verification NLP */
 #define DEFAULT_VERIFICATION_HEURTILIMSOFT   1e+20     /**< soft time limit for heuristic verification */
 #define DEFAULT_VERIFICATION_HEURITERLIMSOFT 100       /**< soft iteration limit for each heuristic verification */
 #define DEFAULT_VERIFICATION_TOTALTILIMSOFT  1e+20     /**< total time limit for all verification problems during the enumeration */
