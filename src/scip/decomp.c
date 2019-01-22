@@ -35,11 +35,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_var.h"
 
-/* author bzfhende
- *
- * TODO create and free a decomposition
- */
-
+/* create and free a decomposition */
 #define INIT_MAP_SIZE 2000
 
 /** create a decomposition */
@@ -96,10 +92,7 @@ void SCIPdecompFree(
    BMSfreeBlockMemory(blkmem, decomp);
 }
 
-/* author bzfhende
- *
- * TODO getter and setter for variable labelling
- */
+/* getter and setter for variable labels */
 
 /** set labels for an array of variables */
 SCIP_RETCODE SCIPdecompSetVarsLabels(
@@ -467,7 +460,7 @@ int countLabelFromPos(
    return endpos - pos;
 }
 
-/** todo compute decomposition modularity */
+/** compute decomposition modularity */
 static
 SCIP_RETCODE computeModularity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -508,10 +501,15 @@ SCIP_RETCODE computeModularity(
    for( c = 0; c < nconss; ++c )
    {
       int nconsvars;
-      int conslabel;
+      int conslabel = conslabels[c];
       int blockpos;
       int varblockstart;
       SCIP_Bool success;
+      SCIP_Bool found;
+
+      /* linking constraints do not contribute to the modularity */
+      if( conslabel == SCIP_DECOMP_LINKCONS )
+         continue;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( ensureCondition(success) );
@@ -528,21 +526,11 @@ SCIP_RETCODE computeModularity(
        */
       SCIPdecompGetVarsLabels(decomp, varbuf, varslabels, nconsvars);
 
-      conslabel = conslabels[c];
       /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
-      if( conslabel == SCIP_DECOMP_LINKCONS )
-         blockpos = 0;
-      else
-      {
-         SCIP_Bool found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
-         assert(found);
-      }
+      found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
+      assert(found);
 
       SCIPsortInt(varslabels, nconsvars);
-
-      /* increase the total degrees and nonzero (edge) counts */
-      totaldegrees[blockpos] += nconsvars;
-      nnonzeroes += nconsvars;
 
       /* count occurences of labels (blocks) in the sorted labels array */
       varblockstart = 0;
@@ -550,19 +538,39 @@ SCIP_RETCODE computeModularity(
       {
          int varblockpos;
          int nblockvars = countLabelFromPos(varslabels, varblockstart, nconsvars);
-         SCIP_Bool found;
 
          found = SCIPsortedvecFindInt(decomp->labels, varslabels[varblockstart], decomp->nblocks + 1, &varblockpos);
          assert(found);
 
-         /* increase the number of within edges for variable and constraints from the same block */
-         if( varblockpos == blockpos )
-            withinedges[varblockpos] += nblockvars;
+         /* don't consider linking variables for modularity statistics */
+         if( varslabels[varblockstart] != SCIP_DECOMP_LINKVAR )
+         {
+            /* increase the number of within edges for variable and constraints from the same block */
+            if( varblockpos == blockpos )
+               withinedges[varblockpos] += nblockvars;
 
-         totaldegrees[varblockpos] += nblockvars;
+            /* increase the total degrees and nonzero (edge) counts; it is intended that the total degrees sum up
+             * to twice the number of edges
+             */
+            totaldegrees[blockpos] += nblockvars;
+            totaldegrees[varblockpos] += nblockvars;
+            nnonzeroes += nblockvars;
+         }
+
          varblockstart += nblockvars;
       }
    }
+
+/* ensure that total degrees sum up to twice the number of edges */
+#ifndef NDEBUG
+   {
+      int totaldegreesum = 0;
+      for( b = 1; b < decomp->nblocks + 1; ++b )
+         totaldegreesum += totaldegrees[b];
+
+      assert(totaldegreesum == 2 * nnonzeroes);
+   }
+#endif
 
    /* compute modularity */
    *modularity = 0.0;
