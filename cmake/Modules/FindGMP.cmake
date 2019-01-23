@@ -1,6 +1,14 @@
 # ${GMP_INCLUDE_DIRS} contains the paths to gmp.h (and gmpxx.h) if GMP is found.
 # ${GMP_LIBRARIES} contains libgmp and libgmpxx if GMP is found.
 
+# Check whether environment variable GMP_DIR was set.
+if(NOT GMP_DIR)
+  set(ENV_GMP_DIR $ENV{GMP_DIR})
+  if(ENV_GMP_DIR)
+    set(GMP_DIR $ENV{GMP_DIR} CACHE PATH "Path to gmp directory")
+  endif()
+endif()
+
 find_path(GMP_INCLUDE_DIRS
     NAMES gmp.h gmpxx.h
     HINTS ${GMP_DIR}
