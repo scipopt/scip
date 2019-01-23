@@ -6,16 +6,27 @@ find_path(GMP_INCLUDE_DIRS
     HINTS ${GMP_DIR}
     PATH_SUFFIXES include)
 
-# todo: enable recursive search
-find_library(GMP_LIBRARY
-    NAMES libgmp.a gmp
-    HINTS ${GMP_DIR}
-    PATH_SUFFIXES lib)
+if(STATIC_GMP)
+    find_library(GMP_LIBRARY
+        NAMES libgmp.a gmp
+        HINTS ${GMP_DIR}
+        PATH_SUFFIXES lib)
 
-find_library(GMPXX_LIBRARY
-    NAMES libgmpxx.a gmpxx
-    HINTS ${GMP_DIR}
-    PATH_SUFFIXES lib)
+    find_library(GMPXX_LIBRARY
+        NAMES libgmpxx.a gmpxx
+        HINTS ${GMP_DIR}
+        PATH_SUFFIXES lib)
+else()
+    find_library(GMP_LIBRARY
+        NAMES gmp
+        HINTS ${GMP_DIR}
+        PATH_SUFFIXES lib)
+
+    find_library(GMPXX_LIBRARY
+        NAMES gmpxx
+        HINTS ${GMP_DIR}
+        PATH_SUFFIXES lib)
+endif()
 
 SET(GMP_LIBRARIES ${GMP_LIBRARY} ${GMPXX_LIBRARY})
 
