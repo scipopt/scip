@@ -181,7 +181,7 @@ SCIP_RETCODE reverseProp(
    /* entropy(childsup) > intersection.sup -> consider [childinf, MIN(childsup,extremum)] */
    else if( SCIPisGT(scip, SCIPintervalGetInf(tmp), SCIPintervalGetSup(intersection)) )
    {
-      boundinf = reversePropBinarySearch(scip, childinf, MIN(childsup,extremum), TRUE,
+      boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup,extremum), TRUE,
          SCIPintervalGetSup(intersection));
    }
 
