@@ -324,7 +324,7 @@ set(instances_Symmetry
 # Symmetry MINLP instances
 #
 set(instances_Symmetry_MINLP
-    "instances/MINLP/gastrans.cip\;89.0858400000"
+    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
     "instances/MINLP/tln2.osil.gz\;5.3000000000"
     "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
     )
