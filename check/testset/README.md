@@ -1,6 +1,6 @@
 |      Testset               | n instances | Description |              Regular testing (see scip/scripts/jenkins/*_testruns.sh)              | Remarks |
 |:--------------------------:|:-----------:|:-----------:|:----------------------------------------------------------------------------------:|:-------:|
-| mipdebug                   |        4474 | -           | debug: weekdays 60s soplex (different settings) and cplex;                         | -       |
+| mipdebug                   |        4656 | -           | debug: weekdays 60s soplex (different settings) and cplex;                         | -       |
 | MINLP                      |        1682 | -           | debug: weekdays 60s soplex (different settings) and cplex;                         | -       |
 | mipdev-solvable            |         425 | -           | debug: weekends 7200s soplex; performance: saturdays 7200s exclusive M620v3;       | -       |
 | minlpdev-solvable          |         113 | -           | debug: weekends 7200s soplex; performance: saturdays 3600s 5 perms exclusive M640; | -       |

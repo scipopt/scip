@@ -165,6 +165,64 @@ Known bugs
 
 @page RN60 Release notes for SCIP 6.0
 
+@section RN602 SCIP 6.0.2
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+- fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
+  skipped because an optimal solution was found
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
 @section RN601 SCIP 6.0.1
 *************************
 
@@ -179,13 +237,8 @@ Performance improvements
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
 
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
-
-### New and changed callbacks
 
 ### Deleted and changed API methods and macros
 
@@ -207,28 +260,16 @@ Interface changes
 
 ### Command line interface
 
-- warn about coefficients in MPS files with absolute larger than SCIP's infinity parameter
-
-### Interfaces to external software
+- warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
 
 ### Changed parameters
 
 - default clock type for timing is now wallclock
 
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
 Unit tests
 ----------
 
 - added unit tests for exact knapsack solving and (weighted) median selection algorithms
-
-Testing
--------
 
 Build system
 ------------
@@ -238,8 +279,6 @@ Build system
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
 - new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -258,12 +297,18 @@ Fixed bugs
 - fixed bug when reading >= indicator constraints in MPS format
 - fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
 - fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
-- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
-  special case of an implication between two binary variables.
+- ignore implications added through SCIPaddVarImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables; also, use implications instead of cliques in the case
+  of a binary implied variable with nonbinary active representative
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
-- fixed handling of nonartificial parity variables when deleting redundant XOR constraints.
+- fixed the upgrade routine to XOR constraints: aggregate integer variable if its coefficient has the wrong sign
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints
+- earlier deletion of trivial XOR constraints (at most 1 operator left)
+- fixed wrong hashmap accesses and added sanity check for the correct hashmap type
+- avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
+- corrected the output of the first LP value in case of branch-and-price
 
 Miscellaneous
 -------------
