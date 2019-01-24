@@ -495,7 +495,7 @@ SCIP_RETCODE computeRltCuts(
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_ROW**            cut,                /**< buffer to store the cut */
    SCIP_ROW*             row,                /**< the row that is used for the rlt cuts */
-   SCIP_SOL*             sol,                /**< the point to be seperated (can be NULL) */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
    SCIP_VAR*             var,                /**< the variable that is used for the rlt cuts */
    SCIP_Bool*            success,            /**< buffer to store whether cut was created successfully */
    SCIP_Bool             uselb,              /**< whether we multiply with (var - lb) or (ub - var) */
@@ -657,6 +657,57 @@ SCIP_RETCODE computeRltCuts(
    return SCIP_OKAY;
 }
 
+/** creates the projected problem by treating all variables that are at their
+ * bounds at the current solution as constant values
+ */
+static
+SCIP_RETCODE createProjectedProb(
+   SCIP*            scip,       /**< SCIP data structure */
+   SCIP_SEPA*       sepa,       /**< separator */
+   SCIP_SEPADATA*   sepadata,   /**< separator data */
+   SCIP_ROW**       rows,       /**< problem rows */
+   int              nrows,      /**> number of rows */
+   SCIP_SOL*        sol,        /**> the point to be separated (can be NULL) */
+   SCIP_ROW**       proj_rows   /**> the projected rows */
+   )
+{
+   SCIP_ROW* proj_row;
+   SCIP_COL** cols;
+   int i, v;
+   SCIPinfoMessage(scip, NULL, "\ncreating projected problem...");
+
+   assert(scip != NULL);
+   assert(sepadata != NULL);
+   assert(rows != NULL);
+   assert(proj_rows != NULL);
+
+   for( i = 0; i < nrows; ++i )
+   {
+      /* create an empty row which we then fill with variables step by step */
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &proj_row, sepa, "rlt_cut", SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i]),
+                                        TRUE, FALSE, FALSE) );
+
+      SCIPinfoMessage(scip, NULL, "\nrow %d", i);
+
+      cols = SCIProwGetCols(rows[i]);
+      for( v = 0; v < SCIProwGetNNonz(rows[i]); ++v )
+      {
+         SCIPinfoMessage(scip, NULL, "\nvar %d", v);
+         assert( SCIPcolGetPrimsol(cols[v]) == SCIPvarGetSol(SCIPcolGetVar(cols[v]), TRUE) );
+         if( SCIPcolGetLb(cols[v]) == SCIPcolGetPrimsol(cols[v]) || SCIPcolGetUb(cols[v]) == SCIPcolGetPrimsol(cols[v]) )
+         {
+            /* add var as a constant to proj_row */
+
+         }
+         else
+         {
+            /* copy the entry to proj_row */
+
+         }
+      }
+   }
+}
+
 /*
  * Callback methods of separator
  */
@@ -718,6 +769,7 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 {  /*lint --e{715}*/
    SCIP_ROW** rows;
+   SCIP_ROW** proj_rows;
    SCIP_SEPADATA* sepadata;
    int ncalls;
    int depth;
@@ -802,6 +854,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    {
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    }
+
+   /* TODO create the projected problem */
+   SCIPallocBufferArray(scip, &proj_rows,nrows);
+   createProjectedProb(scip, sepa, sepadata, rows, nrows, NULL, proj_rows);
+   SCIPfreeBufferArray(scip, &proj_rows);
 
    for( i = 0; i < nrows && !SCIPisStopped(scip); ++i )
    {
