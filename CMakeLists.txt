@@ -13,9 +13,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_SUB 2)
-set(SCIP_VERSION_API 38)
+set(SCIP_VERSION_PATCH 1)
+set(SCIP_VERSION_SUB 3)
+set(SCIP_VERSION_API 41)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
