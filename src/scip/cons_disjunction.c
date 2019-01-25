@@ -408,6 +408,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -425,7 +426,7 @@ SCIP_RETCODE enforceConstraint(
    for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
    {
       /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, FALSE, FALSE, result) );
 
       if( *result == SCIP_INFEASIBLE && branch )
       {
@@ -539,7 +540,7 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -549,7 +550,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -559,7 +560,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
