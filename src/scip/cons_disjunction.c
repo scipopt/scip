@@ -25,6 +25,7 @@
 #include "scip/cons_disjunction.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/pub_tree.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
@@ -36,6 +37,7 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
 #include <string.h>
 
 
@@ -256,8 +258,15 @@ SCIP_RETCODE branchCons(
          SCIP_CALL( SCIPsetConsChecked(scip, conss[i], TRUE) );
       }
 
+      /* mark constraint to be local; otherwise during INITLP the (global) row of all constraints of the disjunction
+       * constrtaint will enter the LP
+       */
+      SCIP_CALL( SCIPsetConsLocal(scip, conss[i], TRUE) );
+
       /* add constraints to nodes */
       SCIP_CALL( SCIPaddConsNode(scip, child, conss[i], NULL) );
+      SCIPdebugMsg(scip, "add cons %s to node %lld from %lld\n", SCIPconsGetName(conss[i]), SCIPnodeGetNumber(child),
+         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
       /* remove disjunction constraint, from child node */
       SCIP_CALL( SCIPdelConsNode(scip, child, cons) );
