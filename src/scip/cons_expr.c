@@ -1338,7 +1338,7 @@ SCIP_RETCODE propConss(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
-   SCIP_Bool success;
+   SCIP_Bool success = FALSE;
    SCIP_Bool allexprs;
    int ntightenings;
    int roundnr;
@@ -1361,8 +1361,7 @@ SCIP_RETCODE propConss(
    }
 
    /* TODO maybe only do this if first call or simplify or someone else changed the expression graph */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
-      allexprs = TRUE;
+   allexprs = (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9880,7 +9879,6 @@ SCIP_INTERVAL SCIPgetConsExprExprActivity(
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
  */
-EXTERN
 SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
