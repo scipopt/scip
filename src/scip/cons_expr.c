@@ -994,7 +994,7 @@ SCIP_RETCODE forwardPropExpr(
       {
          case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
          {
-            /* skip child if it has been evaluated already and current expr is not tightened */
+            /* skip child if it has been evaluated already */
             SCIP_CONSEXPR_EXPR* child;
 
             child = SCIPexpriteratorGetChildExprDFS(it);
@@ -1006,11 +1006,22 @@ SCIP_RETCODE forwardPropExpr(
                   break;
                }
 
-               /* we do not check here whether the child should be added to the reversepropqueue
-                * this should have happened when the activitytag of the child was set to curboundstag, I believe
+#ifndef NDEBUG
+               /* We do not check here whether the child should be added to the reversepropqueue.
+                * This should have happened when the activitytag of the child was set to curboundstag, I believe.
+                * So we can assert that the child activity should be a subset of the auxiliary variable bounds.
+                * Since SCIP sometimes moves variable bounds slightly and we also use relaxed variable bounds below,
+                * we have to add some epsilons here.
                 */
-               assert(child->auxvar == NULL || reversepropqueue == NULL || child->inqueue ||
-                  SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, child->activity, intevalvar(scip, child->auxvar, intevalvardata)));
+               if( child->auxvar != NULL )
+               {
+                  SCIP_INTERVAL auxvarbounds;
+                  auxvarbounds = intevalvar(scip, child->auxvar, intevalvardata);
+                  assert(reversepropqueue == NULL || child->inqueue ||
+                     ((auxvarbounds.inf < -SCIP_INTERVAL_INFINITY || SCIPisGE(scip, child->activity.inf, auxvarbounds.inf)) &&
+                      (auxvarbounds.sup >  SCIP_INTERVAL_INFINITY || SCIPisLE(scip, child->activity.sup, auxvarbounds.sup))));
+               }
+#endif
 
                expr = SCIPexpriteratorSkipDFS(it);
                continue;
