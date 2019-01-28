@@ -98,9 +98,17 @@
 #define DISP_DESC_LPAVGITERS    "average number of LP iterations since the last output line"
 #define DISP_HEAD_LPAVGITERS    "LP it/n"
 #define DISP_WIDT_LPAVGITERS    7
-#define DISP_PRIO_LPAVGITERS    25000
+#define DISP_PRIO_LPAVGITERS    0
 #define DISP_POSI_LPAVGITERS    1400
 #define DISP_STRI_LPAVGITERS    TRUE
+
+#define DISP_NAME_INCUMBHEUR    "incumbentheur"
+#define DISP_DESC_INCUMBHEUR    "name of the heuristic or relaxation responsible of the incumbent solution"
+#define DISP_HEAD_INCUMBHEUR    "heur"
+#define DISP_WIDT_INCUMBHEUR    6
+#define DISP_PRIO_INCUMBHEUR    25000
+#define DISP_POSI_INCUMBHEUR    1425
+#define DISP_STRI_INCUMBHEUR    TRUE
 
 #define DISP_NAME_LPCOND        "lpcond"
 #define DISP_DESC_LPCOND        "estimate on condition number of LP solution"
@@ -457,6 +465,58 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
    }
    else
       SCIPinfoMessage(scip, file, " ");
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of display column (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_DISPINITSOL(dispInitsolIncumbHeur)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_INCUMBHEUR) == 0);
+   assert(scip != NULL);
+
+   SCIPdispSetData(disp, (SCIP_DISPDATA*)SCIPgetBestSol(scip));
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output name of incumbent heuristic or relaxation to file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
+{  /*lint --e{715}*/
+   SCIP_SOL* sol;
+   SCIP_DISPDATA* dispdata;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_INCUMBHEUR) == 0);
+   assert(scip != NULL);
+
+   sol = SCIPgetBestSol(scip);
+   if( sol == NULL )
+      SCIPdispSetData(disp, NULL);
+
+   dispdata = SCIPdispGetData(disp);
+   if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+   {
+      SCIP_HEUR* heur;
+      heur = SCIPgetSolHeur(scip, sol);
+      if( heur == NULL )
+      {
+         SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, "relaxation");
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, SCIPheurGetName(heur));
+      }
+
+      SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
+   }
+   else
+   {
+      SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, "- ");
+   }
 
    return SCIP_OKAY;
 }
@@ -1232,6 +1292,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
     * they should all be included already if the first one is */
    if( tmpdisp != NULL )
    {
+      assert(SCIPfindDisp(scip, DISP_NAME_INCUMBHEUR) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_CONCSOLFOUND) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_TIME) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_NNODES) != NULL );
@@ -1282,6 +1343,13 @@ SCIP_RETCODE SCIPincludeDispDefault(
          dispCopyDefault,
          NULL, NULL, NULL, SCIPdispInitsolSolFound, NULL, SCIPdispOutputSolFound, NULL,
          DISP_WIDT_SOLFOUND, DISP_PRIO_SOLFOUND, DISP_POSI_SOLFOUND, DISP_STRI_SOLFOUND) );
+
+   assert(SCIPfindDisp(scip, DISP_NAME_INCUMBHEUR) == NULL);
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_INCUMBHEUR, DISP_DESC_INCUMBHEUR, DISP_HEAD_INCUMBHEUR,
+         SCIP_DISPSTATUS_AUTO,
+         dispCopyDefault,
+         NULL, NULL, NULL, dispInitsolIncumbHeur, NULL, dispOutputIncumbHeur, NULL,
+         DISP_WIDT_INCUMBHEUR, DISP_PRIO_INCUMBHEUR, DISP_POSI_INCUMBHEUR, DISP_STRI_INCUMBHEUR) );
 
    assert(SCIPfindDisp(scip, DISP_NAME_CONCSOLFOUND) == NULL);
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CONCSOLFOUND, DISP_DESC_CONCSOLFOUND, DISP_HEAD_CONCSOLFOUND,
