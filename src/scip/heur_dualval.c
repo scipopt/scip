@@ -65,7 +65,7 @@
 
 #define HEUR_NAME             "dualval"
 #define HEUR_DESC             "primal heuristic using dual values"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

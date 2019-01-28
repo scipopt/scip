@@ -53,7 +53,7 @@
 
 #define HEUR_NAME             "completesol"
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

@@ -39,7 +39,7 @@
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
-#define HEUR_DISPCHAR         'r'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -500
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

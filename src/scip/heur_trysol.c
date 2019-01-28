@@ -39,7 +39,7 @@
 
 #define HEUR_NAME             "trysol"
 #define HEUR_DESC             "try solution heuristic"
-#define HEUR_DISPCHAR         't'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_TRIVIAL
 #define HEUR_PRIORITY         -3000000     /* should process after all other heuristics */
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

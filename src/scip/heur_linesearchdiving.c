@@ -33,7 +33,7 @@
 
 #define HEUR_NAME             "linesearchdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings following the line from root solution to current solution"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1006000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          6

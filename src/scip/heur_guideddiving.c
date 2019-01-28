@@ -36,7 +36,7 @@
 
 #define HEUR_NAME             "guideddiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1007000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          7

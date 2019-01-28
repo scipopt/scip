@@ -54,7 +54,7 @@
 /* default values for standard parameters that every primal heuristic has in SCIP */
 #define HEUR_NAME             "rens"
 #define HEUR_DESC             "LNS exploring fractional neighborhood of relaxation's optimum"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

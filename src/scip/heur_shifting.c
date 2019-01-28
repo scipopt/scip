@@ -41,7 +41,7 @@
 
 #define HEUR_NAME             "shifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering also using continuous variables"
-#define HEUR_DISPCHAR         'r'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -5000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0

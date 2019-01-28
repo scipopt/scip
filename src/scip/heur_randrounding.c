@@ -51,7 +51,7 @@
 
 #define HEUR_NAME             "randrounding"
 #define HEUR_DESC             "fast LP rounding heuristic"
-#define HEUR_DISPCHAR         'r'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -200
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0

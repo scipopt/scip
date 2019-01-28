@@ -36,7 +36,7 @@
 
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          2

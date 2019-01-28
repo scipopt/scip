@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
-#define HEUR_DISPCHAR         'i'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

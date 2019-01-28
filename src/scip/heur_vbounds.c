@@ -71,7 +71,7 @@
 
 #define HEUR_NAME             "vbounds"
 #define HEUR_DESC             "LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood"
-#define HEUR_DISPCHAR         'p'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         2500
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

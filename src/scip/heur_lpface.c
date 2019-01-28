@@ -55,7 +55,7 @@
 
 #define HEUR_NAME             "lpface"
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             15
 #define HEUR_FREQOFS          0

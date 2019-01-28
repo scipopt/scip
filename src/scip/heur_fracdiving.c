@@ -35,7 +35,7 @@
 
 #define HEUR_NAME             "fracdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3

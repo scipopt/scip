@@ -47,7 +47,7 @@
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -2100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

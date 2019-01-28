@@ -35,7 +35,7 @@
 
 #define HEUR_NAME             "veclendiving"
 #define HEUR_DESC             "LP diving heuristic that rounds variables with long column vectors"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003100
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          4
