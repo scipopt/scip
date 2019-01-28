@@ -21,6 +21,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/var.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_scip.h"
 #include "scip/sepa_rlt.c"
 #include "include/scip_test.h"
 
@@ -92,6 +95,7 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_ROW* row1;
    SCIP_ROW** rows;
    SCIP_ROW** proj_rows;
+   SCIP_COL** cols;
 
    SCIPallocBufferArray(scip, &rows, 1);
 
@@ -115,15 +119,23 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    /* add information about bilinear terms to sepadata */
    sepadata->nbilinterms = 1;
 
-   /* TODO fill in sepadata */
-
-   /* TODO specify solution */
+   /* specify solution and local bounds */
+   cols = SCIProwGetCols(row1);
+   SCIPinfoMessage(scip, NULL, "\ncols = %p", cols);
+   assert(SCIProwGetNNonz(row1) == 3);
+   cols[0]->primsol = 5.0;
+   cols[0]->lppos = 0;
+   cols[1]->primsol = -6.0;
+   cols[1]->lppos = 1;
+   cols[2]->primsol = 2.0;
+   cols[2]->lppos = 2;
 
    SCIPallocBufferArray(scip, &proj_rows, 1);
 
    createProjectedProb(scip, sepa, sepadata, rows, 1, NULL, proj_rows);
 
    /* TODO check results */
+   SCIPprintRow(scip, proj_rows[0], NULL);
 
    /* free memory */
    SCIPfreeBufferArray(scip, &proj_rows);

@@ -671,10 +671,10 @@ SCIP_RETCODE createProjectedProb(
    SCIP_ROW**       proj_rows   /**> the projected rows */
    )
 {
-   SCIP_ROW* proj_row;
    SCIP_COL** cols;
    int i, v;
-   SCIPinfoMessage(scip, NULL, "\ncreating projected problem...");
+   SCIP_Real lhs, rhs;
+   SCIP_VAR* var;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -683,29 +683,36 @@ SCIP_RETCODE createProjectedProb(
 
    for( i = 0; i < nrows; ++i )
    {
-      /* create an empty row which we then fill with variables step by step */
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &proj_row, sepa, "rlt_cut", SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i]),
-                                        TRUE, FALSE, FALSE) );
+      lhs = SCIProwGetLhs(rows[i]);
+      rhs = SCIProwGetRhs(rows[i]);
 
+      /* create an empty row which we then fill with variables step by step */
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &proj_rows[i], sepa, "rlt_cut", lhs, rhs, TRUE, FALSE, FALSE) );
       SCIPinfoMessage(scip, NULL, "\nrow %d", i);
 
       cols = SCIProwGetCols(rows[i]);
+      SCIPinfoMessage(scip, NULL, "\ncols in rlt = %p", cols);
       for( v = 0; v < SCIProwGetNNonz(rows[i]); ++v )
       {
-         SCIPinfoMessage(scip, NULL, "\nvar %d", v);
-         assert( SCIPcolGetPrimsol(cols[v]) == SCIPvarGetSol(SCIPcolGetVar(cols[v]), TRUE) );
-         if( SCIPcolGetLb(cols[v]) == SCIPcolGetPrimsol(cols[v]) || SCIPcolGetUb(cols[v]) == SCIPcolGetPrimsol(cols[v]) )
+         var = SCIPcolGetVar(cols[v]);
+         SCIPinfoMessage(scip, NULL, "\nvar %s, loc lb = %f, loc ub = %f, primsol = %f", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPcolGetPrimsol(cols[v]));
+         assert( SCIPcolGetPrimsol(cols[v]) == SCIPvarGetSol(var, TRUE) );
+         if( SCIPvarGetLbLocal(var) == SCIPcolGetPrimsol(cols[v]) || SCIPvarGetUbLocal(var) == SCIPcolGetPrimsol(cols[v]) )
          {
             /* add var as a constant to proj_row */
-
+            lhs -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
+            rhs -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
          }
          else
          {
             /* copy the entry to proj_row */
-
+            SCIP_CALL( SCIPaddVarToRow(scip, proj_rows[i], var, SCIProwGetVals(rows[i])[v]) );
          }
+         SCIPchgRowLhs(scip, proj_rows[i], lhs);
+         SCIPchgRowRhs(scip, proj_rows[i], rhs);
       }
    }
+   return SCIP_OKAY;
 }
 
 /*
