@@ -60,7 +60,7 @@
 
 #define HEUR_NAME             "repair"
 #define HEUR_DESC             "tries to repair a primal infeasible solution"
-#define HEUR_DISPCHAR         '!'
+#define HEUR_DISPCHAR         'L'
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

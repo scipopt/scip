@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         'p'
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

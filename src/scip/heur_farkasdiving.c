@@ -51,7 +51,7 @@
 
 #define HEUR_NAME             "farkasdiving"
 #define HEUR_DESC             "LP diving heuristic that tries to construct a Farkas-proof"
-#define HEUR_DISPCHAR         'u'
+#define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -900000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0

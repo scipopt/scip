@@ -38,7 +38,7 @@
 
 #define HEUR_NAME             "coefdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the matrix coefficients"
-#define HEUR_DISPCHAR         'c'
+#define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -1001000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          1

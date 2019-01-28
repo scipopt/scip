@@ -39,7 +39,7 @@
 
 #define HEUR_NAME             "reoptsols"
 #define HEUR_DESC             "primal heuristic updating solutions found in a previous optimization round"
-#define HEUR_DISPCHAR         'J'
+#define HEUR_DISPCHAR         'p'
 #define HEUR_PRIORITY         40000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

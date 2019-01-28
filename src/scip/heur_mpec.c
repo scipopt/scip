@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "mpec"
 #define HEUR_DESC             "regularization heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'W'
+#define HEUR_DISPCHAR         'd'
 #define HEUR_PRIORITY         -2050000
 #define HEUR_FREQ             50
 #define HEUR_FREQOFS          0

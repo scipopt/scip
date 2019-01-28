@@ -39,7 +39,7 @@
 
 #define HEUR_NAME             "rounding"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering"
-#define HEUR_DISPCHAR         'R'
+#define HEUR_DISPCHAR         'r'
 #define HEUR_PRIORITY         -1000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
