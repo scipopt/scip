@@ -654,6 +654,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             SCIP_CONS* permutedcons = NULL;
             SCIP_CONSEXPR_EXPR* permutedexpr;
             SCIP_Bool found = FALSE;
+            SCIP_Bool infeasible;
 
             /* copy contraints but exchange variables according to hashmap */
             SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, exprconshdlr, varmap, NULL, NULL,
@@ -663,7 +664,8 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
             /* simplify permuted expr in order to guarantee sorted variables */
             permutedexpr = SCIPgetExprConsExpr(scip, permutedcons);
-            SCIP_CALL( SCIPsimplifyConsExprExpr(scip, exprconshdlr, permutedexpr, &permutedexpr, &success) );
+            SCIP_CALL( SCIPsimplifyConsExprExpr(scip, exprconshdlr, permutedexpr, &permutedexpr, &success, &infeasible) );
+            assert(!infeasible);
 
             /* look for a constraint with same lhs, rhs and expression */
             for( j = 0; j < nexprconss; ++j )

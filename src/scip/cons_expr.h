@@ -731,51 +731,35 @@ SCIP_Real SCIPgetConsExprExprDerivative(
 
 /**@} */  /* end of differentiation methods */
 
-/** evaluates an expression over a box
+/** returns the activity of the expression
  *
- * Initiates an expression walk to also evaluate children, if necessary.
- * The resulting interval can be received via SCIPgetConsExprExprEvalInterval().
- * If the box does not overlap with the domain of the function behind the expression
- * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
- *
- * For variables, the local variable bounds, possibly relaxed by some amount, are used as interval.
- * The actual interval is determined by the intevalvar function, if not NULL.
- * If NULL, then the local bounds of the variable are taken without modification.
- *
- * If a nonzero \p boxtag is passed, then only (sub)expressions are
- * reevaluated that have a different tag. If a tag of 0 is passed,
- * then subexpressions are always reevaluated.
- * The tag is stored together with the interval and can be received via
- * SCIPgetConsExprExprEvalIntervalTag().
+ * The caller needs to make sure that the activity is valid.
+ * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
+ * - interval evaluation (intervals for children only)
+ * - reverse propagation
+ * - monotonicity computation
+ * - convexity detection
+ * - structure detection
  */
 EXTERN
-SCIP_RETCODE SCIPevalConsExprExprInterval(
+SCIP_INTERVAL SCIPgetConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
-   void*                   intevalvardata    /**< data to be passed to intevalvar call */
-   );
-
-/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
-EXTERN
-SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** sets the evaluation interval */
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
+ * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
+ * since last evaluation.
+ */
 EXTERN
-void SCIPsetConsExprExprEvalInterval(
+SCIP_RETCODE SCIPevalConsExprExprActivity(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
-   );
-
-/** gives the box tag from the last interval evaluation, or 0 */
-EXTERN
-unsigned int SCIPgetConsExprExprEvalIntervalTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   SCIP_INTERVAL*          activity,         /**< interval where to store expression */
+   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -792,6 +776,18 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
+   );
+
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * @note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+EXTERN
+void SCIPincrementConsExprCurBoundsTag(
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
 
 /** adds branching score to an expression
@@ -851,7 +847,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
@@ -864,7 +861,8 @@ SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** sets the curvature of an expression */
@@ -893,10 +891,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the monotonicity of an expression w.r.t. to a given child
- *
- *  @note Call SCIPevalConsExprExprInterval before using this function.
- */
+/** returns the monotonicity of an expression w.r.t. to a given child */
 EXTERN
 SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */

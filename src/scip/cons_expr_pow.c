@@ -1362,7 +1362,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
@@ -1527,8 +1527,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
-   interval = SCIPgetConsExprExprInterval(expr);
-   child = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   interval = SCIPgetConsExprExprActivity(scip, expr);
+   child = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
    SCIPdebugMsg(scip, "reverseprop x^%g in [%g,%g], x = [%g,%g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
 
@@ -1595,7 +1595,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childcurv = SCIPgetConsExprExprCurvature(child);
-   childinterval = SCIPgetConsExprExprInterval(child);
+   childinterval = SCIPgetConsExprExprActivity(scip, child);
 
    *curvature = SCIP_EXPRCURV_UNKNOWN;
 
@@ -1725,7 +1725,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   interval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);
