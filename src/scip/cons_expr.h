@@ -780,7 +780,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
 /** increments the curboundstag and resets lastboundrelax in constraint handler data
  *
- * \note This method is not intended for normal use.
+ * @note This method is not intended for normal use.
  *   These tags are maintained by the event handler for variable bound change events.
  *   This method is used by some unittests.
  */
