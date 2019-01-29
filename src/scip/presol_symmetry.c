@@ -2018,12 +2018,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
    int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
    int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
-   int*                  ncomponents,        /**< pointer to store number of components (or NULL) */
-   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
-   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
-   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
-   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 0 */
-   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -2075,7 +2070,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
          int v;
 
          SCIPhashmapFree(&presoldata->permvarmap);
-         *permvarmap = NULL;
 
          /* free variables */
          for (v = 0; v < presoldata->npermvars; ++v)
@@ -2228,16 +2222,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       }
       assert( presoldata->nbg1 == 0 );
    }
-   if ( permvarmap != NULL )
-      *permvarmap = presoldata->permvarmap;
-   if ( bg0 != NULL )
-      *bg0 = presoldata->bg0;
-   if ( bg0list != NULL )
-      *bg0list = presoldata->bg0list;
-   if ( bg1 != NULL )
-      *bg1 = presoldata->bg1;
-   if ( bg1list != NULL )
-      *bg1list = presoldata->bg1list;
 
    return SCIP_OKAY;
 }
@@ -2332,13 +2316,27 @@ SCIP_Shortbool SCIPgetSymmetryComponentblocked(
 }
 
 
-/** get memory address of presoldata->nbg0 */
-int* SCIPgetNbg0MemPos(
-   SCIP*                 scip                /**< SCIP data structure */
+/** return symmetry information on globally fixed variables */
+SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
+   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
+   int**                 nbg0,               /**< pointer to store memory position of number of vars globally fixed to 0 */
+   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
+   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 1 */
+   int**                 nbg1,               /**< pointer to store memory position of number of vars globally fixed to 1 */
+   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
    )
 {
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
+
+   assert( scip != NULL );
+   assert( permvarmap != NULL );
+   assert( bg0 != NULL );
+   assert( bg0list != NULL );
+   assert( bg1 != NULL );
+   assert( bg1list != NULL );
 
    /* find symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
@@ -2353,30 +2351,13 @@ int* SCIPgetNbg0MemPos(
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
-   return &(presoldata->nbg0);
-}
+   *permvarmap = presoldata->permvarmap;
+   *bg0 = presoldata->bg0;
+   *bg0list = presoldata->bg0list;
+   *nbg0 = &(presoldata->nbg0);
+   *bg1 = presoldata->bg1;
+   *bg1list = presoldata->bg1list;
+   *nbg1 = &(presoldata->nbg1);
 
-
-/** get memory address of presoldata->nbg1 */
-int* SCIPgetNbg1MemPos(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-   SCIP_PRESOL* presol;
-
-   /* find symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return FALSE;
-   }
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   return &(presoldata->nbg1);
+   return SCIP_OKAY;
 }

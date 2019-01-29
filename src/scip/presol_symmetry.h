@@ -56,12 +56,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
    int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
    int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
-   int*                  ncomponents,        /**< pointer to store number of components (or NULL) */
-   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
-   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
-   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
-   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 0 */
-   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
 
 /** return objective coefficients of permuted variables at time of symmetry computation */
@@ -86,16 +81,18 @@ SCIP_Shortbool SCIPgetSymmetryComponentblocked(
    );
 
 EXTERN
-/* get memory address of presoldata->nbg0 */
-int* SCIPgetNbg0MemPos(
-   SCIP*                 scip                /**< SCIP data structure */
+/** return symmetry information on globally fixed variables */
+SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
+   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
+   int**                 nbg0,               /**< pointer to store memory position of number of vars globally fixed to 0 */
+   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
+   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 1 */
+   int**                 nbg1,               /**< pointer to store memory position of number of vars globally fixed to 1 */
+   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
    );
 
-EXTERN
-/* get memory address of presoldata->nbg1 */
-int* SCIPgetNbg1MemPos(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

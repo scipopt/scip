@@ -397,11 +397,11 @@ SCIP_RETCODE getSymmetries(
    {
       SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute,
             &(propdata->npermvars), &permvars, &(propdata->nperms), NULL, &(propdata->permstrans), NULL, NULL,
-            &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent), &(propdata->ncomponents),
-            &(propdata->bg0), &(propdata->bg0list), &(propdata->bg1), &(propdata->bg1list), &(propdata->permvarmap)) );
+            &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent),
+            &(propdata->ncomponents)) );
 
-      propdata->nbg0 = SCIPgetNbg0MemPos(scip);
-      propdata->nbg1 = SCIPgetNbg1MemPos(scip);
+      SCIP_CALL( SCIPgetSyminfoGloballyFixedVars(scip, &(propdata->bg0), &(propdata->bg0list), &(propdata->nbg0),
+            &(propdata->bg1), &(propdata->bg1list), &(propdata->nbg1), &(propdata->permvarmap)) );
 
       /* store restart level */
       propdata->lastrestart = SCIPgetNRuns(scip);
