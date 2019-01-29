@@ -53,6 +53,7 @@ Fixed bugs
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
 - fixed wrong enforcement of constraints in the disjunction constraint handler
+- aggregate non-artificial integer variable for XOR constraints with two binary variables and delete constraint
 
 Miscellaneous
 -------------
