@@ -73,8 +73,8 @@
 #define SCIP_OUTPUT_COMPONENT     FALSE
 
 /* macros for getting activeness of symmetry handling methods */
-#define ISSYMRETOPESACTIVE(x)      ((x & 1) > 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & 2) > 0)
+#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 
 
 /** presolver data */
@@ -95,6 +95,7 @@ struct SCIP_PresolData
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
+   int                   usesymmetry;        /**< encoding of active symmetry handling methods  */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -116,7 +117,6 @@ struct SCIP_PresolData
    int                   nbg1;               /**< number of variables in bg1 and bg1list */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
    int*                  permvarsevents;     /**< stores events caught for permvars */
-   int                   usesymmetry;        /**< encoding of active symmetry handling methods  */
 };
 
 
@@ -2326,7 +2326,7 @@ SCIP_Shortbool SCIPgetSymmetryComponentblocked(
 }
 
 
-/* get memory address of presoldata->nbg0 */
+/** get memory address of presoldata->nbg0 */
 int* SCIPgetNbg0MemPos(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2351,7 +2351,7 @@ int* SCIPgetNbg0MemPos(
 }
 
 
-/* get memory address of presoldata->nbg1 */
+/** get memory address of presoldata->nbg1 */
 int* SCIPgetNbg1MemPos(
    SCIP*                 scip                /**< SCIP data structure */
    )
