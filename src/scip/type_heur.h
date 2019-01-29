@@ -57,7 +57,7 @@ typedef struct SCIP_VGraph SCIP_VGRAPH;           /**< variable graph data struc
 #define SCIP_HEURDISPCHAR_LNS       'L'  /**< a 'L'arge Neighborhood or other local search heuristic */
 #define SCIP_HEURDISPCHAR_DIVING    'd'  /**< a 'd'iving heuristic that dives down an auxiliary branch-and-bound path */
 #define SCIP_HEURDISPCHAR_ITERATIVE 'i'  /**< an iterative improvement heuristic such as 1-opt or 2-opt */
-#define SCIP_HEURDISPCHAR_OBJDIVING 'o'  /**< an 'o'bjectiveiving or feasibility pump heuristic */
+#define SCIP_HEURDISPCHAR_OBJDIVING 'o'  /**< an 'o'bjective diving or feasibility pump heuristic */
 #define SCIP_HEURDISPCHAR_PROP      'p'  /**< a 'p'ropagation heuristic, often applied before branch-and-bound starts */
 #define SCIP_HEURDISPCHAR_ROUNDING  'r'  /**< a 'r'ounding heuristic that iteratively tries to round an LP or relaxation solution */
 #define SCIP_HEURDISPCHAR_TRIVIAL   't'  /**< a 't'rivial or helper heuristic, usually applied before branch-and-bound starts */
