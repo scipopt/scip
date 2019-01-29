@@ -96,8 +96,8 @@
 #define TABLE_EARLIEST_ORBITALFIXING    SCIP_STAGE_SOLVING      /**< output of the statistics table is only printed from this stage onwards */
 
 /* macros for getting activeness of symmetry handling methods */
-#define ISSYMRETOPESACTIVE(x)      ((x & 1) > 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & 2) > 0)
+#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 
 /*
  * Data structures

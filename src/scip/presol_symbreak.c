@@ -67,8 +67,8 @@
 #define DEFAULT_DETECTORBITOPES     FALSE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
-#define ISSYMRETOPESACTIVE(x)      ((x & 1) > 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & 2) > 0)
+#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 
 /*
  * Data structures
