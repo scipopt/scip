@@ -1467,12 +1467,12 @@ SCIP_RETCODE computeComponents(
 }
 
 
-/** compute number of variables that are contained in a non-trivial orbit */
+/** determine whether binary variable is effected (and potentially compute number of affected variables) */
 static
-SCIP_RETCODE computeNOrbitVars(
+SCIP_RETCODE determineBinvarAffected(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
-   SCIP_Bool             completestatistic   /**< whether a complete statistic on affected vars should be computed */
+   SCIP_Bool             completestatistic   /**< whether number of affected vars should be computed */
    )
 {
    int** perms;
@@ -1656,11 +1656,11 @@ SCIP_RETCODE determineSymmetry(
 
       if ( presoldata->displaynorbitvars )
       {
-         SCIP_CALL( computeNOrbitVars(scip, presoldata, TRUE) );
+         SCIP_CALL( determineBinvarAffected(scip, presoldata, TRUE) );
       }
       else if ( ISSYMRETOPESACTIVE(presoldata->usesymmetry) )
       {
-         SCIP_CALL( computeNOrbitVars(scip, presoldata, FALSE) );
+         SCIP_CALL( determineBinvarAffected(scip, presoldata, FALSE) );
       }
 
       /* display statistics: number of generators */
