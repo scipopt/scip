@@ -49,6 +49,16 @@ typedef struct SCIP_Sol SCIP_SOL;                 /**< primal CIP solution */
 
 typedef struct SCIP_Viol SCIP_VIOL;               /**< maximum violations of problem constraints */
 
+/** type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
+enum SCIP_SolType
+{
+   SCIP_SOLTYPE_UNKNOWN   = 0,          /**< type of solution unspecified (the default) */
+   SCIP_SOLTYPE_HEUR      = 1,          /**< solution was found by a heuristic */
+   SCIP_SOLTYPE_RELAX     = 2,          /**< solution was found by a relaxation */
+   SCIP_SOLTYPE_LPRELAX   = 3           /**< solution was found by the LP relaxation */
+};
+typedef enum SCIP_SolType SCIP_SOLTYPE;
+
 #ifdef __cplusplus
 }
 #endif
