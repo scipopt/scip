@@ -1383,6 +1383,8 @@ SCIP_RETCODE computeComponents(
       /* reduce number of components by singletons */
       if ( presoldata->vartocomponent[i] == -1 )
          --ncomponents;
+      else if ( SCIPvarIsBinary(presoldata->permvars[i]) )
+         presoldata->binvaraffected = TRUE;
    }
    assert( ncomponents > 0 );
    presoldata->ncomponents = ncomponents;
@@ -1483,6 +1485,10 @@ SCIP_RETCODE computeNOrbitVars(
 
    assert( scip != NULL );
    assert( presoldata != NULL );
+
+   if ( presoldata->binvaraffected && !completestatistic )
+      return SCIP_OKAY;
+
    assert( presoldata->perms != NULL );
    assert( presoldata->nperms > 0 );
    assert( presoldata->npermvars > 0 );
