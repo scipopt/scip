@@ -652,6 +652,10 @@ SCIP_RETCODE SCIPsolCreateRelaxSol(
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkRelaxSol(*sol, set, stat, tree, relaxation) );
 
+   /* update solution type and store relaxator as creator only if no heuristic is specified as creator */
+   if( heur == NULL )
+      SCIPsolSetRelax(*sol, SCIPrelaxationGetSolRelax(relaxation));
+
    return SCIP_OKAY;
 }
 

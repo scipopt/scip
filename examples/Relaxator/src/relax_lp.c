@@ -117,7 +117,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting LP relaxation solution, which improved upon earlier solution\n");
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
          for( i = 0; i < SCIPgetNVars(scip); ++i )
          {
@@ -129,7 +129,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 
             solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
 
-            SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, relax, SCIPgetVars(scip)[i], solval) );
          }
 
          /* mark relaxation solution to be valid and inform SCIP that the relaxation included all LP rows */

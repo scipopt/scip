@@ -138,7 +138,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting NLP relaxation solution, which improved upon earlier solution\n");
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
          for( i = 0; i < nvars; ++i )
          {
@@ -153,7 +153,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
             SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
    #endif
 
-            SCIP_CALL( SCIPsetRelaxSolVal(scip, vars[i], primal[i]) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, relax, vars[i], primal[i]) );
          }
 
          /* mark relaxation solution to be valid */

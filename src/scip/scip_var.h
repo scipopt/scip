@@ -1009,7 +1009,8 @@ SCIP_RETCODE SCIPgetVarSols(
  */
 EXTERN
 SCIP_RETCODE SCIPclearRelaxSolVals(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator data structure */
    );
 
 /** sets the value of the given variable in the global relaxation solution;
@@ -1032,6 +1033,7 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_VAR*             var,                /**< variable to set value for */
    SCIP_Real             val                 /**< solution value of variable */
    );
@@ -1051,6 +1053,7 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
    SCIP_Real*            vals,               /**< array with solution values of variables */
@@ -1071,6 +1074,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_SOL*             sol,                /**< primal relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );

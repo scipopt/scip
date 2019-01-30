@@ -35,6 +35,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_relax.h"
+#include "scip/type_var.h"
 #include "scip/pub_relax.h"
 
 #ifdef __cplusplus
@@ -262,6 +263,19 @@ void SCIPrelaxationUpdateVarObj(
    SCIP_VAR*             var,                /**< variable with changed objective coefficient */
    SCIP_Real             oldobj,             /**< old objective coefficient */
    SCIP_Real             newobj              /**< new objective coefficient */
+   );
+
+/** store the most recent relaxation handler \p relax responsible of the solution */
+extern
+void SCIPrelaxationSetSolRelax(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_RELAX*           relax               /**< relaxation handler responsible of the most recent relaxation solution */
+   );
+
+/** returns the most recent relaxation handler responsible of the solution, or NULL if unspecified */
+extern
+SCIP_RELAX* SCIPrelaxationGetSolRelax(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
 #ifdef __cplusplus
