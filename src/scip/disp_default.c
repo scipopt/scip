@@ -501,15 +501,27 @@ SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
    if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
    {
       SCIP_HEUR* heur;
-      heur = SCIPgetSolHeur(scip, sol);
-      if( heur == NULL )
+      SCIP_RELAX* relax;
+      char* infostr;
+
+      switch( SCIPsolGetType(sol) )
       {
-         SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, "relaxation");
+      case SCIP_SOLTYPE_LPRELAX:
+         infostr = "LP ";
+         break;
+      case SCIP_SOLTYPE_RELAX:
+         relax = SCIPsolGetRelax(sol);
+         infostr = relax != NULL ? SCIPrelaxGetName(relax) : "relaxation";
+         break;
+      case SCIP_SOLTYPE_HEUR:
+         heur = SCIPsolGetHeur(sol);
+         infostr = heur != NULL ? SCIPheurGetName(heur) : "heuristic";
+         break;
+      case SCIP_SOLTYPE_UNKNOWN:
+         infostr = "unknown";
+         break;
       }
-      else
-      {
-         SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, SCIPheurGetName(heur));
-      }
+      SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_INCUMBHEUR, DISP_WIDT_INCUMBHEUR, infostr);
 
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
    }
