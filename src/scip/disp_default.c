@@ -27,6 +27,7 @@
 #include "scip/pub_disp.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
+#include "scip/pub_relax.h"
 #include "scip/pub_sol.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
@@ -502,7 +503,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
    {
       SCIP_HEUR* heur;
       SCIP_RELAX* relax;
-      char* infostr;
+      char const* infostr;
 
       switch( SCIPsolGetType(sol) )
       {

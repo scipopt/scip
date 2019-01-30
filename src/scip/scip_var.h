@@ -39,6 +39,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_prop.h"
+#include "scip/type_relax.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
