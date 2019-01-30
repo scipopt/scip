@@ -88,6 +88,7 @@
                                                    *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART      TRUE        /**< Recompute symmetries after a restart has occured? */
+#define DEFAULT_EITHERSYMBREAKOROF    FALSE       /**< whether orbital fixing should not be used when orbitopes are active */
 
 /* output table properties */
 #define TABLE_NAME_ORBITALFIXING        "orbitalfixing"
@@ -1128,6 +1129,8 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    SCIP_Bool infeasible = FALSE;
    SCIP_Longint nodenumber;
    int nprop = 0;
+   int usesymmetry;
+   SCIP_Bool eithersymbreakorof;
 
    assert( scip != NULL );
    assert( result != NULL );
@@ -1163,6 +1166,23 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    if ( nodenumber == propdata->nodenumber )
       return SCIP_OKAY;
    propdata->nodenumber = nodenumber;
+
+   /* deactivate OF if it should not be combined with orbitopes */
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/eithersymbreakorof", &eithersymbreakorof) );
+   if ( ISSYMRETOPESACTIVE(usesymmetry) && eithersymbreakorof )
+   {
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPfindConshdlr(scip, "orbitope");
+      assert( conshdlr != NULL );
+
+      if ( SCIPconshdlrGetNConss(conshdlr) > 0 )
+      {
+         propdata->enabled = FALSE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* propagate */
    *result = SCIP_DIDNOTFIND;
@@ -1267,6 +1287,11 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
          "propagating/" PROP_NAME "/recomputerestart",
          "recompute symmetries after a restart has occured?",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/eithersymbreakorof",
+         "whether orbital fixing should not be used when orbitopes are active",
+         NULL, TRUE, DEFAULT_EITHERSYMBREAKOROF, NULL, NULL) );
 
    return SCIP_OKAY;
 }
