@@ -22,7 +22,8 @@
  * TODO: 1. allowing to add constraints
  *       2. checkholes: @done
  *       3. use implied bounds information @done
- *       4. knapsack constraint (unknown error)
+ *       4. knapsack constraint (unknown error) @done
+ *       5. update locked number control
  *
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled variables to other variables.
@@ -60,7 +61,7 @@
 
 #define PRESOL_PRIORITY           -240000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should dualsparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
@@ -687,6 +688,7 @@ SCIP_RETCODE aggregation(
    }
    else
    {
+      printf("cccccccccc\n");
       assert( SCIPisEQ(scip, REALABS(weight1), 1.0) );
       newvartype = SCIP_VARTYPE_BINARY;
       newlb = 0.0;
@@ -715,7 +717,7 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
             SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
-//   printf("%d, %d, %s, %s\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx2]), SCIPvarGetName(vars[colidx2]) );
+//   printf("%d, %d, %s, %s\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx1]), SCIPvarGetName(vars[colidx2]) );
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
@@ -1114,7 +1116,7 @@ SCIP_RETCODE cancelColHash(
    cancellb = SCIPvarGetLbGlobal(cancelvar);
    cancelub = SCIPvarGetUbGlobal(cancelvar);
    cancelisbin = ((SCIPvarGetType(cancelvar) == SCIP_VARTYPE_BINARY) ||
-                     (SCIPvarIsIntegral(cancelvar) && SCIPisZero(scip, cancellb) && SCIPisZero(scip, cancelub-1.0)));
+                     (SCIPvarIsIntegral(cancelvar) && SCIPisZero(scip, cancellb) && SCIPisEQ(scip, cancelub, 1.0)));
 
    nchgcoef = 0;
    nretrieves = 0;
@@ -1212,58 +1214,46 @@ SCIP_RETCODE cancelColHash(
             implcollb = SCIPvarGetLbGlobal(implcolvar);
             implcolub = SCIPvarGetUbGlobal(implcolvar);
             implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
-                              (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
+                              (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisEQ(scip, implcolub, 1.0)));
  
             scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
             iscliqueused = FALSE;
 
-            /* TODO: due to some unknown knapsack constraint reason, I block the variable here*/
+            if( REALABS(scale) > MAXSCALE )
+               continue;
+
+            /* @todo maybe do more reduction if knspsack constraint handler supports downgrading constraint,
+             * i.e., converting into a linear constraint
+             */
             if( implcolisbin )
             {
                if( !presoldata->iscliqueused )
                   continue;
                if( !cancelisbin )
-               {
                   continue;
-               }
                else
                {
                   if(SCIPisEQ(scip, scale, 1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, TRUE, TRUE) ||
                            SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, FALSE, TRUE)))
-                  {
                      iscliqueused = TRUE;
-                  }
                   else if(SCIPisEQ(scip, scale, -1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, FALSE, TRUE) ||
                            SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, TRUE, TRUE)))
-                  {
                      iscliqueused = TRUE;
-                  }
                   else
-                  {
                      continue;
-                  }
                }
             }
-
-            if( REALABS(scale) > MAXSCALE )
-               continue;
-
-            if( SCIPvarIsIntegral(implcolvar) )
+            else if( SCIPvarIsIntegral(implcolvar) )
             {
                if( SCIPvarIsIntegral(cancelvar) )
                {
                   if( (SCIPvarGetType(implcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
-                  if( SCIPisIntegral(scip, scale) && isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
-                  {
-                     /*TODO: can do more*/
+                  if( !SCIPisIntegral(scip, scale) || isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
                      continue;
-                  }
                }
                else
-               {
                   continue;
-               }
             }
 
             a = 0;
@@ -1277,15 +1267,6 @@ SCIP_RETCODE cancelColHash(
 
             while( a < cancelcollen && b < implcollen )
             {
-               /* the constraints is knapsack constraints, we need to avoid this case. Otherwise, it will output some error. */
-               conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
-               conshdlrname = SCIPconshdlrGetName(conshdlr);
-               if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
-               {
-                  abortpair = TRUE;
-                  break;
-               }
-
                if( cancelcolinds[a] == implcolinds[b] )
                {
                   SCIP_Real newcoef;
@@ -1298,7 +1279,7 @@ SCIP_RETCODE cancelColHash(
                      ++ncancel;
                   }
                   /* otherwise, check if integral coefficients are preserved if the column is integral */
-                  else if( (preserveintcoefs && SCIPvarIsIntegral(vars[colidx]) &&
+                  else if( (preserveintcoefs && SCIPvarIsIntegral(cancelvar) &&
                             SCIPisIntegral(scip, cancelcolvals[a]) && !SCIPisIntegral(scip, newcoef)) )
                   {
                      abortpair = TRUE;
@@ -1310,6 +1291,7 @@ SCIP_RETCODE cancelColHash(
                      /* do not flip signs for non-canceled coefficients if this adds a lock to a variable that had at most one lock
                       * in that direction before, except if the other direction gets unlocked
                       */
+                     //TODO: if we use clique information, here the rhs and lhs may be changes
                      rowrhs = SCIPmatrixGetRowRhs(matrix, cancelcolinds[a]);
                      rowlhs = SCIPmatrixGetRowLhs(matrix, cancelcolinds[a]);
                      if( (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
@@ -1319,6 +1301,7 @@ SCIP_RETCODE cancelColHash(
                          * coefficient in a >= constraint, e.g. an uplock. If this was the only uplock we do not abort their
                          * cancelling, otherwise we abort if we had a single or no downlock and add one
                          */
+                        //TODO: we may change this 
                         if( SCIPmatrixGetColNUplocks(matrix, colidx) > 1 &&
                             SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
                         {
@@ -1351,6 +1334,7 @@ SCIP_RETCODE cancelColHash(
                {
                   SCIP_Real newcoef;
 
+                  //TODO: be more careful about this
                   rowrhs = SCIPmatrixGetRowRhs(matrix, implcolinds[b]);
                   rowlhs = SCIPmatrixGetRowLhs(matrix, implcolinds[b]);
 
@@ -1408,16 +1392,12 @@ SCIP_RETCODE cancelColHash(
             if( abortpair )
                continue;
 
+            //TODO: update the fillin here
             while( b < implcollen )
             {
                ++b;
                conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
                conshdlrname = SCIPconshdlrGetName(conshdlr);
-               if(implcolisbin && (strcmp(conshdlrname, "knapsack") == 0))
-               {
-                  abortpair = TRUE;
-                  break;
-               }
                if( SCIPvarIsIntegral(cancelvar) )
                {
                   if( SCIPvarIsBinary(cancelvar) && ++nbinfillin > maxbinfillin )
@@ -1432,8 +1412,6 @@ SCIP_RETCODE cancelColHash(
                }
             }
 
-            if( abortpair )
-               continue;
 
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
@@ -1487,7 +1465,7 @@ SCIP_RETCODE cancelColHash(
          implcollb = SCIPvarGetLbGlobal(implcolvar);
          implcolub = SCIPvarGetUbGlobal(implcolvar);
          implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
-                           (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisZero(scip, implcolub-1.0)));
+                           (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisEQ(scip, implcolub, 1.0)));
 
          a = 0;
          b = 0;
@@ -1498,7 +1476,6 @@ SCIP_RETCODE cancelColHash(
          {
             conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
-            assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
 
             if( cancelcolinds[a] == implcolinds[b] )
             {
@@ -1544,7 +1521,6 @@ SCIP_RETCODE cancelColHash(
          {
             conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
-            assert(!implcolisbin || (strcmp(conshdlrname, "knapsack") == 0));
             tmpinds[tmpcollen] = implcolinds[b];
             tmpvals[tmpcollen] = implcolvals[b] * bestscale;
             ++nchgcoef;
@@ -1827,6 +1803,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             }
          }
       }
+
       /* insert conspairs into hash table */
       for( c = 0; c < nconspairs; ++c )
       {
@@ -1904,6 +1881,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
 
+      if( numcancel > 0 )
+      {
+         *result = SCIP_SUCCESS;
+      }
+
+      updateFailureStatistic(presoldata, numcancel > 0);
 
       SCIPfreeBufferArray(scip, &colsparsity);
       SCIPfreeBufferArray(scip, &colidxsorted);
