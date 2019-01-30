@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2714,7 +2714,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
 
-
 /** inserts element in hash table */
 static
 SCIP_RETCODE hashmapInsert(
@@ -2914,6 +2913,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
+   (*hashmap)->hashmaptype = SCIP_HASHMAPTYPE_UNKNOWN;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots) );
    SCIP_ALLOC( BMSallocClearBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots) );
@@ -2983,6 +2983,12 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3013,6 +3019,12 @@ SCIP_RETCODE SCIPhashmapInsertInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3043,6 +3055,12 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3068,6 +3086,7 @@ void* SCIPhashmapGetImage(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.ptr;
@@ -3087,6 +3106,7 @@ int SCIPhashmapGetImageInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.integer;
@@ -3106,6 +3126,7 @@ SCIP_Real SCIPhashmapGetImageReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.real;
@@ -3128,6 +3149,12 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3156,6 +3183,12 @@ SCIP_RETCODE SCIPhashmapSetImageInt(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3184,6 +3217,12 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 

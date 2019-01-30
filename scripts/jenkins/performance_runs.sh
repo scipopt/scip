@@ -71,14 +71,14 @@ BRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
 fi
-if [ "${DAY_OF_WEEK}" == "6" ]; then
-  git checkout ${BRANCHNAME}
-  git pull
-  git checkout performance-${GITBRANCH}
-  git merge ${BRANCHNAME} --ff-only
-  git push
-  git checkout ${BRANCHNAME}
-fi
+#if [ "${DAY_OF_WEEK}" == "6" ]; then
+#  git checkout ${BRANCHNAME}
+#  git pull
+#  git checkout performance-${GITBRANCH}
+#  git merge ${BRANCHNAME} --ff-only
+#  git push
+#  git checkout ${BRANCHNAME}
+#fi
 
 ####################################
 ### jobs configuration variables ###
@@ -203,7 +203,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
 
   for i in `seq 1 ${TODAYS_N_JOBS}`; do
     FLAGS=${TODAYS_JOBS[$i]}
-    for j in "SEED EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+    for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
       unset $j
     done
     export ${FLAGS}
