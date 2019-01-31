@@ -68,7 +68,10 @@ struct SCIP_SepaData
    SCIP_CONSHDLR*        conshdlr;           /**< expression constraint handler */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
    SCIP_VAR**            bilinauxvars;       /**< linearization variable for each bilinear term */
-   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the linearization variables of each bilinear term */
+   SCIP_CONSEXPR_EXPR**  bilinterms;         /**< bilinear terms */
+   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the exprs and linearization variables of each bilinear term */
+   SCIP_VAR***           varbilinvars;       /**< arrays of vars appearing in a bilinear term together with xj for each xj from varssorted */
+   int*                  nvarbilinvars;      /**< number of vars for each element of varbilinvars */
    int*                  varpriorities;      /**< priorities of the variables in varssorted */
    int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
    int                   nbilinterms;        /**< total number of bilinear terms */
@@ -101,7 +104,7 @@ SCIP_RETCODE freeSepaData(
    SCIP_SEPADATA*        sepadata            /**< separation data */
    )
 {  /*lint --e{715}*/
-   int i;
+   int i, j;
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
@@ -110,7 +113,9 @@ SCIP_RETCODE freeSepaData(
    for( i = 0; i < sepadata->nbilinterms; ++i )
    {
       assert(sepadata->bilinauxvars[i] != NULL);
+      assert(sepadata->bilinterms[i] != NULL);
       SCIP_CALL( SCIPreleaseVar(scip, &(sepadata->bilinauxvars[i])) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(sepadata->bilinterms[i])) );
    }
 
    /* release bilinvars that were captured for rlt */
@@ -121,8 +126,16 @@ SCIP_RETCODE freeSepaData(
    }
 
    /* free arrays */
+   for( i = 0; i < sepadata->nbilinvars; ++i )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &sepadata->varbilinvars[i], sepadata->nvarbilinvars[i]);
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &sepadata->bilinterms, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->bilinauxvars, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->nbilinvars);
+   SCIPfreeBlockMemoryArray(scip, &sepadata->nvarbilinvars, sepadata->nbilinvars);
+   SCIPfreeBlockMemoryArray(scip, &sepadata->varbilinvars, sepadata->nbilinvars);
    SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->nbilinvars);
 
    /* free the hashmap */
@@ -174,9 +187,12 @@ SCIP_RETCODE createSepaData(
    SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), nvars) );
 
    /* allocate memory for arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinauxvars, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varssorted, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->varbilinvars, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->nvarbilinvars, nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->varpriorities, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinauxvars, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinterms, nvars) );
 
    /* find maximum variable index */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
@@ -202,6 +218,7 @@ SCIP_RETCODE createSepaData(
                int mapidx;
                int poslocks;
                int neglocks;
+               int xpos;
 
                assert(expr != NULL);
 
@@ -255,14 +272,24 @@ SCIP_RETCODE createSepaData(
 
                   if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
                   {
-                     /* store variables if its the first time they are found in a bilinear term */
+                     /* store variables if it's the first time they are found in a bilinear term */
                      if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
                      {
                         SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
                         sepadata->varssorted[sepadata->nbilinvars] = x;
                         SCIP_CALL( SCIPcaptureVar(scip, x) );
+                        xpos = sepadata->nbilinvars;
                         ++sepadata->nbilinvars;
                      }
+                     else
+                     {
+                        xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
+                     }
+                     if( sepadata->nvarbilinvars[xpos] == 0 )
+                        SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], nvars);
+                     sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
+                     ++sepadata->nvarbilinvars[xpos];
+
 
                      if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
                      {
@@ -276,9 +303,11 @@ SCIP_RETCODE createSepaData(
                      SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
                         sepadata->nbilinterms) ); /*lint !e571*/
 
-                     /* add variables to bilin-arrays and capture them */
+                     /* add variables and exprs to bilin-arrays and capture them */
                      sepadata->bilinauxvars[sepadata->nbilinterms] = auxvar;
                      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+                     sepadata->bilinterms[sepadata->nbilinterms] = expr;
+                     SCIPcaptureConsExprExpr(expr);
                      ++sepadata->nbilinterms;
 
                      /* add locks to priorities of both variables */
@@ -310,16 +339,29 @@ SCIP_RETCODE createSepaData(
    if( sepadata->nbilinvars < nvars )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, nvars, sepadata->nbilinvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varbilinvars, nvars, sepadata->nbilinvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nvarbilinvars, nvars, sepadata->nbilinvars) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, nvars, sepadata->nbilinvars) );
    }
 
    if( sepadata->nbilinterms < nvars )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinauxvars, nvars, sepadata->nbilinterms) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinterms, nvars, sepadata->nbilinterms) );
+   }
+
+   for( i = 0; i < sepadata->nbilinvars; ++i )
+   {
+      if( sepadata->nvarbilinvars[i] > 0 && sepadata->nvarbilinvars[i] < nvars )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varbilinvars[i], nvars, sepadata->nvarbilinvars[i]) );
+      }
    }
 
    /* sort maxnumber of variables according to their occurrences */
    SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars, sepadata->nbilinvars);
+   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varbilinvars, sepadata->maxusedvars, sepadata->nbilinvars);
+   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->nvarbilinvars, sepadata->maxusedvars, sepadata->nbilinvars);
 
    SCIPexpriteratorFree(&it);
    SCIPhashmapFree(&varmap);
@@ -577,6 +619,7 @@ SCIP_RETCODE computeRltCuts(
       /* otherwise, use the McCormick estimator in place of the bilinear term */
       else if( colvar != var )
       {
+         /* TODO this is valid only locally! */
          SCIP_Real lbcolvar = SCIPvarGetLbLocal(colvar);
          SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
          SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
@@ -657,14 +700,15 @@ SCIP_RETCODE computeRltCuts(
    return SCIP_OKAY;
 }
 
-/** creates the projected problem by treating all variables that are at their
- * bounds at the current solution as constant values
+/** creates the projected problem
+ *
+ *  All variables that are at their bounds at the current solution are added
+ *  to left and/or right hand sides as constant values.
  */
 static
 SCIP_RETCODE createProjectedProb(
    SCIP*            scip,       /**< SCIP data structure */
    SCIP_SEPA*       sepa,       /**< separator */
-   SCIP_SEPADATA*   sepadata,   /**< separator data */
    SCIP_ROW**       rows,       /**< problem rows */
    int              nrows,      /**> number of rows */
    SCIP_SOL*        sol,        /**> the point to be separated (can be NULL) */
@@ -675,9 +719,9 @@ SCIP_RETCODE createProjectedProb(
    int i, v;
    SCIP_Real lhs, rhs;
    SCIP_VAR* var;
+   SCIP_Real val;
 
    assert(scip != NULL);
-   assert(sepadata != NULL);
    assert(rows != NULL);
    assert(proj_rows != NULL);
 
@@ -688,16 +732,15 @@ SCIP_RETCODE createProjectedProb(
 
       /* create an empty row which we then fill with variables step by step */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &proj_rows[i], sepa, "rlt_cut", lhs, rhs, TRUE, FALSE, FALSE) );
-      SCIPinfoMessage(scip, NULL, "\nrow %d", i);
 
       cols = SCIProwGetCols(rows[i]);
-      SCIPinfoMessage(scip, NULL, "\ncols in rlt = %p", cols);
       for( v = 0; v < SCIProwGetNNonz(rows[i]); ++v )
       {
          var = SCIPcolGetVar(cols[v]);
-         SCIPinfoMessage(scip, NULL, "\nvar %s, loc lb = %f, loc ub = %f, primsol = %f", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPcolGetPrimsol(cols[v]));
-         assert( SCIPcolGetPrimsol(cols[v]) == SCIPvarGetSol(var, TRUE) );
-         if( SCIPvarGetLbLocal(var) == SCIPcolGetPrimsol(cols[v]) || SCIPvarGetUbLocal(var) == SCIPcolGetPrimsol(cols[v]) )
+         val = SCIPgetSolVal(scip, sol, var);
+         SCIPinfoMessage(scip, NULL, "\nvar %s, loc lb = %f, ", SCIPvarGetName(var), SCIPvarGetLbLocal(var));
+         SCIPinfoMessage(scip, NULL, "loc ub = %f, sol val = %f", SCIPvarGetUbLocal(var), val);
+         if( SCIPvarGetLbLocal(var) == val || SCIPvarGetUbLocal(var) == val ) /* TODO use of local/global bounds? */
          {
             /* add var as a constant to proj_row */
             lhs -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
@@ -714,6 +757,7 @@ SCIP_RETCODE createProjectedProb(
    }
    return SCIP_OKAY;
 }
+
 
 /*
  * Callback methods of separator
@@ -862,10 +906,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    }
 
-   /* TODO create the projected problem */
+   /* create the projected problem */
    SCIPallocBufferArray(scip, &proj_rows,nrows);
-   createProjectedProb(scip, sepa, sepadata, rows, nrows, NULL, proj_rows);
-   SCIPfreeBufferArray(scip, &proj_rows);
+   createProjectedProb(scip, sepa, rows, nrows, NULL, proj_rows);
 
    for( i = 0; i < nrows && !SCIPisStopped(scip); ++i )
    {
@@ -920,7 +963,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
          SCIP_ROW *cut;
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL(isAcceptableRow(scip, sepadata, rows[i], var, sepadata->varpriorities[j], &accepted));
+         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[i], var, sepadata->varpriorities[j], &accepted) );
 
          if( !accepted )
          {
@@ -951,8 +994,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
                uselb[k] ? "lower bound" : "upper bound");
 
             /* compute the rlt cut */
-            SCIP_CALL(computeRltCuts(scip, sepa, sepadata, &cut, rows[i], NULL, var, &success, uselb[k], uselhs[k],
-               allowlocal, buildeqcut));
+            SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[i], NULL, var, &success, uselb[k], uselhs[k],
+               allowlocal, buildeqcut) );
 
             SCIPdebugMsg(scip, "finished cut generation for row %s, %s and variable %s with its %s %s\n",
                SCIProwGetName(rows[i]), uselhs[k] ? "lhs" : "rhs", SCIPvarGetName(var),
@@ -1007,6 +1050,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    }
 
    SCIPdebugMsg(scip, "exit seperator because cut calculation is finished\n");
+
+   /* free the projected problem */
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIPreleaseRow(scip, &proj_rows[i]);
+   }
+   SCIPfreeBufferArray(scip, &proj_rows);
 
    if( sepadata->isinitialround || sepadata->onlyinitial )
    {
