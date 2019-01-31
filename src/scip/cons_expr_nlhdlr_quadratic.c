@@ -70,6 +70,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   nneginfinityquadact;/**< number of quadratic terms contributing -infinity to activity */
    int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
    SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic term as defined in nlhdlrIntervalQuadratic */
+   unsigned int          activitiestag;      /**< value of activities tag when activities were computed */
 };
 
 /*
@@ -1052,6 +1053,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    /* interval evaluation is linear activity + quadactivity */
    SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->linactivity,  quadactivity);
 
+   nlhdlrexprdata->activitiestag = SCIPgetConsExprCurBoundsTag(SCIPfindConshdlr(scip, "expr"));
+
    return SCIP_OKAY;
 }
 
@@ -1086,10 +1089,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
       return SCIP_OKAY;
 
-   /* ensure that partial activities as stored in nlhdlrexprdata are correct
-    * FIXME/TODO: Do this only if necessary, i.e., move into separate function, compare with conshdlr curboundstag,lastboundrelax or so
+   /* ensure that partial activities as stored in nlhdlrexprdata are uptodate
+    * if the activity stored in expr is more recent than the partial activities stored in this nlhdlrexprdata,
+    * then we should reevaluate the partial activities
     */
-   SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &quadactivity, NULL, NULL) );
+   if( SCIPgetConsExprExprActivityTag(expr) > nlhdlrexprdata->activitiestag )
+   {
+      SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &quadactivity, NULL, NULL) );
+   }
 
    /* propagate linear part in rhs = expr's interval - quadratic activity; first, reconstruct the quadratic activity */
    SCIPintervalSetBounds(&quadactivity,
