@@ -108,6 +108,7 @@ struct SCIP_ConsExpr_Expr
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
+   SCIP_EVENTDATA*         vareventdata;  /**< variable event data for auxiliary variable */
 
    /* branching */
    SCIP_Real               brscore;       /**< branching score for the expression (passed on to children) */

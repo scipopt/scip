@@ -121,8 +121,9 @@
 /** eventdata for variable bound change events in constraints */
 typedef struct
 {
-   SCIP_CONS*            cons;               /**< constraint */
-   SCIP_CONSEXPR_EXPR*   varexpr;            /**< variable expression */
+   SCIP_CONS*            cons;               /**< constraint or NULL */
+   SCIP_CONSHDLR*        conshdlr;           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   varexpr;            /**< variable expression or NULL */
    int                   filterpos;          /**< position of eventdata in SCIP's event filter */
 } SCIP_VAREVENTDATA;
 
@@ -323,6 +324,7 @@ SCIP_RETCODE freeExpr(
 static
 SCIP_RETCODE freeAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, can be NULL */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
    )
 {
@@ -344,6 +346,22 @@ SCIP_RETCODE freeAuxVar(
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
    }
 
+   if( expr->vareventdata != NULL )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      if( conshdlr == NULL )
+         conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      SCIP_CALL( SCIPdropVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, expr->vareventdata, ((SCIP_VAREVENTDATA*)expr->vareventdata)->filterpos) );
+
+      SCIPfreeBlockMemory(scip, (SCIP_VAREVENTDATA**)&expr->vareventdata);  /*lint !e866*/
+   }
+
    /* release auxiliary variable */
    SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
    assert(expr->auxvar == NULL);
@@ -355,6 +373,7 @@ SCIP_RETCODE freeAuxVar(
 static
 SCIP_RETCODE freeEnfoData(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, can be NULL */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression whose enforcement data will be released */
    SCIP_Bool             freeauxvar          /**< whether aux var should be released */
    )
@@ -364,7 +383,7 @@ SCIP_RETCODE freeEnfoData(
    /* free auxiliary variable */
    if( freeauxvar )
    {
-      SCIP_CALL( freeAuxVar(scip, expr) );
+      SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
       assert(expr->auxvar == NULL);
    }
 
@@ -1130,6 +1149,7 @@ SCIP_RETCODE forwardPropExpr(
                {
                   SCIP_INTERVAL auxvarbounds;
                   auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
+                  SCIPdebugMsg(scip, "intersect with auxvar <%s> bounds [%g,%g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
 
                   /* it would be odd if the domain of an auxiliary variable were empty */
                   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
@@ -1958,7 +1978,7 @@ SCIP_RETCODE detectNlhdlrs(
              */
             if( expr == consdata->expr )
             {
-               SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+               SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
             }
             else
             {
@@ -2144,6 +2164,7 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( SCIPallocBlockMemory(scip, &(consdata->vareventdata[i])) ); /*lint !e866*/
       consdata->vareventdata[i]->cons = cons;
+      consdata->vareventdata[i]->conshdlr = SCIPconsGetHdlr(cons);
       consdata->vareventdata[i]->varexpr = consdata->varexprs[i];
 
       SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) consdata->vareventdata[i],
@@ -2211,46 +2232,47 @@ static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {  /*lint --e{715}*/
    SCIP_EVENTTYPE eventtype;
-   SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_CONSDATA* consdata;
-   SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons;
    SCIP_VAR* var;
 
    assert(eventdata != NULL);
 
-   cons = ((SCIP_VAREVENTDATA*) eventdata)->cons;
-   assert(cons != NULL);
-   consdata = SCIPconsGetData(cons);
-   assert(cons != NULL);
-
-   varexpr = ((SCIP_VAREVENTDATA*) eventdata)->varexpr;
-   assert(varexpr != NULL);
-   assert(SCIPisConsExprExprVar(varexpr));
-
-   var = SCIPgetConsExprExprVarVar(varexpr);
+   var = SCIPeventGetVar(event);
    assert(var != NULL);
 
    eventtype = SCIPeventGetType(event);
    assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
 
-   SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
+   cons = ((SCIP_VAREVENTDATA*) eventdata)->cons;
+
+   conshdlr = ((SCIP_VAREVENTDATA*) eventdata)->conshdlr;
+   assert(conshdlr != NULL);
+
+   SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "N/A");
 
    /* mark constraint to be propagated and simplified again, update cutboundstag */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert(conshdlr != NULL);
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      if( cons != NULL )
+      {
+         SCIP_CONSDATA* consdata;
+
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+
+         consdata->ispropagated = FALSE;
+         consdata->issimplified = FALSE;
+
+         SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(cons));
+      }
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
-      SCIPdebugMsg(scip, "  mark <%s> for propagate and simplify\n", SCIPconsGetName(cons));
-      consdata->ispropagated = FALSE;
-      consdata->issimplified = FALSE;
-
-      /* increase tag an bounds */
+      /* increase tag on bounds */
       /* TODO maybe do not increase if we did not use the new tag yet, e.g., when there is a sequence of bound changes,
        * so we do not run out of numbers so soon
        */
@@ -2261,9 +2283,16 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       if( eventtype & SCIP_EVENTTYPE_BOUNDRELAXED )
          conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
    }
-   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != (unsigned int) 0 )
+
+   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != (unsigned int) 0 && cons != NULL )
    {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
       consdata->issimplified = FALSE;
+      SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(cons));
    }
 
    return SCIP_OKAY;
@@ -3080,7 +3109,7 @@ SCIP_RETCODE canonicalizeConstraints(
          assert(expr->auxvar == NULL);  /* should not have been created yet or have been removed in INITPRE (if restart) */
 
          /* remove nonlinear handlers in expression and their data */
-         SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
       }
    }
 
@@ -4499,7 +4528,7 @@ SCIP_RETCODE freeAuxVars(
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         SCIP_CALL( freeAuxVar(scip, expr) );
+         SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
       }
    }
 
@@ -6683,7 +6712,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
          /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting */
-         SCIP_CALL( freeEnfoData(scip, expr, !restart) );
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, !restart) );
       }
    }
 
@@ -8965,7 +8994,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    }
 
    /* handle the root expr separately: free enfodata and expression data here */
-   SCIP_CALL( freeEnfoData(scip, *rootexpr, TRUE) );
+   SCIP_CALL( freeEnfoData(scip, NULL, *rootexpr, TRUE) );
 
    if( (*rootexpr)->exprdata != NULL && (*rootexpr)->exprhdlr->freedata != NULL )
    {
@@ -9004,7 +9033,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             assert(child->nuses == 1);
 
             /* free child's enfodata and expression data when entering child */
-            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
+            SCIP_CALL( freeEnfoData(scip, NULL, child, TRUE) );
 
             if( child->exprdata != NULL )
             {
@@ -10174,6 +10203,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VARTYPE vartype;
+   SCIP_VAREVENTDATA* vareventdata;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -10240,7 +10270,15 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    }
 #endif
 
-   /* TODO catch bound change events on this variable, since bounds on this variable take part of activity computation */
+   /* catch bound change events on this variable, since bounds on this variable take part of activity computation */
+   assert(expr->vareventdata == NULL);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &vareventdata) );
+   vareventdata->cons = NULL;
+   vareventdata->conshdlr = conshdlr;
+   vareventdata->varexpr = NULL;
+
+   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)vareventdata, &vareventdata->filterpos) );
+   expr->vareventdata = (SCIP_EVENTDATA*) vareventdata;
 
    if( auxvar != NULL )
       *auxvar = expr->auxvar;
