@@ -3574,14 +3574,14 @@ SCIP_Real calculateWeightedCutoffScore(
    SCIP_Real bestupgain;
    SCIP_Real totaldowngains;
    SCIP_Real totalupgains;
-   int nlowestlevelcutoffs;
+   SCIP_Real nlowestlevelcutoffs;
    int ntotaldowngains;
    int ntotalupgains;
 
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
 
-   nlowestlevelcutoffs = downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+   nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
    bestdowngain = downbranchingresult->bestgain;
    bestupgain = upbranchingresult->bestgain;
    totaldowngains = downbranchingresult->totalgains;
