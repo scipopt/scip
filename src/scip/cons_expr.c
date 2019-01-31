@@ -9884,6 +9884,18 @@ SCIP_INTERVAL SCIPgetConsExprExprActivity(
    return expr->activity;
 }
 
+/** returns the tag associated with the activity of the expression
+ *
+ * Can be compared with SCIPgetConsExprCurBoundsTag() and SCIPgetConsExprLastBoundRelaxTag()
+ * to check whether the activity currently stored in this expression is current and valid, respectively.
+ */
+unsigned int SCIPgetConsExprExprActivityTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   return expr->activitytag;
+}
+
 /** possibly reevaluates and then returns the activity of the expression
  *
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
@@ -10830,6 +10842,32 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
    assert(conshdlrdata != NULL);
 
    return ++conshdlrdata->lastvisitedtag;
+}
+
+/** gets tag indicating current local variable bounds */
+unsigned int SCIPgetConsExprCurBoundsTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+
+   return conshdlrdata->curboundstag;
+}
+
+/** gets the curboundstag at the last time where variable bounds were relaxed */
+unsigned int SCIPgetConsExprLastBoundRelaxTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(consexprhdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+
+   return conshdlrdata->lastboundrelax;
 }
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
