@@ -52,6 +52,21 @@ struct SCIP_Rational{
  * Creation methods
  */
 
+
+/** allocate and create a rational from nominator and denominator */
+SCIP_Rational* RcreateNoMem(void)
+{
+   SCIP_Rational* retrat;
+   
+   BMSallocMemory(&retrat);
+   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
+
+   retrat->isinf = FALSE;
+   new (retrat->r) Rational(0.0);
+
+   return retrat;
+}
+
 /** allocate and create a rational from nominator and denominator */
 SCIP_Rational* Rcreate(
    BMS_BLKMEM*           mem                 /**< block memory */
@@ -133,7 +148,6 @@ SCIP_Rational* RcreateString(
 }
 
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
-static
 SCIP_Rational* RcreateReal(
    BMS_BLKMEM*           mem,                /**< block memory */
    const SCIP_Real       dbl                 /**< the string describing the rational */
@@ -161,9 +175,7 @@ SCIP_Rational** RcreateArray(
 
    for( int i = 0; i < size; ++i )
    {
-      BMSallocBlockMemory(mem, &retrat[i]);
-      retrat[i]->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
-      new (retrat[i]->r) Rational();
+      retrat[i] = Rcreate(mem);
    }
 
    return retrat;
@@ -254,10 +266,22 @@ void RdeleteArray(
 
    for( int i = 0; i < size; ++i )
    {
-      Rdelete(mem, array[i]);
+      Rdelete(mem, &((*array)[i]));
    }
 
    BMSfreeBlockMemoryArray(mem, array, size);
+}
+
+/** delete a rational and free the allocated memory */
+void RdeleteNoMem(
+   SCIP_Rational**       r                   /**< adress of the rational */
+   )
+{
+   assert(*r != NULL);
+
+   (*r)->r->~Rational();
+   BMSfreeMemory(&((*r)->r));
+   BMSfreeMemory(r);
 }
 
 /** delete a rational and free the allocated memory */
@@ -306,8 +330,11 @@ void RsetInt(
    )
 {
    assert(res != NULL);
+   assert(denom != 0);
 
    *(res->r) = (nom/denom);
+   res->isinf = FALSE;
+
 }
 
 /** set a rational to the value described by a string */
@@ -331,6 +358,7 @@ void RsetString(
    else
    {
       *(res->r) = Rational(desc);
+      res->isinf = FALSE;
    }
 }
 
@@ -342,7 +370,7 @@ void RsetReal(
 {
    assert(r != NULL);
 
-   r->isinf = false;
+   r->isinf = FALSE;
    *(r->r) = real;
 }
 
@@ -513,7 +541,7 @@ void RmultReal(
 
     if( op1->isinf )
     {
-       SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+       SCIPdebugMessage("multiplying with infinity might produce undesired behavior \n");
        if( op2 == 0.0 )
        {
           res->isinf = FALSE;
@@ -527,6 +555,7 @@ void RmultReal(
     else
     {
        *(res->r) = *(op1->r) * op2;
+       res->isinf = FALSE;
     }
 }
 
@@ -822,7 +851,7 @@ SCIP_Bool RisAbsInfinity(
    )
 {
    assert(r != NULL);
-   assert(!r->r->is_zero());
+   assert(!r->r->is_zero() || !r->isinf);
 
    return r->isinf;
 }
@@ -837,13 +866,21 @@ SCIP_Bool RisIntegral(
    return !(r->isinf) && (denominator(*r->r) == 1);
 }
 
+SCIP_Bool RisFpRepresentable(
+   const SCIP_Rational*  r
+   )
+{
+   assert(r != NULL);
+
+   return (!r->isinf) && (static_cast<SCIP_Real>(*r->r) == (*r->r));
+}
+
 /*
  * Printing/Conversion methods
  */
 
 /** convert a Rational to a string for printing */
-void RtoString
-(
+void RtoString(
    const SCIP_Rational*  r,                  /**< the rational to print */
    char*                 str                 /**< the string to save the rational in */
    )
@@ -852,7 +889,10 @@ void RtoString
 
    if( r->isinf )
    {
-      (void) SCIPstrncpy(str, "infinity value", SCIP_MAXSTRLEN);
+      if( *(r->r) > 0 )
+         (void) SCIPstrncpy(str, "inf", SCIP_MAXSTRLEN);
+      else
+         (void) SCIPstrncpy(str, "-inf", SCIP_MAXSTRLEN);
    }
    else
    {
@@ -1376,6 +1416,8 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
       rationalarray->minusedidx = MIN(rationalarray->minusedidx, idx);
       rationalarray->maxusedidx = MAX(rationalarray->maxusedidx, idx);
    }
+   
+   return SCIP_OKAY;
 }
 
 

@@ -1240,10 +1240,9 @@ SCIP_RETCODE execRelpscost(
          }
 
          /* check if there are infeasible roundings */
-         if( downinf || upinf )
+         if( (downinf || upinf) && !exactsolve )
          {
             assert(allcolsinlp || propagate);
-            assert(!exactsolve);
 
             if( downinf && upinf )
             {

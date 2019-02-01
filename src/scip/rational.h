@@ -71,6 +71,17 @@ SCIP_Rational* RcreateInt(
    int                   denom               /**< the denominator */
    );
 
+/*
+ * Creation methods
+ */
+
+/** Allocate and create a rational from a scip_real */
+EXTERN
+SCIP_Rational* RcreateReal(
+   BMS_BLKMEM*           mem,
+   const SCIP_Real       num                 /**< the scip_real */
+   );
+
 /** Allocate and create a rational from a string in the format, e.g. "12/35" */
 EXTERN
 SCIP_Rational* RcreateString(
@@ -106,6 +117,9 @@ SCIP_Rational* RcreateTemp(
    );
 
 EXTERN
+SCIP_Rational* RcreateNoMem(void);
+
+EXTERN
 SCIP_Rational* Rcreate(
    BMS_BLKMEM*           buf
    );
@@ -132,6 +146,12 @@ void RsetGMP(
 
 /** delete a rational and free the allocated memory */
 EXTERN
+void RdeleteNoMem(
+   SCIP_Rational**       r                   /**< adress of the rational */
+   );
+
+/** delete a rational and free the allocated memory */
+EXTERN
 void Rdelete(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       r                   /**< adress of the rational */
@@ -146,14 +166,6 @@ void RdeleteTemp(
 /** delete an array of rationals and free the allocated memory */
 EXTERN
 void RdeleteArray(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      array,              /**< address of rational array */
-   int                   size                /**< size of the array */
-   );
-
-/** delete an array of rationals and free the allocated memory */
-EXTERN
-void RdeleteArrayVals(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
@@ -389,6 +401,11 @@ SCIP_Bool RisIntegral(
    const SCIP_Rational*  r                   /**< the rational to check */
    );
 
+EXTERN
+SCIP_Bool RisFpRepresentable(
+   const SCIP_Rational*    r
+   );
+
 /*
  * Printing/Conversion methods
  */
@@ -418,7 +435,7 @@ SCIP_Real RgetRealApprox(
    );
 
 /*
- * Dynamic Arrays
+ * Dynamic Arrays todo: use stl to do this
  */
 
 /** creates a dynamic array of real values */
