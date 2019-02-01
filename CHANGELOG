@@ -26,6 +26,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
 ### Changed parameters
 
 ### New parameters
