@@ -88,6 +88,7 @@ static int numlp         =           0;
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
+#define NEAR_REL_TOLERANCE           1.0     /* MOSEK will multiply all tolerances with this factor after stalling */
 #define DEBUG_PRINT_STAT             0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
@@ -2663,6 +2664,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_BASIS, crossover ? MSK_BI_ALWAYS : MSK_BI_NEVER) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_INTPNT) );
    lpi->lastalgo = MSK_OPTIMIZER_INTPNT;
+
+#if MSK_VERSION_MAJOR >= 9
+   MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_CO_TOL_NEAR_REL, NEAR_REL_TOLERANCE) );
+#endif
 
 #if WRITE_INTPNT > 0
    if( optimizecount > WRITE_ABOVE )
