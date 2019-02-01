@@ -88,7 +88,9 @@ static int numlp         =           0;
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
+#if MSK_VERSION_MAJOR >= 9
 #define NEAR_REL_TOLERANCE           1.0     /* MOSEK will multiply all tolerances with this factor after stalling */
+#endif
 #define DEBUG_PRINT_STAT             0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
