@@ -3838,7 +3838,7 @@ SCIP_RETCODE convertstat_mosek2scip(
          else
          {
             MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
-            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
          }
 #endif
 
@@ -3911,7 +3911,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          else
          {
             MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
-            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
          }
 #endif
 
@@ -4515,7 +4515,7 @@ SCIP_RETCODE checkState1(
          else
          {
             MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
-            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
          }
 #endif
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
