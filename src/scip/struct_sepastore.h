@@ -50,6 +50,17 @@ struct SCIP_SepaStore
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
+struct SCIP_SepaStoreEx
+{
+   SCIP_ROWEX**          cuts;
+   int                   cutssize;
+   int                   ncuts;
+   int                   ncutsfound;
+   int                   ncutsfoundround;
+   int                   ncutsapplied;
+   SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
+};
+
 #ifdef __cplusplus
 }
 #endif
