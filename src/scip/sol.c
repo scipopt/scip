@@ -377,6 +377,7 @@ SCIP_RETCODE SCIPsolCopy(
       break;
    case SCIP_SOLTYPE_RELAX:
       SCIPsolSetRelax((*sol), SCIPsolGetRelax(sourcesol));
+      break;
    default:
       break;
    }

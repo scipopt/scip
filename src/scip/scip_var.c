@@ -2376,6 +2376,9 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPclearRelaxSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* update the responsible relax pointer */
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
+
    /* the relaxation solution is already cleared */
    if( SCIPrelaxationIsSolZero(scip->relaxation) )
       return SCIP_OKAY;
@@ -2389,7 +2392,6 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
 
    SCIPrelaxationSetSolObj(scip->relaxation, 0.0);
    SCIPrelaxationSetSolZero(scip->relaxation, TRUE);
-   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    return SCIP_OKAY;
 }
@@ -2556,6 +2558,7 @@ SCIP_Bool SCIPisRelaxSolValid(
  */
 SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure that set the current relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
@@ -2564,6 +2567,7 @@ SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmarkRelaxSolValid", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    return SCIP_OKAY;
 }

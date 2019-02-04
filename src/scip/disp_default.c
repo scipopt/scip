@@ -104,7 +104,7 @@
 #define DISP_STRI_LPAVGITERS    TRUE
 
 #define DISP_NAME_INCUMBHEUR    "incumbentheur"
-#define DISP_DESC_INCUMBHEUR    "name of the heuristic or relaxation responsible of the incumbent solution"
+#define DISP_DESC_INCUMBHEUR    "name of the heuristic or relaxation responsible for the incumbent solution"
 #define DISP_HEAD_INCUMBHEUR    "heur"
 #define DISP_WIDT_INCUMBHEUR    6
 #define DISP_PRIO_INCUMBHEUR    25000
@@ -519,6 +519,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
          infostr = heur != NULL ? SCIPheurGetName(heur) : "heuristic";
          break;
       case SCIP_SOLTYPE_UNKNOWN:
+      default:
          infostr = "unknown";
          break;
       }

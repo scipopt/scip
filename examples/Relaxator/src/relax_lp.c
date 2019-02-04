@@ -133,7 +133,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
          }
 
          /* mark relaxation solution to be valid and inform SCIP that the relaxation included all LP rows */
-         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, relax, TRUE) );
       }
 
       SCIPdebugMsg(scip, "LP lower bound = %g\n", relaxval);

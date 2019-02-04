@@ -157,7 +157,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
          }
 
          /* mark relaxation solution to be valid */
-         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, relax, TRUE) );
       }
 
       SCIPdebugMsg(scip, "NLP lower bound = %g\n", relaxval);

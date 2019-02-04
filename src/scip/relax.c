@@ -860,7 +860,7 @@ void SCIPrelaxationUpdateVarObj(
    relaxation->relaxsolobjval += (newobj - oldobj) * relaxsolval;
 }
 
-/** store the most recent relaxation handler \p relax responsible of the solution */
+/** store the most recent relaxation handler \p relax responsible for the solution */
 void SCIPrelaxationSetSolRelax(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_RELAX*           relax               /**< responsible relaxation handler, or NULL */
@@ -871,7 +871,7 @@ void SCIPrelaxationSetSolRelax(
    relaxation->lastsolrelax = relax;
 }
 
-/** returns the most recent relaxation handler responsible of the solution, or NULL if unspecified */
+/** returns the most recent relaxation handler responsible for the solution, or NULL if unspecified */
 SCIP_RELAX* SCIPrelaxationGetSolRelax(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    )

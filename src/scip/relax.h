@@ -265,14 +265,14 @@ void SCIPrelaxationUpdateVarObj(
    SCIP_Real             newobj              /**< new objective coefficient */
    );
 
-/** store the most recent relaxation handler \p relax responsible of the solution */
+/** store the most recent relaxation handler \p relax responsible for the solution */
 extern
 void SCIPrelaxationSetSolRelax(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_RELAX*           relax               /**< relaxation handler responsible of the most recent relaxation solution */
+   SCIP_RELAX*           relax               /**< relaxation handler responsible for the most recent relaxation solution */
    );
 
-/** returns the most recent relaxation handler responsible of the solution, or NULL if unspecified */
+/** returns the most recent relaxation handler responsible for the solution, or NULL if unspecified */
 extern
 SCIP_RELAX* SCIPrelaxationGetSolRelax(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
