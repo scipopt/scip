@@ -111,6 +111,7 @@ set(scipsources
     scip/heur_octane.c
     scip/heur_ofins.c
     scip/heur_oneopt.c
+    scip/heur_padm.c
     scip/heur_proximity.c
     scip/heur_pscostdiving.c
     scip/heur_reoptsols.c
@@ -544,6 +545,7 @@ set(scipheaders
     scip/heur_octane.h
     scip/heur_ofins.h
     scip/heur_oneopt.h
+    scip/heut_padm.h
     scip/heur_proximity.h
     scip/heur_pscostdiving.h
     scip/heur_randrounding.h
