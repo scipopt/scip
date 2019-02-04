@@ -37,6 +37,8 @@ static SCIP* scip;
 static SCIP_VAR* x_1;
 static SCIP_VAR* y_1;
 static SCIP_VAR* z_1;
+static SCIP_VAR* z_2;
+static SCIP_VAR* z_3;
 
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
@@ -80,12 +82,16 @@ void setup(void)
    /* go to PRESOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x_1, "x1", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x_1, "x1", 0.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y_1, "y1", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z_1, "z1", 0, 1, 0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z_2, "z2", 0, 1, 0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z_3, "z3", 0, 1, 0, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPaddVar(scip, x_1) );
    SCIP_CALL( SCIPaddVar(scip, y_1) );
    SCIP_CALL( SCIPaddVar(scip, z_1) );
+   SCIP_CALL( SCIPaddVar(scip, z_2) );
+   SCIP_CALL( SCIPaddVar(scip, z_3) );
 }
 
 /* releases variables, frees scip */
@@ -95,13 +101,74 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &y_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &z_1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z_2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z_3) );
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
+/* tests the detection of semicontinuous variables */
+Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
+{
+   SCIP_HASHMAP* scvars;
+   SCIP_HASHMAPENTRY* entry;
+   SCIP_SCVARDATA* scvdata;
+   SCIP_Bool result, infeas;
+   int nbndchgs, c;
+
+   SCIPinfoMessage(scip, NULL, "\nTesting varIsSemicontinuous");
+
+   /* allocate memory */
+   SCIPhashmapCreate(&scvars, SCIPblkmem(scip), 1);
+
+   /* add bound information to the vars */
+   SCIPinfoMessage(scip, NULL, "\nvar z1 has bounds %f, %f", SCIPvarGetLbGlobal(z_1), SCIPvarGetUbGlobal(z_1));
+   /* z1 <= x1 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIPinfoMessage(scip, NULL, "\nvar x1 has bounds %f, %f", SCIPvarGetLbGlobal(x_1), SCIPvarGetUbGlobal(x_1));
+   /* x1 <= 2*z2 */
+   SCIPaddVarVub(scip, x_1, z_2, 2.0, 0.0, &infeas, &nbndchgs);
+   SCIPinfoMessage(scip, NULL, "\nvar x1 has bounds %f, %f", SCIPvarGetLbGlobal(x_1), SCIPvarGetUbGlobal(x_1));
+   /* 2z3 <= x1 <= 4*z3 */
+   SCIPaddVarVlb(scip, x_1, z_3, 2.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_3, 4.0, 0.0, &infeas, &nbndchgs);
+   SCIPinfoMessage(scip, NULL, "\nvar x1 has bounds %f, %f", SCIPvarGetLbGlobal(x_1), SCIPvarGetUbGlobal(x_1));
+
+   /* check if the var is semicontinuous */
+   SCIP_CALL( varIsSemicontinuous(scip, x_1, scvars, &result) );
+
+   /* check result */
+   cr_expect_eq(SCIPhashmapGetNElements(scvars), 1, "Expected 1 semicontinuous variable, got %d", SCIPhashmapGetNElements(scvars));
+   scvdata = SCIPhashmapGetImage(scvars, (void*)x_1);
+   cr_expect_eq(scvdata->nbnds, 3, "Expected 3 on/off bounds for variable x1, got %d", scvdata->nbnds);
+
+   cr_expect_eq(scvdata->bvars[0], (void*)z_1, "bvars[0] expected to be z1, got %s", SCIPvarGetName(scvdata->bvars[0]));
+   cr_expect_eq(scvdata->vals0[0], 0.0, "vals0[0] expected to be 0.0, got %f", scvdata->vals0[0]);
+   cr_expect_eq(scvdata->bvars[1], (void*)z_2, "bvars[1] expected to be z2, got %s", SCIPvarGetName(scvdata->bvars[1]));
+   cr_expect_eq(scvdata->vals0[1], 0.0, "vals0[1] expected to be 0.0, got %f", scvdata->vals0[1]);
+   cr_expect_eq(scvdata->bvars[2], (void*)z_3, "bvars[2] expected to be z3, got %s", SCIPvarGetName(scvdata->bvars[2]));
+   cr_expect_eq(scvdata->vals0[2], 0.0, "vals0[2] expected to be 0.0, got %f", scvdata->vals0[2]);
+
+   /* free memory */
+   for( c = 0; c < SCIPhashmapGetNEntries(scvars); ++c )
+   {
+      entry = SCIPhashmapGetEntry(scvars, c);
+      if( entry != NULL )
+      {
+         scvdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
+         SCIPfreeBlockMemory(scip, &scvdata);
+      }
+   }
+   SCIPhashmapFree(&scvars);
+}
+
 /* detects x1^2 + x1 - log(y1) as an on/off expression */
+#ifdef 0
 Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -171,6 +238,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &vubcons) );
    SCIP_CALL( SCIPreleaseCons(scip, &vlbcons) );
 }
+#endif
 
 /* TODO more unittests */
 

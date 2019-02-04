@@ -1107,6 +1107,63 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
    assert(pos == k);
 }
 
+/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+void SORTTPL_NAME(SCIPsortedvecIntersect, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      array1,                               /**< pointer to first data array */
+   int                   narray1,                              /**< number of entries of first array */
+   SORTTPL_KEYTYPE*      array2,                               /**< pointer to second data array */
+   int                   narray2,                              /**< number of entries of second array */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   SORTTPL_KEYTYPE*      intersectarray,                       /**< intersection of array1 and array2
+                                                                *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray                       /**<  pointer to store number of entries of intersection array
+                                                                *   (note: it is possible to use narray1 for this input argument)*/
+)
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (v1 = 0; v1 < narray1; ++v1)
+   {
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+         continue;
+
+      for (v2 = k; v2 < narray2; ++v2)
+      {
+         assert( v2 == 0 || SORTTPL_ISWORSE(array2[v2], array2[v2-1]) || array2[v2] == array2[v2-1] );
+
+         if ( SORTTPL_ISWORSE(array2[v2], array1[v1]) )
+         {
+            k = v2;
+            break;
+         }
+         else if ( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+}
+
 /* undefine template parameters and local defines */
 #undef SORTTPL_NAMEEXT
 #undef SORTTPL_KEYTYPE
