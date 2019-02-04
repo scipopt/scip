@@ -46,6 +46,7 @@ Interface changes
 - new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
   packing or partitioning type
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
+- added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
 
 ### Command line interface
 ### Interfaces to external software

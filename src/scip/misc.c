@@ -10431,6 +10431,62 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
    return SCIP_OKAY;
 }
 
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
+void SCIPcomputeArraysIntersectionPtr(
+   void**                array1,                   /**< pointer to first data array */
+   int                   narray1,                  /**< number of entries of first array */
+   void**                array2,                   /**< pointer to second data array */
+   int                   narray2,                  /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),              /**< data element comparator */
+   void**                intersectarray,           /**< intersection of array1 and array2
+                                                    *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
+                                                    *   (note: it is possible to use narray1 for this input argument) */
+)
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( ptrcomp != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for( v1 = 0; v1 < narray1; ++v1 )
+   {
+      assert( v1 == 0 || (*ptrcomp)(array1[v1], array1[v1-1]) >= 0 );
+
+      /* skip duplicate entries */
+      if( v1+1 < narray1 && array1[v1] == array1[v1+1] )
+         continue;
+
+      for( v2 = k; v2 < narray2; ++v2 )
+      {
+         assert( v2 == 0 || (*ptrcomp)(array2[v2], array2[v2-1]) > 0 || array2[v2] == array2[v2-1] );
+
+         if( (*ptrcomp)(array2[v2], array1[v1]) > 0 )
+         {
+            k = v2;
+            break;
+         }
+
+         if( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+}
+
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_RETCODE SCIPcomputeArraysSetminus(
