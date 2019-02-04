@@ -77,6 +77,8 @@ Interface changes
   parallel. Setting this argument to TRUE has a performance cost.
 
 - new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+- functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
+  receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
 
 ### New API functions
 
@@ -85,6 +87,9 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
+- new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolGetRelax(), SCIPsolSetLPRelaxation() to set or query the
+  creator type of a primal solution. Creators can be relaxation handlers, the LP relaxation, or primal heuristics.
+  The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 
 ### Command line interface
 
@@ -159,6 +164,11 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
+- new display column "incumbentheur" displayed as "heur" in the header column, which reports the creator name
+  (heuristic, relaxation handler, LP relaxation) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
 
 Known bugs
 ----------
