@@ -419,12 +419,23 @@ static
 SCIP_DECL_DISPINITSOL(SCIPdispInitsolSolFound)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0
+      || strcmp(SCIPdispGetName(disp), DISP_NAME_INCUMBHEUR) == 0);
    assert(scip != NULL);
 
    SCIPdispSetData(disp, (SCIP_DISPDATA*)SCIPgetBestSol(scip));
 
    return SCIP_OKAY;
+}
+
+/** todo returns TRUE if this solution should be displayed in the output */
+static
+SCIP_Bool isDisplaySol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< solution data structure, e.g., current incumbent solution */
+   )
+{
+   return SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
 }
 
 /** output method of display column to output file stream 'file' for character of best solution */
@@ -443,7 +454,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       SCIPdispSetData(disp, NULL);
 
    dispdata = SCIPdispGetData(disp);
-   if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+   if( sol != (SCIP_SOL*)dispdata && isDisplaySol(scip, sol) )
    {
       SCIP_HEUR* heur;
       char c;
@@ -470,19 +481,6 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of display column (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_DISPINITSOL(dispInitsolIncumbHeur)
-{  /*lint --e{715}*/
-   assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_INCUMBHEUR) == 0);
-   assert(scip != NULL);
-
-   SCIPdispSetData(disp, (SCIP_DISPDATA*)SCIPgetBestSol(scip));
-
-   return SCIP_OKAY;
-}
-
 /** output method of display column to output name of incumbent heuristic or relaxation to file stream 'file' */
 static
 SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
@@ -499,7 +497,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputIncumbHeur)
       SCIPdispSetData(disp, NULL);
 
    dispdata = SCIPdispGetData(disp);
-   if( sol != (SCIP_SOL*)dispdata && SCIPisFeasLE(scip, SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+   if( sol != (SCIP_SOL*)dispdata && isDisplaySol(scip, sol) )
    {
       SCIP_HEUR* heur;
       SCIP_RELAX* relax;
@@ -1362,7 +1360,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_INCUMBHEUR, DISP_DESC_INCUMBHEUR, DISP_HEAD_INCUMBHEUR,
          SCIP_DISPSTATUS_AUTO,
          dispCopyDefault,
-         NULL, NULL, NULL, dispInitsolIncumbHeur, NULL, dispOutputIncumbHeur, NULL,
+         NULL, NULL, NULL, SCIPdispInitsolSolFound, NULL, dispOutputIncumbHeur, NULL,
          DISP_WIDT_INCUMBHEUR, DISP_PRIO_INCUMBHEUR, DISP_POSI_INCUMBHEUR, DISP_STRI_INCUMBHEUR) );
 
    assert(SCIPfindDisp(scip, DISP_NAME_CONCSOLFOUND) == NULL);
