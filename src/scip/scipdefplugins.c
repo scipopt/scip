@@ -160,6 +160,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
+   SCIP_CALL( SCIPincludeHeurPADM(scip) );
    SCIP_CALL( SCIPincludeHeurProximity(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
