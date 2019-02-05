@@ -33,6 +33,9 @@
 #define NLHDLR_DESC         "perspective handler for expressions"
 #define NLHDLR_PRIORITY     75
 
+#define DETECTSUM    FALSE
+#define MULTCUTS     TRUE
+
 /*
  * Data structures
  */
@@ -186,43 +189,46 @@ SCIP_RETCODE varIsSemicontinuous(
    }
 
    /* look for vubvars that have not been processed yet */
-   for( c = 0; c < nvubs; ++c )
-   {/*lint --e{613}*/
-      SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
-         SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);
-      /* var bounds should contain bvar; if bvar is not specified, look for any binary var */
-      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)
-         continue;
-
-      bvar = vubvars[c];
-
-      /* skip vars that are in vlbvars */
-      if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
-         continue;
-
-      lb0 = glb;
-      lb1 = glb;
-      ub0 = MIN(vubconstants[c], gub);
-      ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
-
-      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
+   if( vubvars != NULL )
+   {
+      for( c = 0; c < nvubs; ++c )
       {
-         if( scvdata == NULL )
-            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
+         SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
+                      SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);
 
-         if( scvdata->nbnds + 1 > scvdata->bndssize )
+         if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)
+            continue;
+
+         bvar = vubvars[c];
+
+         /* skip vars that are in vlbvars */
+         if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
+            continue;
+
+         lb0 = glb;
+         lb1 = glb;
+         ub0 = MIN(vubconstants[c], gub);
+         ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
+
+         /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
+         if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
          {
-            newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars,  scvdata->bndssize, newsize) );
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
-            scvdata->bndssize = newsize;
-         }
-         assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+            if( scvdata == NULL )
+               SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
 
-         scvdata->bvars[scvdata->nbnds] = bvar;
-         scvdata->vals0[scvdata->nbnds] = lb0;
-         ++scvdata->nbnds;
+            if( scvdata->nbnds + 1 > scvdata->bndssize )
+            {
+               newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars,  scvdata->bndssize, newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
+               scvdata->bndssize = newsize;
+            }
+            assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+
+            scvdata->bvars[scvdata->nbnds] = bvar;
+            scvdata->vals0[scvdata->nbnds] = lb0;
+            ++scvdata->nbnds;
+         }
       }
    }
 
@@ -430,7 +436,6 @@ SCIP_RETCODE addPerspectiveLinearisation(
    SCIP_VAR** vars;
    SCIP_Real scalar_prod, fval, fval0;
    int nvars, v, pos;
-   SCIP_Bool exists;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -463,8 +468,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
       vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)vars[v]);
 
       /* find bvar in vardata->bvars */
-      exists = SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
-      assert(exists);
+      SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);  /*lint !e534*/
+      assert(pos < vardata->nbnds);
 
       vals0[v] = vardata->vals0[pos];
    }
@@ -624,6 +629,61 @@ SCIP_RETCODE addTerm(
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
    }
    SCIPfreeBufferArray(scip, &varexprs);
+
+   return SCIP_OKAY;
+}
+
+/** add the cut given by rowprep to sepastore */
+static
+SCIP_RETCODE addCut(
+   SCIP*         scip,
+   SCIP_CONS*    cons,
+   SCIP_ROWPREP* rowprep,
+   SCIP_SOL*     sol,
+   double        mincutviolation,
+   int*          ncuts,
+   SCIP_RESULT*  result
+   )
+{
+   SCIP_Bool success;
+   SCIP_ROW* row;
+
+   /* merge coefficients that belong to same variable */
+   SCIPmergeRowprepTerms(scip, rowprep);
+
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+
+   /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
+   if( success )
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "Separating sol point\n");
+      for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
+      {
+         SCIP_VAR* var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
+         SCIPwriteVarName(scip, NULL, var, TRUE);
+         SCIPinfoMessage(scip, NULL, ": %f\n",  SCIPgetSolVal(scip, sol, var));
+      }
+      SCIPinfoMessage(scip, NULL, "by perspective cut ");
+      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+      }
+      else
+      {
+         *result = SCIP_SEPARATED;
+         ++*ncuts;
+      }
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
 
    return SCIP_OKAY;
 }
@@ -812,6 +872,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
 #endif
 
+   /* ignore sums */
+   if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_UNKNOWN || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR )
    {
       SCIPdebugMsg(scip, "curvature of expr %p is %s\n", expr, SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR ? "linear" : "unknown");
@@ -945,7 +1012,6 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
 { /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
-   SCIP_ROW* row;
    SCIP_VAR* auxvar;
    int i, j;
    SCIP_CONSEXPR_EXPR* pexpr;
@@ -982,86 +1048,78 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
-   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
-      SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
-
-   success = TRUE; /* think positive */
-
-   /* handle convex terms */
-   for( i = 0; i < nlhdlrexprdata->nconvterms && success; ++i )
+   if( !MULTCUTS || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
    {
-      SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol, &success) );
-   }
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-   /* handle on/off terms */
-   for( i = 0; i < nlhdlrexprdata->nonoffterms && success; ++i )
-   {
-      SCIP_VAR* bvar;
-      SCIP_Real minbval = 1, bval;
+      if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+         SCIPaddRowprepConstant(rowprep, SCIPgetConsExprExprSumConstant(expr));
 
-      /* heuristically choose the most promising binary variable (one closest to 0) */
-      pexpr = nlhdlrexprdata->onoffterms[i];
-      pcoef = nlhdlrexprdata->onoffcoefs[i];
-      bvars = nlhdlrexprdata->termbvars[i];
-      bvar = bvars[0];
-      for( j = 1; j < nlhdlrexprdata->ntermbvars[i]; ++j)
+      success = TRUE; /* think positive */
+
+      /* handle convex terms */
+      for( i = 0; i < nlhdlrexprdata->nconvterms && success; ++i )
       {
-         bval = SCIPgetSolVal(scip, sol, bvars[j]);
-         if( bvars[j] != NULL && bval < minbval )
+         SCIP_CALL( addGradientLinearisation(scip, conshdlr, rowprep, nlhdlrexprdata->convterms[i], nlhdlrexprdata->convcoefs[i], sol, &success) );
+      }
+
+      /* handle on/off terms */
+      for( i = 0; i < nlhdlrexprdata->nonoffterms && success; ++i )
+      {
+         SCIP_VAR* bvar;
+         SCIP_Real minbval = 1, bval;
+
+         /* heuristically choose the most promising binary variable (one closest to 0) */
+         pexpr = nlhdlrexprdata->onoffterms[i];
+         pcoef = nlhdlrexprdata->onoffcoefs[i];
+         bvars = nlhdlrexprdata->termbvars[i];
+         bvar = bvars[0];
+         for( j = 1; j < nlhdlrexprdata->ntermbvars[i]; ++j)
          {
-            minbval = bval;
-            bvar = bvars[j];
+            bval = SCIPgetSolVal(scip, sol, bvars[j]);
+            if( bvars[j] != NULL && bval < minbval )
+            {
+               minbval = bval;
+               bvar = bvars[j];
+            }
          }
+         SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, pcoef, bvar, sol, &success) );
       }
-      SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, pexpr, pcoef, bvar, sol, &success) );
+
+      if( success )
+      {
+         SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
    }
-
-   /* merge coefficients that belong to same variable */
-   SCIPmergeRowprepTerms(scip, rowprep);
-
-   if( success )
+   else /* cuts for every suitable binary variable have been requested and expr is not a sum */
    {
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, NULL, &success) );
+      assert(nlhdlrexprdata->nonoffterms == 1);
+
+      /* generate one cut for each binary variable */
+      for( i = 0; i < nlhdlrexprdata->ntermbvars[0]; ++i )
+      {
+         SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+         success = TRUE; /* think positive */
+
+         SCIP_CALL( addPerspectiveLinearisation(scip, conshdlr, nlhdlrdata->scvars, rowprep, expr, 1.0, nlhdlrexprdata->termbvars[0][i], sol, &success) );
+
+         if( success )
+         {
+            SCIP_CALL( addCut(scip, cons, rowprep, sol, mincutviolation, ncuts, result) );
+         }
+
+         SCIPfreeRowprep(scip, &rowprep);
+         if( *result == SCIP_CUTOFF )
+            break;
+      }
    }
-
-   /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
-   if( success )
-   {
-      SCIP_Bool infeasible;
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-#ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "Separating sol point\n");
-      for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
-      {
-         SCIP_VAR* var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
-         SCIPwriteVarName(scip, NULL, var, TRUE);
-         SCIPinfoMessage(scip, NULL, ": %f\n",  SCIPgetSolVal(scip, sol, var));
-      }
-      SCIPinfoMessage(scip, NULL, "by perspective cut ");
-      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
-
-      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-      if( infeasible )
-      {
-         *result = SCIP_CUTOFF;
-      }
-      else
-      {
-         *result = SCIP_SEPARATED;
-         ++*ncuts;
-      }
-
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-   }
-
-   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
