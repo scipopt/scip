@@ -89,6 +89,11 @@ typedef struct Component
    SCIP_VAR**            subvars;            /**< variables belonging to this component (in subscip) */
    int                   nvars;              /**< number of variables belonging to this component */
    int                   number;             /**< component number */
+
+   SCIP_VAR**            slackspos;
+   int                   nslackspos;
+   SCIP_VAR**            slacksneg;
+   int                   nslacksneg;
 } COMPONENT;
 
 /** data related to one problem */
@@ -141,6 +146,11 @@ SCIP_RETCODE initComponent(
    component->nvars = 0;
    component->number = problem->ncomponents;
 
+   component->slackspos = NULL;
+   component->nslackspos = 0;
+   component->slacksneg = NULL;
+   component->nslacksneg = 0;
+
    ++problem->ncomponents;
 
    return SCIP_OKAY;
@@ -171,6 +181,12 @@ SCIP_RETCODE freeComponent(
       SCIPfreeBlockMemoryArray(scip, &component->vars, component->nvars);
       SCIPfreeBlockMemoryArray(scip, &component->subvars, component->nvars);
    }
+#if 0
+   SCIPfreeBufferArray(scip, &component->slackspos);
+   SCIPfreeBufferArray(scip, &component->slacksneg);
+#endif
+   component->nslackspos = 0;
+   component->nslacksneg = 0;
 
    /* free sub-SCIP belonging to this component and the working solution */
    if( component->subscip != NULL )
@@ -594,6 +610,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_VAR** linkvars;
    SET* linkvartoblocks;
    SET* blocktolinkvars;
+   int j;
 
    SCIPdebugMsg(scip,"run padm heuristic...\n");
 #if 0
@@ -629,7 +646,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    nblocks = SCIPdecompGetNBlocks(decomp);
    ncomponents = nblocks;
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
-   assert(conslabels[0] >= 0); /* TODO: currently we do not allow linking constraints */
+   assert(conslabels[0] == 0); /* TODO: currently we do not allow linking constraints */
 
    /* determine start indices of components in (sorted) conss array */
    i = 0;
@@ -694,6 +711,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
+   /* init block to linkvars set */
    for( i = 0; i < problem->ncomponents; i++ )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[i].indexes), numlinkvars) );
@@ -718,6 +736,85 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
    }
+
+   /* init slack variable arrays */
+   for( i = 0; i < problem->ncomponents; i++ )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[i]).slackspos), blocktolinkvars[i].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[i]).slacksneg), blocktolinkvars[i].size) );
+   }
+
+   /* extend submips */
+   for( c = 0; c < problem->ncomponents; c++ )
+   {
+      SCIP_VAR** blockvars;
+      int nblockvars;
+      blockvars = SCIPgetVars((problem->components[c]).subscip);
+      nblockvars = SCIPgetNVars((problem->components[c]).subscip);
+
+      /* set objective function to zero */
+      for( i = 0; i < nblockvars; i++ )
+         SCIP_CALL( SCIPchgVarObj((problem->components[c]).subscip, blockvars[i], 0.0) );
+
+      /* add slack variables for linking variables in block */
+      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      {
+         int linkvaridx;
+         linkvaridx = blocktolinkvars[c].indexes[i];
+
+         for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
+         {
+            int blockcontaininglinkvar;
+            blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
+
+            if( blockcontaininglinkvar != c )
+            {
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
+                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
+
+               j = (problem->components[c]).nslackspos;
+               (problem->components[c]).slackspos[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->components[c]).subscip,
+                     &((problem->components[c]).slackspos[j]), name,
+                        0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+               SCIP_CALL( SCIPaddVar((problem->components[c]).subscip,
+                     (problem->components[c]).slackspos[j]) );
+               assert( (problem->components[c]).slackspos[j] != NULL );
+               (problem->components[c]).nslackspos++;
+
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
+                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
+
+               j = (problem->components[c]).nslacksneg;
+               (problem->components[c]).slacksneg[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->components[c]).subscip,
+                     &((problem->components[c]).slacksneg[j]), name,
+                        0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+               SCIP_CALL( SCIPaddVar((problem->components[c]).subscip,
+                     (problem->components[c]).slacksneg[j]) );
+               assert( (problem->components[c]).slacksneg[j] != NULL );
+               (problem->components[c]).nslacksneg++;
+            }
+         }
+      }
+
+      assert((problem->components[c]).nslackspos == blocktolinkvars[c].size);
+      assert((problem->components[c]).nslacksneg == blocktolinkvars[c].size);
+
+
+      /* BAUSTELLE: hier weiter ... */
+      /* the freeing of slackvars is not correct */
+
+
+   }
+
+#if 1
+   for( i = 0; i < problem->ncomponents; i++ )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
+      SCIP_CALL( SCIPwriteOrigProblem((problem->components[i]).subscip, name, "lp", FALSE) );
+   }
+#endif
 
 #if 0 /* BAUSTELLE */
    for(block = 0; block < nblocks; ++block)
