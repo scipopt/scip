@@ -40,8 +40,6 @@
 /** data structure to store information of a semicontinuous variable */
 struct SCIP_SCVarData
 {
-   SCIP_VAR*             bvar;               /**< the binary variable on which the variable domain depends */
-   SCIP_Real             val0;               /**< var value when bvar = 0 */
    SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
    SCIP_VAR**            bvars;              /**< the binary variables on which the variable domain depends */
    int                   nbnds;              /**< number of suitable on/off bounds the var has */
@@ -93,7 +91,7 @@ SCIP_RETCODE varIsSemicontinuous(
    SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
    )
 {
-   SCIP_Real lb0, ub0, lb1, ub1;
+   SCIP_Real lb0, ub0, lb1, ub1, glb, gub;
    SCIP_Bool exists;
    int c, pos, newsize;
    SCIP_VAR** vlbvars;
@@ -128,6 +126,8 @@ SCIP_RETCODE varIsSemicontinuous(
    vubconstants = SCIPvarGetVubConstants(var);
    nvlbs = SCIPvarGetNVlbs(var);
    nvubs = SCIPvarGetNVubs(var);
+   glb = SCIPvarGetLbGlobal(var);
+   gub = SCIPvarGetUbGlobal(var);
 
    /* Scan through lower bounds; for each binary vlbvar save the corresponding lb0 and lb1.
     * Then check if there is an upper bound with this vlbvar and save ub0 and ub1.
@@ -143,32 +143,32 @@ SCIP_RETCODE varIsSemicontinuous(
 
       bvar = vlbvars[c];
 
-      lb0 = MAX(vlbconstants[c], SCIPvarGetLbGlobal(var));
-      lb1 = MAX(vlbconstants[c] + vlbcoefs[c], SCIPvarGetLbGlobal(var));
+      lb0 = MAX(vlbconstants[c], glb);
+      lb1 = MAX(vlbconstants[c] + vlbcoefs[c], glb);
 
       /* look for bvar in vubvars */
       if( vubvars != NULL )
          exists = SCIPsortedvecFindPtr((void**)vubvars, SCIPvarComp, bvar, nvubs, &pos);
       else exists = FALSE;
       if( exists )
-      {
+      {/*lint --e{644}*/
          /* save the upper bounds */
-         ub0 = MIN(vubconstants[pos], SCIPvarGetUbGlobal(var));
-         ub1 = MIN(vubconstants[pos] + vubcoefs[pos], SCIPvarGetUbGlobal(var));
+         ub0 = MIN(vubconstants[pos], gub);
+         ub1 = MIN(vubconstants[pos] + vubcoefs[pos], gub);
       }
       else
       {
          /* if there is no upper bound with vubvar = bvar, use global var bounds */
-         ub0 = SCIPvarGetUbGlobal(var);
-         ub1 = SCIPvarGetUbGlobal(var);
+         ub0 = gub;
+         ub1 = gub;
       }
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
       SCIPdebugMsg(scip, "\nbnds for this var are: %f, %f, %f, %f", lb0, lb1, ub0, ub1);
-      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) )
+      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
          if( scvdata == NULL )
-            SCIPallocClearBlockMemory(scip, &scvdata);
+            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
 
          if( scvdata->nbnds + 1 > scvdata->bndssize )
          {
@@ -187,8 +187,9 @@ SCIP_RETCODE varIsSemicontinuous(
 
    /* look for vubvars that have not been processed yet */
    for( c = 0; c < nvubs; ++c )
-   {
-      SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f", SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);
+   {/*lint --e{613}*/
+      SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
+         SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);
       /* var bounds should contain bvar; if bvar is not specified, look for any binary var */
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)
          continue;
@@ -199,16 +200,16 @@ SCIP_RETCODE varIsSemicontinuous(
       if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
          continue;
 
-      lb0 = SCIPvarGetLbGlobal(var);
-      lb1 = SCIPvarGetLbGlobal(var);
-      ub0 = MIN(vubconstants[c], SCIPvarGetUbGlobal(var));
-      ub1 = MIN(vubconstants[c] + vubcoefs[c], SCIPvarGetUbGlobal(var));
+      lb0 = glb;
+      lb1 = glb;
+      ub0 = MIN(vubconstants[c], gub);
+      ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) )
+      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
          if( scvdata == NULL )
-            SCIPallocClearBlockMemory(scip, &scvdata);
+            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
 
          if( scvdata->nbnds + 1 > scvdata->bndssize )
          {
@@ -225,7 +226,7 @@ SCIP_RETCODE varIsSemicontinuous(
       }
    }
 
-   SCIPdebugMsg(scip, "\nvar %s has bounds %f, %f", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+   SCIPdebugMsg(scip, "\nvar %s has bounds %f, %f", SCIPvarGetName(var), glb, gub);
 
    if( scvdata != NULL )
    {
@@ -429,6 +430,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
    SCIP_VAR** vars;
    SCIP_Real scalar_prod, fval, fval0;
    int nvars, v, pos;
+   SCIP_Bool exists;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -461,8 +463,8 @@ SCIP_RETCODE addPerspectiveLinearisation(
       vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)vars[v]);
 
       /* find bvar in vardata->bvars */
-      SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
-      assert(pos != vardata->nbnds);
+      exists = SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
+      assert(exists);
 
       vals0[v] = vardata->vals0[pos];
    }
@@ -554,7 +556,7 @@ SCIP_RETCODE addTerm(
    )
 {
    SCIP_CONSEXPR_EXPR** varexprs;
-   int nvars, v, i, nbvars;
+   int nvars, v, nbvars;
    SCIP_Bool var_is_sc;
    SCIP_VAR* var;
    SCIP_SCVARDATA* scvdata;
@@ -594,7 +596,7 @@ SCIP_RETCODE addTerm(
       SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[v])));
 #endif
       scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[v]));
-      SCIPsortedvecIntersectPtr((void**)expr_bvars, nbvars, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)expr_bvars, &nbvars);
+      SCIPcomputeArraysIntersectionPtr((void**)expr_bvars, nbvars, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)expr_bvars, &nbvars);
 
       /* if we have found out that the intersection is empty, term can be immediately added to convterms */
       if( nbvars == 0 )

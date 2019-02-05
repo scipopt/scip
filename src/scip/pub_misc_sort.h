@@ -4234,21 +4234,6 @@ SCIP_Bool SCIPsortedvecFindDownLong(
    int*                  pos                 /**< pointer to store position of element */
    );
 
-/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly
- */
-EXTERN
-void SCIPsortedvecIntersectPtr(
-   void**                ptrarray1,           /**< first pointer array */
-   int                   narray1,             /**< number of entries of first array */
-   void**                ptrarray2,           /**< second pointer array */
-   int                   narray2,             /**< number of entries of second array */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),         /**< data element comparator */
-   void**                intersectarray,      /**< intersection of array1 and array2
-                                               *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray      /**<  pointer to store number of entries of intersection array
-                                               *   (note: it is possible to use narray1 for this input argument)*/
-);
-
 /**@} */
 
 #ifdef __cplusplus

@@ -2085,7 +2085,7 @@ void SCIPpermuteArray(
  */
 
 
-/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 EXTERN
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -2097,6 +2097,20 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  nintersectarray     /**< pointer to store number of entries of intersection array
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
+
+/** computes pointer set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+EXTERN
+void SCIPcomputeArraysIntersectionPtr(
+   void**                array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+);
 
 /** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
 EXTERN

@@ -168,7 +168,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
 }
 
 /* detects x1^2 + x1 - log(y1) as an on/off expression */
-#ifdef 0
+#if 0
 Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
