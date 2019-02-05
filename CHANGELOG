@@ -165,7 +165,7 @@ Fixed bugs
 Miscellaneous
 -------------
 
-- new display column "incumbentheur" displayed as "heur" in the header column, which reports the creator name
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
   (heuristic, relaxation handler, LP relaxation) of every new incumbent solution. Together with this change,
   heuristic display characters have been unified to represent the type of the heuristic
   (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
