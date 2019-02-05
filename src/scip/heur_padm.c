@@ -101,6 +101,12 @@ struct Problem
    int                   ncomponents;        /**< number of independent components into which the problem can be divided */
 };
 
+typedef struct set
+{
+   int                   size;
+   int*                  indexes;
+} SET;
+
 /** primal heuristic data */
 struct SCIP_HeurData
 {
@@ -581,11 +587,18 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    int block;
    int ncomponents;
    int c;
+   int k;
    int* compstartsconss;
    char name[SCIP_MAXSTRLEN];
+   int numlinkvars;
+   SCIP_VAR** linkvars;
+   SET* linkvartoblocks;
+   SET* blocktolinkvars;
 
    SCIPdebugMsg(scip,"run padm heuristic...\n");
+#if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
+#endif
 
    /* for prove of concept we only use ORIG decomp, conss, vars */
    assert(SCIPdecompstoreGetNOrigDecomps(decompstore) == 1);
@@ -616,7 +629,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    nblocks = SCIPdecompGetNBlocks(decomp);
    ncomponents = nblocks;
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
-   assert(conslabels[0] >= 0); /* currently we do not allow linking constraints */
+   assert(conslabels[0] >= 0); /* TODO: currently we do not allow linking constraints */
 
    /* determine start indices of components in (sorted) conss array */
    i = 0;
@@ -630,10 +643,80 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIP_CALL( createAndSplitProblem(scip, conss, compstartsconss, ncomponents, &problem) );
 
+#if 0
    for( i = 0; i < problem->ncomponents; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
       SCIP_CALL( SCIPwriteOrigProblem((problem->components[i]).subscip, name, "lp", FALSE) );
+   }
+#endif
+
+   /* count linking variables */
+   numlinkvars = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      if( varslabels[i] == -1 )
+         numlinkvars++;
+   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->ncomponents) );
+
+   /* extract linking variables and init linkvar to block indexes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
+   c = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      if( varslabels[i] == -1 )
+      {
+         linkvars[c] = vars[i];
+         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[c].indexes), problem->ncomponents) );
+         linkvartoblocks[c].size = 0;
+         c++;
+      }
+   }
+
+   /* fill linkvar to blocks */
+   for( i = 0; i < numlinkvars; i++ )
+   {
+      SCIP_VAR* var;
+      const char* vname;
+      vname = SCIPvarGetName(linkvars[i]);
+      k = 0;
+      for( c = 0; c < problem->ncomponents; c++ )
+      {
+         var = SCIPfindVar((problem->components[c]).subscip,vname);
+         if( var != NULL )
+         {
+            linkvartoblocks[i].indexes[k] = c;
+            linkvartoblocks[i].size = k + 1;
+            k++;
+         }
+      }
+   }
+
+   for( i = 0; i < problem->ncomponents; i++ )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[i].indexes), numlinkvars) );
+      blocktolinkvars[i].size = 0;
+   }
+
+   /* fill block to linkvars */
+   for( i = 0; i < problem->ncomponents; i++ )
+   {
+      k = 0;
+      for( c = 0; c < numlinkvars; c++ )
+      {
+         SCIP_VAR* var;
+         const char* vname;
+         vname = SCIPvarGetName(linkvars[c]);
+         var = SCIPfindVar((problem->components[i]).subscip,vname);
+         if( var != NULL )
+         {
+            blocktolinkvars[i].indexes[k] = c;
+            blocktolinkvars[i].size = k + 1;
+            k++;
+         }
+      }
    }
 
 #if 0 /* BAUSTELLE */
@@ -699,10 +782,20 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 #endif
 
+   for( i = 0; i < problem->ncomponents; i++ )
+      SCIPfreeBufferArray(scip, &(blocktolinkvars[i].indexes));
 
+   SCIPfreeBufferArray(scip, &blocktolinkvars);
+
+   for( i = 0; i < numlinkvars; i++ )
+      SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
+
+   SCIPfreeBufferArray(scip, &linkvartoblocks);
+   SCIPfreeBufferArray(scip, &linkvars);
    SCIPfreeBufferArray(scip, &compstartsconss);
    SCIPfreeBufferArray(scip, &conslabels);
    SCIPfreeBufferArray(scip, &varslabels);
+   freeProblem(&problem);
 
    return SCIP_OKAY;
 }
