@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_alns.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
  * @author Gregor Hendel
  */

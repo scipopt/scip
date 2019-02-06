@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_and.c
+ * @ingroup CONSHDLRS
  * @brief  Constraint handler for AND-constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz

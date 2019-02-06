@@ -8243,3 +8243,19 @@
  * - change tolerances inside relaxations
  * - epsilon-comparison methods for floating point numbers
  */
+
+/** @defgroup DEFPLUGINS Default Plugins
+ *  @brief implementation files (.c files) of the default plugins of SCIP
+ *
+ *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup DEFPLUGINS_HEUR Default Primal Heuristics
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default primal heuristics of SCIP
+ */
+
+/** @defgroup DEFPLUGINS_PRESOL Default Presolvers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default presolvers of SCIP
+ */
