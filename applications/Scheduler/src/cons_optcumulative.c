@@ -3985,9 +3985,6 @@ SCIP_DECL_CONSPARSE(consParseOptcumulative)
          SCIP_CALL( SCIPcreateConsOptcumulative(scip, cons, name, nvars, vars, binvars, durations, demands, capacity,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-         //SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
-         //SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
-
          (*success) = TRUE;
       }
    }
