@@ -1651,18 +1651,19 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          assert(graph_sol_valid(scip, graph, newsoledges));
          pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);
 
-         printf("REC: new obj: %f \n", pobj);
+         SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
          /* new solution better than incumbent? */
          if( !SCIPisStopped(scip) && SCIPisLT(scip, pobj, incumentobj) )
          {
             SCIPdebugMessage("...is better! \n");
             incumentobj = pobj;
-            *solfound = TRUE;
             BMScopyMemoryArray(incumbentedges, newsoledges, nedges);
 
-            if( !restrictheur && failcount >= 1 )
+            if( (!restrictheur && failcount >= 1) || !(*solfound) )
                failcount--;
+
+            *solfound = TRUE;
          }
          else
          {
