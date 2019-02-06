@@ -10122,7 +10122,7 @@ void SCIPcomputeArraysIntersectionPtr
    /* determine intersection of array1 and array2 */
    for (v1 = 0; v1 < narray1; ++v1)
    {
-      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+      assert( v1 == 0 || (*ptrcomp)(array1[v1], array1[v1-1]) >= 0 );
 
       /* skip duplicate entries */
       if ( v1+1 < narray1 && array1[v1] == array1[v1+1])

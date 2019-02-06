@@ -35,6 +35,7 @@
 
 static SCIP* scip;
 static SCIP_VAR* x_1;
+static SCIP_VAR* x_2;
 static SCIP_VAR* y_1;
 static SCIP_VAR* z_1;
 static SCIP_VAR* z_2;
@@ -79,15 +80,17 @@ void setup(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   /* go to PRESOLVING stage */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, TRUE) );
+   /* go to SOLVING stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x_1, "x1", 0.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x_2, "x2", 0.0, 4.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y_1, "y1", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z_1, "z1", 0, 1, 0, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z_2, "z2", 0, 1, 0, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z_3, "z3", 0, 1, 0, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPaddVar(scip, x_1) );
+   SCIP_CALL( SCIPaddVar(scip, x_2) );
    SCIP_CALL( SCIPaddVar(scip, y_1) );
    SCIP_CALL( SCIPaddVar(scip, z_1) );
    SCIP_CALL( SCIPaddVar(scip, z_2) );
@@ -99,6 +102,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x_2) );
    SCIP_CALL( SCIPreleaseVar(scip, &y_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &z_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &z_2) );
@@ -167,44 +171,27 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
    SCIPhashmapFree(&scvars);
 }
 
-/* detects x1^2 + x1 - log(y1) as an on/off expression */
-#if 0
+/* detects x1^2 as an on/off expression */
 Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
-   SCIP_Bool success;
-   SCIP_Bool changed;
+   SCIP_Bool success, infeas;
    SCIP_CONS* cons;
-   SCIP_CONS* vubcons;
-   SCIP_CONS* vlbcons;
-   SCIP_SCVARDATA* scv;
+   int nbndchgs;
 
-   /* create expression and simplify it */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1> - log(<y1>)", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = simplified;
-
+   /* create expression and constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
-   /* create upper varbound constraint x1 - 2z <= 0 */
-   SCIP_CALL( SCIPcreateConsVarbound(scip, &vubcons, "vub", x_1, z_1, -2.0, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddCons(scip, vubcons)  );
-
-   /* create lower varbound constraint x1 - z >= 0 */
-   SCIP_CALL( SCIPcreateConsVarbound(scip, &vlbcons, "vlb", x_1, z_1, -1.0, 0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddCons(scip, vlbcons)  );
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   /* z1 <= x1 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
@@ -220,13 +207,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    cr_assert(success);
    cr_assert_not_null(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nconvterms, 2, "Expecting 2 convex terms, got %d\n", nlhdlrexprdata->nconvterms);
    cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
-
-   scv = SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)x_1);
-   cr_expect_not_null(scv, "x should be detected as a semicontinuous variable!\n");
-   cr_expect_eq(scv->val0, 0.0, "Expecting val0 to be %g, got %g\n", 0.0, scv->val0);
-   cr_expect_eq(scv->bvar, z_1, "Expecting bvar to be %p, got %p\n", z_1, scv->bvar);
 
    SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
 
@@ -235,19 +216,140 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &vubcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &vlbcons) );
 }
-#endif
 
-/* TODO more unittests */
+/* detects log(x1+x2) as an on/off expression */
+Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success, infeas;
+   SCIP_CONS* cons;
+   int nbndchgs;
+
+   /* create expression and constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x1>+<x2>)", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+
+   /* z1 <= x1 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z2 <= x1 <= 3*z2 */
+   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z1 <= x2 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_2, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z2 <= x2 <= 3*z2 */
+   SCIPaddVarVlb(scip, x_2, z_2, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z3 <= x2 <= 3*z3 */
+   SCIPaddVarVlb(scip, x_2, z_3, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs);
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
+   cr_assert(enforceabove);
+   cr_assert(!enforcebelow);
+   cr_assert(success);
+   cr_assert_not_null(nlhdlrexprdata);
+
+   cr_expect_eq(nlhdlrexprdata->nonoffterms, 1, "Expecting 1 perspective term, got %d\n", nlhdlrexprdata->nonoffterms);
+   cr_expect_eq(nlhdlrexprdata->ntermbvars[0], 2, "Expecting 2 binary vars for term 0, got %d\n", nlhdlrexprdata->ntermbvars[0]);
+
+   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
+
+   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
+   SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* detects (x1+x2) as an on/off expression */
+Test(nlhdlrperspective, separate1, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool enforceabove;
+   SCIP_Bool success, infeas;
+   SCIP_CONS* cons;
+   int nbndchgs, ncuts;
+   SCIP_RESULT result;
+   SCIP_SOL* sol;
+   SCIP_ROW** cuts;
+
+   /* create expression and constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"(<x1>+<x2>)^2", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
+
+   /* z1 <= x1 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z2 <= x1 <= 3*z2 */
+   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z1 <= x2 <= 3*z1 */
+   SCIPaddVarVlb(scip, x_2, z_1, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z2 <= x2 <= 3*z2 */
+   SCIPaddVarVlb(scip, x_2, z_2, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   /* z3 <= x2 <= 3*z3 */
+   SCIPaddVarVlb(scip, x_2, z_3, 1.0, 0.0, &infeas, &nbndchgs);
+   SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs);
+
+   /* detect */
+   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcebelow = FALSE;
+   enforceabove = FALSE;
+   success = FALSE;
+   SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+
+   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+   cr_expect_eq(provided, providedexpected, "expecting provided = %d, got %d\n", providedexpected, provided);
+   cr_assert(enforcebelow);
+   cr_assert(!enforceabove);
+   cr_assert(success);
+   cr_assert_not_null(nlhdlrexprdata);
+
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIPsetSolVal(scip, sol, x_1, 0.0);
+   SCIPsetSolVal(scip, sol, x_2, 4.0);
+   SCIPsetSolVal(scip, sol, z_1, 0.5);
+   SCIPsetSolVal(scip, sol, z_2, 0.5);
+   SCIPsetSolVal(scip, sol, z_3, 1);
+
+   SCIP_CALL( nlhdlrSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, 4.0, FALSE, SCIPfeastol(scip), FALSE, &result, &ncuts) );
+   cr_assert(result == SCIP_SEPARATED);
+   cuts = SCIPgetCuts(scip);
+   cr_expect_eq(SCIPgetNCuts(scip), 2, "expecting number of cuts = 2, got %d\n", SCIPgetNCuts(scip));
+   cr_expect_eq(SCIProwGetNNonz(cuts[0]), 4, "expecting number of nonzeros in cuts[0] = 4, got %d\n", SCIProwGetNNonz(cuts[0]));
+   cr_expect_eq(SCIProwGetNNonz(cuts[1]), 4, "expecting number of nonzeros in cuts[1] = 4, got %d\n", SCIProwGetNNonz(cuts[1]));
 
 
-
-
-
-
-
-
-
-
+   SCIP_CALL( SCIPclearCuts(scip) );
+   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
+   SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
+   SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}

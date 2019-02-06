@@ -58,7 +58,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_CONSEXPR_EXPR**  onoffterms;         /**< on/off terms for which we apply perspective cuts */
    SCIP_Real*            onoffcoefs;         /**< coefficients of onoffterms */
    SCIP_VAR***           termbvars;          /**< binary vars associated with onoffterms */
-   SCIP_Real*            ntermbvars;         /**< number of binary variables for each term */
+   int*                  ntermbvars;         /**< number of binary variables for each term */
    int                   nonoffterms;        /**< number of on/off expressions */
    int                   onofftermssize;     /**< size of arrays describing on/off terms */
 
@@ -544,8 +544,6 @@ SCIP_RETCODE addPerspectiveLinearisation(
    }
    SCIPfreeBufferArray(scip, &varexprs);
 
-   SCIPprintRowprep(scip, rowprep, NULL);
-
    return SCIP_OKAY;
 }
 
@@ -561,7 +559,7 @@ SCIP_RETCODE addTerm(
    )
 {
    SCIP_CONSEXPR_EXPR** varexprs;
-   int nvars, v, nbvars;
+   int nvars, v, nbvars, nbvars0;
    SCIP_Bool var_is_sc;
    SCIP_VAR* var;
    SCIP_SCVARDATA* scvdata;
@@ -591,8 +589,9 @@ SCIP_RETCODE addTerm(
 
    /* find common binary variables for all variables of children[c] */
    scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
-   expr_bvars = scvdata->bvars;
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(SCIPblkmem(scip), &expr_bvars, scvdata->bvars, scvdata->nbnds) );
    nbvars = scvdata->nbnds;
+   nbvars0 = scvdata->nbnds;
 
    SCIPdebugMsg(scip, "\nArray intersection for vars %s", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])));
    for( v = 1; v < nvars; ++v )
@@ -606,10 +605,13 @@ SCIP_RETCODE addTerm(
       /* if we have found out that the intersection is empty, term can be immediately added to convterms */
       if( nbvars == 0 )
       {
+         SCIPfreeBlockMemoryArray(scip, &expr_bvars, nbvars0);
          SCIP_CALL( addConvTerm(scip, nlhdlrexprdata, coef, term) );
          goto TERMINATE;
       }
    }
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr_bvars, nbvars0, nbvars) );
+
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, " is: ");
    for( v = 0; v < nbvars; ++v )
@@ -697,6 +699,10 @@ SCIP_RETCODE freeNlhdlrExprData(
 {
    int c;
 
+   for( c = 0; c < nlhdlrexprdata->nonoffterms; ++c )
+   {
+      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->termbvars[c]), nlhdlrexprdata->ntermbvars[c]);
+   }
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->termbvars), nlhdlrexprdata->onofftermssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->ntermbvars), nlhdlrexprdata->onofftermssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->onoffcoefs), nlhdlrexprdata->onofftermssize);
@@ -935,6 +941,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( *success )
    {
+      SCIPinfoMessage(scip, NULL, "\ndetected an on/off expr");
       /* depending on curvature, set enforcemethods */
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
       {
