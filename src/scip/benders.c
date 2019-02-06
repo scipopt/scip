@@ -76,6 +76,17 @@
 #define NODESOLVED_EVENTHDLR_NAME        "bendersnodesolved"
 #define NODESOLVED_EVENTHDLR_DESC        "node solved event handler for the Benders' integer cuts"
 
+/* fundamental constraint handler properties */
+#define CONSHDLR_NAME          "delaybenders"
+#define CONSHDLR_DESC          "constraint handler used to delay Benders' decomposition subproblem solve"
+#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FAST /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_NEEDSCONS        TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -574,6 +585,226 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodesolved)
    return SCIP_OKAY;
 }
 
+
+/* ---------------- Methods for the Benders' decomposition delay constraint handler ---------------- */
+
+/** constraint handler data */
+struct SCIP_ConshdlrData
+{
+   int*                  subprobstosolve;    /**< indices of the subproblems that need to be solved */
+   int                   nsubprobstosolve;   /**< the number of subproblems to solve */
+}
+
+/*
+ * Callback methods of constraint handler
+ */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenders)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+static
+SCIP_DECL_CONSFREE(consFreeBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* freeing the constraint handler data */
+   SCIPfreeMemory(scip, &conshdlrdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of constraint handler (called after problem was transformed) */
+static
+SCIP_DECL_CONSINIT(consInitBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   conshdlrdata->checkedsolssize = DEFAULT_CHECKEDSOLSSIZE;
+   conshdlrdata->ncheckedsols = 0;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
+static
+SCIP_DECL_CONSEXIT(consExitBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* freeing the checked sols array */
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+SCIP_DECL_CONSENFOLP(consEnfolpBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->active )
+   {
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
+   }
+   else
+      (*result) = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->active )
+   {
+      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
+   }
+   else
+      (*result) = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+SCIP_DECL_CONSENFOPS(consEnfopsBenders)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+
+
+/** feasibility check method of constraint handler for integral solutions
+ *
+ *  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
+ *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. It is not
+ *  possible to simply update the auxiliary variable values, so a new solution is created.
+ */
+static
+SCIP_DECL_CONSCHECK(consCheckBenders)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+
+
+/** the presolving method for the Benders' decomposition constraint handler
+ *
+ *  This method is used to update the lower bounds of the auxiliary problem and to identify infeasibility before the
+ *  subproblems are solved. When SCIP is copied, the Benders' decomposition subproblems from the source SCIP are
+ *  transferred to the target SCIP. So there is no need to perform this presolving step in the copied SCIP, since the
+ *  computed bounds would be identical.
+ */
+static
+SCIP_DECL_CONSPRESOL(consPresolBenders)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+
+/** variable rounding lock method of constraint handler
+ *  The auxiliary variables and the master problem variables need to lock added by the Benders' decomposition
+ *  constraint. The auxiliary variables require a down lock. The master problem variable need both up and down lock.
+ *  The master problem variables require locks in both directions because the coefficients in all potential Benders'
+ *  cuts are not known in general.
+ */
+static
+SCIP_DECL_CONSLOCK(consLockBenders)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+
+
+/*
+ * constraint specific interface methods
+ */
+
+/** creates the handler for Benders' decomposition and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrBenders(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* create benders constraint handler data */
+   conshdlrdata = NULL;
+
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+
+   conshdlr = NULL;
+
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpBenders, consEnfopsBenders, consCheckBenders, consLockBenders,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBenders) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBenders) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenders, NULL) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenders, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
+
+   /* add Benders' decomposition constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition constraint handler active?",
+         &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
+
+   return SCIP_OKAY;
+}
 
 
 /* Local methods */
