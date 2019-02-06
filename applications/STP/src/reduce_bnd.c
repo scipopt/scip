@@ -2492,7 +2492,6 @@ SCIP_RETCODE reduceCheckEdge(
       if(graph->mark[k] != (graph->grad[k] > 0))
        graph_knot_printInfo(graph, k);
 
-
    if( !graph_pc_isPcMw(graph) )
       for( int k = 0; k < graph->knots; k++ )
          assert(graph->mark[k] == (graph->grad[k] > 0));

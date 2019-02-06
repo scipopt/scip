@@ -3434,7 +3434,7 @@ void graph_knot_printInfo(
    if( graph_pc_isPcMw(g) && (g->term2edge[k] < 0 || !Is_term(g->term[k])) )
    {
       assert(g->prize != NULL);
-      printf("node %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
+      printf("Xnode %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
    }
    else
       printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
