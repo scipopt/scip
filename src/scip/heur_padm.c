@@ -72,6 +72,8 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 
+#define COUPLINGSIZE         3
+
 /*
  * Data structures
  */
@@ -94,6 +96,9 @@ typedef struct Component
    int                   nslackspos;
    SCIP_VAR**            slacksneg;
    int                   nslacksneg;
+
+   SCIP_CONS**           couplingcons;
+   int                   ncouplingcons;
 } COMPONENT;
 
 /** data related to one problem */
@@ -187,6 +192,7 @@ SCIP_RETCODE freeComponent(
 #endif
    component->nslackspos = 0;
    component->nslacksneg = 0;
+   component->ncouplingcons = 0;
 
    /* free sub-SCIP belonging to this component and the working solution */
    if( component->subscip != NULL )
@@ -611,6 +617,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SET* linkvartoblocks;
    SET* blocktolinkvars;
    int j;
+   SCIP_VAR** tmpcouplingvars;
+   SCIP_Real* tmpcouplingcoef;
 
    SCIPdebugMsg(scip,"run padm heuristic...\n");
 #if 0
@@ -738,11 +746,18 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* init slack variable arrays */
-   for( i = 0; i < problem->ncomponents; i++ )
+   for( c = 0; c < problem->ncomponents; c++ )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[i]).slackspos), blocktolinkvars[i].size) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[i]).slacksneg), blocktolinkvars[i].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).slackspos), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).slacksneg), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).couplingcons), blocktolinkvars[c].size) );
    }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcouplingvars, COUPLINGSIZE) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcouplingcoef, COUPLINGSIZE) );
+   tmpcouplingcoef[0] = 1.0;
+   tmpcouplingcoef[1] = 1.0;
+   tmpcouplingcoef[2] = -1.0;
 
    /* extend submips */
    for( c = 0; c < problem->ncomponents; c++ )
@@ -756,7 +771,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       for( i = 0; i < nblockvars; i++ )
          SCIP_CALL( SCIPchgVarObj((problem->components[c]).subscip, blockvars[i], 0.0) );
 
-      /* add slack variables for linking variables in block */
+      /* add two slack variables for each linking variable in block */
       for( i = 0; i < blocktolinkvars[c].size; i++ )
       {
          int linkvaridx;
@@ -801,12 +816,48 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       assert((problem->components[c]).nslackspos == blocktolinkvars[c].size);
       assert((problem->components[c]).nslacksneg == blocktolinkvars[c].size);
 
+      /* add linking constraint in block */
+      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      {
+         int linkvaridx;
+         linkvaridx = blocktolinkvars[c].indexes[i];
 
-      /* BAUSTELLE: hier weiter ... */
-      /* the freeing of slackvars is not correct */
+         for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
+         {
+            int blockcontaininglinkvar;
+            blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
+            if( blockcontaininglinkvar != c )
+            {
+               /* fill variables for linking constraint */
+               tmpcouplingvars[0] = SCIPfindVar((problem->components[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
+                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
+               tmpcouplingvars[1] = SCIPfindVar((problem->components[c]).subscip, name);
+
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
+                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
+               tmpcouplingvars[2] = SCIPfindVar((problem->components[c]).subscip, name);
+
+               /* create linking constraint */
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
+                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
+
+               j = (problem->components[c]).ncouplingcons;
+               SCIP_CALL( SCIPcreateConsBasicLinear((problem->components[c]).subscip, &((problem->components[c]).couplingcons[j]),
+                     name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
+               SCIP_CALL( SCIPaddCons((problem->components[c]).subscip, (problem->components[c]).couplingcons[j]) );
+               (problem->components[c]).ncouplingcons++;
+            }
+         }
+      }
+
+      assert(blocktolinkvars[c].size == (problem->components[c]).ncouplingcons);
    }
+
+   /* TODO: the freeing of slackvars is not correct */
+
 
 #if 1
    for( i = 0; i < problem->ncomponents; i++ )
@@ -816,68 +867,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 #endif
 
-#if 0 /* BAUSTELLE */
-   for(block = 0; block < nblocks; ++block)
-   {
-      submips[block]->setObjective(submips[block]->getObjective() * origObjScale);
-      int nBlockVars = submips[block]->get(GRB_IntAttr_NumVars);
-      GRBVar* blockVars = submips[block]->getVars();
-      blockSols[block] = new double[nBlockVars];
-      fill(blockSols[block], blockSols[block]+nBlockVars, 0);
-      // add slack variables for linking vars in block
-      set<int> linkVarsInBlock = blocktolinkvaridx.at(block);
-      for (set<int>::const_iterator it = linkVarsInBlock.begin(), ei = linkVarsInBlock.end(); it != ei; ++it) {
-         int linkVarIdx = *it;
-         set<int> blocksContainingLinkVar = linkvaridxtoblock.at(linkVarIdx);
-         for (set<int>::const_iterator jt = blocksContainingLinkVar.begin(), ej = blocksContainingLinkVar.end(); jt != ej; ++jt) {
-            int blockContainingLinkVar = *jt;
-            if (blockContainingLinkVar != block) {
-               stringstream slackPosVarName;
-               stringstream slackNegVarName;
-               slackPosVarName << idxtonamemap.at(linkVarIdx) << "_SlackPos_Block_" << blockContainingLinkVar;
-               slackNegVarName << idxtonamemap.at(linkVarIdx) << "_SlackNeg_Block_" << blockContainingLinkVar;
-               auto idx3 = make_tuple(block, blockContainingLinkVar, linkVarIdx);
-
-               double slackObjCoef = fabs(submips[block]->getVarByName(idxtonamemap.at(linkVarIdx)).get(GRB_DoubleAttr_Obj)) + 1.0;
-               slackPosCoeffs[idx3] = slackObjCoef; // 0.01; // 1.1;
-               slackNegCoeffs[idx3] = slackObjCoef; // 0.01; // 1.1;
-
-               slackPosVars[idx3] = submips[block]->addVar(0.0, GRB_INFINITY, slackPosCoeffs.at(idx3), GRB_CONTINUOUS, slackPosVarName.str());
-               slackNegVars[idx3] = submips[block]->addVar(0.0, GRB_INFINITY, slackNegCoeffs.at(idx3), GRB_CONTINUOUS, slackNegVarName.str());
-
-               slacksofblock[block].insert(slackPosVarName.str());
-               slacksofblock[block].insert(slackNegVarName.str());
-            }
-         }
-      }
-      submips[block]->update();
-      for (set<int>::const_iterator it = linkVarsInBlock.begin(), ei = linkVarsInBlock.end(); it != ei; ++it) {
-         int linkVarIdx = *it;
-         set<int> blocksContainingLinkVar = linkvaridxtoblock.at(linkVarIdx);
-         for (set<int>::const_iterator jt = blocksContainingLinkVar.begin(), ej = blocksContainingLinkVar.end(); jt != ej; ++jt) {
-            int blockContainingLinkVar = *jt;
-            if (blockContainingLinkVar != block) {
-               auto idx2 = make_tuple(blockContainingLinkVar, linkVarIdx);
-               auto idx3 = make_tuple(block, blockContainingLinkVar, linkVarIdx);
-               stringstream constrName;
-               constrName << idxtonamemap.at(linkVarIdx) << "_Coupling_Block_" << blockContainingLinkVar;
-               if(uselprelax) {
-                  linkingVarVals[idx2] = relax.getVarByName(idxtonamemap.at(linkVarIdx)).get(GRB_DoubleAttr_X);
-               }
-               else {
-                  linkingVarVals[idx2] = 0.0;
-               }
-#ifdef DEBUG_MORE
-               cout << "=== block" << block << " " << constrName.str() << ": " << idxtonamemap.at(linkVarIdx) <<
-                  " + " << slackPosVars.at(idx3).get(GRB_StringAttr_VarName) << " - " << slackNegVars.at(idx3).get(GRB_StringAttr_VarName) << " == " << linkingVarVals.at(idx2) << endl;
-#endif
-               couplingCons[idx3] = submips[block]->addConstr(submips[block]->getVarByName(idxtonamemap.at(linkVarIdx)) + slackPosVars.at(idx3) - slackNegVars.at(idx3) == linkingVarVals.at(idx2), constrName.str());
-            }
-         }
-      }
-      submips[block]->update();
-   }
-#endif
+   SCIPfreeBufferArray(scip, &tmpcouplingcoef);
+   SCIPfreeBufferArray(scip, &tmpcouplingvars);
 
    for( i = 0; i < problem->ncomponents; i++ )
       SCIPfreeBufferArray(scip, &(blocktolinkvars[i].indexes));
