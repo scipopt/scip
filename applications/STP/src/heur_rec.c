@@ -1141,73 +1141,6 @@ SCIP_RETCODE buildsolgraph(
 
          assert(nsolnodes >= 1);
          assert(nsoledges >= 0);
-
-int todo; //deleteme
-#if 0
-
-         for( int i = graph->outbeg[oldroot]; i != EAT_LAST; i = graph->oeat[i] )
-         {
-            const int head = graph->head[i];
-            const int ihalf = i / 2;
-
-            if( !soledge[ihalf] ) // todo kill?
-            {
-               if( Is_gterm(graph->term[head]) )
-               {
-                  nsoledges++;
-                  soledge[ihalf] = TRUE;
-
-                  if( !solnode[head] )
-                  {
-                     solnode[head] = TRUE;
-                     nsolnodes++;
-                  }
-               }
-            }
-            else
-            {
-               assert(solnode[head]);
-            }
-
-            if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
-            {
-               const int e2 = graph->term2edge[head];
-               const int head2 = graph->head[e2];
-
-               assert(graph->grad[head] == 2 && e2 >= 0 && Is_pterm(graph->term[head2]));
-
-               if( !soledge[e2 / 2] )
-               {
-                  nsoledges++;
-                  soledge[e2 / 2] = TRUE;
-               }
-               if( !solnode[head2] )
-               {
-                  solnode[head2] = TRUE;
-                  nsolnodes++;
-               }
-            }
-         }
-
-
-#ifndef NDEBUG
-         for( int k = 0; k < nnodes; k++ )
-         {
-            if( Is_pterm(graph->term[k]) )
-            {
-               const int e2 = graph->term2edge[k];
-
-               assert(!graph_pc_knotIsFixedTerm(graph, k));
-               assert(solnode[k]);
-               assert(e2 != EAT_LAST && soledge[e2 / 2]);
-            }
-            else if( Is_term(graph->term[k]) )
-            {
-               assert(solnode[k]);
-            }
-         }
-#endif
-#endif
       }
 
       /* add additional edges? */
@@ -1218,7 +1151,7 @@ int todo; //deleteme
 
          for( int e = 0; e < nedges && naddedges <= (int)(REC_ADDEDGE_FACTOR * nsoledges); e += 2 )
          {
-            const int newedge = (e + 0) % nedges;
+            const int newedge = (e + offset) % nedges;
             int tail;
             int head;
 
@@ -1657,7 +1590,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       int* edgeancestor;
       SCIP_Bool success;
       const SCIP_Bool randomize = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1);
-      const SCIP_Bool addmoreedges = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1);
+      const SCIP_Bool addmoreedges = (SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1);
 
       /* compute number of solutions to merge (and save in heurdata->nsols) */
       setHeurdataNUsedSols(heurdata, nsols, restrictheur);
@@ -1665,7 +1598,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
       /* build a new graph, consisting of several solutions */
       SCIP_CALL( buildsolgraph(scip, pool, heurdata, graph, &solgraph, incumbentedges, newsolindex,
-            &edgeancestor, &edgeweight, &success, randomize, TRUE) );
+            &edgeancestor, &edgeweight, &success, randomize, addmoreedges) );
 
       /* valid graph built? */
       if( success )
@@ -1727,6 +1660,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             incumentobj = pobj;
             *solfound = TRUE;
             BMScopyMemoryArray(incumbentedges, newsoledges, nedges);
+
+            if( !restrictheur && failcount >= 1 )
+               failcount--;
          }
          else
          {
