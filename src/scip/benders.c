@@ -2598,194 +2598,201 @@ SCIP_RETCODE solveBendersSubproblems(
       (*infeasible) = TRUE;
    }
    else
+   #pragma omp parallel reduction(&&:(*optimal)) reduction(||:(*infeasible)) reduction(+:(*nverified)) reduction(||:(*stopped))
    {
-      /* solving each of the subproblems for Benders' decomposition */
-      /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values
-       */
-      i = benders->firstchecked;
-      /*for( i = 0; i < nsubproblems; i++ )*/
-      while( subproblemcount < nsubproblems && numnotopt < numtocheck && !(*stopped) )
+      #pragma omp single
       {
-         SCIP_Bool subinfeas = FALSE;
-         SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
-         SCIP_Bool solvesub = TRUE;
-         SCIP_Bool solved;
-
-         /* the subproblem is initially flagged as not solved for this solving loop */
-         (*subprobsolved)[i] = FALSE;
-
-         /* setting the subsystem status to UNKNOWN at the start of each solve loop */
-         (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
-
-         /* for the second solving loop, if the problem is an LP, it is not solved again. If the problem is a MIP,
-          * then the subproblem objective function value is set to infinity. However, if the subproblem is proven
-          * infeasible from the LP, then the IP loop is not performed.
-          * If the solve loop is SCIP_BENDERSSOLVELOOP_USERCIP, then nothing is done. It is assumed that the user will
-          * correctly update the objective function within the user-defined solving function.
+         /* solving each of the subproblems for Benders' decomposition */
+         /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values
           */
-         if( solveloop == SCIP_BENDERSSOLVELOOP_CIP )
+         i = benders->firstchecked;
+         /*for( i = 0; i < nsubproblems; i++ )*/
+         while( subproblemcount < nsubproblems && numnotopt < numtocheck && !(*stopped) )
          {
-            if( convexsub || (*substatus)[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
-               solvesub = FALSE;
-            else
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
-         }
-
-         /* if the subproblem is independent, then it does not need to be solved. In this case, the nverified flag will
-          * increase by one. When the subproblem is not independent, then it needs to be checked.
-          */
-         if( !subproblemIsActive(benders, i) )
-         {
-            /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
-             * non-optimal subproblem is found.
-             */
-            /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
-             * subproblem statue is unknown. */
-            if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
-               || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
-               || SCIPsetIsInfinity(set, -SCIPbendersGetSubproblemLowerbound(benders, i)) )
+            #pragma omp task
             {
-               SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
+               SCIP_Bool subinfeas = FALSE;
+               SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
+               SCIP_Bool solvesub = TRUE;
+               SCIP_Bool solved;
+
+               /* the subproblem is initially flagged as not solved for this solving loop */
+               (*subprobsolved)[i] = FALSE;
+
+               /* setting the subsystem status to UNKNOWN at the start of each solve loop */
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
-               (*optimal) = FALSE;
 
-               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
-                 " setting status to UNKNOWN\n", i);
-            }
-            else
-            {
-               SCIP_Real soltol;
-
-               SCIP_CALL( SCIPsetGetRealParam(set, "benders/solutiontol", &soltol) );
-
-               if( SCIPrelDiff(SCIPbendersGetSubproblemLowerbound(benders, i),
-                     SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) < soltol )
-               {
-                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
-                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
-               }
-               else
-               {
-                  SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetSubproblemLowerbound(benders, i));
-                  (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
-               }
-
-               SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
-            }
-
-            (*subprobsolved)[i] = TRUE;
-
-            /* the nverified counter is only increased in the convex solving loop */
-            if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX )
-               (*nverified)++;
-         }
-         else if( solvesub )
-         {
-            SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &solved, &subinfeas, type) );
-
-#ifdef SCIP_DEBUG
-            if( type == SCIP_BENDERSENFOTYPE_LP )
-            {
-               SCIPsetDebugMsg(set, "LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
-                  SCIPbendersGetSubproblemObjval(benders, i));
-            }
-#endif
-            (*subprobsolved)[i] = solved;
-
-            (*infeasible) = (*infeasible) || subinfeas;
-            if( subinfeas )
-               (*substatus)[i] = SCIP_BENDERSSUBSTATUS_INFEAS;
-
-            /* if the subproblems are solved to check integer feasibility, then the optimality check must be performed.
-             * This will only be performed if checkint is TRUE and the subproblem was solved. The subproblem may not be
-             * solved if the user has defined a solving function
-             */
-            if( checkint && (*subprobsolved)[i] )
-            {
-               /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
-                * objective function value of the subproblem.
+               /* for the second solving loop, if the problem is an LP, it is not solved again. If the problem is a MIP,
+                * then the subproblem objective function value is set to infinity. However, if the subproblem is proven
+                * infeasible from the LP, then the IP loop is not performed.
+                * If the solve loop is SCIP_BENDERSSOLVELOOP_USERCIP, then nothing is done. It is assumed that the user will
+                * correctly update the objective function within the user-defined solving function.
                 */
-               if( !subinfeas )
+               if( solveloop == SCIP_BENDERSSOLVELOOP_CIP )
                {
-                  SCIP_Bool subproboptimal = FALSE;
-
-                  SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, set, sol, i, &subproboptimal) );
-
-                  if( subproboptimal )
-                     (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+                  if( convexsub || (*substatus)[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
+                     solvesub = FALSE;
                   else
-                     (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
+                     SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
+               }
 
-                  /* It is only possible to determine the optimality of a solution within a given subproblem in four
-                   * different cases:
-                   * i) solveloop == SCIP_BENDERSSOLVELOOP_CONVEX or USERCONVEX and the subproblem is convex.
-                   * ii) solveloop == SCIP_BENDERSOLVELOOP_CONVEX  and only the convex relaxations will be checked.
-                   * iii) solveloop == SCIP_BENDERSSOLVELOOP_USERCIP and the subproblem was solved, since the user has
-                   * defined a solve function, it is expected that the solving is correctly executed.
-                   * iv) solveloop == SCIP_BENDERSSOLVELOOP_CIP and the MIP for the subproblem has been solved.
+               /* if the subproblem is independent, then it does not need to be solved. In this case, the nverified flag will
+                * increase by one. When the subproblem is not independent, then it needs to be checked.
+                */
+               if( !subproblemIsActive(benders, i) )
+               {
+                  /* NOTE: There is no need to update the optimal flag. This is because optimal is always TRUE until a
+                   * non-optimal subproblem is found.
                    */
-                  if( convexsub || onlyconvexcheck
-                     || solveloop == SCIP_BENDERSSOLVELOOP_CIP
-                     || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP )
-                     (*optimal) = (*optimal) && subproboptimal;
-
-#ifdef SCIP_DEBUG
-                  if( convexsub || solveloop >= SCIP_BENDERSSOLVELOOP_CIP )
+                  /* if the auxiliary variable value is infinity, then the subproblem has not been solved yet. Currently the
+                   * subproblem statue is unknown. */
+                  if( SCIPsetIsInfinity(set, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+                     || SCIPsetIsInfinity(set, -SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i))
+                     || SCIPsetIsInfinity(set, -SCIPbendersGetSubproblemLowerbound(benders, i)) )
                   {
-                     if( subproboptimal )
+                     SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(SCIPbendersSubproblem(benders, i)));
+                     (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
+                     (*optimal) = FALSE;
+
+                     SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
+                       " setting status to UNKNOWN\n", i);
+                  }
+                  else
+                  {
+                     SCIP_Real soltol;
+
+                     SCIP_CALL( SCIPsetGetRealParam(set, "benders/solutiontol", &soltol) );
+
+                     if( SCIPrelDiff(SCIPbendersGetSubproblemLowerbound(benders, i),
+                           SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i)) < soltol )
                      {
-                        SCIPsetDebugMsg(set, "Subproblem %d is Optimal (%f >= %f)\n", i,
-                           SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubproblemObjval(benders, i));
+                        SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i));
+                        (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
                      }
                      else
                      {
-                        SCIPsetDebugMsg(set, "Subproblem %d is NOT Optimal (%f < %f)\n", i,
-                           SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubproblemObjval(benders, i));
+                        SCIPbendersSetSubproblemObjval(benders, i, SCIPbendersGetSubproblemLowerbound(benders, i));
+                        (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
                      }
+
+                     SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, setting status to OPTIMAL\n", i);
+                  }
+
+                  (*subprobsolved)[i] = TRUE;
+
+                  /* the nverified counter is only increased in the convex solving loop */
+                  if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX )
+                     (*nverified)++;
+               }
+               else if( solvesub )
+               {
+                  SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &solved, &subinfeas, type) );
+
+#ifdef SCIP_DEBUG
+                  if( type == SCIP_BENDERSENFOTYPE_LP )
+                  {
+                     SCIPsetDebugMsg(set, "LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
+                        SCIPbendersGetSubproblemObjval(benders, i));
                   }
 #endif
+                  (*subprobsolved)[i] = solved;
 
-                  /* the nverified variable is only incremented when the original form of the subproblem has been solved.
-                   * What is meant by "original" is that the LP relaxation of CIPs are solved to generate valid cuts. So
-                   * if the subproblem is defined as a CIP, then it is only classified as checked if the CIP is solved.
-                   * There are three cases where the "original" form is solved are:
-                   * i) solveloop == SCIP_BENDERSSOLVELOOP_CONVEX or USERCONVEX and the subproblem is an LP
-                   *    - the original form has been solved.
-                   * ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP or USERCIP and the CIP for the subproblem has been
-                   *    solved.
-                   * iii) or, only a convex check is performed.
+                  (*infeasible) = (*infeasible) || subinfeas;
+                  if( subinfeas )
+                     (*substatus)[i] = SCIP_BENDERSSUBSTATUS_INFEAS;
+
+                  /* if the subproblems are solved to check integer feasibility, then the optimality check must be performed.
+                   * This will only be performed if checkint is TRUE and the subproblem was solved. The subproblem may not be
+                   * solved if the user has defined a solving function
                    */
-                  if( ((solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX)
-                        && convexsub)
-                     || ((solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP)
-                        && !convexsub)
-                     || onlyconvexcheck )
-                     (*nverified)++;
-
-                  if( !subproboptimal )
+                  if( checkint && (*subprobsolved)[i] )
                   {
-                     numnotopt++;
-                     assert(numnotopt <= nsubproblems);
+                     /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
+                      * objective function value of the subproblem.
+                      */
+                     if( !subinfeas )
+                     {
+                        SCIP_Bool subproboptimal = FALSE;
+
+                        SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, set, sol, i, &subproboptimal) );
+
+                        if( subproboptimal )
+                           (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
+                        else
+                           (*substatus)[i] = SCIP_BENDERSSUBSTATUS_AUXVIOL;
+
+                        /* It is only possible to determine the optimality of a solution within a given subproblem in four
+                         * different cases:
+                         * i) solveloop == SCIP_BENDERSSOLVELOOP_CONVEX or USERCONVEX and the subproblem is convex.
+                         * ii) solveloop == SCIP_BENDERSOLVELOOP_CONVEX  and only the convex relaxations will be checked.
+                         * iii) solveloop == SCIP_BENDERSSOLVELOOP_USERCIP and the subproblem was solved, since the user has
+                         * defined a solve function, it is expected that the solving is correctly executed.
+                         * iv) solveloop == SCIP_BENDERSSOLVELOOP_CIP and the MIP for the subproblem has been solved.
+                         */
+                        if( convexsub || onlyconvexcheck
+                           || solveloop == SCIP_BENDERSSOLVELOOP_CIP
+                           || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP )
+                           (*optimal) = (*optimal) && subproboptimal;
+
+#ifdef SCIP_DEBUG
+                        if( convexsub || solveloop >= SCIP_BENDERSSOLVELOOP_CIP )
+                        {
+                           if( subproboptimal )
+                           {
+                              SCIPsetDebugMsg(set, "Subproblem %d is Optimal (%f >= %f)\n", i,
+                                 SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubproblemObjval(benders, i));
+                           }
+                           else
+                           {
+                              SCIPsetDebugMsg(set, "Subproblem %d is NOT Optimal (%f < %f)\n", i,
+                                 SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubproblemObjval(benders, i));
+                           }
+                        }
+#endif
+
+                        /* the nverified variable is only incremented when the original form of the subproblem has been solved.
+                         * What is meant by "original" is that the LP relaxation of CIPs are solved to generate valid cuts. So
+                         * if the subproblem is defined as a CIP, then it is only classified as checked if the CIP is solved.
+                         * There are three cases where the "original" form is solved are:
+                         * i) solveloop == SCIP_BENDERSSOLVELOOP_CONVEX or USERCONVEX and the subproblem is an LP
+                         *    - the original form has been solved.
+                         * ii) solveloop == SCIP_BENDERSSOLVELOOP_CIP or USERCIP and the CIP for the subproblem has been
+                         *    solved.
+                         * iii) or, only a convex check is performed.
+                         */
+                        if( ((solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX)
+                              && convexsub)
+                           || ((solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP)
+                              && !convexsub)
+                           || onlyconvexcheck )
+                           (*nverified)++;
+
+                        if( !subproboptimal )
+                        {
+                           numnotopt++;
+                           assert(numnotopt <= nsubproblems);
+                        }
+                     }
+                     else
+                     {
+                        numnotopt++;
+                        assert(numnotopt <= nsubproblems);
+                     }
                   }
                }
-               else
-               {
-                  numnotopt++;
-                  assert(numnotopt <= nsubproblems);
-               }
-            }
+
+               /* checking whether the limits have been exceeded in the master problem */
+               (*stopped) = SCIPisStopped(set->scip);
+            } /* pragma omp task */
+
+            subproblemcount++;
+            i++;
+            if( i >= nsubproblems )
+               i = 0;
+            benders->lastchecked = i;
          }
-
-         subproblemcount++;
-         i++;
-         if( i >= nsubproblems )
-            i = 0;
-         benders->lastchecked = i;
-
-         /* checking whether the limits have been exceeded in the master problem */
-         (*stopped) = SCIPisStopped(set->scip);
-      }
-   }
+      } /* pragma omp single */
+   } /* pragma omp parallel */
 
    (*nchecked) = subproblemcount;
 
