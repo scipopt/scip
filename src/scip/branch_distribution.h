@@ -74,7 +74,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
 /** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
  *  special treatment of infinite bounds necessary */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvarCalcDistributionParameters(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             varlb,              /**< variable lower bound */
@@ -102,7 +102,7 @@ void SCIPvarCalcDistributionParameters(
  *  The distribution is given by the respective mean and deviation. This implementation
  *  uses the error function erf().
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPcalcCumulativeDistribution(
    SCIP*                 scip,               /**< current SCIP */
    SCIP_Real             mean,               /**< the mean value of the distribution */
@@ -120,7 +120,7 @@ SCIP_Real SCIPcalcCumulativeDistribution(
  *  For equations (lhs==rhs), we use the centeredness measure p = min(PHI(lhs'), 1-PHI(lhs'))/max(PHI(lhs'), 1 - PHI(lhs')),
  *  where lhs' = lhs - mu / sqrt(sigma2).
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIProwCalcProbability(
    SCIP*                 scip,               /**< current scip */
    SCIP_ROW*             row,                /**< the row */
@@ -133,7 +133,7 @@ SCIP_Real SCIProwCalcProbability(
 /** update the up- and downscore of a single variable after calculating the impact of branching on a
  *  particular row, depending on the chosen score parameter
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPupdateDistributionScore(
    SCIP*                 scip,               /**< current SCIP pointer */
    SCIP_Real             currentprob,        /**< the current probability */

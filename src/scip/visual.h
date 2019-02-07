@@ -38,20 +38,20 @@ extern "C" {
 #endif
 
 /** creates visualization data structure */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPvisualCreate(
    SCIP_VISUAL**         visual,             /**< pointer to store the visualization information */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** frees visualization data structure */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualFree(
    SCIP_VISUAL**         visual              /**< pointer to store the visualization information */
    );
 
 /** initializes visualization information and creates a file for visualization output */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPvisualInit(
    SCIP_VISUAL*          visual,             /**< visualization information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPvisualInit(
    );
 
 /** closes the visualization output file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualExit(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -68,7 +68,7 @@ void SCIPvisualExit(
    );
 
 /** creates a new node entry in the visualization output file */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPvisualNewChild(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
    );
 
 /** marks node as solved in visualization output file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualSolvedNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -95,7 +95,7 @@ void SCIPvisualSolvedNode(
    );
 
 /** changes the color of the node to the color of cutoff nodes */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualCutoffNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -105,7 +105,7 @@ void SCIPvisualCutoffNode(
    );
 
 /** changes the color of the node to the color of nodes where a conflict constraint was found */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualFoundConflict(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -113,7 +113,7 @@ void SCIPvisualFoundConflict(
    );
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualMarkedRepropagateNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -121,7 +121,7 @@ void SCIPvisualMarkedRepropagateNode(
    );
 
 /** changes the color of the node to the color of repropagated nodes */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualRepropagatedNode(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -129,7 +129,7 @@ void SCIPvisualRepropagatedNode(
    );
 
 /** changes the color of the node to the color of nodes with a primal solution */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualFoundSolution(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -140,7 +140,7 @@ void SCIPvisualFoundSolution(
    );
 
 /** outputs a new global lower bound to the visualization output file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualLowerbound(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -149,7 +149,7 @@ void SCIPvisualLowerbound(
    );
 
 /** outputs a new global upper bound to the visualization output file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPvisualUpperbound(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */

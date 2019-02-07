@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the weakcompr tree compression and includes it in SCIP */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeComprWeakcompr(
    SCIP*                 scip                /**< SCIP data structure */
    );

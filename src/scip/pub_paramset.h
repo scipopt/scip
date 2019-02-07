@@ -34,164 +34,164 @@ extern "C" {
 #endif
 
 /** returns type of parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_PARAMTYPE SCIPparamGetType(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns name of parameter */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPparamGetName(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns description of parameter */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPparamGetDesc(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns locally defined parameter specific data */
-EXTERN
+SCIP_EXPORT extern
 SCIP_PARAMDATA* SCIPparamGetData(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns whether parameter is advanced */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPparamIsAdvanced(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns whether parameter is fixed */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPparamIsFixed(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** sets fixing status of given parameter */
-EXTERN
+SCIP_EXPORT extern
 void SCIPparamSetFixed(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
    );
 
 /** returns value of SCIP_Bool parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPparamGetBool(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of SCIP_Bool parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPparamGetBoolDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of int parameter */
-EXTERN
+SCIP_EXPORT extern
 int SCIPparamGetInt(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of int parameter */
-EXTERN
+SCIP_EXPORT extern
 int SCIPparamGetIntMin(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of int parameter */
-EXTERN
+SCIP_EXPORT extern
 int SCIPparamGetIntMax(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of int parameter */
-EXTERN
+SCIP_EXPORT extern
 int SCIPparamGetIntDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of SCIP_Longint parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPparamGetLongint(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of longint parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPparamGetLongintMin(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of longint parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPparamGetLongintMax(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of SCIP_Longint parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPparamGetLongintDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of SCIP_Real parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPparamGetReal(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of real parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPparamGetRealMin(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of real parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPparamGetRealMax(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of SCIP_Real parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPparamGetRealDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of char parameter */
-EXTERN
+SCIP_EXPORT extern
 char SCIPparamGetChar(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns allowed values of char parameter, or NULL if everything is allowed */
-EXTERN
+SCIP_EXPORT extern
 char* SCIPparamGetCharAllowedValues(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of char parameter */
-EXTERN
+SCIP_EXPORT extern
 char SCIPparamGetCharDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of string parameter */
-EXTERN
+SCIP_EXPORT extern
 char* SCIPparamGetString(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of String parameter */
-EXTERN
+SCIP_EXPORT extern
 char* SCIPparamGetStringDefault(
    SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns whether the parameter is on its default setting */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPparamIsDefault(
    SCIP_PARAM*           param               /**< parameter */
    );

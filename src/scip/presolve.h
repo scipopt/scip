@@ -60,7 +60,7 @@ extern "C" {
  *  Also, the both other implications and x3 >= 1 (in the given variable set) all imply exactly x3 >= 1, so we tighten
  *  the global lower bound of x3 to 1 and the set of variables gets redundant.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables array for which at least one must be fulfilled in the

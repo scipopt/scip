@@ -51,7 +51,7 @@ extern "C" {
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
  */
-extern
+SCIP_EXPORT extern
 SCIP_Bool SCIPsolveIsStopped(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */

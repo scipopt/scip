@@ -46,7 +46,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP*                 scip                /**< SCIP data structure */
    );

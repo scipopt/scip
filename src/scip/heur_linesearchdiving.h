@@ -42,7 +42,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

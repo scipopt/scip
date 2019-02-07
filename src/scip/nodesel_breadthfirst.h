@@ -40,7 +40,7 @@ extern "C" {
  *
  *  @ingroup NodeSelectorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
    SCIP*                 scip                /**< SCIP data structure */
    );

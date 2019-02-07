@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPprocessShellArguments(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   argc,               /**< number of shell parameters */
@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPrunShell(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */

@@ -43,19 +43,19 @@ extern "C" {
  * @{
  */
 /** returns the root dialog of the dialog handler */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DIALOG* SCIPdialoghdlrGetRoot(
    SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
 /** clears the input command buffer of the dialog handler */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdialoghdlrClearBuffer(
    SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
 /** returns TRUE iff input command buffer is empty */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
@@ -63,7 +63,7 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
 /** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialoghdlrGetLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialoghdlrGetWord(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    );
 
 /** adds a single line of input to the dialog handler which is treated as if the user entered the command line */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    const char*           inputline           /**< input line to add */
@@ -94,7 +94,7 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
  *  by the dialog's command path; if no command is given, only the path to the dialog is added to the command history
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialoghdlrAddHistory(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog, or NULL */
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
  */
 
 /** returns TRUE iff a dialog entry matching exactly the given name is existing in the given dialog */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPdialogHasEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
    const char*           entryname           /**< name of the dialog entry to find */
@@ -124,7 +124,7 @@ SCIP_Bool SCIPdialogHasEntry(
  *  number is 1, the single match is returned as "subdialog". Otherwise,
  *  "subdialog" is set to NULL.
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdialogFindEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
    const char*           entryname,          /**< name of the dialog entry to find */
@@ -132,21 +132,21 @@ int SCIPdialogFindEntry(
    );
 
 /** displays the dialog's menu */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialogDisplayMenu(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP*                 scip                /**< SCIP data structure */   
    );
 
 /** displays the entry for the dialog in it's parent's menu */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialogDisplayMenuEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP*                 scip                /**< SCIP data structure */   
    );
 
 /** displays all dialog entries with names starting with the given "entryname" */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialogDisplayCompletions(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP*                 scip,               /**< SCIP data structure */   
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPdialogDisplayCompletions(
    );
 
 /** gets the name of the current path in the dialog tree, separated by the given character */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdialogGetPath(
    SCIP_DIALOG*          dialog,             /**< dialog */
    const char            sepchar,            /**< separation character to insert in path */
@@ -162,56 +162,56 @@ void SCIPdialogGetPath(
    );
 
 /** gets the command name of the dialog */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPdialogGetName(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the description of the dialog */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPdialogGetDesc(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** returns whether the dialog is a sub menu */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPdialogIsSubmenu(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the parent dialog of the given dialog */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DIALOG* SCIPdialogGetParent(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the array of sub-dialogs associated with the given dialog */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DIALOG** SCIPdialogGetSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the number of sub-dialogs associated with the given dialog */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdialogGetNSubdialogs(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the user defined data associated with the given dialog */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DIALOGDATA* SCIPdialogGetData(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** sets user data of dialog; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdialogSetData(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
    );
 
 /** writes command history to specified filename */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdialogWriteHistory(
    const char*           filename            /**< file name for (over)writing history */
    );

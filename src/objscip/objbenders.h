@@ -267,7 +267,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBenders is called here
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
@@ -275,14 +275,14 @@ SCIP_RETCODE SCIPincludeObjBenders(
    );
 
 /** returns the benders object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjBenders* SCIPfindObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of Benders' decomposition */
    );
 
 /** returns the benders object for the given constraint handler */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjBenders* SCIPgetObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */

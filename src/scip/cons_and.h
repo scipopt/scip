@@ -42,7 +42,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsBasicAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -121,35 +121,35 @@ SCIP_RETCODE SCIPcreateConsBasicAnd(
    );
 
 /** gets number of variables in and constraint */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in and constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the resultant variable in and constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** return if the variables of the AND-constraint are sorted with respect to their indices */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPisAndConsSorted(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** sort the variables of the AND-constraint with respect to their indices */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsortAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPsortAndCons(
 /** when 'upgrading' the given AND-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
  *  the check flag of this AND-constraint is set to FALSE?
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
 /** when 'upgrading' the given AND-constraint, should the removable flag for the upgraded constraint be set to FALSE,
  *  even if the removable flag of this AND-constraint is set to TRUE?
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */

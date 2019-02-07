@@ -66,7 +66,7 @@ extern "C" {
  */
 
 /** creates a display column and includes it in SCIP */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of display column */
@@ -88,32 +88,32 @@ SCIP_RETCODE SCIPincludeDisp(
    );
 
 /** returns the display column of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DISP* SCIPfindDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of display column */
    );
 
 /** returns the array of currently available display columns */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DISP** SCIPgetDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available display columns */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** automatically selects display columns for being shown w.r.t. the display width parameter */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** changes the display column mode */
-EXTERN
+SCIP_EXPORT extern
 void SCIPchgDispMode(
    SCIP_DISP*            disp,               /**< display column */
    SCIP_DISPMODE         mode                /**< the display column mode */

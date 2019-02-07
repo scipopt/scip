@@ -32,19 +32,19 @@ extern "C" {
 #include "symmetry/struct_symmetry.h"
 
 /** return whether symmetry can be computed */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SYMcanComputeSymmetry(void);
 
 /** return name of external program used to compute generators */
-EXTERN
+SCIP_EXPORT extern
 const char* SYMsymmetryGetName(void);
 
 /** return description of external program used to compute generators */
-EXTERN
+SCIP_EXPORT extern
 const char* SYMsymmetryGetDesc(void);
 
 /** compute generators of symmetry group */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */

@@ -38,31 +38,31 @@ extern "C" {
 #endif
 
 /** creates event handler for global bound event */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets the global bound changes stored in the eventhandler */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
    SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    );
 
 /** enables storing of bound changes */
-EXTERN
+SCIP_EXPORT extern
 void SCIPeventGlobalbndEnableBoundStorage(
    SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    );
 
 /** disables storing of bound changes */
-EXTERN
+SCIP_EXPORT extern
 void SCIPeventGlobalbndDisableBoundStorage(
    SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    );
 
 /** clears all bound changes stored in the eventhandler */
-EXTERN
+SCIP_EXPORT extern
 void SCIPeventGlobalbndClearBoundChanges(
    SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    );

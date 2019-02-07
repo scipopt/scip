@@ -39,225 +39,225 @@ extern "C" {
  */
 
 /** compares two propagators w. r. to their priority */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
 
 /** compares two propagators w. r. to their presolving priority */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_SORTPTRCOMP(SCIPpropCompPresol);
 
 /** comparison method for sorting propagators w.r.t. to their name */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_SORTPTRCOMP(SCIPpropCompName);
 
 /** gets user data of propagator */
-EXTERN
+SCIP_EXPORT extern
 SCIP_PROPDATA* SCIPpropGetData(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** sets user data of propagator; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT extern
 void SCIPpropSetData(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PROPDATA*        propdata            /**< new propagator user data */
    );
 
 /** gets name of propagator */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPpropGetName(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets description of propagator */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPpropGetDesc(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets priority of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetPriority(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets presolving priority of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetPresolPriority(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets frequency of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetFreq(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets time in seconds used for setting up this propagator for new stages */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPpropGetSetupTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** sets frequency of propagator */
-EXTERN
+SCIP_EXPORT extern
 void SCIPpropSetFreq(
    SCIP_PROP*            prop,               /**< propagator */
    int                   freq                /**< new frequency of propagator */
    );
 
 /** gets time in seconds used in this propagator */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPpropGetTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets time in seconds used in this propagator during strong branching */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPpropGetStrongBranchPropTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets time in seconds used in this propagator for resolve propagation */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPpropGetRespropTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets time in seconds used in this propagator for presolving */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPpropGetPresolTime(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets the total number of times, the propagator was called */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPpropGetNCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets the total number of times, the propagator was called for resolving a propagation */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPpropGetNRespropCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets total number of times, this propagator detected a cutoff */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPpropGetNCutoffs(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets total number of domain reductions found by this propagator */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPpropGetNDomredsFound(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** should propagator be delayed, if other propagators found reductions? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPpropIsDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** was propagator delayed at the last call? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPpropWasDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** is propagator initialized? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPpropIsInitialized(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of variables fixed during presolving of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNFixedVars(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of variables aggregated during presolving of propagator  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNAggrVars(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of variable types changed during presolving of propagator  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNChgVarTypes(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of bounds changed during presolving of propagator  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNChgBds(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of holes added to domains of variables during presolving of propagator  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNAddHoles(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of constraints deleted during presolving of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNDelConss(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of constraints added during presolving of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNAddConss(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of constraints upgraded during presolving of propagator  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNUpgdConss(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of coefficients changed during presolving of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNChgCoefs(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of constraint sides changed during presolving of propagator */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNChgSides(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets number of times the propagator was called in presolving and tried to find reductions */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpropGetNPresolCalls(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** returns the timing mask of the propagator */
-EXTERN
+SCIP_EXPORT extern
 SCIP_PROPTIMING SCIPpropGetTimingmask(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** does the propagator perform presolving? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPpropDoesPresolve(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** returns the timing mask of the presolving method of the propagator */
-EXTERN
+SCIP_EXPORT extern
 SCIP_PRESOLTIMING SCIPpropGetPresolTiming(
    SCIP_PROP*            prop                /**< propagator */
    );
 
 /** sets the timing mask of the presolving method of the propagator */
-EXTERN
+SCIP_EXPORT extern
 void SCIPpropSetPresolTiming(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */

@@ -41,7 +41,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeReaderCcg(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeReaderCcg(
  */
 
 /** writes problem to file */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPwriteCcg(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

@@ -48,7 +48,7 @@ extern "C" {
 /** perform activity based coefficient tigthening on the given cut; returns TRUE if the cut was detected
  *  to be redundant due to acitvity bounds
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             cutislocal,         /**< is the cut local? */
@@ -60,21 +60,21 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    );
 
 /** create an empty the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow             /**< pointer to return the aggregation row */
    );
 
 /** free a the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow             /**< pointer to the aggregation row that should be freed */
    );
 
 /** output aggregation row to file stream */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< pointer to return aggregation row */
@@ -82,7 +82,7 @@ void SCIPaggrRowPrint(
    );
 
 /** copy the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow,            /**< pointer to return the aggregation row */
@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPaggrRowCopy(
    );
 
 /** add weighted row to the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowAddRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
  *
  *  @note: The list of non-zero indices will be updated by swapping the last non-zero index to @p pos.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowCancelVarWithBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -116,7 +116,7 @@ void SCIPaggrRowCancelVarWithBound(
    );
 
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    );
 
 /** add weighted constraint to the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -142,14 +142,14 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
  *
  *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPaggrRowCalcEfficacyNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** clear all entries in the aggregation row but do not free the internal memory */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
@@ -157,7 +157,7 @@ void SCIPaggrRowClear(
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row, \p aggrrow, gets overwritten
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    );
 
 /** removes all (close enough to) zero entries in the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -180,19 +180,19 @@ void SCIPaggrRowRemoveZeros(
    );
 
 /** get array with lp positions of aggregated rows */
-EXTERN
+SCIP_EXPORT extern
 int* SCIPaggrRowGetRowInds(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** get array with weights of aggregated rows */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real* SCIPaggrRowGetRowWeights(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** checks whether a given row has been added to the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPaggrRowHasRowBeenAdded(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
@@ -201,7 +201,7 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
 /** gets the min and max absolute value of the weights used to aggregate the rows;
  *  must not be called for empty aggregation rows
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPaggrRowGetAbsWeightRange(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for aggregating rows */
@@ -209,13 +209,13 @@ void SCIPaggrRowGetAbsWeightRange(
    );
 
 /** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 int* SCIPaggrRowGetInds(
     SCIP_AGGRROW*        aggrrow
    );
 
 /** gets the number of non-zeros in the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 int SCIPaggrRowGetNNz(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
@@ -249,25 +249,25 @@ SCIP_Real SCIPaggrRowGetProbvarValue(
 }
 
 /** gets the rank of the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 int SCIPaggrRowGetRank(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** checks if the aggregation row is only valid locally */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPaggrRowIsLocal(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** gets the right hand side of the aggregation row */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPaggrRowGetRhs(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** gets the number of row aggregations */
-EXTERN
+SCIP_EXPORT extern
 int SCIPaggrRowGetNRows(
    SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
@@ -275,7 +275,7 @@ int SCIPaggrRowGetNRows(
 /** perform a cut selection algorithm for the given array of cuts; the array is partitioned
  *  so that the selected cuts come first and the remaining ones are at the end of the array
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
@@ -308,7 +308,7 @@ SCIP_RETCODE SCIPselectCuts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -353,7 +353,7 @@ SCIP_RETCODE SCIPcalcMIR(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -397,7 +397,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcalcFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcalcStrongCG(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */

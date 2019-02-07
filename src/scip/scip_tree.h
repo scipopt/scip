@@ -77,7 +77,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetFocusNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -92,7 +92,7 @@ SCIP_NODE* SCIPgetFocusNode(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetCurrentNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -114,7 +114,7 @@ SCIP_NODE* SCIPgetCurrentNode(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -136,7 +136,7 @@ int SCIPgetDepth(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetFocusDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -149,7 +149,7 @@ int SCIPgetFocusDepth(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -164,7 +164,7 @@ int SCIPgetPlungeDepth(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetRootNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -177,7 +177,7 @@ SCIP_NODE* SCIPgetRootNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetEffectiveRootDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -192,7 +192,7 @@ int SCIPgetEffectiveRootDepth(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPinRepropagation(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -205,7 +205,7 @@ SCIP_Bool SCIPinRepropagation(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetChildren(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE***          children,           /**< pointer to store children array, or NULL if not needed */
@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPgetChildren(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNChildren(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -232,7 +232,7 @@ int SCIPgetNChildren(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetSiblings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE***          siblings,           /**< pointer to store siblings array, or NULL if not needed */
@@ -246,7 +246,7 @@ SCIP_RETCODE SCIPgetSiblings(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNSiblings(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -259,7 +259,7 @@ int SCIPgetNSiblings(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetLeaves(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE***          leaves,             /**< pointer to store leaves array, or NULL if not needed */
@@ -273,7 +273,7 @@ SCIP_RETCODE SCIPgetLeaves(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -287,7 +287,7 @@ int SCIPgetNLeaves(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -299,7 +299,7 @@ int SCIPgetNNodesLeft(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetPrioChild(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -311,7 +311,7 @@ SCIP_NODE* SCIPgetPrioChild(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetPrioSibling(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -323,7 +323,7 @@ SCIP_NODE* SCIPgetPrioSibling(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetBestChild(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -335,7 +335,7 @@ SCIP_NODE* SCIPgetBestChild(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetBestSibling(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -347,7 +347,7 @@ SCIP_NODE* SCIPgetBestSibling(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetBestLeaf(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -359,7 +359,7 @@ SCIP_NODE* SCIPgetBestLeaf(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetBestNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -371,7 +371,7 @@ SCIP_NODE* SCIPgetBestNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_NODE* SCIPgetBestboundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -381,7 +381,7 @@ SCIP_NODE* SCIPgetBestboundNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetOpenNodesData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE***          leaves,             /**< pointer to store the leaves, or NULL if not needed */
@@ -400,7 +400,7 @@ SCIP_RETCODE SCIPgetOpenNodesData(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcutoffNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be cut off */
@@ -414,7 +414,7 @@ SCIP_RETCODE SCIPcutoffNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be propagated again */
@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPrepropagateNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetCutoffdepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -439,7 +439,7 @@ int SCIPgetCutoffdepth(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetRepropdepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -452,7 +452,7 @@ int SCIPgetRepropdepth(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPprintNodeRootPath(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node data */
@@ -467,7 +467,7 @@ SCIP_RETCODE SCIPprintNodeRootPath(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsetFocusnodeLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             solvelp             /**< should the LP be solved? */

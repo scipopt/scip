@@ -35,7 +35,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP*                 scip                /**< SCIP data structure */
    );

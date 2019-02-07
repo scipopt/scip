@@ -41,7 +41,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeReaderOsil(
    SCIP*                 scip                /**< SCIP data structure */
    );

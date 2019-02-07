@@ -43,7 +43,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
  */
 
 /** computes a minimal set of covering variables */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  coversize,          /**< size of the computed cover */

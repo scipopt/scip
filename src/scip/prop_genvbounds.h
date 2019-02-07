@@ -80,7 +80,7 @@ extern "C" {
 /** adds a generalized variable bound to the genvbounds propagator; if there is already a genvbound for the bound
  *  "boundtype" of variable "var", it will be replaced
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

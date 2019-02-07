@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup BendersIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

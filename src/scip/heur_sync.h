@@ -44,7 +44,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeHeurSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPincludeHeurSync(
   */
 
 /** pass solution to sync heuristic */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< sync heuristic */

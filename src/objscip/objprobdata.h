@@ -201,7 +201,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // problem is freed and destructor of MyProbData is called here
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateObjProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPcreateObjProb(
  *  Warning! This method should only be called after a problem was created with SCIPcreateObjProb().
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.
  */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjProbData* SCIPgetObjProbData(
    SCIP*                 scip                /**< SCIP data structure */
    );

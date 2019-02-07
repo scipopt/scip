@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates the concurrent SCIP solver plugins and includes them in SCIP */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    SCIP*                 scip                /**< SCIP datastructure */
    );

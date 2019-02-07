@@ -51,7 +51,7 @@ extern "C" {
  */
 
 /** create and resets an epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
@@ -67,13 +67,13 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    );
 
 /** get weights array of epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real* SCIPgetWeightsEpsgreedy(
    SCIP_BANDIT*          epsgreedy           /**< epsilon greedy bandit algorithm */
    );
 
 /** set epsilon parameter of epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsetEpsilonEpsgreedy(
    SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
    SCIP_Real             eps                 /**< parameter to increase probability for exploration between all actions */

@@ -161,7 +161,7 @@ void SCIPcomprSetExitsol(
    );
 
 /** should the compression be executed at the given depth, frequency, timing, ... */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPcomprShouldBeExecuted(
    SCIP_COMPR*           compr,              /**< tree compression */
    int                   depth,              /**< depth of current node */

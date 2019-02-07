@@ -100,7 +100,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP*                 scip                /**< SCIP data structure */
    );

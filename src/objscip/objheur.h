@@ -190,7 +190,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyHeur is called here
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeObjHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjHeur*        objheur,            /**< primal heuristic object */
@@ -198,14 +198,14 @@ SCIP_RETCODE SCIPincludeObjHeur(
    );
 
 /** returns the heur object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjHeur* SCIPfindObjHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of primal heuristic */
    );
 
 /** returns the heur object for the given primal heuristic */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjHeur* SCIPgetObjHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur                /**< primal heuristic */

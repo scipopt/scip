@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates event handler for newsol event */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeEventHdlrNewsol(
    SCIP*                 scip                /**< SCIP data structure */
    );

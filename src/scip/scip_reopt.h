@@ -78,7 +78,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetReoptChildIDs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node of the search tree */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,               /**< SCIP data strcuture */
    SCIP_NODE*            node,               /**< node of the search tree */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
 /** returns the number of nodes in the reoptimization tree induced by @p node; if @p node == NULL, the method
  *  returns the number of nodes of the whole reoptimization tree.
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNReoptnodes(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node of the search tree */
@@ -118,7 +118,7 @@ int SCIPgetNReoptnodes(
 /** returns the number of leave nodes of the subtree induced by @p node; if @p node == NULL, the method
  *  returns the number of leaf nodes of the whole reoptimization tree.
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNReoptLeaves(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node of the search tree */
@@ -140,7 +140,7 @@ SCIP_REOPTNODE* SCIPgetReoptnode(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
@@ -157,7 +157,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsetReoptCompression(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      representation,     /**< array of representatives */
@@ -173,7 +173,7 @@ SCIP_RETCODE SCIPsetReoptCompression(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddReoptnodeCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    );
 
 /** return the branching path stored in the reoptree at ID id */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgetReoptnodePath(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
@@ -208,7 +208,7 @@ void SCIPgetReoptnodePath(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPinitRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPresetRepresentation(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPfreeRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
@@ -253,7 +253,7 @@ SCIP_RETCODE SCIPfreeRepresentation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPapplyReopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
@@ -275,7 +275,7 @@ SCIP_RETCODE SCIPapplyReopt(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPresetReoptnodeDualcons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node of the search tree */
@@ -290,7 +290,7 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsplitReoptRoot(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
@@ -298,7 +298,7 @@ SCIP_RETCODE SCIPsplitReoptRoot(
    );
 
 /** returns if a node should be reoptimized */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPreoptimizeNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node of the search tree */
@@ -312,14 +312,14 @@ SCIP_Bool SCIPreoptimizeNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdeleteReoptnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      reoptnode           /**< node of the reoptimization tree */
    );
 
 /** return the similarity between two objective functions */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPgetReoptSimilarity(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   run1,               /**< number of run */
@@ -327,7 +327,7 @@ SCIP_Real SCIPgetReoptSimilarity(
    );
 
 /** check the changes of the variable coefficient in the objective function */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgetVarCoefChg(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   varidx,             /**< index of variable */

@@ -202,7 +202,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBranchrule is called here
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeObjBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjBranchrule*  objbranchrule,      /**< branching rule object */
@@ -210,14 +210,14 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    );
 
 /** returns the branchrule object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjBranchrule* SCIPfindObjBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of branching rule */
    );
 
 /** returns the branchrule object for the given branching rule */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjBranchrule* SCIPgetObjBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */

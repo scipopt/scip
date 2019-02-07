@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
  * Depending on the given permutation, either an orbisack or symresack constraint
  * is created.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateSymbreakCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -117,7 +117,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsBasicSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

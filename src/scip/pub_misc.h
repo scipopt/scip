@@ -73,7 +73,7 @@ extern "C" {
  */
 
 /** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPstudentTGetCriticalValue(
    SCIP_CONFIDENCELEVEL  clevel,             /**< (one-sided) confidence level */
    int                   df                  /**< degrees of freedom */
@@ -85,7 +85,7 @@ SCIP_Real SCIPstudentTGetCriticalValue(
  *  value can be compared with a critical value (see also SCIPstudentTGetCriticalValue()) at
  *  a predefined confidence level for checking if x and y significantly differ in location
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real             meanx,              /**< the mean of the first distribution */
    SCIP_Real             meany,              /**< the mean of the second distribution */
@@ -96,13 +96,13 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    );
 
 /** returns the value of the Gauss error function evaluated at a given point */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPerf(
    SCIP_Real             x                   /**< value to evaluate */
    );
 
 /** get critical value of a standard normal distribution  at a given confidence level */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPnormalGetCriticalValue(
    SCIP_CONFIDENCELEVEL  clevel              /**< (one-sided) confidence level */
    );
@@ -113,7 +113,7 @@ SCIP_Real SCIPnormalGetCriticalValue(
  *  The distribution is given by the respective mean and deviation. This implementation
  *  uses the error function erf().
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPnormalCDF(
    SCIP_Real             mean,               /**< the mean value of the distribution */
    SCIP_Real             variance,           /**< the square of the deviation of the distribution */
@@ -132,25 +132,25 @@ SCIP_Real SCIPnormalCDF(
  */
 
 /** returns the number of observations of this regression */
-EXTERN
+SCIP_EXPORT extern
 int SCIPregressionGetNObservations(
    SCIP_REGRESSION*      regression          /**< regression data structure */
    );
 
 /** return the current slope of the regression */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPregressionGetSlope(
    SCIP_REGRESSION*      regression          /**< regression data structure */
    );
 
 /** get the current y-intercept of the regression */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPregressionGetIntercept(
    SCIP_REGRESSION*      regression          /**< regression data structure */
    );
 
 /** removes an observation (x,y) from the regression */
-EXTERN
+SCIP_EXPORT extern
 void SCIPregressionRemoveObservation(
    SCIP_REGRESSION*      regression,         /**< regression data structure */
    SCIP_Real             x,                  /**< X of observation */
@@ -158,7 +158,7 @@ void SCIPregressionRemoveObservation(
    );
 
 /** update regression by a new observation (x,y) */
-EXTERN
+SCIP_EXPORT extern
 void SCIPregressionAddObservation(
    SCIP_REGRESSION*      regression,         /**< regression data structure */
    SCIP_Real             x,                  /**< X of observation */
@@ -166,19 +166,19 @@ void SCIPregressionAddObservation(
    );
 
 /** reset regression data structure */
-EXTERN
+SCIP_EXPORT extern
 void SCIPregressionReset(
    SCIP_REGRESSION*      regression          /**< regression data structure */
    );
 
 /** creates and resets a regression */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPregressionCreate(
    SCIP_REGRESSION**     regression          /**< regression data structure */
    );
 
 /** frees a regression */
-EXTERN
+SCIP_EXPORT extern
 void SCIPregressionFree(
    SCIP_REGRESSION**     regression          /**< regression data structure */
    );
@@ -199,7 +199,7 @@ void SCIPregressionFree(
 
 
 /** writes a node section to the given graph file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteNode(
    FILE*                 file,               /**< file to write to */
    unsigned int          id,                 /**< id of the node */
@@ -210,7 +210,7 @@ void SCIPgmlWriteNode(
    );
 
 /** writes a node section including weight to the given graph file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteNodeWeight(
    FILE*                 file,               /**< file to write to */
    unsigned int          id,                 /**< id of the node */
@@ -222,7 +222,7 @@ void SCIPgmlWriteNodeWeight(
    );
 
 /** writes an edge section to the given graph file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteEdge(
    FILE*                 file,               /**< file to write to */
    unsigned int          source,             /**< source node id of the node */
@@ -232,7 +232,7 @@ void SCIPgmlWriteEdge(
    );
 
 /** writes an arc section to the given graph file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteArc(
    FILE*                 file,               /**< file to write to */
    unsigned int          source,             /**< source node id of the node */
@@ -242,14 +242,14 @@ void SCIPgmlWriteArc(
    );
 
 /** writes the starting line to a GML graph file, does not open a file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteOpening(
    FILE*                 file,               /**< file to write to */
    SCIP_Bool             directed            /**< is the graph directed */
    );
 
 /** writes the ending lines to a GML graph file, does not close a file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPgmlWriteClosing(
    FILE*                 file                /**< file to close */
    );
@@ -268,7 +268,7 @@ void SCIPgmlWriteClosing(
  */
 
 /** creates a sparse solution */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsparseSolCreate(
    SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
    SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous variables */
@@ -277,37 +277,37 @@ SCIP_RETCODE SCIPsparseSolCreate(
    );
 
 /** frees sparse solution */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsparseSolFree(
    SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
    );
 
 /** returns the variables in the given sparse solution */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR** SCIPsparseSolGetVars(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
 /** returns the number of variables in the given sparse solution */
-EXTERN
+SCIP_EXPORT extern
 int SCIPsparseSolGetNVars(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
 /** returns the the lower bound array for all variables for a given sparse solution */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint* SCIPsparseSolGetLbs(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
 /** returns the the upper bound array for all variables for a given sparse solution */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint* SCIPsparseSolGetUbs(
    SCIP_SPARSESOL*       sparsesol           /**< a sparse solution */
    );
 
 /** constructs the first solution of sparse solution (all variables are set to their lower bound value */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsparseSolGetFirstSol(
    SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
    SCIP_Longint*         sol,                /**< array to store the first solution */
@@ -315,7 +315,7 @@ void SCIPsparseSolGetFirstSol(
    );
 
 /** constructs the next solution of the sparse solution and return whether there was one more or not */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPsparseSolGetNextSol(
    SCIP_SPARSESOL*       sparsesol,          /**< sparse solutions */
    SCIP_Longint*         sol,                /**< current solution array which get changed to the next solution */
@@ -338,7 +338,7 @@ SCIP_Bool SCIPsparseSolGetNextSol(
 
 
 /** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPqueueCreate(
    SCIP_QUEUE**          queue,              /**< pointer to the new queue */
    int                   initsize,           /**< initial number of available element slots */
@@ -347,63 +347,63 @@ SCIP_RETCODE SCIPqueueCreate(
 
 
 /** frees queue, but not the data elements themselves */
-EXTERN
+SCIP_EXPORT extern
 void SCIPqueueFree(
    SCIP_QUEUE**          queue               /**< pointer to a queue */
    );
 
 /** clears the queue, but doesn't free the data elements themselves */
-EXTERN
+SCIP_EXPORT extern
 void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** inserts pointer element at the end of the queue */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
    );
 
 /** inserts unsigned integer element at the end of the queue */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPqueueInsertUInt(
    SCIP_QUEUE*           queue,              /**< queue */
    unsigned int          elem                /**< element to be inserted */
    );
 
 /** removes and returns the first element of the queue, or NULL if no element exists */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** removes and returns the first unsigned integer element of the queue, or UNIT_MAX if no element exists */
-EXTERN
+SCIP_EXPORT extern
 unsigned int SCIPqueueRemoveUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the first element of the queue without removing it, or NULL if no element exists */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
-EXTERN
+SCIP_EXPORT extern
 unsigned int SCIPqueueFirstUInt(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns whether the queue is empty */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPqueueIsEmpty(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the number of elements in the queue */
-EXTERN
+SCIP_EXPORT extern
 int SCIPqueueNElems(
    SCIP_QUEUE*           queue               /**< queue */
    );
@@ -422,7 +422,7 @@ int SCIPqueueNElems(
  */
 
 /** creates priority queue */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
@@ -431,44 +431,44 @@ SCIP_RETCODE SCIPpqueueCreate(
    );
 
 /** frees priority queue, but not the data elements themselves */
-EXTERN
+SCIP_EXPORT extern
 void SCIPpqueueFree(
    SCIP_PQUEUE**         pqueue              /**< pointer to a priority queue */
    );
 
 /** clears the priority queue, but doesn't free the data elements themselves */
-EXTERN
+SCIP_EXPORT extern
 void SCIPpqueueClear(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
 /** inserts element into priority queue */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    void*                 elem                /**< element to be inserted */
    );
 
 /** removes and returns best element from the priority queue */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPpqueueRemove(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
 /** returns the best element of the queue without removing it */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPpqueueFirst(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
 /** returns the number of elements in the queue */
-EXTERN
+SCIP_EXPORT extern
 int SCIPpqueueNElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
 /** returns the elements of the queue; changing the returned array may destroy the queue's ordering! */
-EXTERN
+SCIP_EXPORT extern
 void** SCIPpqueueElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
@@ -513,7 +513,7 @@ uint32_t SCIPrealHashCode(double x)
 }
 
 /** creates a hash table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
    BMS_BLKMEM*           blkmem,             /**< block memory used to store hash table entries */
@@ -525,7 +525,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    );
 
 /** frees the hash table */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    );
@@ -537,80 +537,80 @@ void SCIPhashtableFree(
  *
  *  @deprecated Please use SCIPhashtableRemoveAll()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** inserts element in hash table (multiple inserts of same element override the previous entry) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
 /** retrieve element with key from hash table, returns NULL if not existing */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPhashtableRetrieve(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 key                 /**< key to retrieve */
    );
 
 /** returns whether the given element exists in the table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPhashtableExists(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to search in the table */
    );
 
 /** removes element from the hash table, if it exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashtableRemove(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to remove from the table */
    );
 
 /** removes all elements of the hash table */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** returns number of hash table elements */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** gives the number of entries in the internal arrays of a hash table */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashtableGetNEntries(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** gives the element at the given index or NULL if entry at that index has no element */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPhashtableGetEntry(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    int                   entryidx            /**< index of hash table entry */
    );
 
 /** returns the load of the given hash table in percentage */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPhashtableGetLoad(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** prints statistics about hash table usage */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashtablePrintStatistics(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
@@ -630,13 +630,13 @@ void SCIPhashtablePrintStatistics(
  */
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-EXTERN
+SCIP_EXPORT extern
 int SCIPcalcMultihashSize(
    int                   minsize             /**< minimal size of the hash table */
    );
 
 /** creates a multihash table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmultihashCreate(
    SCIP_MULTIHASH**      multihash,          /**< pointer to store the created multihash table */
    BMS_BLKMEM*           blkmem,             /**< block memory used to store multihash table entries */
@@ -648,7 +648,7 @@ SCIP_RETCODE SCIPmultihashCreate(
    );
 
 /** frees the multihash table */
-EXTERN
+SCIP_EXPORT extern
 void SCIPmultihashFree(
    SCIP_MULTIHASH**      multihash           /**< pointer to the multihash table */
    );
@@ -658,7 +658,7 @@ void SCIPmultihashFree(
  *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding an element
  *        to the hash table, due to dynamic resizing.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmultihashInsert(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to insert into the table */
@@ -669,14 +669,14 @@ SCIP_RETCODE SCIPmultihashInsert(
  *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding a new
  *        element to the multihash table, due to dynamic resizing.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmultihashSafeInsert(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to insert into the table */
    );
 
 /** retrieve element with key from multihash table, returns NULL if not existing */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPmultihashRetrieve(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 key                 /**< key to retrieve */
@@ -687,7 +687,7 @@ void* SCIPmultihashRetrieve(
  *
  *  @note The returned multimultihashlist pointer might get invalid when adding a new element to the multihash table.
  */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPmultihashRetrieveNext(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
@@ -697,14 +697,14 @@ void* SCIPmultihashRetrieveNext(
    );
 
 /** returns whether the given element exists in the multihash table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPmultihashExists(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to search in the table */
    );
 
 /** removes element from the multihash table, if it exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmultihashRemove(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    void*                 element             /**< element to remove from the table */
@@ -715,48 +715,48 @@ SCIP_RETCODE SCIPmultihashRemove(
  *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
  *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPmultihashRemoveAll(
    SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
 /** returns number of multihash table elements */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPmultihashGetNElements(
    SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
 /** returns the load of the given multihash table in percentage */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPmultihashGetLoad(
    SCIP_MULTIHASH*       multihash           /**< multihash table */
    );
 
 /** prints statistics about multihash table usage */
-EXTERN
+SCIP_EXPORT extern
 void SCIPmultihashPrintStatistics(
    SCIP_MULTIHASH*       multihash,          /**< multihash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** standard hash key comparator for string keys */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString);
 
 /** standard hashing function for string keys */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString);
 
 /** gets the element as the key */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyStandard);
 
 /** returns TRUE iff both keys(pointer) are equal */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr);
 
 /** returns the hash value of the key */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
 
 /**@} */
@@ -774,7 +774,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
  */
 
 /** creates a hash map mapping pointers to pointers */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapCreate(
    SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
    BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
@@ -782,13 +782,13 @@ SCIP_RETCODE SCIPhashmapCreate(
    );
 
 /** frees the hash map */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashmapFree(
    SCIP_HASHMAP**        hashmap             /**< pointer to the hash map */
    );
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapInsert(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -796,7 +796,7 @@ SCIP_RETCODE SCIPhashmapInsert(
    );
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapInsertInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -804,7 +804,7 @@ SCIP_RETCODE SCIPhashmapInsertInt(
    );
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -812,21 +812,21 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    );
 
 /** retrieves image of given origin from the hash map, or NULL if no image exists */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPhashmapGetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
 
 /** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -835,7 +835,7 @@ SCIP_Real SCIPhashmapGetImageReal(
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
  *  new origin->image pair
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -845,7 +845,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
  *  new origin->image pair
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapSetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -855,7 +855,7 @@ SCIP_RETCODE SCIPhashmapSetImageInt(
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
  *  new origin->image pair
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapSetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -863,98 +863,98 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    );
 
 /** checks whether an image to the given origin exists in the hash map */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPhashmapExists(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to search for */
    );
 
 /** removes origin->image pair from the hash map, if it exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapRemove(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to remove from the list */
    );
 
 /** prints statistics about hash map usage */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashmapPrintStatistics(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** indicates whether a hash map has no entries */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
 /** gives the number of elements in a hash map */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashmapGetNElements(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
 /** gives the number of entries in the internal arrays of a hash map */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
 /** gives the hashmap entry at the given index or NULL if entry has no element */
-EXTERN
+SCIP_EXPORT extern
 SCIP_HASHMAPENTRY* SCIPhashmapGetEntry(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   entryidx            /**< index of hash map entry */
    );
 
 /** gives the origin of the hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPhashmapEntryGetOrigin(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
 /** gives the image of the hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPhashmapEntryGetImage(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
 /** gives the image of the hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashmapEntryGetImageInt(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
 /** gives the image of the hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
 /** sets pointer image of a hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashmapEntrySetImage(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    void*                 image               /**< new image */
    );
 
 /** sets integer image of a hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashmapEntrySetImageInt(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    int                   image               /**< new image */
    );
 
 /** sets real image of a hashmap entry */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashmapEntrySetImageReal(
    SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
    SCIP_Real             image               /**< new image */
    );
 
 /** removes all entries in a hash map. */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
@@ -974,7 +974,7 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  */
 
 /** creates a hash set of pointers */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashsetCreate(
    SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
    BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
@@ -983,14 +983,14 @@ SCIP_RETCODE SCIPhashsetCreate(
    );
 
 /** frees the hash set */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashsetFree(
    SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
    BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
    );
 
 /** inserts new element into the hash set */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashsetInsert(
    SCIP_HASHSET*         hashset,            /**< hash set */
    BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
@@ -998,52 +998,52 @@ SCIP_RETCODE SCIPhashsetInsert(
    );
 
 /** checks whether an element exists in the hash set */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPhashsetExists(
    SCIP_HASHSET*         hashset,            /**< hash set */
    void*                 element             /**< element to search for */
    );
 
 /** removes an element from the hash set, if it exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPhashsetRemove(
    SCIP_HASHSET*         hashset,            /**< hash set */
    void*                 element             /**< origin to remove from the list */
    );
 
 /** prints statistics about hash set usage */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashsetPrintStatistics(
    SCIP_HASHSET*         hashset,            /**< hash set */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** indicates whether a hash set has no entries */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPhashsetIsEmpty(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
 
 /** gives the number of elements in a hash set */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashsetGetNElements(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
 
 /** gives the number of slots of a hash set */
-EXTERN
+SCIP_EXPORT extern
 int SCIPhashsetGetNSlots(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
 
 /** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
-EXTERN
+SCIP_EXPORT extern
 void** SCIPhashsetGetSlots(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
 
 /** removes all entries in a hash set. */
-EXTERN
+SCIP_EXPORT extern
 void SCIPhashsetRemoveAll(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
@@ -1076,7 +1076,7 @@ void SCIPhashsetRemoveAll(
  */
 
 /** create a resource activity */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPactivityCreate(
    SCIP_RESOURCEACTIVITY** activity,         /**< pointer to store the resource activity */
    SCIP_VAR*             var,                /**< start time variable of the activity */
@@ -1085,7 +1085,7 @@ SCIP_RETCODE SCIPactivityCreate(
    );
 
 /** frees a resource activity */
-EXTERN
+SCIP_EXPORT extern
 void SCIPactivityFree(
    SCIP_RESOURCEACTIVITY** activity          /**< pointer to the resource activity */
    );
@@ -1093,25 +1093,25 @@ void SCIPactivityFree(
 #ifndef NDEBUG
 
 /** returns the start time variable of the resource activity */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR* SCIPactivityGetVar(
    SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
    );
 
 /** returns the duration of the resource activity */
-EXTERN
+SCIP_EXPORT extern
 int SCIPactivityGetDuration(
    SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
    );
 
 /** returns the demand of the resource activity */
-EXTERN
+SCIP_EXPORT extern
 int SCIPactivityGetDemand(
    SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
    );
 
 /** returns the energy of the resource activity */
-EXTERN
+SCIP_EXPORT extern
 int SCIPactivityGetEnergy(
    SCIP_RESOURCEACTIVITY* activity           /**< resource activity */
    );
@@ -1140,20 +1140,20 @@ int SCIPactivityGetEnergy(
  */
 
 /** creates resource profile */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPprofileCreate(
    SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
    int                   capacity            /**< resource capacity */
    );
 
 /** frees given resource profile */
-EXTERN
+SCIP_EXPORT extern
 void SCIPprofileFree(
    SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    );
 
 /** output of the given resource profile */
-EXTERN
+SCIP_EXPORT extern
 void SCIPprofilePrint(
    SCIP_PROFILE*         profile,            /**< resource profile to output */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1161,38 +1161,38 @@ void SCIPprofilePrint(
    );
 
 /** returns the capacity of the resource profile */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetCapacity(
    SCIP_PROFILE*         profile             /**< resource profile to use */
    );
 
 /** returns the number time points of the resource profile */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetNTimepoints(
    SCIP_PROFILE*         profile             /**< resource profile to use */
    );
 
 /** returns the time points of the resource profile */
-EXTERN
+SCIP_EXPORT extern
 int* SCIPprofileGetTimepoints(
    SCIP_PROFILE*         profile             /**< resource profile to use */
    );
 
 /** returns the loads of the resource profile */
-EXTERN
+SCIP_EXPORT extern
 int* SCIPprofileGetLoads(
    SCIP_PROFILE*         profile             /**< resource profile to use */
    );
 
 /** returns the time point for given position of the resource profile */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetTime(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   pos                 /**< position */
    );
 
 /** returns the loads of the resource profile at the given position */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetLoad(
    SCIP_PROFILE*         profile,            /**< resource profile */
    int                   pos                 /**< position */
@@ -1201,7 +1201,7 @@ int SCIPprofileGetLoad(
 /** returns if the given time point exists in the resource profile and stores the position of the given time point if it
  *  exists; otherwise the position of the next smaller existing time point is stored
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPprofileFindLeft(
    SCIP_PROFILE*         profile,            /**< resource profile to search */
    int                   timepoint,          /**< time point to search for */
@@ -1211,7 +1211,7 @@ SCIP_Bool SCIPprofileFindLeft(
 /** insert a core into resource profile; if the core is non-empty the resource profile will be updated otherwise nothing
  *  happens
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPprofileInsertCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
@@ -1222,7 +1222,7 @@ SCIP_RETCODE SCIPprofileInsertCore(
    );
 
 /** subtracts the height from the resource profile during core time */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
@@ -1233,7 +1233,7 @@ SCIP_RETCODE SCIPprofileDeleteCore(
 /** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
  *  and duration)
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetEarliestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   est,                /**< earliest starting time of the given core */
@@ -1246,7 +1246,7 @@ int SCIPprofileGetEarliestFeasibleStart(
 /** return the latest possible starting point within the time interval [lb,ub] for a given core (given by its height and
  *  duration)
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPprofileGetLatestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   lb,                 /**< earliest possible start point */
@@ -1268,21 +1268,21 @@ int SCIPprofileGetLatestFeasibleStart(
  */
 
 /** resize directed graph structure */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphResize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   nnodes              /**< new number of nodes */
    );
 
 /** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphSetSizes(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int*                  sizes               /**< sizes of the successor lists */
    );
 
 /** frees given directed graph structure */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphFree(
    SCIP_DIGRAPH**        digraph             /**< pointer to the directed graph */
    );
@@ -1291,7 +1291,7 @@ void SCIPdigraphFree(
  *
  *  @note if the arc is already contained, it is added a second time
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphAddArc(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the arc */
@@ -1304,7 +1304,7 @@ SCIP_RETCODE SCIPdigraphAddArc(
  * @note if there already exists an arc from startnode to endnode, the new arc is not added,
  *       even if its data is different
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphAddArcSafe(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   startnode,          /**< start node of the arc */
@@ -1313,7 +1313,7 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    );
 
 /** sets the number of successors to a given value */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphSetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node,               /**< node for which the number of successors has to be changed */
@@ -1321,20 +1321,20 @@ SCIP_RETCODE SCIPdigraphSetNSuccessors(
    );
 
 /** returns the number of nodes of the given digraph */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** returns the node data, or NULL if no data exist */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    );
 
 /** sets the node data */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
@@ -1342,20 +1342,20 @@ void SCIPdigraphSetNodeData(
    );
 
 /** returns the total number of arcs in the given digraph */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdigraphGetNArcs(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** returns the number of successor nodes of the given node */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdigraphGetNSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the number of outgoing arcs is returned */
    );
 
 /** returns the array of indices of the successor nodes; this array must not be changed from outside */
-EXTERN
+SCIP_EXPORT extern
 int* SCIPdigraphGetSuccessors(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the array of outgoing arcs is returned */
@@ -1364,7 +1364,7 @@ int* SCIPdigraphGetSuccessors(
 /** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
-EXTERN
+SCIP_EXPORT extern
 void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
@@ -1375,7 +1375,7 @@ void** SCIPdigraphGetSuccessorsData(
  *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
  *        undirected graph.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   minsize,            /**< all components with less nodes are ignored */
@@ -1393,7 +1393,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
  *
  *  @note In general a topological sort of the strongly connected components is not unique.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the undirected connected component */
@@ -1411,13 +1411,13 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
  *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
  *        broken, which is the reason for having only almost topologically sorted arrays.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** returns the number of previously computed undirected components for the given directed graph */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdigraphGetNComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
@@ -1425,7 +1425,7 @@ int SCIPdigraphGetNComponents(
 /** Returns the previously computed undirected component of the given number for the given directed graph.
  *  If the components were sorted using SCIPdigraphTopoSortComponents(), the component is (almost) topologically sorted.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphGetComponent(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the component to return */
@@ -1435,13 +1435,13 @@ void SCIPdigraphGetComponent(
    );
 
 /** frees the component information for the given directed graph */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    );
 
 /** output of the given directed graph via the given message handler */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphPrint(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1449,7 +1449,7 @@ void SCIPdigraphPrint(
    );
 
 /** prints the given directed graph structure in GML format into the given file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphPrintGml(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    FILE*                 file                /**< file to write to */
@@ -1457,7 +1457,7 @@ void SCIPdigraphPrintGml(
 
 
 /** output of the given directed graph via the given message handler */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdigraphPrintComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -1477,7 +1477,7 @@ void SCIPdigraphPrintComponents(
  */
 
 /** creates a binary tree node with sorting value and user data */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPbtnodeCreate(
    SCIP_BT*              tree,               /**< binary search tree */
    SCIP_BTNODE**         node,               /**< pointer to store the created search node */
@@ -1488,62 +1488,62 @@ SCIP_RETCODE SCIPbtnodeCreate(
  *
  *  @note The user pointer (object) is not freed. If needed, it has to be done by the user.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtnodeFree(
    SCIP_BT*              tree,               /**< binary tree */
    SCIP_BTNODE**         node                /**< node to be freed */
    );
 
 /** returns the user data pointer stored in that node */
-EXTERN
+SCIP_EXPORT extern
 void* SCIPbtnodeGetData(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns the parent which can be NULL if the given node is the root */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BTNODE* SCIPbtnodeGetParent(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns left child which can be NULL if the given node is a leaf */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BTNODE* SCIPbtnodeGetLeftchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns right child which can be NULL if the given node is a leaf */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BTNODE* SCIPbtnodeGetRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns the sibling of the node or NULL if does not exist */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BTNODE* SCIPbtnodeGetSibling(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns whether the node is a root node */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPbtnodeIsRoot(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns whether the node is a leaf */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPbtnodeIsLeaf(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns TRUE if the given node is left child */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPbtnodeIsLeftchild(
    SCIP_BTNODE*          node                /**< node */
    );
 
 /** returns TRUE if the given node is right child */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPbtnodeIsRightchild(
    SCIP_BTNODE*          node                /**< node */
    );
@@ -1571,7 +1571,7 @@ SCIP_Bool SCIPbtnodeIsRightchild(
  *
  *  @note The old user pointer is not freed.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtnodeSetData(
    SCIP_BTNODE*          node,               /**< node */
    void*                 dataptr             /**< node user data pointer */
@@ -1581,7 +1581,7 @@ void SCIPbtnodeSetData(
  *
  *  @note The old parent including the rooted subtree is not delete.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtnodeSetParent(
    SCIP_BTNODE*          node,               /**< node */
    SCIP_BTNODE*          parent              /**< new parent node, or NULL */
@@ -1591,7 +1591,7 @@ void SCIPbtnodeSetParent(
  *
  *  @note The old left child including the rooted subtree is not delete.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtnodeSetLeftchild(
    SCIP_BTNODE*          node,               /**< node */
    SCIP_BTNODE*          left                /**< new left child, or NULL */
@@ -1601,14 +1601,14 @@ void SCIPbtnodeSetLeftchild(
  *
  *  @note The old right child including the rooted subtree is not delete.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtnodeSetRightchild(
    SCIP_BTNODE*          node,               /**< node */
    SCIP_BTNODE*          right               /**< new right child, or NULL */
    );
 
 /** creates an binary tree */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPbtCreate(
    SCIP_BT**             tree,               /**< pointer to store the created binary tree */
    BMS_BLKMEM*           blkmem              /**< block memory used to create nodes */
@@ -1618,26 +1618,26 @@ SCIP_RETCODE SCIPbtCreate(
  *
  *  @note The user pointers (object) of the search nodes are not freed. If needed, it has to be done by the user.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtFree(
    SCIP_BT**             tree                /**< pointer to binary tree */
    );
 
 /** prints the binary tree in GML format into the given file */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtPrintGml(
    SCIP_BT*              tree,               /**< binary tree */
    FILE*                 file                /**< file to write to */
    );
 
 /** returns whether the binary tree is empty (has no nodes) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPbtIsEmpty(
    SCIP_BT *             tree                /**< binary tree */
    );
 
 /** returns the root node of the binary tree or NULL if the binary tree is empty */
-EXTERN
+SCIP_EXPORT extern
 SCIP_BTNODE* SCIPbtGetRoot(
    SCIP_BT*              tree                /**< tree to be evaluated */
    );
@@ -1657,7 +1657,7 @@ SCIP_BTNODE* SCIPbtGetRoot(
  *
  *  @note The old root including the rooted subtree is not delete.
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPbtSetRoot(
    SCIP_BT*              tree,               /**< tree to be evaluated */
    SCIP_BTNODE*          root                /**< new root, or NULL */
@@ -1675,20 +1675,20 @@ void SCIPbtSetRoot(
  */
 
 /** clears the disjoint set (union find) structure \p djset */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdisjointsetClear(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
 /** finds and returns the component identifier of this \p element */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdisjointsetFind(
    SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing the elements \p p and \p q */
-EXTERN
+SCIP_EXPORT extern
 void SCIPdisjointsetUnion(
    SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   p,                  /**< first element */
@@ -1697,13 +1697,13 @@ void SCIPdisjointsetUnion(
    );
 
 /** returns the number of independent components in this disjoint set (union find) data structure */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdisjointsetGetComponentCount(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
 /** returns the size (number of nodes) of this disjoint set (union find) data structure */
-EXTERN
+SCIP_EXPORT extern
 int SCIPdisjointsetGetSize(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
@@ -1722,27 +1722,27 @@ int SCIPdisjointsetGetSize(
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPcalcMachineEpsilon(
    void
    );
 
 /** returns the next representable value of from in the direction of to */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPnextafter(
    SCIP_Real             from,               /**< value from which the next representable value should be returned */
    SCIP_Real             to                  /**< direction in which the next representable value should be returned */
    );
 
 /** calculates the greatest common divisor of the two given values */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPcalcGreComDiv(
    SCIP_Longint          val1,               /**< first value of greatest common devisor calculation */
    SCIP_Longint          val2                /**< second value of greatest common devisor calculation */
    );
 
 /** calculates the smallest common multiple of the two given values */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPcalcSmaComMul(
    SCIP_Longint          val1,               /**< first value of smallest common multiple calculation */
    SCIP_Longint          val2                /**< second value of smallest common multiple calculation */
@@ -1752,7 +1752,7 @@ SCIP_Longint SCIPcalcSmaComMul(
  *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
  *  big numbers or an negative value m (and m < n) and -1 will be returned
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Longint SCIPcalcBinomCoef(
    int                   n,                  /**< number of different elements */
    int                   m                   /**< number to choose out of the above */
@@ -1761,7 +1761,7 @@ SCIP_Longint SCIPcalcBinomCoef(
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPrealToRational(
    SCIP_Real             val,                /**< real value r to convert into rational number */
    SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
@@ -1774,7 +1774,7 @@ SCIP_Bool SCIPrealToRational(
 /** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
  *  difference in between mindelta and maxdelta
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real*            vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
@@ -1790,7 +1790,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPfindSimpleRational(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
@@ -1803,7 +1803,7 @@ SCIP_Bool SCIPfindSimpleRational(
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
  *  if no valid rational number inside the interval was found, selects the central value of the interval
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
@@ -1832,7 +1832,7 @@ SCIP_Real SCIPselectSimpleValue(
  */
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPrelDiff(
    SCIP_Real             val1,               /**< first value to be compared */
    SCIP_Real             val2                /**< second value to be compared */
@@ -1849,7 +1849,7 @@ SCIP_Real SCIPrelDiff(
 #endif
 
 /** computes the gap from the primal and the dual bound */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPcomputeGap(
    SCIP_Real             eps,                /**< the value treated as zero */
    SCIP_Real             inf,                /**< the value treated as infinity */
@@ -1875,7 +1875,7 @@ SCIP_Real SCIPcomputeGap(
  *
  *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 int SCIPgetRandomInt(
    int                   minrandval,         /**< minimal value to return */
@@ -1885,7 +1885,7 @@ int SCIPgetRandomInt(
 
 
 /** returns a random integer between minrandval and maxrandval */
-EXTERN
+SCIP_EXPORT extern
 int SCIPrandomGetInt(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    int                   minrandval,         /**< minimal value to return */
@@ -1895,7 +1895,7 @@ int SCIPrandomGetInt(
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPrandomGetSubset(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                set,                /**< original set, from which elements should be drawn */
@@ -1905,7 +1905,7 @@ SCIP_RETCODE SCIPrandomGetSubset(
    );
 
 /** returns a random real between minrandval and maxrandval */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
@@ -1916,7 +1916,7 @@ SCIP_Real SCIPrandomGetReal(
  *
  *  @deprecated Please use SCIPrandomGetReal() to request a random real.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 SCIP_Real SCIPgetRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
@@ -1929,7 +1929,7 @@ SCIP_Real SCIPgetRandomReal(
  *
  *  @deprecated Please use SCIPrandomGetSubset()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
@@ -1954,21 +1954,21 @@ SCIP_RETCODE SCIPgetRandomSubset(
  */
 
 /** swaps two ints */
-EXTERN
+SCIP_EXPORT extern
 void SCIPswapInts(
    int*                  value1,             /**< pointer to first integer */
    int*                  value2              /**< pointer to second integer */
    );
 
 /** swaps two real values */
-EXTERN
+SCIP_EXPORT extern
 void SCIPswapReals(
    SCIP_Real*            value1,             /**< pointer to first real value */
    SCIP_Real*            value2              /**< pointer to second real value */
 );
 
 /** swaps the addresses of two pointers */
-EXTERN
+SCIP_EXPORT extern
 void SCIPswapPointers(
    void**                pointer1,           /**< first pointer */
    void**                pointer2            /**< second pointer */
@@ -1978,7 +1978,7 @@ void SCIPswapPointers(
  *
  *  @deprecated Please use SCIPrandomPermuteIntArray()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
@@ -1992,7 +1992,7 @@ void SCIPpermuteIntArray(
    );
 
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
-EXTERN
+SCIP_EXPORT extern
 void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int*                  array,              /**< array to be shuffled */
@@ -2005,7 +2005,7 @@ void SCIPrandomPermuteIntArray(
    );
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
-EXTERN
+SCIP_EXPORT extern
 void SCIPrandomPermuteArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                array,              /**< array to be shuffled */
@@ -2021,7 +2021,7 @@ void SCIPrandomPermuteArray(
  *
  *  @deprecated Please use SCIPrandomPermuteArray()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_DEPRECATED
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
@@ -2050,7 +2050,7 @@ void SCIPpermuteArray(
 
 
 /** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
@@ -2063,7 +2063,7 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
    );
 
 /** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcomputeArraysSetminus(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
@@ -2094,7 +2094,7 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
  *
  *  @note undefined behaviuor on overlapping arrays
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPmemccpy(
    char*                 dest,               /**< destination pointer to copy to */
    const char*           src,                /**< source pointer to copy to */
@@ -2107,13 +2107,13 @@ int SCIPmemccpy(
  *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
  *  threadsafe (on SUN-systems, it actually is)
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPprintSysError(
    const char*           message             /**< first part of the error message, e.g. the filename */
    );
 
 /** extracts tokens from strings - wrapper method for strtok_r() */
-EXTERN
+SCIP_EXPORT extern
 char* SCIPstrtok(
    char*                 s,                  /**< string to parse */
    const char*           delim,              /**< delimiters for parsing */
@@ -2121,7 +2121,7 @@ char* SCIPstrtok(
    );
 
 /** translates the given string into a string where symbols ", ', and spaces are escaped with a \ prefix */
-EXTERN
+SCIP_EXPORT extern
 void SCIPescapeString(
    char*                 t,                  /**< target buffer to store escaped string */
    int                   bufsize,            /**< size of buffer t */
@@ -2129,7 +2129,7 @@ void SCIPescapeString(
    );
 
 /** safe version of snprintf */
-EXTERN
+SCIP_EXPORT extern
 int SCIPsnprintf(
    char*                 t,                  /**< target string */
    int                   len,                /**< length of the string to copy */
@@ -2144,7 +2144,7 @@ int SCIPsnprintf(
  *  of copied nonzero characters, if the length of s is at most size - 1, and returns size otherwise. Thus, the original
  *  string was truncated if the return value is size.
  */
-EXTERN
+SCIP_EXPORT extern
 int SCIPstrncpy(
    char*                 t,                  /**< target string */
    const char*           s,                  /**< source string */
@@ -2155,7 +2155,7 @@ int SCIPstrncpy(
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPstrToIntValue(
    const char*           str,                /**< string to search */
    int*                  value,              /**< pointer to store the parsed value */
@@ -2166,7 +2166,7 @@ SCIP_Bool SCIPstrToIntValue(
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPstrToRealValue(
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
@@ -2176,7 +2176,7 @@ SCIP_Bool SCIPstrToRealValue(
 /** copies the first size characters between a start and end character of str into token, if no error occured endptr
  *  will point to the position after the read part, otherwise it will point to @p str
  */
-EXTERN
+SCIP_EXPORT extern
 void SCIPstrCopySection(
    const char*           str,                /**< string to search */
    char                  startchar,          /**< character which defines the beginning */
@@ -2200,13 +2200,13 @@ void SCIPstrCopySection(
  */
 
 /** returns, whether the given file exists */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPfileExists(
    const char*           filename            /**< file name */
    );
 
 /** splits filename into path, name, and extension */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsplitFilename(
    char*                 filename,           /**< filename to split; is destroyed (but not freed) during process */
    char**                path,               /**< pointer to store path, or NULL if not needed */

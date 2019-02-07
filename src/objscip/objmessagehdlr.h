@@ -112,7 +112,7 @@ public:
 
 
 /** creates the message handler for the given message handler object */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateObjMessagehdlr(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    scip::ObjMessagehdlr* objmessagehdlr,     /**< message handler object */
@@ -120,13 +120,13 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    );
 
 /** returns the message handler object for the given message handler */
-EXTERN
+SCIP_EXPORT extern
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** set static error output function to the corresponding function of message handler */
-EXTERN
+SCIP_EXPORT extern
 void SCIPsetStaticErrorPrintingMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );

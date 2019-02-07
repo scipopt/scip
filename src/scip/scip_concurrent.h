@@ -75,7 +75,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeConcsolverType(
    SCIP*                               scip,                       /**< SCIP data structure */
    const char*                         name,                       /**< name of concurrent_solver */
@@ -93,20 +93,20 @@ SCIP_RETCODE SCIPincludeConcsolverType(
    );
 
 /** returns the concurrent solver type with the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT extern
 SCIP_CONCSOLVERTYPE* SCIPfindConcsolverType(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of concurrent_solver */
    );
 
 /** returns the array of included concurrent solver types */
-EXTERN
+SCIP_EXPORT extern
 SCIP_CONCSOLVERTYPE** SCIPgetConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of included concurrent solver types */
-EXTERN
+SCIP_EXPORT extern
 int SCIPgetNConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -139,7 +139,7 @@ int SCIPgetNConcsolverTypes(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPconstructSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    );

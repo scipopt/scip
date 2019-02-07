@@ -42,7 +42,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsBasicIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -193,7 +193,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicatorLinCons(
    );
 
 /** adds variable to the inequality of the indicator constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -202,13 +202,13 @@ SCIP_RETCODE SCIPaddVarIndicator(
    );
 
 /** gets the linear constraint corresponding to the indicator constraint (may be NULL) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** sets the linear constraint corresponding to the indicator constraint (may be NULL) */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsetLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -216,7 +216,7 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    );
 
 /** sets binary indicator variable for indicator constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -224,13 +224,13 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    );
 
 /** gets binary variable corresponding to indicator constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR* SCIPgetBinaryVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
 
 /** gets slack variable corresponding to indicator constraint */
-EXTERN
+SCIP_EXPORT extern
 SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
@@ -244,7 +244,7 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsetSlackVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPsetSlackVarUb(
    );
 
 /** checks whether indicator constraint is violated w.r.t. sol */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPisViolatedIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -260,7 +260,7 @@ SCIP_Bool SCIPisViolatedIndicator(
    );
 
 /** based on values of other variables, computes slack and binary variable to turn constraint feasible */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< indicator constraint */
@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    );
 
 /** based on values of other variables, computes slack and binary variable to turn all constraints feasible */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    );
 
 /** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    );
 
 /** adds additional globally valid row that is not connected with an indicator constraint, but can be used for separation */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddRowIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */

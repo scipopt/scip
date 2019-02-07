@@ -75,7 +75,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP*                 scip                /**< SCIP data structure */
    );

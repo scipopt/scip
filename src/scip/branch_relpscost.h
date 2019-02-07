@@ -57,7 +57,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
  */
 
 /** execution reliability pseudo cost branching with the given branching candidates */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            branchcands,        /**< branching candidates */

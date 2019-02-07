@@ -62,7 +62,7 @@ extern "C" {
  *
  * @note The variables in the lpcands array must have a fractional value in the current LP solution
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP_VAR**            pseudocands,        /**< branching candidates                                */
@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    );
 
 /** creates the all variables full strong LP branching rule and includes it in SCIP */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );

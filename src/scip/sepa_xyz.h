@@ -35,7 +35,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeSepaXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

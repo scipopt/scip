@@ -36,7 +36,7 @@ extern "C" {
  *
  *  @ingroup NodeSelectorIncludes
  */
-EXTERN
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPincludeNodeselHybridestim(
    SCIP*                 scip                /**< SCIP data structure */
    );

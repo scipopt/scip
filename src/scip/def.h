@@ -41,6 +41,7 @@
  */
 #ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
+#include "scip/scip_export.h"
 #endif
 
 /*
@@ -78,21 +79,23 @@
 #endif
 
 /*
- * Define the marco EXTERN and some functions depending if the OS is Windows or not
+ * Add some macros for differing functions on Windows
  */
 #if defined(_WIN32) || defined(_WIN64)
 
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
-
-#ifndef EXTERN
-#define EXTERN __declspec(dllexport)
 #endif
 
+/*
+ * Define the marco SCIP_EXPORT if it is not included from the generated header
+ */
+#ifndef SCIP_EXPORT
+#if defined(_WIN32) || defined(_WIN64)
+#define SCIP_EXPORT __declspec(dllexport)
 #else
-#ifndef EXTERN
-#define EXTERN extern
+#define SCIP_EXPORT
 #endif
 #endif
 
@@ -409,12 +412,14 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
+#ifndef SCIP_DEPRECATED
 #if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
 #elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED
+#endif
 #endif
 
 #ifdef __cplusplus

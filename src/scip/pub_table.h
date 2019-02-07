@@ -39,50 +39,50 @@ extern "C" {
  */
 
 /** gets user data of statistics table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_TABLEDATA* SCIPtableGetData(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** sets user data of statistics table; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT extern
 void SCIPtableSetData(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_TABLEDATA*       tabledata           /**< new statistics table user data */
    );
 
 /** gets name of statistics table */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPtableGetName(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets description of statistics table */
-EXTERN
+SCIP_EXPORT extern
 const char* SCIPtableGetDesc(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets position of statistics table */
-EXTERN
+SCIP_EXPORT extern
 int SCIPtableGetPosition(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets earliest stage of statistics table */
-EXTERN
+SCIP_EXPORT extern
 SCIP_STAGE SCIPtableGetEarliestStage(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** is statistics table currently active? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPtableIsActive(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** is statistics table initialized? */
-EXTERN
+SCIP_EXPORT extern
 SCIP_Bool SCIPtableIsInitialized(
    SCIP_TABLE*           table               /**< statistics table */
    );
