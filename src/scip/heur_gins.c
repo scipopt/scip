@@ -100,6 +100,7 @@
 #define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
 #define DEFAULT_USEDECOMP    TRUE           /**< should user decompositions be considered, if available? */
+#define DEFAULT_USEDECOMPROLLHORIZON FALSE  /**< should user decompositions be considered for initial selection in rolling horizon, if available? */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #endif
@@ -177,6 +178,7 @@ struct SCIP_HeurData
    SCIP_Bool             userollinghorizon;  /**< should the heuristic solve a sequence of sub-MIP's around the first
                                               *   selected variable */
    SCIP_Bool             usedecomp;          /**< should user decompositions be considered, if available? */
+   SCIP_Bool             usedecomprollhorizon;/**< should user decompositions be considered for initial selection in rolling horizon, if available? */
    char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or
                                               *   (p)seudo solution */
    int                   maxseendistance;    /**< maximum of all distances between two variables */
@@ -834,9 +836,145 @@ SCIP_Real heurdataAvgDiscreteNeighborhoodSize(
    return heurdata->sumdiscneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
 }
 
+/** count occurrences of this label */
+static
+int countLabel(
+   int*                  labels,             /**< sorted array of labels */
+   int                   start,              /**< start position */
+   int                   nlabels             /**< length of the labels array */
+   )
+{
+   int label = labels[start];
+   int end = start;
+
+   assert(labels != NULL);
+   assert(start < nlabels);
+   assert(start >= 0);
+
+   do
+   {
+      ++end;
+   } while( end < nlabels && labels[end] == label);
+
+   return end - start;
+}
+
+/** todo select initial variable based on decomposition information, if available */
+static
+SCIP_RETCODE selectInitialVariableDecomposition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure with variable labels */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure to work on */
+   int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
+   SCIP_VAR**            selvar,             /**< pointer to store the selected variable */
+   int*                  selvarmaxdistance   /**< maximal distance k to consider for selected variable neighborhood */
+   )
+{
+   SCIP_SOL* sol;
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   SCIP_VAR** varscopy;
+   int nvars;
+   int* varlabels;
+   int currblockstart = 0;
+   SCIP_Real bestpotential;
+   int bestvaridx;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(decomp != NULL);
+   assert(vargraph != NULL);
+   assert(distances != NULL);
+   assert(selvar != NULL);
+   assert(selvarmaxdistance != NULL);
+
+   sol = SCIPgetBestSol(scip);
+   assert(sol != NULL);
+
+   /* get integer and binary variables from problem and labels for all variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
+
+   SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
+
+   /* sort the variables copy by the labels */
+   SCIPsortIntPtr(varlabels, (void **)varscopy, nvars);
+
+   currblockstart = 0;
+   bestpotential = 0.0;
+   bestvaridx = -1;
+   /* compute the potential for every block */
+   while( currblockstart < nvars )
+   {
+      int currblockend;
+      int v;
+      int firstdiscvaridx = -1;
+      SCIP_Real potential;
+
+      currblockend = currblockstart + countLabel(varlabels, currblockstart, nvars);
+
+      /* author bzfhende
+       *
+       * TODO omit the linking variables from the computation of the potential?
+       */
+      /* check if block has discrete variables */
+      for( v = currblockstart; v < currblockend && firstdiscvaridx == -1; ++v )
+      {
+         if( SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_INTEGER )
+            firstdiscvaridx = v;
+      }
+
+      /* skip potential computation if block has no discrete variables */
+      if( firstdiscvaridx >= 0 )
+      {
+         potential = getPotential(scip, heurdata, sol, &(varscopy[currblockstart]), currblockend - currblockstart);
+
+         if( potential > bestpotential )
+         {
+            bestpotential = potential;
+            bestvaridx = firstdiscvaridx;
+         }
+      }
+
+      currblockstart += currblockend;
+   }
+
+   /* we return the first discrete variable from the block with maximum potential */
+   if( bestvaridx >= 0 )
+   {
+      *selvar = varscopy[bestvaridx];
+      SCIPdebugMsg(scip, "Select initial variable <%s> from block <%d>\n", SCIPvarGetName(*selvar), varlabels[bestvaridx]);
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "Could not find suitable block for variable selection.\n");
+      *selvar = NULL;
+   }
+
+   /* use the variable constraint graph to compute distances to all other variables, and store the selvarmaxdistance */
+   if( *selvar != NULL )
+   {
+      SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, vargraph, selvar, 1, distances,
+            heurdata->maxdistance == -1 ? INT_MAX : heurdata->maxdistance, INT_MAX, INT_MAX) );
+
+      SCIP_CALL( determineMaxDistance(scip, heurdata, distances, selvarmaxdistance) );
+   }
+
+   SCIPfreeBufferArray(scip, &varlabels);
+   SCIPfreeBufferArray(scip, &varscopy);
+
+   return SCIP_OKAY;
+}
+
+
+
 /** select a good starting variable at the first iteration of a rolling horizon approach */
 static
-SCIP_RETCODE selectInitialVariable(
+SCIP_RETCODE selectInitialVariableRandomly(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_VGRAPH*          vargraph,           /**< variable graph data structure to work on */
@@ -1328,7 +1466,24 @@ SCIP_RETCODE determineVariableFixings(
    /* in the first iteration of the rolling horizon approach, we select an initial variable */
    if( rollinghorizon == NULL || rollinghorizon->niterations == 0 )
    {
-      SCIP_CALL( selectInitialVariable(scip, heurdata, vargraph, distances, &selvar, &selvarmaxdistance) );
+      /* choose the initial variable based on a user decomposition, if available */
+      if( heurdata->usedecomprollhorizon )
+      {
+         SCIP_DECOMP* decomp = chooseDecomp(scip, heurdata);
+         if( decomp != NULL )
+         {
+            SCIP_CALL( selectInitialVariableDecomposition(scip, heurdata, decomp, vargraph,
+                  distances, &selvar, &selvarmaxdistance) );
+         }
+      }
+
+      /* use random variable selection as fallback strategy, if no user decomposition is available, or the
+       * heuristic should not use decomposition
+       */
+      if( selvar == NULL )
+      {
+         SCIP_CALL( selectInitialVariableRandomly(scip, heurdata, vargraph, distances, &selvar, &selvarmaxdistance) );
+      }
 
       /* collect and save the distances in the rolling horizon data structure */
       if( selvar != NULL && rollinghorizon != NULL )
@@ -2027,6 +2182,10 @@ SCIP_RETCODE SCIPincludeHeurGins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedecomp",
          "should user decompositions be considered, if available?",
          &heurdata->usedecomp, TRUE, DEFAULT_USEDECOMP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedecomprollhorizon",
+         "should user decompositions be considered for initial selection in rolling horizon, if available?",
+         &heurdata->usedecomprollhorizon, TRUE, DEFAULT_USEDECOMPROLLHORIZON, NULL, NULL) );
 
    return SCIP_OKAY;
 }
