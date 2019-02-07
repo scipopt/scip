@@ -901,11 +901,8 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitBilinear)
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitBilinear)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata != NULL);
-   assert(nlhdlrdata->nexprs == 0);
+   assert(SCIPgetConsExprNlhdlrData(nlhdlr) != NULL);
+   assert(SCIPgetConsExprNlhdlrData(nlhdlr)->nexprs == 0);
 
    return SCIP_OKAY;
 }
