@@ -4051,6 +4051,7 @@ SCIP_RETCODE SCIPtryStrongbranchLPSol(
       SCIPclockStart(scip->stat->sbsoltime, scip->set);
 
       SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+      SCIPsolSetStrongbranching(sol);
 
       /* try to round the strong branching solution */
       if( scip->set->branch_roundsbsol )

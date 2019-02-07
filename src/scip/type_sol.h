@@ -55,7 +55,9 @@ enum SCIP_SolType
    SCIP_SOLTYPE_UNKNOWN   = 0,          /**< type of solution unspecified (the default) */
    SCIP_SOLTYPE_HEUR      = 1,          /**< solution was found by a heuristic */
    SCIP_SOLTYPE_RELAX     = 2,          /**< solution was found by a relaxation */
-   SCIP_SOLTYPE_LPRELAX   = 3           /**< solution was found by the LP relaxation */
+   SCIP_SOLTYPE_LPRELAX   = 3,          /**< solution was found by the LP relaxation */
+   SCIP_SOLTYPE_STRONGBRANCH = 4,       /**< solution was found during strong branching */
+   SCIP_SOLTYPE_PSEUDO    = 5           /**< solution originates from a pseudo solution */
 };
 typedef enum SCIP_SolType SCIP_SOLTYPE;
 

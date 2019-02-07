@@ -370,6 +370,8 @@ SCIP_RETCODE SCIPsolCopy(
    {
    case SCIP_SOLTYPE_UNKNOWN:
    case SCIP_SOLTYPE_LPRELAX:
+   case SCIP_SOLTYPE_STRONGBRANCH:
+   case SCIP_SOLTYPE_PSEUDO:
       (*sol)->type = sourcesol->type;
       break;
    case SCIP_SOLTYPE_HEUR:
@@ -379,7 +381,8 @@ SCIP_RETCODE SCIPsolCopy(
       SCIPsolSetRelax((*sol), SCIPsolGetRelax(sourcesol));
       break;
    default:
-      break;
+      SCIPerrorMessage("Unknown source solution type %d!\n", sourcesol->type);
+      return SCIP_INVALIDDATA;
    }
    (*sol)->obj = sourcesol->obj;
    (*sol)->primalindex = -1;
@@ -677,6 +680,10 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, prob, tree, lp) );
+
+   /* update solution type to pseudo solution */
+   if( heur == NULL )
+      SCIPsolSetPseudo(*sol);
 
    return SCIP_OKAY;
 }
@@ -2486,6 +2493,9 @@ SCIP_Real SCIPsolGetRelConsViolation(
 #undef SCIPsolSetPrimalIndex
 #undef SCIPsolGetIndex
 #undef SCIPsolGetType
+#undef SCIPsolSetLPRelaxation
+#undef SCIPsolSetStrongbranching
+#undef SCIPsolSetPseudo
 
 /** gets origin of solution */
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -2683,5 +2693,25 @@ void SCIPsolSetLPRelaxation(
    assert(sol != NULL);
 
    sol->type = SCIP_SOLTYPE_LPRELAX;
+}
+
+/** informs the solution that it is a solution found during strong branching */
+void SCIPsolSetStrongbranching(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   sol->type = SCIP_SOLTYPE_STRONGBRANCH;
+}
+
+/** informs the solution that it originates from a pseudo solution */
+void SCIPsolSetPseudo(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   sol->type = SCIP_SOLTYPE_PSEUDO;
 }
 

@@ -135,6 +135,18 @@ void SCIPsolSetLPRelaxation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** informs the solution that it is a solution found during strong branching */
+EXTERN
+void SCIPsolSetStrongbranching(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** informs the solution that it originates from a pseudo solution */
+EXTERN
+void SCIPsolSetPseudo(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** returns unique index of given solution */
 EXTERN
 int SCIPsolGetIndex(
@@ -200,6 +212,9 @@ SCIP_Real SCIPsolGetRelConsViolation(
 #define SCIPsolGetRelax(sol)            ((sol)->type == SCIP_SOLTYPE_RELAX ? (sol)->creator.relax : NULL)
 #define SCIPsolGetIndex(sol)            (sol)->index
 #define SCIPsolGetType(sol)             (sol)->type
+#define SCIPsolSetLPRelaxation(sol)     ((sol)->type = SCIP_SOLTYPE_LPRELAX)
+#define SCIPsolSetStrongbranching(sol)  ((sol)->type = SCIP_SOLTYPE_STRONGBRANCH)
+#define SCIPsolSetPseudo(sol)           ((sol)->type = SCIP_SOLTYPE_PSEUDO)
 #endif
 
 /* @} */

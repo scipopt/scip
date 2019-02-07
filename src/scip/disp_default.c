@@ -748,6 +748,12 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
       case SCIP_SOLTYPE_LPRELAX:
          infostr = "LP ";
          break;
+      case SCIP_SOLTYPE_STRONGBRANCH:
+         infostr = "strongbranch";
+         break;
+      case SCIP_SOLTYPE_PSEUDO:
+         infostr = "pseudosol";
+         break;
       case SCIP_SOLTYPE_RELAX:
          relax = SCIPsolGetRelax(sol);
          infostr = relax != NULL ? SCIPrelaxGetName(relax) : "relaxation";
