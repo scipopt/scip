@@ -62,6 +62,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_CONSEXPR_EXPR**  exprs;             /**< expressions that have been detected by the nlhdlr */
    int                   nexprs;            /**< total number of expression that have been detected */
    int                   exprsize;          /**< size of exprs array */
+   SCIP_HASHMAP*         exprmap;           /**< hashmap to store the position of each expression in the exprs array */
 
    /* parameter */
    SCIP_Bool             useinteval;        /**< whether to use the interval evaluation callback of the nlhdlr */
@@ -737,7 +738,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
    nlhdlr = SCIPfindConsExprNlhdlr(conshdlr, NLHDLR_NAME);
    assert(nlhdlr != NULL);
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata);
+   assert(nlhdlrdata != NULL);
 
    /* allocate memory */
    SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nlhdlrdata->nexprs) );
@@ -745,6 +746,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    for( c = 0; c < nlhdlrdata->nexprs; ++c )
    {
+      assert(!SCIPhashmapExists(hashmap, nlhdlrdata->exprs[c]));
       SCIP_CALL( SCIPhashmapInsertInt(hashmap, nlhdlrdata->exprs[c], 0) );
    }
 
@@ -823,6 +825,12 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
    assert(nlhdlrdata != NULL);
    assert((*nlhdlrdata)->nexprs == 0);
 
+   if( (*nlhdlrdata)->exprmap != NULL )
+   {
+      assert(SCIPhashmapGetNElements((*nlhdlrdata)->exprmap) == 0);
+      SCIPhashmapFree(&(*nlhdlrdata)->exprmap);
+   }
+
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrdata)->exprs, (*nlhdlrdata)->exprsize);
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
@@ -834,7 +842,40 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataBilinear)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   int pos;
 
+   assert(expr != NULL);
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+   assert(nlhdlrdata->nexprs > 0);
+   assert(nlhdlrdata->exprs != NULL);
+   assert(nlhdlrdata->exprmap != NULL);
+   assert(SCIPhashmapExists(nlhdlrdata->exprmap, (void*)expr));
+
+   pos = SCIPhashmapGetImageInt(nlhdlrdata->exprmap, (void*)expr);
+   assert(pos >= 0 && pos < nlhdlrdata->nexprs);
+   assert(nlhdlrdata->exprs[pos] == expr);
+
+   /* move the last expression to the free position */
+   if( nlhdlrdata->nexprs > 0 && pos != nlhdlrdata->nexprs - 1 )
+   {
+      SCIP_CONSEXPR_EXPR* lastexpr = nlhdlrdata->exprs[nlhdlrdata->nexprs - 1];
+      assert(expr != lastexpr);
+      assert(SCIPhashmapExists(nlhdlrdata->exprmap, (void*)lastexpr));
+
+      nlhdlrdata->exprs[pos] = lastexpr;
+      nlhdlrdata->exprs[nlhdlrdata->nexprs - 1] = NULL;
+      SCIP_CALL( SCIPhashmapSetImageInt(nlhdlrdata->exprmap, (void*)lastexpr, pos) );
+   }
+
+   /* remove expression from the nonlinear handler data */
+   SCIP_CALL( SCIPhashmapRemove(nlhdlrdata->exprmap, (void*)expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   --nlhdlrdata->nexprs;
+
+   /* free nonlinear handler expression data */
    SCIPfreeBlockMemoryNull(scip, nlhdlrexprdata);
 
    return SCIP_OKAY;
@@ -861,20 +902,10 @@ static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitBilinear)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   int i;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata);
-
-   /* release expressions */
-   for( i = 0; i < nlhdlrdata->nexprs; ++i )
-   {
-      assert(nlhdlrdata->exprs[i] != NULL);
-
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlhdlrdata->exprs[i]) );
-   }
-
-   nlhdlrdata->nexprs = 0;
+   assert(nlhdlrdata != NULL);
+   assert(nlhdlrdata->nexprs == 0);
 
    return SCIP_OKAY;
 }
@@ -898,7 +929,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
       return SCIP_OKAY;
 
    /* check for product expressions with two children */
-   if( SCIPgetConsExprExprHdlrProduct(conshdlr) == SCIPgetConsExprExprHdlr(expr) && SCIPgetConsExprExprNChildren(expr) == 2 )
+   if( SCIPgetConsExprExprHdlrProduct(conshdlr) == SCIPgetConsExprExprHdlr(expr) && SCIPgetConsExprExprNChildren(expr) == 2
+      && (nlhdlrdata->exprmap == NULL || !SCIPhashmapExists(nlhdlrdata->exprmap, (void*)expr)) )
    {
       SCIP_CONSEXPR_EXPR* child1 = SCIPgetConsExprExprChildren(expr)[0];
       SCIP_CONSEXPR_EXPR* child2 = SCIPgetConsExprExprChildren(expr)[1];
@@ -932,9 +964,23 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
             nlhdlrdata->exprsize = newsize;
          }
 
+         /* create expression map, if not done so far */
+         if( nlhdlrdata->exprmap == NULL )
+         {
+            SCIP_CALL( SCIPhashmapCreate(&nlhdlrdata->exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+         }
+
+         {
+            int i;
+
+            for( i = 0; i < nlhdlrdata->nexprs; ++i )
+               assert(nlhdlrdata->exprs[i] != expr);
+         }
+
          /* add expression to nlhdlrdata and capture it */
          nlhdlrdata->exprs[nlhdlrdata->nexprs] = expr;
          SCIPcaptureConsExprExpr(expr);
+         SCIP_CALL( SCIPhashmapInsertInt(nlhdlrdata->exprmap, (void*)expr, nlhdlrdata->nexprs) );
          ++nlhdlrdata->nexprs;
       }
    }

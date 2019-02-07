@@ -407,7 +407,7 @@ SCIP_RETCODE freeEnfoData(
       /* free nlhdlr exprdata, if there is any and there is a method to free this data */
       if( expr->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
       {
-         SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, &expr->enfos[e]->nlhdlrexprdata) );
+         SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, expr, &expr->enfos[e]->nlhdlrexprdata) );
          assert(expr->enfos[e]->nlhdlrexprdata == NULL);
       }
 
