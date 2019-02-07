@@ -61,11 +61,11 @@
 
 #define PRESOL_PRIORITY           -240000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should dualsparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
-#define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
+#define DEFAULT_PRESERVEINTCOEFS    FALSE    /**< should we forbid cancellations that destroy integer coefficients? */
 #define DEFAULT_MAX_CONT_FILLIN         1    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          1    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          1    /**< default value for the maximal fillin for integer variables (including binary) */
@@ -647,6 +647,10 @@ SCIP_RETCODE aggregation(
    (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "dualsparsifyvar_%d", presoldata->naggregated);
 
    constant = 0.0;
+
+   if( SCIPvarIsIntegral(vars[colidx1]) && SCIPvarIsIntegral(vars[colidx2]) )
+      printf("aggregated integral variables\n");
+
    if( !iscliqueused )
    {
       if( weight1 > 0 )
@@ -688,7 +692,6 @@ SCIP_RETCODE aggregation(
    }
    else
    {
-      printf("cccccccccc\n");
       assert( SCIPisEQ(scip, REALABS(weight1), 1.0) );
       newvartype = SCIP_VARTYPE_BINARY;
       newlb = 0.0;
@@ -714,10 +717,12 @@ SCIP_RETCODE aggregation(
    }
 
 
+
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
             SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
-//   printf("%d, %d, %s, %s\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx1]), SCIPvarGetName(vars[colidx2]) );
+//   printf("%d, %d, %s, %s, %d, %8.4f\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx1]), SCIPvarGetName(vars[colidx2])
+//        ,newvartype, constant );
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
@@ -730,10 +735,9 @@ SCIP_RETCODE aggregation(
 
    vars[colidx2] = newvar;
 
-   if( iscliqueused )
-
    if( !isimpliedfree || iscliqueused )
    {
+      printf("clique %8.4f, %8.4f, %8.4f, %8.4f\n", lhs, rhs, coefs[0], coefs[1]);
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, newconsname, 2, tmpvars, coefs,
@@ -1233,10 +1237,10 @@ SCIP_RETCODE cancelColHash(
                   continue;
                else
                {
-                  if(SCIPisEQ(scip, scale, 1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, TRUE, TRUE) ||
+                  if(SCIPisEQ(scip, scale, -1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, TRUE, TRUE) ||
                            SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, FALSE, TRUE)))
                      iscliqueused = TRUE;
-                  else if(SCIPisEQ(scip, scale, -1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, FALSE, TRUE) ||
+                  else if(SCIPisEQ(scip, scale, 1.0) && (SCIPvarsHaveCommonClique(cancelvar, TRUE, implcolvar, FALSE, TRUE) ||
                            SCIPvarsHaveCommonClique(cancelvar, FALSE, implcolvar, TRUE, TRUE)))
                      iscliqueused = TRUE;
                   else
@@ -1249,7 +1253,8 @@ SCIP_RETCODE cancelColHash(
                {
                   if( (SCIPvarGetType(implcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
-                  if( !SCIPisIntegral(scip, scale) || isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
+                  //if( !SCIPisIntegral(scip, scale) || isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
+                  if( !SCIPisIntegral(scip, scale) )
                      continue;
                }
                else
@@ -1281,7 +1286,8 @@ SCIP_RETCODE cancelColHash(
                   /* otherwise, check if integral coefficients are preserved if the column is integral */
                   else if( (preserveintcoefs && SCIPvarIsIntegral(cancelvar) &&
                             SCIPisIntegral(scip, cancelcolvals[a]) && !SCIPisIntegral(scip, newcoef)) )
-                  {
+                  { 
+                     //printf("fail due to integral coef destruction\n");
                      abortpair = TRUE;
                      break;
                   }
@@ -1306,6 +1312,7 @@ SCIP_RETCODE cancelColHash(
                             SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
                         {
                            abortpair = TRUE;
+                           //printf("fail due to locked limit\n");
                            break;
                         }
                      }
@@ -1318,6 +1325,7 @@ SCIP_RETCODE cancelColHash(
                             SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
                         {
                            abortpair = TRUE;
+                           //printf("fail due to locked limit\n");
                            break;
                         }
                      }
@@ -1347,6 +1355,7 @@ SCIP_RETCODE cancelColHash(
                      {
                         abortpair = TRUE;
                         ++b;
+                     //printf( "fail due to locked limit\n" );
                         break;
                      }
                   }
@@ -1358,6 +1367,7 @@ SCIP_RETCODE cancelColHash(
                      {
                         abortpair = TRUE;
                         ++b;
+                     //printf( "fail due to locked limit\n" );
                         break;
                      }
                   }
@@ -1368,12 +1378,14 @@ SCIP_RETCODE cancelColHash(
                   {
                      if( SCIPvarIsBinary(cancelvar) && ++nbinfillin > maxbinfillin )
                      {
+                     //printf( "fail due to too many fillins\n" );
                         abortpair = TRUE;
                         break;
                      }
 
                      if( ++nintfillin > maxintfillin )
                      {
+                     //printf( "fail due to too many fillins\n" );
                         abortpair = TRUE;
                         break;
                      }
@@ -1382,11 +1394,16 @@ SCIP_RETCODE cancelColHash(
                   {
                      if( ++ncontfillin > maxcontfillin )
                      {
+                     //printf( "fail due to too many fillins\n" );
                         abortpair = TRUE;
                         break;
                      }
                   }
-               }
+                  if( abortpair )
+                  {
+                     //printf( "fail due to too many fillins\n" );
+                  }
+               }    
             }
 
             if( abortpair )
@@ -1414,7 +1431,10 @@ SCIP_RETCODE cancelColHash(
 
 
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
+            {
+               //printf( "fail due to too many fillins\n" );
                continue;
+            }
 
             ntotfillin = nintfillin + ncontfillin;
 
@@ -1652,6 +1672,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
    SCIP_Bool* isimpliedfrees;
+   int nimpliedfrees;
    SCIP_Bool* isblockedvar;
    SCIP_VAR** vars;
    int oldnchgcoefs;
@@ -1694,6 +1715,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    if( initialized && complete )
    {
       ncols = SCIPmatrixGetNColumns(matrix);
+      nimpliedfrees = 0;
 
       /* sort column by row indices */
       for( i = 0; i < ncols; i++ )
@@ -1727,7 +1749,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          ubimplied = isUpperBoundImplied(scip, matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
 
-         isimpliedfrees[c] = lbimplied && ubimplied;
+         if( lbimplied && ubimplied )
+         {
+            nimpliedfrees += 1;
+            isimpliedfrees[c] = TRUE;
+         }
          isblockedvar[c] = FALSE;
 
          /* only consider implied free variables
@@ -1784,7 +1810,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                   i2 = perm[(j + failshift) % nnonz];
                   conspairs[nconspairs].colindex = c;
 
-                  if( colinds[i1] < colinds[i2])
+                 if( colinds[i1] < colinds[i2])
                   {
                      conspairs[nconspairs].consindex1 = colinds[i1];
                      conspairs[nconspairs].consindex2 = colinds[i2];
@@ -1802,6 +1828,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                }
             }
          }
+      }
+
+      {
+      if( SCIPpresolGetNCalls(presol) <= 0 && nimpliedfrees != 0 )
+         printf( "The number of implied free variables %d\n", nimpliedfrees );
       }
 
       /* insert conspairs into hash table */
