@@ -970,12 +970,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
             SCIP_CALL( SCIPhashmapCreate(&nlhdlrdata->exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
          }
 
+#ifndef NDEBUG
          {
             int i;
 
             for( i = 0; i < nlhdlrdata->nexprs; ++i )
                assert(nlhdlrdata->exprs[i] != expr);
          }
+#endif
 
          /* add expression to nlhdlrdata and capture it */
          nlhdlrdata->exprs[nlhdlrdata->nexprs] = expr;
