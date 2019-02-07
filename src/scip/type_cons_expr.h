@@ -620,11 +620,13 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
+ * - expr expression
  * - nlhdlrexprdata nonlinear handler expression data to be freed
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** callback to be called in initialization
