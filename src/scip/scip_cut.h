@@ -150,7 +150,7 @@ SCIP_Bool SCIPisCutApplicable(
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
  *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
-SCIP_DEPRECATED_EXPORT extern
+SCIP_DEPRECATED SCIP_EXPORT extern
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
