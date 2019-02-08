@@ -147,6 +147,17 @@ struct DecompHorizon
 };
 typedef struct DecompHorizon DECOMPHORIZON;
 
+/** data structure to hold elements that are taboo */
+struct TabooList
+{
+   int*                  taboolabels;        /**< labels or indices that are currently taboo */
+   int*                  sortedlabels;       /**< array of labels in sorted order for quicker finding */
+   int                   memsize;            /**< storage capacity of taboolabels */
+   int                   ntaboolabels;       /**< number of elements contained in taboo list */
+   SCIP_Bool             needssorting;       /**< has an element been added since the last sort? */
+};
+typedef struct TabooList TABOOLIST;
+
 /** primal heuristic data */
 struct SCIP_HeurData
 {
@@ -161,9 +172,12 @@ struct SCIP_HeurData
    SCIP_Real             rollhorizonlimfac;  /**< limiting percentage for variables already used in sub-SCIPs to terminate
                                               *   rolling horizon approach */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
+   SCIP_SOL*             lastinitsol;        /**< last solution used for selection of initial variable */
+   TABOOLIST*            taboolist;          /**< taboo list of block labels that should not be used */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
+   SCIP_Bool             allblocksunsuitable; /**< remember if all blocks are unsuitable w.r.t. the current incumbent solution  */
    SCIP_Bool             fixcontvars;        /**< should continuous variables outside the neighborhoods get fixed? */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP */
    int                   maxdistance;        /**< maximum distance to selected variable to enter the subproblem, or -1 to
@@ -538,6 +552,135 @@ SCIP_RETCODE rollingHorizonCreate(
    return SCIP_OKAY;
 }
 
+
+/** reset a taboo list */
+static
+void tabooListReset(
+   TABOOLIST*            taboolist           /**< taboo list data structure */
+   )
+{
+   taboolist->ntaboolabels = 0;
+   taboolist->needssorting = FALSE;
+}
+
+/** create a taboo list data structure */
+static
+SCIP_RETCODE createTabooList(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TABOOLIST**           taboolist,          /**< pointer to store taboo list data structure */
+   int                   initialsize         /**< initial storage capacity of taboo list */
+   )
+{
+   assert(scip != NULL);
+   assert(taboolist != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, taboolist) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(*taboolist)->taboolabels, initialsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(*taboolist)->sortedlabels, initialsize) );
+   (*taboolist)->memsize = initialsize;
+   tabooListReset(*taboolist);
+
+   return SCIP_OKAY;
+}
+
+/** free a taboo list data structure */
+static
+void freeTabooList(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TABOOLIST**           taboolist           /**< pointer to taboo list data structure that should be freed */
+   )
+{
+   assert(scip != NULL);
+   assert(taboolist != NULL);
+
+   if( *taboolist == NULL )
+      return;
+
+   SCIPfreeMemoryArray(scip, &(*taboolist)->sortedlabels);
+   SCIPfreeMemoryArray(scip, &(*taboolist)->taboolabels);
+
+   SCIPfreeMemory(scip, taboolist);
+}
+
+/** add an element to the taboo list */
+static
+SCIP_RETCODE tabooListAdd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TABOOLIST*            taboolist,          /**< taboo list data structure */
+   int                   elem                /**< element that should be added to the taboo list */
+   )
+{
+   assert(scip != NULL);
+   assert(taboolist != NULL);
+
+   if( taboolist->memsize == taboolist->ntaboolabels )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, taboolist->ntaboolabels + 1);
+      assert(newsize >= taboolist->ntaboolabels + 1);
+
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &taboolist->taboolabels, newsize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &taboolist->sortedlabels, newsize) );
+
+      taboolist->memsize = newsize;
+   }
+
+   assert(taboolist->ntaboolabels < taboolist->memsize);
+   taboolist->taboolabels[taboolist->ntaboolabels++] = elem;
+
+   taboolist->needssorting = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** find an element in the taboo list */
+static
+SCIP_Bool tabooListFind(
+   TABOOLIST*            taboolist,          /**< taboo list data structure */
+   int                   elem                /**< element that should be added to the taboo list */
+   )
+{
+   SCIP_Bool found;
+   int pos;
+   assert(taboolist != NULL);
+
+   if( taboolist->ntaboolabels == 0 )
+      return FALSE;
+
+   if( taboolist->needssorting )
+   {
+      BMScopyMemoryArray(taboolist->sortedlabels, taboolist->taboolabels, taboolist->ntaboolabels);
+      SCIPsortInt(taboolist->sortedlabels, taboolist->ntaboolabels);
+   }
+
+   found = SCIPsortedvecFindInt(taboolist->sortedlabels, elem, taboolist->ntaboolabels, &pos);
+
+   return found;
+}
+
+/** get most recent k elements from taboo list */
+static
+int* tabooListGetLastK(
+   TABOOLIST*            taboolist,          /**< taboo list data structure */
+   int                   k                   /**< the number of elements that should be returned */
+   )
+{
+   assert(taboolist != NULL);
+   assert(k <= taboolist->ntaboolabels);
+   assert(k > 0);
+
+   return &taboolist->taboolabels[taboolist->ntaboolabels - k];
+}
+
+/** get number of elements in taboo list */
+static
+int taboolistgetNElems(
+   TABOOLIST*            taboolist           /**< taboo list data structure */
+   )
+{
+   return taboolist->ntaboolabels;
+}
+
 /** free a rolling horizon data structure */
 static
 void rollingHorizonFree(
@@ -878,9 +1021,11 @@ SCIP_RETCODE selectInitialVariableDecomposition(
    SCIP_VAR** varscopy;
    int nvars;
    int* varlabels;
+   int* discvaridxs;
    int currblockstart = 0;
    SCIP_Real bestpotential;
    int bestvaridx;
+   int cntmessages;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
@@ -893,11 +1038,60 @@ SCIP_RETCODE selectInitialVariableDecomposition(
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
 
+   /* create a taboo list for recently used block labels at the first initial variable selection */
+   if( heurdata->taboolist == NULL )
+   {
+      SCIPdebugMsg(scip, "Creating taboo list\n");
+      SCIP_CALL( createTabooList(scip, &heurdata->taboolist, SCIPdecompGetNBlocks(decomp)) );
+   }
+
+   /* reset taboo list if a new solution has been found since the last initialization call */
+   if( sol != heurdata->lastinitsol )
+   {
+      int nblockstokeep = 3;
+      int* labelstokeep;
+      int e;
+
+      /* keep the last 3 blocks except for border cases of very coarse decomposition, or too few taboo elements */
+      if( taboolistgetNElems(heurdata->taboolist) > 0 )
+      {
+         nblockstokeep = MIN(nblockstokeep, SCIPdecompGetNBlocks(decomp) - 1);
+         nblockstokeep = MIN(nblockstokeep, MAX(1, taboolistgetNElems(heurdata->taboolist) - 1));
+         nblockstokeep = MAX(nblockstokeep, 0);
+      }
+      else
+         nblockstokeep = 0;
+
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &labelstokeep, tabooListGetLastK(heurdata->taboolist, nblockstokeep), nblockstokeep) );
+
+      SCIPdebugMsg(scip, "Resetting taboo list, keeping %d elements\n", nblockstokeep);
+      tabooListReset(heurdata->taboolist);
+
+      /* reinstall the last 3 elements into the taboo list */
+      for( e = 0; e < nblockstokeep; ++e )
+      {
+         SCIP_CALL( tabooListAdd(scip, heurdata->taboolist, labelstokeep[e]) );
+      }
+      SCIPfreeBufferArray(scip, &labelstokeep);
+
+      heurdata->allblocksunsuitable = FALSE;
+   }
+
+   *selvar = NULL;
+   /* do not continue if, for this solution, all blocks are known to be unsuitable */
+   if( heurdata->allblocksunsuitable )
+   {
+      SCIPdebugMsg(scip, "Skip initial variable selection because all blocks are unsuitable for solution %d\n",
+         SCIPsolGetIndex(sol));
+      return SCIP_OKAY;
+   }
+
    /* get integer and binary variables from problem and labels for all variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &discvaridxs, nvars) );
 
    SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
 
@@ -907,36 +1101,52 @@ SCIP_RETCODE selectInitialVariableDecomposition(
    currblockstart = 0;
    bestpotential = 0.0;
    bestvaridx = -1;
+   cntmessages = 0;
    /* compute the potential for every block */
    while( currblockstart < nvars )
    {
       int currblockend;
       int v;
-      int firstdiscvaridx = -1;
+      int label = varlabels[currblockstart];
+      int ndiscblockvars;
       SCIP_Real potential;
 
       currblockend = currblockstart + countLabel(varlabels, currblockstart, nvars);
+
+      /* this block was recently used and should be skipped */
+      if( tabooListFind(heurdata->taboolist, label) )
+      {
+         if( cntmessages++ < 3 )
+            SCIPdebugMsg(scip, "Skipping block <%d> from taboo list\n", label);
+
+         currblockstart += currblockend;
+
+         continue;
+      }
 
       /* author bzfhende
        *
        * TODO omit the linking variables from the computation of the potential?
        */
       /* check if block has discrete variables */
-      for( v = currblockstart; v < currblockend && firstdiscvaridx == -1; ++v )
+      ndiscblockvars = 0;
+      for( v = currblockstart; v < currblockend; ++v )
       {
          if( SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_INTEGER )
-            firstdiscvaridx = v;
+            discvaridxs[ndiscblockvars++] = v;
       }
 
       /* skip potential computation if block has no discrete variables */
-      if( firstdiscvaridx >= 0 )
+      if( ndiscblockvars > 0 )
       {
          potential = getPotential(scip, heurdata, sol, &(varscopy[currblockstart]), currblockend - currblockstart);
 
          if( potential > bestpotential )
          {
             bestpotential = potential;
-            bestvaridx = firstdiscvaridx;
+            /* randomize the selection of the best variable */
+            bestvaridx = discvaridxs[SCIPrandomGetInt(heurdata->randnumgen, 0, ndiscblockvars - 1)];
+            assert(bestvaridx >= 0);
          }
       }
 
@@ -947,11 +1157,16 @@ SCIP_RETCODE selectInitialVariableDecomposition(
    if( bestvaridx >= 0 )
    {
       *selvar = varscopy[bestvaridx];
+
+      /* save block label in taboo list to not use it again too soon */
+      SCIP_CALL( tabooListAdd(scip, heurdata->taboolist, varlabels[bestvaridx]) );
+
       SCIPdebugMsg(scip, "Select initial variable <%s> from block <%d>\n", SCIPvarGetName(*selvar), varlabels[bestvaridx]);
    }
    else
    {
       SCIPdebugMsg(scip, "Could not find suitable block for variable selection.\n");
+      heurdata->allblocksunsuitable = TRUE;
       *selvar = NULL;
    }
 
@@ -964,6 +1179,10 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       SCIP_CALL( determineMaxDistance(scip, heurdata, distances, selvarmaxdistance) );
    }
 
+   /* remember this solution for the next initial selection */
+   heurdata->lastinitsol = sol;
+
+   SCIPfreeBufferArray(scip, &discvaridxs);
    SCIPfreeBufferArray(scip, &varlabels);
    SCIPfreeBufferArray(scip, &varscopy);
 
@@ -1847,6 +2066,9 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->nfailures = 0;
    heurdata->nextnodenumber = 0;
    heurdata->lastblockuseddecomp = INT_MIN; /* cannot use -1 because this is defined for linking variables */
+   heurdata->lastinitsol = NULL;
+   heurdata->allblocksunsuitable = FALSE;
+   heurdata->taboolist = NULL;
 
 #ifdef SCIP_STATISTIC
    resetHistogram(heurdata->conscontvarshist);
@@ -1879,7 +2101,10 @@ SCIP_DECL_HEUREXIT(heurExitGins)
       printHistogram(scip, heurdata->consdiscvarshist, "Constraint discrete density histogram");
       )
 
+   /* free some data structures that must be reset for a new problem */
+   freeTabooList(scip, &heurdata->taboolist);
    SCIPfreeRandom(scip, &heurdata->randnumgen);
+   heurdata->taboolist = NULL;
    heurdata->randnumgen = NULL;
 
    return SCIP_OKAY;
@@ -2027,6 +2252,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
       /* check, whether a solution was found */
+      success = FALSE;
       if( SCIPgetNSols(subscip) > 0 )
       {
          SCIP_SOL** subsols;
@@ -2037,7 +2263,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
           */
          nsubsols = SCIPgetNSols(subscip);
          subsols = SCIPgetSols(subscip);
-         success = FALSE;
          for( i = 0; i < nsubsols && !success; ++i )
          {
             SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
@@ -2058,7 +2283,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
          SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain ) );
 
          if( rollinghorizon != NULL )
-            runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*result == SCIP_FOUNDSOL);
+            runagain = runagain && rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (success);
          else if( decomphorizon != NULL )
             runagain = runagain && decompHorizonRunAgain(scip, decomphorizon);
       }
