@@ -646,6 +646,7 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    );
 
 /** returns the total number of bilinear terms that are contained in all quadratic constraints */
+SCIP_EXPORT extern
 int SCIPgetNAllBilinearTermsQuadratic(
    SCIP*                 scip                /**< SCIP data structure */
    );

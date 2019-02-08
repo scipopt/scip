@@ -64,7 +64,7 @@ void* SCIPgetIpoptApplicationPointerIpopt(
    );
 
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
-extern
+SCIP_EXPORT extern
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );

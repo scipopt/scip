@@ -278,7 +278,7 @@ char* SCIPnlpiOracleGetConstraintName(
 /** gives maximum degree of a constraint or objective
  *  The degree is the maximal degree of all summands,, and is infinity for nonpolynomial terms.
  */ 
-extern
+SCIP_EXPORT extern
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
