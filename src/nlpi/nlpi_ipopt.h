@@ -58,7 +58,7 @@ SCIP_EXPORT extern
 SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-extern
+SCIP_EXPORT extern
 void* SCIPgetIpoptApplicationPointerIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
@@ -73,7 +73,7 @@ void* SCIPgetNlpiOracleIpopt(
  *
  * Do not forget to add a newline after the last option in optionsstring.
  */
-extern
+SCIP_EXPORT extern
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
    const char*           optionsstring       /**< string with options as in Ipopt options file */
@@ -96,6 +96,7 @@ SCIP_RETCODE LapackDsyev(
  *  the linear problem Ax = b.
  *  It's here, because Ipopt is linked against Lapack.
  */
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
