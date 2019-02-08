@@ -190,6 +190,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
 ### Changed parameters
 
 ### New parameters
@@ -216,6 +218,7 @@ Fixed bugs
 ----------
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
 
 Miscellaneous
 -------------
