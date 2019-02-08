@@ -421,60 +421,71 @@ SCIP_RETCODE SCIPnlpiSetMessageHdlr(
    );
 
 /** gets data of an NLPI */
+SCIP_EXPORT extern
 SCIP_NLPIDATA* SCIPnlpiGetData(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
    
 /** gets NLP solver name */
+SCIP_EXPORT extern
 const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
 /** gets NLP solver descriptions */
+SCIP_EXPORT extern
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
 /** gets NLP solver priority */
+SCIP_EXPORT extern
 int SCIPnlpiGetPriority(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
 /** sets NLP solver priority */
+SCIP_EXPORT extern
 void SCIPnlpiSetPriority(
    SCIP_NLPI*            nlpi,               /**< NLP interface structure */
    int                   priority            /**< new priority of NLPI */
    );
 
 /** creates an NLP statistics structure */
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPnlpStatisticsCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 
 /** frees an NLP statistics structure */
+SCIP_EXPORT extern
 void SCIPnlpStatisticsFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 
 /** gets the number of iterations from an NLP statistics structure */
+SCIP_EXPORT extern
 int SCIPnlpStatisticsGetNIterations(
    SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
    );
 
 /** gets the total time from an NLP statistics structure */
+SCIP_EXPORT extern
 SCIP_Real SCIPnlpStatisticsGetTotalTime(
    SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
    );
 
 /** sets the number of iterations in an NLP statistics structure */
+SCIP_EXPORT extern
 void SCIPnlpStatisticsSetNIterations(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    int                   niterations         /**< number of iterations to store */
    );
 
 /** sets the total time in an NLP statistics structure */
+SCIP_EXPORT extern
 void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    SCIP_Real             totaltime           /**< solution time to store */

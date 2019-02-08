@@ -37,7 +37,7 @@ extern "C" {
  */
 
 /** create solver interface for Worhp solver */
-extern
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
@@ -45,19 +45,19 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    );
 
 /** gets string that identifies Worhp (version number) */
-extern
+SCIP_EXPORT extern
 const char* SCIPgetSolverNameWorhp(
    void
    );
 
 /** gets string that describes Worhp (version number) */
-extern
+SCIP_EXPORT extern
 const char* SCIPgetSolverDescWorhp(
    void
    );
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
-extern
+SCIP_EXPORT extern
 SCIP_Bool SCIPisWorhpAvailableWorhp(
    void
    );
