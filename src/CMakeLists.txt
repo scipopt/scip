@@ -953,8 +953,6 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
     add_sanitizers(scip)
 endif()
 
-target_compile_definitions(scip PRIVATE EXTERN=extern)
-
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
