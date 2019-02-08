@@ -183,11 +183,13 @@ SCIP_Real SCIPnlrowGetRhs(
    );
 
 /** returns the curvature of a nonlinear row */
+SCIP_EXPORT extern
 SCIP_EXPRCURV SCIPnlrowGetCurvature(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** sets the curvature of a nonlinear row */
+SCIP_EXPORT extern
 void SCIPnlrowSetCurvature(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_EXPRCURV         curvature           /**< curvature of NLP row */

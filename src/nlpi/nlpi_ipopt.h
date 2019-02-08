@@ -39,22 +39,22 @@ extern "C" {
 /** create solver interface for Ipopt solver
  * sets *nlpi to NULL if Ipopt is not available
  */
-extern
+SCIP_EXPORT extern
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
 
 /** gets string that identifies Ipopt (version number) */
-extern
+SCIP_EXPORT extern
 const char* SCIPgetSolverNameIpopt(void);
 
 /** gets string that describes Ipopt */
-extern
+SCIP_EXPORT extern
 const char* SCIPgetSolverDescIpopt(void);
 
 /** returns whether Ipopt is available, i.e., whether it has been linked in */
-extern
+SCIP_EXPORT extern
 SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
@@ -82,6 +82,7 @@ void SCIPsetModifiedDefaultSettingsIpopt(
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
  */
+SCIP_EXPORT extern
 SCIP_RETCODE LapackDsyev(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
