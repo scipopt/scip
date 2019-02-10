@@ -215,6 +215,7 @@ extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern void   graph_pc_deleteTermExtension(SCIP*, GRAPH*, int);
+extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Bool, SCIP_Real*, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
@@ -272,8 +273,8 @@ extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Re
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
-extern void   graph_path_st_rpcmw(SCIP*, GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
-extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_rpcmw(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_full(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);

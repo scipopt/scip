@@ -1515,6 +1515,80 @@ SCIP_RETCODE graph_pc_getSapShift(
    return SCIP_OKAY;
 }
 
+
+
+/** initializes biased data structure */
+void graph_pc_getBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Bool             fullbias,           /**< fully bias or only dominated terminals? */
+   SCIP_Real*            costbiased,         /**< biased costs */
+   SCIP_Real*            prizebiased         /**< biased prizes */
+)
+{
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
+   const int root = graph->source;
+
+   assert(scip && graph && costbiased && prizebiased);
+
+   BMScopyMemoryArray(costbiased, graph->cost, nedges);
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+      {
+         SCIP_Real mincost = FARAWAY;
+
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            if( !rpcmw && graph->tail[e] == root )
+               continue;
+
+            if( graph->cost[e] < mincost )
+               mincost = graph->cost[e];
+         }
+
+         if( fullbias )
+         {
+            mincost = MIN(mincost, graph->prize[k]);
+         }
+         else
+         {
+            if( mincost < graph->prize[k] )
+            {
+               prizebiased[k] = graph->prize[k];
+               continue;
+            }
+
+            mincost = graph->prize[k];
+         }
+
+         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         {
+            if( !rpcmw && graph->tail[e] == root )
+               continue;
+
+            if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
+               continue;
+
+            costbiased[e] -= mincost;
+            assert(!SCIPisNegative(scip, costbiased[e]));
+         }
+
+         prizebiased[k] = graph->prize[k] - mincost;
+         assert(!SCIPisNegative(scip, prizebiased[k]));
+      }
+      else
+      {
+         if( rpcmw && graph_pc_knotIsFixedTerm(graph, k) )
+            prizebiased[k] = graph->prize[k];
+         else
+            prizebiased[k] = 0.0;
+      }
+   }
+}
+
 /** alters the graph for prize-collecting problems with given root */
 SCIP_RETCODE graph_pc_getRsap(
    SCIP*                 scip,               /**< SCIP data structure */
