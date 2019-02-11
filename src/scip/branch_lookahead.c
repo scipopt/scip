@@ -4246,7 +4246,9 @@ SCIP_RETCODE executeBranchingRecursive(
                      &branchingresult->ndeepestnodes) );
 #endif
 
-               assert(deeperstatus->cutoff || deeperstatus->lperror || branchingresult->ndeepestnodes == 8 || branchingresult->ndeepestnodes == 2 * candidatelist->ncandidates);
+               assert(deeperstatus->cutoff || deeperstatus->lperror || branchingresult->ndeepestnodes == 8
+                  || branchingresult->ndeepestnodes == 2 * candidatelist->ncandidates
+                  || SCIPisStopped(scip));
 
                /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
                 * node has more/tighter constraints and as such cannot be better than the base LP. */
