@@ -101,6 +101,7 @@
                                                     *   collected and added? */
 #define DEFAULT_PROPAGATE                    TRUE  /**< Should domain propagation be executed before each temporary node is
                                                     *   solved? */
+#define DEFAULT_USELEVEL2DATA                TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
 #define DEFAULT_MAXPROPROUNDS                -1    /**< maximum number of propagation rounds to perform at temporary
                                                     *   nodes (-1: unlimited) */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
@@ -1034,6 +1035,7 @@ typedef struct
                                               *   the scoring? */
    SCIP_Bool             addclique;          /**< add binary constraints with two variables found at the root node also as a clique? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
+   SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
    SCIP_Bool             inscoring;          /**< are we currently in FSB-scoring (only used internally) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to perform at temporary nodes
                                               *   (-1: unlimited) */
@@ -4979,7 +4981,7 @@ SCIP_RETCODE selectVarStart(
       SCIPstatistic(performedlab = TRUE);
 
       /* we do not need the level 2 data for FSB scoring, so we do not need to create it before */
-      if( recursiondepth == 2 )
+      if( recursiondepth == 2 && config->uselevel2data )
       {
          SCIP_CALL( level2dataCreate(scip, &level2data) );
       }
@@ -5794,6 +5796,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/propagate",
          "should domain propagation be executed before each temporary node is solved?",
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/uselevel2data",
+         "should branching data generated at depth level 2 be stored for re-using it?",
+         &branchruledata->config->uselevel2data, TRUE, DEFAULT_USELEVEL2DATA, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/maxproprounds",
          "maximum number of propagation rounds to perform at each temporary node (-1: unlimited)",
