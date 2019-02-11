@@ -875,6 +875,43 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
  *  local functions
  */
 
+
+/** returns mode */
+static
+int getMode(
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph              /**< graph data structure */
+)
+{
+   /* get user parameter */
+   int mode = heurdata->type;
+   assert(mode == AUTO || mode == TM_SP || mode == TM_VORONOI || mode == TM_DIJKSTRA);
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      mode = TM_DIJKSTRA;
+   }
+   else if( graph->stp_type == STP_DHCSTP )
+   {
+      mode = TM_SP;
+   }
+   else if( graph->stp_type == STP_DCSTP )
+   {
+      mode = TM_SP;
+   }
+   else if( graph->stp_type == STP_SAP )
+   {
+      mode = TM_SP;
+   }
+   else
+   {
+      if( mode == AUTO )
+         mode = TM_DIJKSTRA;
+   }
+
+   return mode;
+}
+
 /* compute starting vertices and number of runs */
 static
 SCIP_RETCODE computeStarts(
@@ -2152,11 +2189,14 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    int** node_edge = NULL;
    SCIP_Bool startsgiven;
 
-   assert(scip != NULL);
-   assert(cost != NULL);
-   assert(graph != NULL);
-   assert(costrev != NULL);
-   assert(best_result != NULL);
+   assert(scip && cost && graph && costrev && best_result);
+   assert(root >= 0);
+   assert(nedges > 0);
+   assert(nnodes > 0);
+   assert(nterms > 0);
+
+   for( e = 0; e < nedges; e++)
+      assert(SCIPisGE(scip, cost[e], 0.0) && SCIPisGE(scip, costrev[e], 0.0));
 
    if( heurdata == NULL )
    {
@@ -2175,50 +2215,17 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    else
       startsgiven = (starts != NULL);
 
-   for( e = 0; e < nedges; e++)
-   {
-      assert(SCIPisGE(scip, cost[e], 0.0));
-      assert(SCIPisGE(scip, costrev[e], 0.0));
-   }
-
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   assert(root >= 0);
-   assert(nedges > 0);
-   assert(nnodes > 0);
-   assert(nterms > 0);
+   if( graph_pc_isPcMw(graph) )
+      graph_pc_2transcheck(graph);
+
+   mode = getMode(heurdata, graph);
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-
-   /* get user parameter */
-   mode = heurdata->type;
-   assert(mode == AUTO || mode == TM_SP || mode == TM_VORONOI || mode == TM_DIJKSTRA);
-
-   if( graph_pc_isPcMw(graph) )
-   {
-      mode = TM_DIJKSTRA;
-      graph_pc_2transcheck(graph);
-   }
-   else if( graph->stp_type == STP_DHCSTP )
-   {
-      mode = TM_SP;
-   }
-   else if( graph->stp_type == STP_DCSTP )
-   {
-      mode = TM_SP;
-   }
-   else if( graph->stp_type == STP_SAP )
-   {
-      mode = TM_SP;
-   }
-   else
-   {
-      if( mode == AUTO )
-         mode = TM_DIJKSTRA;
-   }
 
    /* allocate memory according to selected mode */
    if( mode == TM_DIJKSTRA || graph->stp_type == STP_DHCSTP )
