@@ -249,7 +249,6 @@ SCIP_Bool SCIPbendersSubproblemIsConvex(
    );
 
 /** returns the number of subproblems that are convex */
-extern
 int SCIPbendersGetNConvexSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );

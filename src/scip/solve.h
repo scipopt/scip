@@ -59,7 +59,6 @@ SCIP_Bool SCIPsolveIsStopped(
    );
 
 /** applies domain propagation on current node and flushes the conflict store afterwards */
-extern
 SCIP_RETCODE SCIPpropagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -81,7 +80,6 @@ SCIP_RETCODE SCIPpropagateDomains(
    );
 
 /** puts all constraints with initial flag TRUE into the LP */
-extern
 SCIP_RETCODE SCIPinitConssLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -103,7 +101,6 @@ SCIP_RETCODE SCIPinitConssLP(
    );
 
 /** constructs the LP of the current node, but does not load the LP state and warmstart information  */
-extern
 SCIP_RETCODE SCIPconstructCurrentLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -125,7 +122,6 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    );
 
 /** calls primal heuristics */
-extern
 SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -142,7 +138,6 @@ SCIP_RETCODE SCIPprimalHeuristics(
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */
-extern
 SCIP_RETCODE SCIPseparationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -164,7 +159,6 @@ SCIP_RETCODE SCIPseparationRound(
    );
 
 /** solves the current LP completely with pricing in new variables */
-extern
 SCIP_RETCODE SCIPpriceLoop(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -195,7 +189,6 @@ SCIP_RETCODE SCIPpriceLoop(
    );
 
 /** main solving loop */
-extern
 SCIP_RETCODE SCIPsolveCIP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */

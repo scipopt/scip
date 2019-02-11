@@ -77,7 +77,6 @@ SCIP_RETCODE SCIPvisualNewChild(
    );
 
 /** updates a node entry in the visualization output file */
-extern
 SCIP_RETCODE SCIPvisualUpdateChild(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */

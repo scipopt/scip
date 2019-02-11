@@ -42,7 +42,6 @@ extern "C" {
 #endif
 
 /** creates problem statistics data */
-extern
 SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -53,32 +52,27 @@ SCIP_RETCODE SCIPstatCreate(
    );
 
 /** frees problem statistics data */
-extern
 SCIP_RETCODE SCIPstatFree(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** diables the collection of any statistic for a variable */
-extern
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** enables the collection of statistics for a variable */
-extern
 void SCIPstatEnableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** marks statistics to be able to reset them when solving process is freed */
-extern
 void SCIPstatMark(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset statistics to the data before solving started */
-extern
 void SCIPstatReset(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -87,13 +81,11 @@ void SCIPstatReset(
    );
 
 /** reset implication counter */
-extern
 void SCIPstatResetImplications(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset presolving and current run specific statistics */
-extern
 void SCIPstatResetPresolving(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -102,7 +94,6 @@ void SCIPstatResetPresolving(
    );
 
 /* reset primal-dual integral */
-extern
 void SCIPstatResetPrimalDualIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -113,7 +104,6 @@ void SCIPstatResetPrimalDualIntegral(
 /** update the primal-dual integral statistic. method accepts + and - SCIPsetInfinity() as values for
  *  upper and lower bound, respectively
  */
-extern
 void SCIPstatUpdatePrimalDualIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -124,7 +114,6 @@ void SCIPstatUpdatePrimalDualIntegral(
    );
 
 /** update and return the primal-dual integral statistic */
-extern
 SCIP_Real SCIPstatGetPrimalDualIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -133,7 +122,6 @@ SCIP_Real SCIPstatGetPrimalDualIntegral(
    );
 
 /** reset current branch and bound run specific statistics */
-extern
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -143,19 +131,16 @@ void SCIPstatResetCurrentRun(
    );
 
 /** resets display statistics, such that a new header line is displayed before the next display line */
-extern
 void SCIPstatResetDisplay(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** increases LP count, such that all lazy updates depending on the LP are enforced again */
-extern
 void SCIPstatEnforceLPUpdates(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */
-extern
 void SCIPstatUpdateMemsaveMode(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -164,7 +149,6 @@ void SCIPstatUpdateMemsaveMode(
    );
 
 /** returns the estimated number of bytes used by extern software, e.g., the LP solver */
-extern
 SCIP_Longint SCIPstatGetMemExternEstim(
    SCIP_STAT*            stat                /**< dynamic SCIP statistics */
    );
@@ -176,14 +160,12 @@ SCIP_Longint SCIPstatGetMemExternEstim(
  *
  *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
  */
-extern
 void SCIPstatEnableOrDisableStatClocks(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    );
 
 /** recompute root LP best-estimate from scratch */
-extern
 void SCIPstatComputeRootLPBestEstimate(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -193,7 +175,6 @@ void SCIPstatComputeRootLPBestEstimate(
    );
 
 /** update root LP best-estimate with changed variable pseudo-costs */
-extern
 SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_SET*             set,                /**< global SCIP settings */

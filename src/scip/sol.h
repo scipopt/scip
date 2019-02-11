@@ -47,7 +47,6 @@ extern "C" {
 #endif
 
 /** creates primal CIP solution, initialized to zero */
-extern
 SCIP_RETCODE SCIPsolCreate(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -59,7 +58,6 @@ SCIP_RETCODE SCIPsolCreate(
    );
 
 /** creates primal CIP solution in original problem space, initialized to the offset in the original problem */
-extern
 SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -72,7 +70,6 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    );
 
 /** creates a copy of a primal CIP solution */
-extern
 SCIP_RETCODE SCIPsolCopy(
    SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -85,7 +82,6 @@ SCIP_RETCODE SCIPsolCopy(
 /** transformes given original solution to the transformed space; a corresponding transformed solution has to be given
  *  which is copied into the existing solution and freed afterwards
  */
-extern
 SCIP_RETCODE SCIPsolTransform(
    SCIP_SOL*             sol,                /**< primal CIP solution to change, living in original space */
    SCIP_SOL**            transsol,           /**< pointer to corresponding transformed primal CIP solution */
@@ -97,7 +93,6 @@ SCIP_RETCODE SCIPsolTransform(
 /** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
  *  deteriorated by this method.
  */
-extern
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -108,7 +103,6 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    );
 
 /** creates primal CIP solution, initialized to the current LP solution */
-extern
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -122,7 +116,6 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    );
 
 /** creates primal CIP solution, initialized to the current NLP solution */
-extern
 SCIP_RETCODE SCIPsolCreateNLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -135,7 +128,6 @@ SCIP_RETCODE SCIPsolCreateNLPSol(
    );
 
 /** creates primal CIP solution, initialized to the current relaxation solution */
-extern
 SCIP_RETCODE SCIPsolCreateRelaxSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -148,7 +140,6 @@ SCIP_RETCODE SCIPsolCreateRelaxSol(
    );
 
 /** creates primal CIP solution, initialized to the current pseudo solution */
-extern
 SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -162,7 +153,6 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    );
 
 /** creates primal CIP solution, initialized to the current solution */
-extern
 SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -176,7 +166,6 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    );
 
 /** creates partial primal CIP solution, initialized to unknown values */
-extern
 SCIP_RETCODE SCIPsolCreatePartial(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -187,7 +176,6 @@ SCIP_RETCODE SCIPsolCreatePartial(
    );
 
 /** creates primal CIP solution, initialized to unknown values */
-extern
 SCIP_RETCODE SCIPsolCreateUnknown(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -199,7 +187,6 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    );
 
 /** frees primal CIP solution */
-extern
 SCIP_RETCODE SCIPsolFree(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -207,7 +194,6 @@ SCIP_RETCODE SCIPsolFree(
    );
 
 /** copies current LP solution into CIP solution by linking */
-extern
 SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -218,7 +204,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    );
 
 /** copies current NLP solution into CIP solution by linking */
-extern
 SCIP_RETCODE SCIPsolLinkNLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -227,7 +212,6 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
    );
 
 /** copies current relaxation solution into CIP solution by linking */
-extern
 SCIP_RETCODE SCIPsolLinkRelaxSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -237,7 +221,6 @@ SCIP_RETCODE SCIPsolLinkRelaxSol(
    );
 
 /** copies current pseudo solution into CIP solution by linking */
-extern
 SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -248,7 +231,6 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    );
 
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */
-extern
 SCIP_RETCODE SCIPsolLinkCurrentSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -259,7 +241,6 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
    );
 
 /** clears primal CIP solution */
-extern
 SCIP_RETCODE SCIPsolClear(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -267,7 +248,6 @@ SCIP_RETCODE SCIPsolClear(
    );
 
 /** declares all entries in the primal CIP solution to be unknown */
-extern
 SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -275,7 +255,6 @@ SCIP_RETCODE SCIPsolSetUnknown(
    );
 
 /** stores solution values of variables in solution's own array */
-extern
 SCIP_RETCODE SCIPsolUnlink(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -283,7 +262,6 @@ SCIP_RETCODE SCIPsolUnlink(
    );
 
 /** sets value of variable in primal CIP solution */
-extern
 SCIP_RETCODE SCIPsolSetVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -294,7 +272,6 @@ SCIP_RETCODE SCIPsolSetVal(
    );
 
 /** increases value of variable in primal CIP solution */
-extern
 SCIP_RETCODE SCIPsolIncVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -305,7 +282,6 @@ SCIP_RETCODE SCIPsolIncVal(
    );
 
 /** returns value of variable in primal CIP solution */
-extern
 SCIP_Real SCIPsolGetVal(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -314,7 +290,6 @@ SCIP_Real SCIPsolGetVal(
    );
 
 /** returns value of variable in primal ray represented by primal CIP solution */
-extern
 SCIP_Real SCIPsolGetRayVal(
    SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -324,7 +299,6 @@ SCIP_Real SCIPsolGetRayVal(
 
 
 /** gets objective value of primal CIP solution in transformed problem */
-extern
 SCIP_Real SCIPsolGetObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -333,7 +307,6 @@ SCIP_Real SCIPsolGetObj(
    );
 
 /** updates primal solutions after a change in a variable's objective value */
-extern
 void SCIPsolUpdateVarObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR*             var,                /**< problem variable */
@@ -342,7 +315,6 @@ void SCIPsolUpdateVarObj(
    );
 
 /* mark the given solution as partial solution */
-extern
 SCIP_RETCODE SCIPsolMarkPartial(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -357,7 +329,6 @@ SCIP_RETCODE SCIPsolMarkPartial(
  *        differently. There might be some variables which do not have an original counter part (e.g. in
  *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
  */
-extern
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -374,7 +345,6 @@ SCIP_RETCODE SCIPsolCheck(
    );
 
 /** try to round given solution */
-extern
 SCIP_RETCODE SCIPsolRound(
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -385,7 +355,6 @@ SCIP_RETCODE SCIPsolRound(
    );
 
 /** updates the solution value sums in variables by adding the value in the given solution */
-extern
 void SCIPsolUpdateVarsum(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -395,7 +364,6 @@ void SCIPsolUpdateVarsum(
    );
 
 /** retransforms solution to original problem space */
-extern
 SCIP_RETCODE SCIPsolRetransform(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -408,7 +376,6 @@ SCIP_RETCODE SCIPsolRetransform(
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
  *  from the solution pool (objective coefficients might have changed in the meantime)
  */
-extern
 void SCIPsolRecomputeObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -418,7 +385,6 @@ void SCIPsolRecomputeObj(
 
 
 /** returns whether the given solutions in transformed space are equal */
-extern
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
@@ -429,7 +395,6 @@ SCIP_Bool SCIPsolsAreEqual(
    );
 
 /** outputs non-zero elements of solution to file stream */
-extern
 SCIP_RETCODE SCIPsolPrint(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -443,7 +408,6 @@ SCIP_RETCODE SCIPsolPrint(
    );
 
 /** outputs non-zero elements of solution representing a ray to file stream */
-extern
 SCIP_RETCODE SCIPsolPrintRay(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -457,20 +421,17 @@ SCIP_RETCODE SCIPsolPrintRay(
 
 
 /** reset violations of a solution */
-extern
 void SCIPsolResetViolations(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** update integrality violation of a solution */
-extern
 void SCIPsolUpdateIntegralityViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
    );
 
 /** update bound violation of a solution */
-extern
 void SCIPsolUpdateBoundViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
@@ -478,7 +439,6 @@ void SCIPsolUpdateBoundViolation(
    );
 
 /** update LP row violation of a solution */
-extern
 void SCIPsolUpdateLPRowViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
@@ -486,7 +446,6 @@ void SCIPsolUpdateLPRowViolation(
    );
 
 /** update constraint violation of a solution */
-extern
 void SCIPsolUpdateConsViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolcons,        /**< absolute violation of constraint */
@@ -494,7 +453,6 @@ void SCIPsolUpdateConsViolation(
    );
 
 /** update violation of a constraint that is represented in the LP */
-extern
 void SCIPsolUpdateLPConsViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation of constraint */
@@ -508,20 +466,17 @@ void SCIPsolUpdateLPConsViolation(
  */
 
 /** adds value to the objective value of a given original primal CIP solution */
-extern
 void SCIPsolOrigAddObjval(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             addval              /**< offset value to add */
    );
 
 /** gets current position of solution in array of existing solutions of primal data */
-extern
 int SCIPsolGetPrimalIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** sets current position of solution in array of existing solutions of primal data */
-extern
 void SCIPsolSetPrimalIndex(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   primalindex         /**< new primal index of solution */

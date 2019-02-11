@@ -77,19 +77,14 @@ typedef struct Graph
 } GRAPH;
 
 
-extern
 SCIP_Bool create_graph(int n, int m, GRAPH** gr);
 
-extern
 void capture_graph(GRAPH* gr);
    
-extern
 void release_graph(GRAPH** gr);
    
-extern
 SCIP_Bool gmincut(GRAPH *gr, double *mincap, long *n_shore);
 
-extern
 SCIP_Bool ghc_tree(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol);
 
 #endif

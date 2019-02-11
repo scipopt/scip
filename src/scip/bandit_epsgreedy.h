@@ -36,30 +36,24 @@ extern "C" {
 #endif
 
 /** creates the epsilon greedy bandit algorithm includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeBanditvtableEpsgreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** callback to free bandit specific data structures */
-extern
 SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy);
 
 /** selection callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy);
 
 /** update callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy);
 
 /** reset callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy);
 
 
 /** internal method to create and reset epsilon greedy bandit algorithm */
-extern
 SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
