@@ -5662,6 +5662,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    branchruledata->statistics->ntotalresults++;
    branchruledata->statistics->nresults[*result]++;
 
+   if( config->abbreviated )
    {
       int sum;
       int i;
