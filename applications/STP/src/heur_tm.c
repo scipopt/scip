@@ -1163,6 +1163,8 @@ static
 SCIP_RETCODE computeSteinerTreeDijkPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
+   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   const int*            orderedprizes_id,   /**< ordered prizes ids */
    const SCIP_Real*      cost,               /**< (possibly biased) edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
    SCIP_Real*            dijkdist,           /**< distance array */
@@ -1173,9 +1175,9 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    )
 {
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      graph_path_st_rpcmw(scip, g, cost, prize, dijkdist, dijkedge, start, connected);
+      graph_path_st_rpcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
    else
-      graph_path_st_pcmw(scip, g, cost, prize, dijkdist, dijkedge, start, connected);
+      graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
 
    SCIP_CALL(prune(scip, g, NULL, result, connected));
 
@@ -1926,6 +1928,48 @@ SCIP_RETCODE computeSteinerTreeVnoi(
 
 /** submethod for runPCMW */
 static
+void initOrderedPrizesPcMw(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      prizes,             /**< prizes for all nodes */
+   SCIP_Real*            orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   int*                  orderedprizes_id    /**< ordered prizes ids */
+   )
+{
+   const int nnodes = graph->knots;
+   const int nterms = graph->terms;
+   int termcount;
+
+   assert(prizes && graph && orderedprizes && orderedprizes_id);
+   assert(graph->extended);
+   assert(nterms >= 1);
+
+   termcount = 0;
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_pterm(graph->term[k]) )
+      {
+         orderedprizes[termcount] = prizes[k];
+         orderedprizes_id[termcount++] = k;
+      }
+   }
+
+   for( int k = termcount; k < nterms; k++ )
+   {
+      orderedprizes[k] = 0.0;
+      orderedprizes_id[k] = -1;
+   }
+
+   SCIPsortDownRealInt(orderedprizes, orderedprizes_id, nterms);
+
+   /* set sentinel */
+   orderedprizes[nterms] = 0.0;
+   orderedprizes_id[nterms] = -1;
+
+   assert(orderedprizes[0] >= orderedprizes[nterms - 1]);
+}
+
+/** submethod for runPCMW */
+static
 void initTerminalPrioPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
@@ -2038,6 +2082,8 @@ SCIP_RETCODE runPcMW(
    SCIP_Real min = FARAWAY;
    SCIP_Real* costbiased;
    SCIP_Real* prizebiased;
+   SCIP_Real* orderedprizes;
+   int* orderedprizes_id;
    int* terminalperm;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
@@ -2048,6 +2094,8 @@ SCIP_RETCODE runPcMW(
    assert(graph->extended);
    assert(bias != both);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &terminalperm, nterms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &terminalprio, nterms) );
@@ -2055,9 +2103,17 @@ SCIP_RETCODE runPcMW(
    SCIP_CALL( SCIPallocBufferArray(scip, &prizebiased, nnodes) );
 
    if( bias != none )
+   {
       graph_pc_getBiased(scip, graph, bias == full, costbiased, prizebiased);
+      initOrderedPrizesPcMw(graph, prizebiased, orderedprizes, orderedprizes_id);
+   }
+   else
+   {
+      initOrderedPrizesPcMw(graph, graph->prize, orderedprizes, orderedprizes_id);
+   }
 
    initTerminalPrioPcMw(scip, heurdata, nodepriority, graph, terminalperm, terminalprio);
+
 
    if( maxruns > 0 && bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
    {
@@ -2100,9 +2156,11 @@ SCIP_RETCODE runPcMW(
       else
       {
          if( bias != none )
-            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, costbiased, prizebiased, dijkdist, result, dijkedge, start, connected));
+            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+                  costbiased, prizebiased, dijkdist, result, dijkedge, start, connected));
          else
-            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, cost, graph->prize, dijkdist, result, dijkedge, start, connected));
+            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+                  cost, graph->prize, dijkdist, result, dijkedge, start, connected));
       }
 
       if( SCIPisStopped(scip) )
@@ -2139,6 +2197,8 @@ SCIP_RETCODE runPcMW(
    SCIPfreeBufferArray(scip, &terminalprio);
    SCIPfreeBufferArray(scip, &terminalperm);
    SCIPfreeBufferArray(scip, &connected);
+   SCIPfreeBufferArray(scip, &orderedprizes_id);
+   SCIPfreeBufferArray(scip, &orderedprizes);
 
    return SCIP_OKAY;
 }

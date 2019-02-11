@@ -382,6 +382,48 @@ inline static void correctXwalk(
    }
 }
 
+static
+void updatmaxprize(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   const int*            orderedprizes_id,   /**< ordered prizes ids */
+   const STP_Bool*       connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int                   node,               /**< current node */
+   int*                  maxprizeidx_p,      /**< pointer to */
+   SCIP_Real*            maxprizeval_p       /**< pointer to */
+)
+{
+   const int nterms = g->terms;
+   int maxprizeidx = *maxprizeidx_p;
+   assert(maxprizeidx <= nterms);
+
+   /* sentinel? */
+   if( maxprizeidx < 0 )
+   {
+      assert(*maxprizeval_p == 0.0);
+      return;
+   }
+
+   assert(maxprizeidx < nterms);
+
+   /* is current node at the maximum? */
+   if( node == orderedprizes_id[maxprizeidx] )
+   {
+      while( maxprizeidx >= 0 && connected[orderedprizes_id[maxprizeidx]] )
+      {
+         maxprizeidx++;
+         assert(maxprizeidx <= nterms);
+      }
+
+      *maxprizeidx_p = maxprizeidx;
+
+      if( maxprizeidx < 0 )
+         *maxprizeval_p = 0.0;
+      else
+         *maxprizeval_p = orderedprizes[maxprizeidx];
+   }
+}
+
 void heap_add(
    int* heap,     /* heaparray */
    int* state,
@@ -1551,6 +1593,8 @@ void graph_path_st(
 void graph_path_st_pcmw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   const int*            orderedprizes_id,   /**< ordered prizes ids */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
@@ -1559,24 +1603,17 @@ void graph_path_st_pcmw(
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
-   SCIP_Real maxprize;
    int count;
    const int nnodes = g->knots;
    int* const heap = g->path_heap;
    int* const state = g->path_state;
    int ntermspos;
 
-   assert(pathdist   != NULL);
-   assert(pathedge   != NULL);
-   assert(g      != NULL);
+   assert(scip && g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
    assert(start  <  g->knots);
-   assert(cost   != NULL);
-   assert(connected != NULL);
-   assert(prize != NULL);
    assert(g->extended);
 
-   maxprize = 0.0;
    count = 0;
    ntermspos = 0;
 
@@ -1594,9 +1631,6 @@ void graph_path_st_pcmw(
 
       if( SCIPisPositive(scip, prize[k]) )
          ntermspos++;
-
-      if( (prize[k] > maxprize) && k != start )
-         maxprize = prize[k];
    }
 
    pathdist[start] = 0.0;
@@ -1605,10 +1639,15 @@ void graph_path_st_pcmw(
 
    if( nnodes > 1 )
    {
+      int maxprizeidx = 0;
+      SCIP_Real maxprizeval = orderedprizes[0];
+
       int nterms = 0;
 
       if( Is_pterm(g->term[start]) && SCIPisPositive(scip, prize[start]) )
          nterms++;
+
+      updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
 
       /* add start vertex to heap */
       count = 1;
@@ -1627,12 +1666,12 @@ void graph_path_st_pcmw(
          {
             int node;
             assert(k != start);
-            SCIPdebugMessage("connect %d \n", k);
-            SCIPdebugMessage("pathdist[k]=%f \n", pathdist[k]);
 
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             assert(pathedge[k] != -1);
+
+            updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
 
             /* connect k to current subtree */
             node = k;
@@ -1659,7 +1698,7 @@ void graph_path_st_pcmw(
                break;
             }
          }
-         else if( pathdist[k] > maxprize )
+         else if( pathdist[k] > maxprizeval )
          {
             break;
          }
@@ -1963,6 +2002,8 @@ void graph_path_st_pcmw_extend(
 void graph_path_st_rpcmw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   const int*            orderedprizes_id,   /**< ordered prizes ids */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
@@ -1971,24 +2012,18 @@ void graph_path_st_rpcmw(
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
-   SCIP_Real maxprize;
    const int nnodes = g->knots;
    int nrterms;
    int* const heap = g->path_heap;
    int* const state = g->path_state;
 
-   assert(pathdist   != NULL);
-   assert(pathedge   != NULL);
-   assert(g      != NULL);
+   assert(scip && g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
+
    assert(start  >= 0);
    assert(start  <  g->knots);
-   assert(cost   != NULL);
-   assert(connected != NULL);
-   assert(prize != NULL);
    assert(g->extended);
 
    nrterms = 0;
-   maxprize = 0.0;
 
    /* unmark dummy terminals */
    graph_pc_markOrgGraph(scip, g);
@@ -2007,12 +2042,7 @@ void graph_path_st_rpcmw(
          nrterms++;
          assert(!Is_pterm(g->term[k]));
       }
-
-      if( Is_pterm(g->term[k]) && (prize[k] > maxprize) && k != start )
-         maxprize = prize[k];
    }
-
-   assert(SCIPisLT(scip, maxprize, FARAWAY));
 
    pathdist[start] = 0.0;
    connected[start] = TRUE;
@@ -2023,6 +2053,8 @@ void graph_path_st_rpcmw(
       const int nterms = g->terms;
       int termscount = 0;
       int rtermscount = 0;
+      int maxprizeidx = 0;
+      SCIP_Real maxprizeval = orderedprizes[0];
 
       /* add start vertex to heap */
       count = 1;
@@ -2031,6 +2063,8 @@ void graph_path_st_rpcmw(
 
       if( Is_gterm(g->term[start]) )
          termscount++;
+
+      updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
 
       /* repeat until heap is empty */
       while( count > 0 )
@@ -2055,6 +2089,7 @@ void graph_path_st_rpcmw(
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
+            updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
 
             assert(pathedge[k] != -1);
             while( !connected[node = g->tail[pathedge[node]]] )
@@ -2077,7 +2112,7 @@ void graph_path_st_rpcmw(
                break;
             }
          }
-         else if( rtermscount >= nrterms && pathdist[k] > maxprize )
+         else if( rtermscount >= nrterms && pathdist[k] > maxprizeval )
          {
             assert(rtermscount == nrterms);
             break;
