@@ -67,7 +67,7 @@ extern "C" {
  */
 
 /** includes a bandit algorithm virtual function table  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDITVTABLE**   banditvtable,       /**< bandit algorithm virtual function table */
@@ -79,21 +79,21 @@ SCIP_RETCODE SCIPincludeBanditvtable(
    );
 
 /** returns the bandit virtual function table of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BANDITVTABLE* SCIPfindBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of bandit algorithm virtual function table */
    );
 
 /** calls destructor and frees memory of bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeBandit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
    );
 
 /** reset the bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetBandit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */

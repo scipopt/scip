@@ -31,49 +31,49 @@
 #include "tpi/type_tpi.h"
 
 /** initializes the given lock */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitLock(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** destroys the given lock */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPtpiDestroyLock(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** acquires the given lock */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiAcquireLock(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** releases the given lock */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiReleaseLock(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** initializes the given condition variable */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitCondition(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** destroys the given condition variable */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPtpiDestroyCondition(
    SCIP_LOCK*            lock                /**< the lock */
    );
 
 /** signals one waiting thread */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiSignalCondition(
    SCIP_CONDITION*       condition           /**< the condition variable to signal */
    );
 
 /** signals all waiting threads */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiBroadcastCondition(
    SCIP_CONDITION*       condition           /**< the condition variable to broadcast */
    );
@@ -81,26 +81,26 @@ SCIP_RETCODE SCIPtpiBroadcastCondition(
 /** waits on a condition variable. The given lock must be held by the caller and will
  *  be held when this function returns.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiWaitCondition(
    SCIP_CONDITION*       condition,          /**< the condition variable to wait on */
    SCIP_LOCK*            lock                /**< the lock that is held by the caller */
    );
 
 /** returns the number of threads */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPtpiGetNumThreads(
    void
    );
 
 /** returns the thread number */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPtpiGetThreadNum(
    void
    );
 
 /** creates a job for parallel processing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                /**< pointer to the job that will be created */
    int                   jobid,              /**< the id for the current job */
@@ -109,13 +109,13 @@ SCIP_RETCODE SCIPtpiCreateJob(
    );
 
 /** get a new job id for a new set of jobs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPtpiGetNewJobID(
    void
    );
 
 /** submit a job for parallel processing the return is a globally defined status */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
@@ -124,13 +124,13 @@ SCIP_RETCODE SCIPtpiSumbitJob(
 /** blocks until all jobs of the given jobid have finished
  *  and then returns the smallest SCIP_RETCODE of all the jobs
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiCollectJobs(
    int                   jobid               /**< the jobid of the jobs to wait for */
    );
 
 /** initializes tpi */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInit(
    int                   nthreads,           /**< the number of threads to be used */
    int                   queuesize,          /**< the size of the queue */
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPtpiInit(
    );
 
 /** deinitializes the tpi */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPtpiExit(
    void
    );

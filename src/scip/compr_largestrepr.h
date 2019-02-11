@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the largestrepr tree compression and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeComprLargestrepr(
    SCIP*                 scip                /**< SCIP data structure */
    );

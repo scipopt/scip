@@ -45,7 +45,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPincludeReaderOpb(
  */
 
 /** reads problem from file */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPreadOpb(
    );
 
 /** writes problem to file */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteOpb(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

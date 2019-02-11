@@ -39,14 +39,14 @@ extern "C" {
  */
 
 /** select the next action */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbanditSelect(
    SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
    int*                  action              /**< pointer to store the selected action */
    );
 
 /** update the score of the selected action */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbanditUpdate(
    SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
    int                   action,             /**< index of action for which the score should be updated */
@@ -54,19 +54,19 @@ SCIP_RETCODE SCIPbanditUpdate(
    );
 
 /** return the name of this bandit virtual function table */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPbanditvtableGetName(
    SCIP_BANDITVTABLE*    banditvtable        /**< virtual table for bandit algorithm */
    );
 
 /** return the random number generator of a bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RANDNUMGEN* SCIPbanditGetRandnumgen(
    SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
    );
 
 /** return number of actions of this bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbanditGetNActions(
    SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
    );

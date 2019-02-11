@@ -82,7 +82,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeReaderBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of reader */
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPincludeReader(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeReader() instead
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER**         readerptr,          /**< reference to reader pointer, or NULL */
@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPincludeReaderBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPsetReaderCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -159,7 +159,7 @@ SCIP_RETCODE SCIPsetReaderFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderRead(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -175,7 +175,7 @@ SCIP_RETCODE SCIPsetReaderRead(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetReaderWrite(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< reader */
@@ -183,20 +183,20 @@ SCIP_RETCODE SCIPsetReaderWrite(
    );
 
 /** returns the reader of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_READER* SCIPfindReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of reader */
    );
 
 /** returns the array of currently available readers */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_READER** SCIPgetReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available readers */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );

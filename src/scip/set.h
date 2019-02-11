@@ -1945,7 +1945,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 
 /** prints a debug message */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           sourcefile,         /**< name of the source file that called the function */
@@ -1955,7 +1955,7 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           formatstr,          /**< format string like in printf() function */

@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaPartition(
    SCIP*                 scip                /**< SCIP data structure */
    );

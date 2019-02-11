@@ -44,7 +44,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -111,7 +111,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPcreateConsBasicKnapsack(
    );
 
 /** adds new item to knapsack constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -132,7 +132,7 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
    );
 
 /** gets the capacity of the knapsack constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPgetCapacityKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -142,7 +142,7 @@ SCIP_Longint SCIPgetCapacityKnapsack(
  *
  *  @note This method can only be called during problem creation stage (SCIP_STAGE_PROBLEM)
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgCapacityKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -150,35 +150,35 @@ SCIP_RETCODE SCIPchgCapacityKnapsack(
    );
 
 /** gets the number of items in the knapsack constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNVarsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of variables in the knapsack constraint; the user must not modify this array! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of weights in the knapsack constraint; the user must not modify this array! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint* SCIPgetWeightsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the knapsack constraint in the current LP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetDualsolKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the knapsack constraint in the current infeasible LP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -187,7 +187,7 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
 /** returns the linear relaxation of the given knapsack constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -203,7 +203,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
  *       The dynamic programming algorithm runs with a time and space complexity
  *       of O(nitems * capacity).
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nitems,             /**< number of available items */
@@ -224,7 +224,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
  *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not
  *  selected items
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nitems,             /**< number of available items */
@@ -240,7 +240,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    );
 
 /** separates different classes of valid inequalities for the 0-1 knapsack problem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< originating constraint of the knapsack problem, or NULL */
@@ -256,7 +256,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    );
 
 /* relaxes given general linear constraint into a knapsack constraint and separates lifted knapsack cover inequalities */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< originating constraint of the knapsack problem, or NULL */

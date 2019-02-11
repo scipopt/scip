@@ -55,7 +55,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderSto(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
  */
 
 /** reads the stochastic information for a stochastic program that is in SMPS format */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPreadSto(
    );
 
 /** writes problem to file */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteSto(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPwriteSto(
    );
 
 /** returns the total number of scenarios added to the problem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPstoGetNScenarios(
    SCIP*                 scip                /**< SCIP data structure */
    );

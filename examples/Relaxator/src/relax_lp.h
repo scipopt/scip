@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the lp relaxator and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelaxLp(
    SCIP*                 scip                /**< SCIP data structure */
    );

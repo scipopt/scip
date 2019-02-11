@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPcreateConsBasicDisjunction(
    );
 
 /** adds constraint to the disjunction of constraints */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< disjunction constraint */

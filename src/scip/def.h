@@ -100,7 +100,7 @@
 #endif
 
 #ifndef EXTERN
-#define EXTERN SCIP_EXPORT extern
+#define EXTERN SCIP_EXPORT
 #endif
 
 /* define INLINE */

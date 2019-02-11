@@ -39,32 +39,32 @@ extern "C" {
 /** create solver interface for Ipopt solver
  * sets *nlpi to NULL if Ipopt is not available
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
 
 /** gets string that identifies Ipopt (version number) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPgetSolverNameIpopt(void);
 
 /** gets string that describes Ipopt */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPgetSolverDescIpopt(void);
 
 /** returns whether Ipopt is available, i.e., whether it has been linked in */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 
 /** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void* SCIPgetIpoptApplicationPointerIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
 
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
@@ -73,7 +73,7 @@ void* SCIPgetNlpiOracleIpopt(
  *
  * Do not forget to add a newline after the last option in optionsstring.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
    const char*           optionsstring       /**< string with options as in Ipopt options file */
@@ -82,7 +82,7 @@ void SCIPsetModifiedDefaultSettingsIpopt(
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE LapackDsyev(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
@@ -96,7 +96,7 @@ SCIP_RETCODE LapackDsyev(
  *  the linear problem Ax = b.
  *  It's here, because Ipopt is linked against Lapack.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */

@@ -33,21 +33,21 @@ extern "C" {
 
 typedef struct SCIP_File SCIP_FILE;          /**< file data structure */
 
-SCIP_EXPORT extern SCIP_FILE* SCIPfopen(const char *path, const char *mode);
-SCIP_EXPORT extern SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
-SCIP_EXPORT extern size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
-SCIP_EXPORT extern size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
-SCIP_EXPORT extern int SCIPfputc(int c, SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfputs(const char *s, SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfgetc(SCIP_FILE *stream);
-SCIP_EXPORT extern char* SCIPfgets(char *s, int size, SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfflush(SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfseek(SCIP_FILE *stream, long offset, int whence);
-SCIP_EXPORT extern void SCIPrewind(SCIP_FILE *stream);
-SCIP_EXPORT extern long SCIPftell(SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfeof(SCIP_FILE *stream);
-SCIP_EXPORT extern int SCIPfclose(SCIP_FILE *fp);
+SCIP_EXPORT SCIP_FILE* SCIPfopen(const char *path, const char *mode);
+SCIP_EXPORT SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
+SCIP_EXPORT size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+SCIP_EXPORT size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
+SCIP_EXPORT int SCIPfputc(int c, SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfputs(const char *s, SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfgetc(SCIP_FILE *stream);
+SCIP_EXPORT char* SCIPfgets(char *s, int size, SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfflush(SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfseek(SCIP_FILE *stream, long offset, int whence);
+SCIP_EXPORT void SCIPrewind(SCIP_FILE *stream);
+SCIP_EXPORT long SCIPftell(SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfeof(SCIP_FILE *stream);
+SCIP_EXPORT int SCIPfclose(SCIP_FILE *fp);
 
 #ifdef __cplusplus
 }

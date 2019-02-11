@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup PricerIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePricerXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

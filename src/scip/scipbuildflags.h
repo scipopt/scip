@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 /** returns the flags that were used to build SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPgetBuildFlags(
    void
    );

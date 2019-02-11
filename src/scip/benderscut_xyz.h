@@ -37,7 +37,7 @@ extern "C" {
  *
  *  @ingroup BenderscutIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition structure */

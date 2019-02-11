@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 
 
 /** prints a debug message */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPstatPrintDebugMessage(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           sourcefile,         /**< name of the source file that called the function */
@@ -328,7 +328,7 @@ void SCIPstatPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPstatDebugMessagePrint(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           formatstr,          /**< format string like in printf() function */

@@ -77,7 +77,7 @@ extern "C" {
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetCutEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
@@ -93,7 +93,7 @@ SCIP_Real SCIPgetCutEfficacy(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisCutEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
@@ -104,7 +104,7 @@ SCIP_Bool SCIPisCutEfficacious(
  *
  *  @return TRUE if the given cut's efficacy is larger than the minimal cut efficacy, otherwise FALSE
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             efficacy            /**< efficacy of the cut */
@@ -114,7 +114,7 @@ SCIP_Bool SCIPisEfficacious(
  *
  *  @return the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetVectorEfficacyNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            vals,               /**< array of values */
@@ -133,7 +133,7 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
  *
  *  @return whether the cut is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisCutApplicable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             cut                 /**< separated cut */
@@ -150,7 +150,7 @@ SCIP_Bool SCIPisCutApplicable(
  *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
  *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
-SCIP_DEPRECATED SCIP_EXPORT extern
+SCIP_DEPRECATED SCIP_EXPORT
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
@@ -167,7 +167,7 @@ SCIP_RETCODE SCIPaddCut(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< row */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPaddRow(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisCutNew(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -196,7 +196,7 @@ SCIP_Bool SCIPisCutNew(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPaddPoolCut(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to remove */
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPdelPoolCut(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CUT** SCIPgetPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -239,7 +239,7 @@ SCIP_CUT** SCIPgetPoolCuts(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -253,7 +253,7 @@ int SCIPgetNPoolCuts(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CUTPOOL* SCIPgetGlobalCutpool(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -273,7 +273,7 @@ SCIP_CUTPOOL* SCIPgetGlobalCutpool(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
@@ -298,7 +298,7 @@ SCIP_RETCODE SCIPcreateCutpool(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL**        cutpool             /**< pointer to store cut pool */
@@ -313,7 +313,7 @@ SCIP_RETCODE SCIPfreeCutpool(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -329,7 +329,7 @@ SCIP_RETCODE SCIPaddRowCutpool(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNewRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -346,7 +346,7 @@ SCIP_RETCODE SCIPaddNewRowCutpool(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelRowCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -361,7 +361,7 @@ SCIP_RETCODE SCIPdelRowCutpool(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -376,7 +376,7 @@ SCIP_RETCODE SCIPseparateCutpool(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateSolCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
@@ -391,7 +391,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
  *
  *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddDelayedPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -404,7 +404,7 @@ SCIP_RETCODE SCIPaddDelayedPoolCut(
  *
  *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelDelayedPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< cutting plane to add */
@@ -417,7 +417,7 @@ SCIP_RETCODE SCIPdelDelayedPoolCut(
  *
  *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CUT** SCIPgetDelayedPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -429,7 +429,7 @@ SCIP_CUT** SCIPgetDelayedPoolCuts(
  *
  *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNDelayedPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -441,7 +441,7 @@ int SCIPgetNDelayedPoolCuts(
  *
  *  @pre This method can be called if @p scip is the stages \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CUTPOOL* SCIPgetDelayedGlobalCutpool(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -461,7 +461,7 @@ SCIP_CUTPOOL* SCIPgetDelayedGlobalCutpool(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
@@ -481,7 +481,7 @@ SCIP_RETCODE SCIPseparateSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_ROW** SCIPgetCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -495,7 +495,7 @@ SCIP_ROW** SCIPgetCuts(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -508,7 +508,7 @@ int SCIPgetNCuts(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPclearCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -521,7 +521,7 @@ SCIP_RETCODE SCIPclearCuts(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );

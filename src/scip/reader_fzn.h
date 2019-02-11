@@ -41,7 +41,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderFzn(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeReaderFzn(
  */
 
 /** print given solution in Flatzinc format w.r.t. the output annotation */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintSolReaderFzn(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */

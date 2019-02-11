@@ -42,193 +42,193 @@ extern "C" {
  */
 
 /** get column based start pointer of values */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real* SCIPmatrixGetColValPtr(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get column based start pointer of row indices */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int* SCIPmatrixGetColIdxPtr(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get the number of non-zero entries of this column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetColNNonzs(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get number of columns of the matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetNColumns(
    SCIP_MATRIX*          matrix              /**< matrix instance */
    );
 
 /** get upper bound of column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetColUb(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get lower bound of column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetColLb(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get number of uplocks of column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetColNUplocks(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get number of downlocks of column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetColNDownlocks(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get variable pointer of column */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR* SCIPmatrixGetVar(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get name of column/variable */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPmatrixGetColName(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get row based start pointer of values */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real* SCIPmatrixGetRowValPtr(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get row based start pointer of column indices */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int* SCIPmatrixGetRowIdxPtr(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of non-zeros of this row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetRowNNonzs(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get name of row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPmatrixGetRowName(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of rows of the matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetNRows(
    SCIP_MATRIX*          matrix              /**< matrix instance */
    );
 
 /** get left-hand-side of row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetRowLhs(
    SCIP_MATRIX*          matrix,             /**< matrix instace */
    int                   row                 /**< row index */
    );
 
 /** get right-hand-side of row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetRowRhs(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** flag indicating if right-hand-side of row is infinity */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPmatrixIsRowRhsInfinity(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of non-zeros of matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetNNonzs(
    SCIP_MATRIX*          matrix              /**< matrix instance */
    );
 
 /** get minimal activity of row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetRowMinActivity(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get maximal activity of row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPmatrixGetRowMaxActivity(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of negative infinities present within minimal activity */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetRowNMinActNegInf(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of positive infinities present within minimal activity */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetRowNMinActPosInf(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of negative infinities present within maximal activity */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetRowNMaxActNegInf(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get number of positive infinities present within maximal activity */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPmatrixGetRowNMaxActPosInf(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get constraint pointer for constraint representing row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CONS* SCIPmatrixGetCons(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
 
 /** get if conflicting uplocks of variable present */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPmatrixUplockConflict(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get if conflicting downlocks of variable present */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPmatrixDownlockConflict(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   col                 /**< column index */
@@ -273,7 +273,7 @@ SCIP_Bool SCIPmatrixDownlockConflict(
 #endif
 
 /** initialize matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
@@ -282,14 +282,14 @@ SCIP_RETCODE SCIPmatrixCreate(
    );
 
 /** frees the constraint matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmatrixFree(
    SCIP*                 scip,               /**< current SCIP instance */
    SCIP_MATRIX**         matrix              /**< constraint matrix object */
    );
 
 /** print one row of the MIP matrix */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmatrixPrintRow(
    SCIP*                 scip,               /**< current SCIP instance */
    SCIP_MATRIX*          matrix,             /**< constraint matrix object */
@@ -297,7 +297,7 @@ void SCIPmatrixPrintRow(
    );
 
 /** detect parallel rows, rhs/lhs are ignored */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixGetParallelRows(
    SCIP*                 scip,               /**< current SCIP instance */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
@@ -306,7 +306,7 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    );
 
 /** detect parallel rows, obj ignored */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixGetParallelCols(
    SCIP*                 scip,               /**< current SCIP instance */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */

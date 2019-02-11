@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup TableIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeTableXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

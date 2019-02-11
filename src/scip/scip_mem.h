@@ -162,7 +162,7 @@ extern "C" {
  *
  *  @return the block memory to use at the current time.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -171,7 +171,7 @@ BMS_BLKMEM* SCIPblkmem(
  *
  *  @return the buffer memory for short living temporary objects
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 BMS_BUFMEM* SCIPbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -180,7 +180,7 @@ BMS_BUFMEM* SCIPbuffer(
  *
  *  @return the buffer memory for short living temporary objects initialized to all zero
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 BMS_BUFMEM* SCIPcleanbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -189,7 +189,7 @@ BMS_BUFMEM* SCIPcleanbuffer(
  *
  *  @return the total number of bytes used in block and buffer memory.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -198,7 +198,7 @@ SCIP_Longint SCIPgetMemUsed(
  *
  *  @return the total number of bytes in block and buffer memory.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -207,7 +207,7 @@ SCIP_Longint SCIPgetMemTotal(
  *
  *  @return the estimated number of bytes used by external software, e.g., the LP solver.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -216,7 +216,7 @@ SCIP_Longint SCIPgetMemExternEstim(
  *
  *  @return the memory size for dynamically allocated arrays.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPcalcMemGrowSize(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   num                 /**< minimum number of entries to store */
@@ -228,7 +228,7 @@ int SCIPcalcMemGrowSize(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                arrayptr,           /**< pointer to dynamically sized array */
@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    );
 
 /** prints output about used memory */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -76,7 +76,7 @@ extern "C" {
  *        callback is added in future releases; consider using SCIPincludePropBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of propagator */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPincludeProp(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP**           propptr,            /**< reference to a propagator pointer, or NULL */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPincludePropBasic(
    );
 
 /** sets copy method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -132,7 +132,7 @@ SCIP_RETCODE SCIPsetPropCopy(
    );
 
 /** sets destructor method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPsetPropFree(
    );
 
 /** sets initialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -148,7 +148,7 @@ SCIP_RETCODE SCIPsetPropInit(
    );
 
 /** sets deinitialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPsetPropExit(
    );
 
 /** sets solving process initialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPsetPropInitsol(
    );
 
 /** sets solving process deinitialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPsetPropExitsol(
    );
 
 /** sets preprocessing initialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -180,7 +180,7 @@ SCIP_RETCODE SCIPsetPropInitpre(
    );
 
 /** sets preprocessing deinitialization method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropExitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPsetPropExitpre(
    );
 
 /** sets presolving method of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPsetPropPresol(
    );
 
 /** sets propagation conflict resolving callback of propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropResprop(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -207,26 +207,26 @@ SCIP_RETCODE SCIPsetPropResprop(
    );
 
 /** returns the propagator of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_PROP* SCIPfindProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of propagator */
    );
 
 /** returns the array of currently available propagators */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_PROP** SCIPgetProps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available propagators */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNProps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPsetPropPriority(
    );
 
 /** sets the presolving priority of a propagator */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPropPresolPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator */

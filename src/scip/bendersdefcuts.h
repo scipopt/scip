@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 /** includes default Benders' decomposition cuts plugins into SCIP and the associated Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBendersDefaultCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition struture */

@@ -45,138 +45,138 @@ extern "C" {
 
 
 /** compares two heuristics w. r. to their priority */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
 
 /** comparison method for sorting heuristics w.r.t. to their name */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPheurCompName);
 
 /** gets user data of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_HEURDATA* SCIPheurGetData(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets user data of primal heuristic; user has to free old data in advance! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPheurSetData(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
 /** gets name of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPheurGetName(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets description of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPheurGetDesc(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets display character of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 char SCIPheurGetDispchar(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** returns the timing mask of the heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_HEURTIMING SCIPheurGetTimingmask(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets new timing mask for heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPheurSetTimingmask(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_HEURTIMING       timingmask          /**< new timing mask of heuristic */
    );
 
 /** does the heuristic use a secondary SCIP instance? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPheurUsesSubscip(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets priority of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPheurGetPriority(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets frequency of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPheurGetFreq(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets frequency of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPheurSetFreq(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    int                   freq                /**< new frequency of heuristic */
    );
 
 /** gets frequency offset of primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPheurGetFreqofs(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPheurGetMaxdepth(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPheurGetNCalls(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of primal feasible solutions found by this heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPheurGetNSolsFound(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of new best primal feasible solutions found by this heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPheurGetNBestSolsFound(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** is primal heuristic initialized? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPheurIsInitialized(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets time in seconds used in this heuristic for setting up for next stages */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPheurGetSetupTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets time in seconds used in this heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** returns array of divesets of this primal heuristic, or NULL if it has no divesets */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DIVESET** SCIPheurGetDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** returns the number of divesets of this primal heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
@@ -184,19 +184,19 @@ int SCIPheurGetNDivesets(
 /* @} */
 
 /** get the heuristic to which this diving setting belongs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_HEUR* SCIPdivesetGetHeur(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the working solution of this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_SOL* SCIPdivesetGetWorkSolution(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** set the working solution for this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPdivesetSetWorkSolution(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
@@ -208,157 +208,157 @@ void SCIPdivesetSetWorkSolution(
  */
 
 /** get the name of the dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPdivesetGetName(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum relative depth of the diving settings */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetMinRelDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum relative depth of the diving settings */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetMaxRelDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the number of successful runs of the diving settings */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the number of calls to this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetNCalls(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the number of calls successfully terminated at a feasible leaf node */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetNSolutionCalls(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum depth reached by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetMinDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum depth reached by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetMaxDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average depth this dive set reached during execution */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum depth at which this dive set found a solution */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetMinSolutionDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum depth at which this dive set found a solution */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetMaxSolutionDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average depth at which this dive set found a solution */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgSolutionDepth(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the total number of LP iterations used by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNLPIterations(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the total number of probing nodes used by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNProbingNodes(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the total number of backtracks performed by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNBacktracks(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the total number of conflicts found by this dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNConflicts(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the total number of solutions (leaf and rounded solutions) found by the dive set */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPdivesetGetNSols(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum LP iterations quotient of the diving settings */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum LP iterations offset of the diving settings */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetMaxLPIterOffset(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum upper bound quotient parameter of the diving settings if no solution is available */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetUbQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average quotient parameter of the diving settings if no solution is available */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgQuotNoSol(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the maximum upper bound quotient parameter of the diving settings if an incumbent solution exists */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetUbQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the average upper bound quotient parameter of the diving settings if an incumbent solution exists */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetAvgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** should backtracking be applied? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPdivesetUseBacktrack(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPdivesetGetLPSolveFreq(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
@@ -366,20 +366,20 @@ SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
 /** should only LP branching candidates be considered instead of the slower but
  *  more general constraint handler diving variable selection?
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** returns TRUE if dive set supports diving of the specified type */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
 
 /** returns the random number generator of this \p diveset for tie-breaking */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
@@ -414,7 +414,7 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
  *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
  *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    );
 
 /** initialization method of variable graph data structure */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPvariableGraphCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
@@ -438,7 +438,7 @@ SCIP_RETCODE SCIPvariableGraphCreate(
    );
 
 /** deinitialization method of variable graph data structure */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPvariableGraphFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */

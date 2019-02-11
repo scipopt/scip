@@ -37,7 +37,7 @@ extern "C" {
  *
  *  @ingroup BendersIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
  */
 
 /** Creates a default Benders' decomposition algorithm and activates it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP**                subproblems,        /**< the Benders' decomposition subproblems */

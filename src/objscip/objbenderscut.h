@@ -181,7 +181,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBenderscut is called here
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjBenderscut(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
@@ -190,14 +190,14 @@ SCIP_RETCODE SCIPincludeObjBenderscut(
    );
 
 /** returns the benderscut object of the given name, or 0 if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 scip::ObjBenderscut* SCIPfindObjBenderscut(
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
    const char*           name                /**< name of Benders' decomposition cut */
    );
 
 /** returns the benderscut object for the given constraint handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 scip::ObjBenderscut* SCIPgetObjBenderscut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */

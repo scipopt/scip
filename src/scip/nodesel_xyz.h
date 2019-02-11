@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup NodeSelectorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNodeselXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

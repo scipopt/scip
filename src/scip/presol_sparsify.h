@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the sparsify presolver and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP*                 scip                /**< SCIP data structure */
    );

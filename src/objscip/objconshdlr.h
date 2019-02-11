@@ -459,7 +459,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyConshdlr is called here
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjConshdlr*    objconshdlr,        /**< constraint handler object */
@@ -467,14 +467,14 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    );
 
 /** returns the conshdlr object of the given name, or 0 if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 scip::ObjConshdlr* SCIPfindObjConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint handler */
    );
 
 /** returns the conshdlr object for the given constraint handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 scip::ObjConshdlr* SCIPgetObjConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */

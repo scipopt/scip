@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the conflictdiving heuristic and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP*                 scip                /**< SCIP data structure */
    );

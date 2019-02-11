@@ -45,7 +45,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -114,7 +114,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -127,49 +127,49 @@ SCIP_RETCODE SCIPcreateConsBasicVarbound(
    );
 
 /** gets left hand side of variable bound constraint lhs <= x + c*y <= rhs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetLhsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of variable bound constraint lhs <= x + c*y <= rhs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetRhsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets bounded variable x of variable bound constraint lhs <= x + c*y <= rhs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR* SCIPgetVarVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets bounding variable y of variable bound constraint lhs <= x + c*y <= rhs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR* SCIPgetVbdvarVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets bound coefficient c of variable bound constraint lhs <= x + c*y <= rhs */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetVbdcoefVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the variable bound constraint in the current LP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetDualsolVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the variable bound constraint in the current infeasible LP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -178,7 +178,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
 /** returns the linear relaxation of the given variable bound constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

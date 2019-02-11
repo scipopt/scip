@@ -42,83 +42,83 @@ extern "C" {
  */
 
 /** compares two benderss w. r. to their priority */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbendersComp);
 
 /** comparison method for sorting benderss w.r.t. to their name */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbendersCompName);
 
 /** gets user data of Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BENDERSDATA* SCIPbendersGetData(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** sets user data of Benders' decomposition; user has to free old data in advance! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbendersSetData(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_BENDERSDATA*     bendersdata         /**< new Benders' decomposition user data */
    );
 
 /** gets name of Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPbendersGetName(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets description of Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPbendersGetDesc(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets priority of Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetPriority(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of subproblems for the Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetNSubproblems(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
    );
 
 /** returns the SCIP instance for a given subproblem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP* SCIPbendersSubproblem(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** gets the number of times, the Bender' decomposition was called and tried to find a violated second stage constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetNCalls(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of optimality cuts found by the collection of Benders' decomposition subproblems */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetNCutsFound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets time in seconds used in this Benders' decomposition for setting up for next stages */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbendersGetSetupTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets execution time in seconds used in this Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbendersGetTime(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** Is Benders' decomposition initialized? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
@@ -138,44 +138,44 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    );
 
 /** Are Benders' cuts generated from the LP solutions? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersCutLP(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** Are Benders' cuts generated from the pseudo solutions? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersCutPseudo(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** Are Benders' cuts generated from the relaxation solutions? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** Should this Benders' use the auxiliary variables from the highest priority Benders'? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersShareAuxVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** returns the auxiliary variable for the given subproblem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns all auxiliary variables */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPbendersGetAuxiliaryVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** stores the objective function value of the subproblem for use in cut generation */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbendersSetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -183,7 +183,7 @@ void SCIPbendersSetSubproblemObjval(
    );
 
 /** returns the objective function value of the subproblem for use in cut generation */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbendersGetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
@@ -194,7 +194,7 @@ SCIP_Real SCIPbendersGetSubproblemObjval(
  */
 
 /** returns the Benders' cut of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BENDERSCUT* SCIPfindBenderscut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    const char*           name                /**< name of Benderscut' decomposition */
@@ -204,20 +204,20 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
 /** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
  * the array
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 
 /** returns the number of currently available Benders' cuts */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetNBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** sets the priority of a Benders' decomposition */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' cut */
@@ -231,7 +231,7 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
  *  reintroduces the integrality constraints to the master problem and the third phase then reintroduces integrality
  *  constraints to the subproblems.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbendersSetSubproblemIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -242,7 +242,7 @@ void SCIPbendersSetSubproblemIsConvex(
  *
  *  This means that the dual solution can be used to generate cuts.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersSubproblemIsConvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
@@ -258,7 +258,7 @@ int SCIPbendersGetNConvexSubproblems(
  *
  *  This requires that the subproblem is in probing mode.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    );
 
 /** solves the Benders' decomposition subproblem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    );
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbendersGetNTransferredCuts(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
    );
@@ -286,7 +286,7 @@ int SCIPbendersGetNTransferredCuts(
 /** updates the lower bound for the subproblem. If the lower bound is not greater than the previously stored lowerbound,
  * then no update occurs.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbendersUpdateSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -294,14 +294,14 @@ void SCIPbendersUpdateSubproblemLowerbound(
    );
 
 /** returns the stored lower bound for the given subproblem */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbendersGetSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** sets the independent subproblem flag */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbendersSetSubproblemIsIndependent(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -309,14 +309,14 @@ void SCIPbendersSetSubproblemIsIndependent(
    );
 
 /** returns whether the subproblem is independent */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersSubproblemIsIndependent(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbendersSubproblemIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */

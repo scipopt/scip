@@ -77,7 +77,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeConflicthdlrBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of conflict handler */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConflicthdlr() instead
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConflicthdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR**   conflicthdlrptr,    /**< reference to a conflict handler pointer, or NULL */
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPincludeConflicthdlrBasic(
    );
 
 /** set copy method of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -121,7 +121,7 @@ SCIP_RETCODE SCIPsetConflicthdlrCopy(
    );
 
 /** set destructor of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPsetConflicthdlrFree(
    );
 
 /** set initialization method of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPsetConflicthdlrInit(
    );
 
 /** set deinitialization method of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPsetConflicthdlrExit(
    );
 
 /** set solving process initialization method of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPsetConflicthdlrInitsol(
    );
 
 /** set solving process deinitialization method of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -161,26 +161,26 @@ SCIP_RETCODE SCIPsetConflicthdlrExitsol(
    );
 
 /** returns the conflict handler of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CONFLICTHDLR* SCIPfindConflicthdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of conflict handler */
    );
 
 /** returns the array of currently available conflict handlers */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CONFLICTHDLR** SCIPgetConflicthdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available conflict handlers */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNConflicthdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConflicthdlrPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisConflictAnalysisApplicable(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -226,7 +226,7 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPinitConflictAnalysis(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONFTYPE         conftype,           /**< type of conflict */
@@ -249,7 +249,7 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
@@ -275,7 +275,7 @@ SCIP_RETCODE SCIPaddConflictLb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictRelaxedLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPaddConflictRelaxedLb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPaddConflictUb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictRelaxedUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
@@ -352,7 +352,7 @@ SCIP_RETCODE SCIPaddConflictRelaxedUb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictBd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
@@ -379,7 +379,7 @@ SCIP_RETCODE SCIPaddConflictBd(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictRelaxedBd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPaddConflictRelaxedBd(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflictBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
@@ -423,7 +423,7 @@ SCIP_RETCODE SCIPaddConflictBinvar(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPisConflictVarUsed(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
@@ -445,7 +445,7 @@ SCIP_RETCODE SCIPisConflictVarUsed(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetConflictVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -463,7 +463,7 @@ SCIP_Real SCIPgetConflictVarLb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetConflictVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -487,7 +487,7 @@ SCIP_Real SCIPgetConflictVarUb(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPanalyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
@@ -511,7 +511,7 @@ SCIP_RETCODE SCIPanalyzeConflict(
  *
  *  @note SCIP stage does not get changed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPanalyzeConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that detected the conflict */

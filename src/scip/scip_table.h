@@ -67,7 +67,7 @@ extern "C" {
  */
 
 /** creates a statistics table and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of statistics table */
@@ -86,20 +86,20 @@ SCIP_RETCODE SCIPincludeTable(
    );
 
 /** returns the statistics table of the given name, or NULL if not existing */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_TABLE* SCIPfindTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of statistics table */
    );
 
 /** returns the array of currently available statistics tables */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_TABLE** SCIPgetTables(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available statistics tables */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNTables(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -54,13 +54,13 @@ extern "C" {
  */
 
 /** returns variables of expression tree */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPexprtreeGetVars(
    SCIP_EXPRTREE*        tree                /**< expression tree */
    );
 
 /** stores array of variables in expression tree */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprtreeSetVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPexprtreeSetVars(
    );
 
 /** adds variables to the expression tree variables array */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprtreeAddVars(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    int                   nvars,              /**< number of variables */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPexprtreeAddVars(
    );
 
 /** prints an expression tree using variable names from variables array */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprtreePrintWithNames(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPexprtreePrintWithNames(
 /** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
  * Note that this is an O(n) operation!
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPexprtreeFindVar(
    SCIP_EXPRTREE*        tree,               /**< expression tree */
    SCIP_VAR*             var                 /**< variable to search for */
@@ -100,62 +100,62 @@ int SCIPexprtreeFindVar(
  */
 
 /** gets constant */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPnlrowGetConstant(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets number of variables of linear part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPnlrowGetNLinearVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets array with variables of linear part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPnlrowGetLinearVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets array with coefficients in linear part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real* SCIPnlrowGetLinearCoefs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets number of quadratic variables in quadratic part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPnlrowGetNQuadVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets quadratic variables in quadratic part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPnlrowGetQuadVars(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gives position of variable in quadvars array of row, or -1 if not found */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPnlrowSearchQuadVar(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_VAR*             var                 /**< variable to search for */
    );
 
 /** gets number of quadratic elements in quadratic part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPnlrowGetNQuadElems(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets quadratic elements in quadratic part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_QUADELEM* SCIPnlrowGetQuadElems(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets array with coefficients in linear part */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPnlrowGetQuadData(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
@@ -165,50 +165,50 @@ void SCIPnlrowGetQuadData(
    );
 
 /** gets expression tree */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_EXPRTREE* SCIPnlrowGetExprtree(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** returns the left hand side of a nonlinear row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPnlrowGetLhs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** returns the right hand side of a nonlinear row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPnlrowGetRhs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** returns the curvature of a nonlinear row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_EXPRCURV SCIPnlrowGetCurvature(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** sets the curvature of a nonlinear row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPnlrowSetCurvature(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_EXPRCURV         curvature           /**< curvature of NLP row */
    );
 
 /** returns the name of a nonlinear row */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPnlrowGetName(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** gets position of a nonlinear row in current NLP, or -1 if not in NLP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPnlrowGetNLPPos(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
 /** returns TRUE iff row is member of current NLP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPnlrowIsInNLP(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
@@ -216,7 +216,7 @@ SCIP_Bool SCIPnlrowIsInNLP(
 /** gets the dual NLP solution of a nlrow
  * for a ranged constraint, the dual value is positive if the right hand side is active and negative if the left hand side is active
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPnlrowGetDualsol(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );

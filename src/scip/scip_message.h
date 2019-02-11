@@ -104,7 +104,7 @@ extern "C" {
  *
  *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
@@ -114,27 +114,27 @@ SCIP_RETCODE SCIPsetMessagehdlr(
  *
  *  @return the currently installed message handler, or NULL if messages are currently suppressed
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the log file name for the currently installed message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of log file, or NULL (no log) */
    );
 
 /** sets the currently installed message handler to be quiet (or not) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPsetMessagehdlrQuiet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should screen messages be suppressed? */
    );
 
 /** prints a warning message via the message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPwarningMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -142,7 +142,7 @@ void SCIPwarningMessage(
    );
 
 /** prints a debug message */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPprintDebugMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           sourcefile,         /**< name of the source file that called the function */
@@ -152,7 +152,7 @@ void SCIPprintDebugMessage(
    );
 
 /** prints a debug message without precode */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -160,7 +160,7 @@ void SCIPdebugMessagePrint(
    );
 
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPdialogMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -169,7 +169,7 @@ void SCIPdialogMessage(
    );
 
 /** prints a message */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPinfoMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -178,7 +178,7 @@ void SCIPinfoMessage(
    );
 
 /** prints a message depending on the verbosity level */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPverbMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
@@ -193,7 +193,7 @@ void SCIPverbMessage(
  *
  *  @see \ref SCIP_VerbLevel "SCIP_VERBLEVEL" for a list of all verbosity levels
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );

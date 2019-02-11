@@ -47,7 +47,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP*                 scip                /**< SCIP data structure */
    );

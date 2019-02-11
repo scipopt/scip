@@ -42,7 +42,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
  */
 
 /** pass partial solution for indicator variables to heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPheurPassIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< indicator heuristic */

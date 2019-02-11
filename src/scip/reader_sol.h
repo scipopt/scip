@@ -69,7 +69,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderSol(
    SCIP*                 scip                /**< SCIP data structure */
    );

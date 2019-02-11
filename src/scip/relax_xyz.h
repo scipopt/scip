@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates the xyz relaxator and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelaxXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -1128,7 +1128,7 @@ void SCIPconsMarkConflict(
    );
 
 /** marks the constraint to be propagated (update might be delayed) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */

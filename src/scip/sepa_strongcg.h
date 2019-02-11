@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaStrongcg(
    SCIP*                 scip                /**< SCIP data structure */
    );

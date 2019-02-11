@@ -39,7 +39,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderPbm(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPincludeReaderPbm(
  */
 
 /* writes picture of matrix structure to file */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPwritePbm(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */

@@ -40,58 +40,58 @@ extern "C" {
  */
 
 /** compares two conflict handlers w. r. to their priority */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
 /** comparison method for sorting conflict handler w.r.t. to their name */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName);
 
 /** gets user data of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** sets user data of conflict handler; user has to free old data in advance! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPconflicthdlrSetData(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
    );
 
 /** gets name of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPconflicthdlrGetName(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets description of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPconflicthdlrGetDesc(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets priority of conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPconflicthdlrGetPriority(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** is conflict handler initialized? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets time in seconds used in this conflict handler for setting up for next stages */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPconflicthdlrGetSetupTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets time in seconds used in this conflict handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );

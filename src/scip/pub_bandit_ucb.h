@@ -51,7 +51,7 @@ extern "C" {
 
 
 /** create and reset UCB bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
@@ -62,14 +62,14 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    );
 
 /** returns the upper confidence bound of a selected action */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPgetConfidenceBoundUcb(
    SCIP_BANDIT*          ucb,                /**< UCB bandit algorithm */
    int                   action              /**< index of the queried action */
    );
 
 /** return start permutation of the UCB bandit algorithm */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int* SCIPgetStartPermutationUcb(
    SCIP_BANDIT*          ucb                 /**< UCB bandit algorithm */
    );

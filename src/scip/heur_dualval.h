@@ -44,7 +44,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPincludeHeurDualval(
  */
 
 /** main procedure of the dualval heuristic */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyHeurDualval(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */

@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -117,7 +117,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPcreateConsBasicCardinality(
    );
 
 /** changes cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE  SCIPchgCardvalCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< pointer to hold the created constraint */
@@ -141,7 +141,7 @@ SCIP_RETCODE  SCIPchgCardvalCardinality(
    );
 
 /** adds variable to cardinality constraint, the position is determined by the given weight */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPaddVarCardinality(
    );
 
 /** appends variable to cardinality constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPappendVarCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -164,28 +164,28 @@ SCIP_RETCODE SCIPappendVarCardinality(
    );
 
 /** gets number of variables in cardinality constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNVarsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets array of variables in cardinality constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetCardvalCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of weights in cardinality constraint (or NULL if not existent) */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real* SCIPgetWeightsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

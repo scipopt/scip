@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -119,28 +119,28 @@ SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    );
 
 /** gets number of variables in bound disjunction constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in bound disjunction constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of bound types in bound disjunction constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of bounds in bound disjunction constraint */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

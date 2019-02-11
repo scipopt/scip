@@ -115,7 +115,7 @@ extern "C" {
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  *  @note Creating a message handler automatically captures it.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmessagehdlrCreate(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
@@ -129,40 +129,40 @@ SCIP_RETCODE SCIPmessagehdlrCreate(
    );
 
 /** captures message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagehdlrCapture(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler, or NULL */
    );
 
 /** releases message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmessagehdlrRelease(
    SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
    );
 
 /** sets the user data of the message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPmessagehdlrSetData(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler; must not be NULL */
    SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< new message handler data to attach to the handler */
    );
 
 /** sets the log file name for the message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagehdlrSetLogfile(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename            /**< log file name where to copy messages into, or NULL */
    );
 
 /** sets the messages handler to be quiet */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagehdlrSetQuiet(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             quiet               /**< should screen messages be suppressed? */
    );
 
 /** prints a message, acting like the printf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -170,7 +170,7 @@ void SCIPmessagePrintInfo(
    );
 
 /** prints a message, acting like the vprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVPrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -178,7 +178,7 @@ void SCIPmessageVPrintInfo(
    );
 
 /** prints a message into a file, acting like the fprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageFPrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -187,7 +187,7 @@ void SCIPmessageFPrintInfo(
    );
 
 /** prints a message into a file, acting like the vfprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVFPrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -196,7 +196,7 @@ void SCIPmessageVFPrintInfo(
    );
 
 /** prints a warning message, acting like the printf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -204,7 +204,7 @@ void SCIPmessagePrintWarning(
    );
 
 /** prints a warning message, acting like the vprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVPrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -212,7 +212,7 @@ void SCIPmessageVPrintWarning(
    );
 
 /** prints a warning message into a file, acting like the fprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageFPrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -220,7 +220,7 @@ void SCIPmessageFPrintWarning(
    );
 
 /** prints a warning message into a file, acting like the vfprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVFPrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -228,7 +228,7 @@ void SCIPmessageVFPrintWarning(
    );
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -236,7 +236,7 @@ void SCIPmessagePrintDialog(
    );
 
 /** prints a dialog message that requests user interaction, acting like the vprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVPrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -244,7 +244,7 @@ void SCIPmessageVPrintDialog(
    );
 
 /** prints a dialog message that requests user interaction into a file, acting like the fprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageFPrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -253,7 +253,7 @@ void SCIPmessageFPrintDialog(
    );
 
 /** prints a dialog message that requests user interaction into a file, acting like the vfprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVFPrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -262,7 +262,7 @@ void SCIPmessageVFPrintDialog(
    );
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
@@ -272,7 +272,7 @@ void SCIPmessagePrintVerbInfo(
    );
 
 /** prints a message depending on the verbosity level, acting like the vprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVPrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
@@ -282,7 +282,7 @@ void SCIPmessageVPrintVerbInfo(
    );
 
 /** prints a message into a file depending on the verbosity level, acting like the fprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageFPrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
@@ -293,7 +293,7 @@ void SCIPmessageFPrintVerbInfo(
    );
 
 /** prints a message into a file depending on the verbosity level, acting like the vfprintf() command */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVFPrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
@@ -304,21 +304,21 @@ void SCIPmessageVFPrintVerbInfo(
    );
 
 /** prints the header with source file location for an error message using the static message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintErrorHeader(
    const char*           sourcefile,         /**< name of the source file that called the function */
    int                   sourceline          /**< line in the source file where the function was called */
    );
 
 /** prints an error message, acting like the printf() command using the static message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessagePrintError(
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    );
 
 /** prints an error message, acting like the vprintf() command using the static message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageVPrintError(
    const char*           formatstr,          /**< format string like in printf() function */
    va_list               ap                  /**< variable argument list */
@@ -328,7 +328,7 @@ void SCIPmessageVPrintError(
  *
  *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageSetErrorPrinting(
    SCIP_DECL_ERRORPRINTING((*errorPrinting)),/**< error message print method of message handler, or NULL */
    void*                 data                /**< data pointer which will be passed to the error printing method, or NULL */
@@ -338,26 +338,26 @@ void SCIPmessageSetErrorPrinting(
  *
  *  @note The error printing method is a static variable. This means that all occurring errors are handled via this method.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPmessageSetErrorPrintingDefault(
    void
    );
 
 
 /** returns the user data of the message handler */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** returns the log file or NULL for stdout */
-SCIP_EXPORT extern
+SCIP_EXPORT
 FILE* SCIPmessagehdlrGetLogfile(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** returns TRUE if the message handler is set to be quiet */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPmessagehdlrIsQuiet(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );

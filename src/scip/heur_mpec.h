@@ -89,7 +89,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP*                 scip                /**< SCIP data structure */
    );

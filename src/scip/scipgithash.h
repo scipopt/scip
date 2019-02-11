@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 /** returns the SCIP git hash */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPgetGitHash(
    void
    );

@@ -41,82 +41,82 @@ extern "C" {
  */
 
 /** compares two Benders' decomposition cuts w. r. to their priority */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutComp);
 
 /** comparison method for sorting Benders' decomposition cuts w.r.t. to their name */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbenderscutCompName);
 
 /** gets user data of the Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_BENDERSCUTDATA* SCIPbenderscutGetData(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** sets user data of the Benders' decomposition cut; user has to free old data in advance! */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbenderscutSetData(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_BENDERSCUTDATA*  benderscutdata      /**< new Benders' decomposition cut user data */
    );
 
 /** gets name of the Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPbenderscutGetName(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets description of the Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 const char* SCIPbenderscutGetDesc(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets priority of the Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbenderscutGetPriority(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets the number of times, the Benders' decomposition cut was called and tried to find a violated cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPbenderscutGetNCalls(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets the number of the cuts found by this Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Longint SCIPbenderscutGetNFound(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** is the Benders' decomposition cut initialized? */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbenderscutIsInitialized(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets time in seconds used in this Benders' decomposition cut for setting up for next stages */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbenderscutGetSetupTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** gets time in seconds used in this Benders' decomposition cut */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** returns the number of cuts that have been added for storage */
-SCIP_EXPORT extern
+SCIP_EXPORT
 int SCIPbenderscutGetNAddedCuts(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** returns the data for the cuts that have been added by the Benders' cut plugin */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPbenderscutGetAddedCutData(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    int                   cutidx,             /**< the index for the cut data that is requested */
@@ -128,13 +128,13 @@ SCIP_RETCODE SCIPbenderscutGetAddedCutData(
    );
 
 /** returns whether the Benders' cut uses the LP information */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPbenderscutIsLPCut(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
    );
 
 /** sets the enabled flag of the Benders' decomposition cut method */
-SCIP_EXPORT extern
+SCIP_EXPORT
 void SCIPbenderscutSetEnabled(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
    SCIP_Bool             enabled             /**< flag to indicate whether the Benders' decomposition cut is enabled */

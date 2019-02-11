@@ -50,7 +50,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP*                 scip                /**< SCIP data structure */
    );

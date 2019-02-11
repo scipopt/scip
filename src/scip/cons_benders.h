@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
  *  solution feasibility.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */

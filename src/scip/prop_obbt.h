@@ -58,7 +58,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropObbt(
    SCIP*                 scip                /**< SCIP data structure */
    );

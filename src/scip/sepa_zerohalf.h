@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaClique(
    SCIP*                 scip                /**< SCIP data structure */
    );

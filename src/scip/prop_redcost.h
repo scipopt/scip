@@ -42,7 +42,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropRedcost(
    SCIP*                 scip                /**< SCIP data structure */
    );

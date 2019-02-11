@@ -34,13 +34,13 @@ extern "C" {
 #include <symmetry/type_symmetry.h>
 
 /** include symmetry presolver */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** return symmetry group generators */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    );
 
 /** return objective coefficients of permuted variables at time of symmetry computation */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */

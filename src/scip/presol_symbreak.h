@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the symmetry breaking presolver and includes it in SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */

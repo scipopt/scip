@@ -38,7 +38,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeHeurZeroobj(
  */
 
 /** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */

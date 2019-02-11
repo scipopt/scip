@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,13 +49,13 @@ SCIP_RETCODE SCIPincludePropVbounds(
   */
 
 /** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** performs propagation of variables lower and upper bounds */
-SCIP_EXPORT extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPexecPropVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
