@@ -393,31 +393,31 @@ void updatmaxprize(
    SCIP_Real*            maxprizeval_p       /**< pointer to */
 )
 {
-   const int nterms = g->terms;
    int maxprizeidx = *maxprizeidx_p;
-   assert(maxprizeidx <= nterms);
+   assert(maxprizeidx >= 0 && maxprizeidx <= g->terms);
 
    /* sentinel? */
-   if( maxprizeidx < 0 )
+   if( orderedprizes_id[maxprizeidx] < 0 )
    {
+      assert(orderedprizes_id[maxprizeidx] == -1);
       assert(*maxprizeval_p == 0.0);
       return;
    }
 
-   assert(maxprizeidx < nterms);
+   assert(maxprizeidx < g->terms);
 
    /* is current node at the maximum? */
    if( node == orderedprizes_id[maxprizeidx] )
    {
-      while( maxprizeidx >= 0 && connected[orderedprizes_id[maxprizeidx]] )
+      while( orderedprizes_id[maxprizeidx] >= 0 && connected[orderedprizes_id[maxprizeidx]] )
       {
          maxprizeidx++;
-         assert(maxprizeidx <= nterms);
+         assert(maxprizeidx <= g->terms);
       }
 
       *maxprizeidx_p = maxprizeidx;
 
-      if( maxprizeidx < 0 )
+      if( orderedprizes_id[maxprizeidx] < 0 )
          *maxprizeval_p = 0.0;
       else
          *maxprizeval_p = orderedprizes[maxprizeidx];
