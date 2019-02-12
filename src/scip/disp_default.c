@@ -130,7 +130,8 @@
 #define DISP_NAME_MEMTOTAL      "memtotal"
 #define DISP_DESC_MEMTOTAL      "total number of bytes in block memory or the creator name when a new incumbent solution was found"
 #define DISP_HEAD_MEMTOTAL      "mem/heur"
-#define DISP_WIDT_MEMTOTAL      8
+#define DISP_WIDT_MEMTOTAL      8 /* the width of the column is 8, since we print 8 characters for new incumbents */
+#define DISP_WIDT_MEMONLY       5 /* for memory output, we only use 5 characters because this is easier to decipher */
 #define DISP_PRIO_MEMTOTAL      20000
 #define DISP_POSI_MEMTOTAL      1500
 #define DISP_STRI_MEMTOTAL      TRUE
@@ -746,7 +747,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
       switch( SCIPsolGetType(sol) )
       {
       case SCIP_SOLTYPE_LPRELAX:
-         infostr = "LP ";
+         infostr = "LP  ";
          break;
       case SCIP_SOLTYPE_STRONGBRANCH:
          infostr = "strongbranch";
@@ -773,7 +774,11 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
    }
    else
    {
-      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMTOTAL);
+      /* for memory output, we only use 5 characters because this is easier to decipher */
+      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0);
+      SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, "");
+      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMONLY);
+      SCIPinfoMessage(scip, file, " ");
    }
 
 
