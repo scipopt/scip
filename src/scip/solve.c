@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4266,7 +4266,7 @@ SCIP_RETCODE solveNode(
       }
 
       /* if an improved solution was found, propagate and solve the relaxations again */
-      if( foundsol )
+      if( foundsol && !(*cutoff) )
       {
          propagateagain = TRUE;
          solvelpagain = TRUE;
@@ -4642,6 +4642,9 @@ SCIP_RETCODE solveNode(
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+
+      /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
+      *unbounded = FALSE;
    }
    else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {

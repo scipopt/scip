@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4055,8 +4055,11 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
 
-      /* compute mapping of variable indices quadratic term -> NLPI */
+      /* allocate memory */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &quadvarsidx, nlrow->nquadvars) );
+
+      /* compute mapping of variable indices quadratic term -> NLPI */
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          var = nlrow->quadvars[i];
@@ -4068,7 +4071,6 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       }
 
       /* compute quad elements using NLPI indices */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       for( i = 0; i < nlrow->nquadelems; ++i )
       {
          assert(nlrow->quadelems[i].idx1 >= 0);
@@ -4484,28 +4486,28 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
          nlidxs, exprtrees,
          names) );
 
-   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
-      if( linidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &linidxs[c]);
-      if( quadelems[c] != NULL )
-         SCIPsetFreeBufferArray(set, &quadelems[c]);
       if( nlidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &nlidxs[c]);
+      if( quadelems[c] != NULL )
+         SCIPsetFreeBufferArray(set, &quadelems[c]);
+      if( linidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &linidxs[c]);
    }
 
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lhss);
-   SCIPsetFreeBufferArray(set, &rhss);
-   SCIPsetFreeBufferArray(set, &nlinvars);
-   SCIPsetFreeBufferArray(set, &linidxs);
-   SCIPsetFreeBufferArray(set, &lincoefs);
-   SCIPsetFreeBufferArray(set, &nquadelems);
-   SCIPsetFreeBufferArray(set, &quadelems);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &nlidxs);
+   SCIPsetFreeBufferArray(set, &quadelems);
+   SCIPsetFreeBufferArray(set, &nquadelems);
+   SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linidxs);
+   SCIPsetFreeBufferArray(set, &nlinvars);
+   SCIPsetFreeBufferArray(set, &rhss);
+   SCIPsetFreeBufferArray(set, &lhss);
 
    nlp->nunflushednlrowadd = 0;
 
@@ -4592,8 +4594,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lbs);
    SCIPsetFreeBufferArray(set, &ubs);
+   SCIPsetFreeBufferArray(set, &lbs);
 
    nlp->nunflushedvaradd = 0;
 
@@ -4653,8 +4655,8 @@ SCIP_RETCODE nlpFlushObjective(
          NULL, NULL,
          0.0) );
 
-   SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linindices);
 
    nlp->objflushed = TRUE;
 
@@ -4675,6 +4677,7 @@ SCIP_RETCODE nlpSolve(
    )
 {
    SCIP_Real sciptimelimit;
+   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -4725,7 +4728,8 @@ SCIP_RETCODE nlpSolve(
 
    /* set the NLP timelimit to the remaining time */
    SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, sciptimelimit - SCIPclockGetTime(stat->solvingtime)) );
+   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
 
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);

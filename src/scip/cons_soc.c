@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3920,13 +3920,13 @@ GENERALUPG:
 #endif
 
  cleanup:
+   SCIPfreeBufferArrayNull(scip, &eigvals);
+   SCIPfreeBufferArrayNull(scip, &quadvars);
+   SCIPfreeBufferArrayNull(scip, &bp);
+   SCIPfreeBufferArrayNull(scip, &a);
    SCIPfreeBufferArray(scip, &lhsoffsets);
    SCIPfreeBufferArray(scip, &lhscoefs);
    SCIPfreeBufferArray(scip, &lhsvars);
-   SCIPfreeBufferArrayNull(scip, &a);
-   SCIPfreeBufferArrayNull(scip, &bp);
-   SCIPfreeBufferArrayNull(scip, &quadvars);
-   SCIPfreeBufferArrayNull(scip, &eigvals);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -5033,9 +5033,9 @@ SCIP_DECL_CONSPARSE(consParseSOC)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
    }
 
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &offsets);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }

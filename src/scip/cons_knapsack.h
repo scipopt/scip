@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -195,6 +195,13 @@ SCIP_ROW* SCIPgetRowKnapsack(
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
+ *
+ * @note in case you provide the solitems or nonsolitems array you also have to provide the counter part, as well
+ *
+ * @note the algorithm will first compute a greedy solution and terminate
+ *       if the greedy solution is proven to be optimal.
+ *       The dynamic programming algorithm runs with a time and space complexity
+ *       of O(nitems * capacity).
  */
 EXTERN
 SCIP_RETCODE SCIPsolveKnapsackExactly(

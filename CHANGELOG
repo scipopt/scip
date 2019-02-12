@@ -109,7 +109,7 @@ Interface changes
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
-- added parameter benders/default/cutcheck to enable the generation of Benders' decomposition cuts during solution
+- added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
   checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
@@ -122,6 +122,14 @@ Interface changes
   chosen closer to the middle of the candidates domain if the variables local domain is still similar to its
   global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
   domain.
+
+- Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
+  High values sacrifice performance for stability.
+
+- Added parameters benders/<bendersname>/lnsmaxcalls and benders/<bendersname>/lnsmaxcallsroot to the Benders'
+  decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
+  branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
+  parameters only have effect if the lnscheck parameter is set to TRUE.
 
 ### Data structures
 
@@ -165,13 +173,11 @@ Known bugs
 
 @page RN60 Release notes for SCIP 6.0
 
-@section RN601 SCIP 6.0.1
+@section RN602 SCIP 6.0.2
 *************************
 
 Features
 --------
-
-- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
 
 Performance improvements
 ------------------------
@@ -183,6 +189,67 @@ Interface changes
 -----------------
 
 ### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+- fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
+  skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN601 SCIP 6.0.1
+*************************
+
+Features
+--------
+
+- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
+
+Performance improvements
+------------------------
+
+- try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
+  compute greedy solution by weighted median selection.
+
+Interface changes
+-----------------
 
 ### Deleted and changed API methods and macros
 
@@ -204,24 +271,16 @@ Interface changes
 
 ### Command line interface
 
-### Interfaces to external software
+- warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
 
 ### Changed parameters
 
 - default clock type for timing is now wallclock
 
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
 Unit tests
 ----------
 
-Testing
--------
+- added unit tests for exact knapsack solving and (weighted) median selection algorithms
 
 Build system
 ------------
@@ -231,8 +290,6 @@ Build system
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
 - new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -251,12 +308,22 @@ Fixed bugs
 - fixed bug when reading >= indicator constraints in MPS format
 - fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
 - fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
-- ignore implications added through SCIPvarAddImplication() that are redundant to global bounds also in the
-  special case of an implication between two binary variables.
+- ignore implications added through SCIPaddVarImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables; also, use implications instead of cliques in the case
+  of a binary implied variable with nonbinary active representative
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
+- fixed some special cases in SCIPselect/SCIPselectWeighted methods
+- relaxed too strict assertion in Zirounding heuristic
+- fixed the upgrade routine to XOR constraints: aggregate integer variable if its coefficient has the wrong sign
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints
+- earlier deletion of trivial XOR constraints (at most 1 operator left)
+- fixed wrong hashmap accesses and added sanity check for the correct hashmap type
+- avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
+- corrected the output of the first LP value in case of branch-and-price
 
 Miscellaneous
 -------------
+- do not scale linear constraints to integral coefficients
 
 Known bugs
 ----------

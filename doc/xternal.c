@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.0.2
+ * @version  6.0.1.3
  *
  * \image html scippy.png
  */
@@ -95,7 +95,7 @@
  * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek
+ * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *

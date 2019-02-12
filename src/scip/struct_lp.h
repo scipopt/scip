@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -277,6 +277,7 @@ struct SCIP_Lp
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
    SCIP_Real             lpiconditionlimit;  /**< current condition number limit in LPI */
+   SCIP_Real             lpimarkowitz;       /**< current markowitz threshhold */
    SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
    SCIP_LPI*             lpi;                /**< LP solver interface */
