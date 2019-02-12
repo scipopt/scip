@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   stat.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for problem statistics
  * @author Tobias Achterberg
  * @author Stefan Heinz
