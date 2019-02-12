@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_or.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for "or" constraints,  \f$r = x_1 \vee x_2 \vee \dots  \vee x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz

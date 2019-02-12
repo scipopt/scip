@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_proximity.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
  *         is itself added as a constraint to a sub-SCIP instance. The heuristic was presented by Matteo Fischetti
  *         and Michele Monaci.

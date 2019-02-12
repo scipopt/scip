@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_completesol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  COMPLETESOL - primal heuristic trying to complete given partial solutions
  * @author Jakob Witzig
  */

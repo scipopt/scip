@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_locks.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  rounding locks primal heuristic
  * @author Michael Winkler
  * @author Gerald Gamrath

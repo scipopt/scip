@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rins.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that combines the incumbent with the LP optimum
  * @author Timo Berthold
  */

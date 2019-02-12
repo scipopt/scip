@@ -11,7 +11,7 @@
 /*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */q
 
 /**@file   type_branch.h
  * @ingroup TYPEDEFINITIONS
@@ -23,6 +23,11 @@
  *  - \ref BRANCH "Instructions for implementing a branching rule"
  *  - \ref PRIMALHEURISTICS "List of available branching rule"
  *  - \ref scip::ObjBranchrule "C++ wrapper class"
+ */
+
+/** @defgroup DEFPLUGINS_BRANCH Default branching rules
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default branching rules of SCIP
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

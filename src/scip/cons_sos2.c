@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos2.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
  *

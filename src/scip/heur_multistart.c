@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_multistart.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  multistart heuristic for convex and nonconvex MINLPs
  * @author Benjamin Mueller
  */

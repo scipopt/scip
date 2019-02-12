@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_sync.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  propagator for applying global bound changes that were communicated by other
  *         concurrent solvers
  * @author Robert Lion Gottwald

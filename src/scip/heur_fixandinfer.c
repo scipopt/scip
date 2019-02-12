@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fixandinfer.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  fix-and-infer primal heuristic
  * @author Tobias Achterberg
  */

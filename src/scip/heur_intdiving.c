@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that fixes variables with integral LP value
  * @author Tobias Achterberg
  */

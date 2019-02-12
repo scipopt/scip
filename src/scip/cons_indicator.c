@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *

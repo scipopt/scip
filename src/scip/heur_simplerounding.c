@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_simplerounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  * @author Marc Pfetsch

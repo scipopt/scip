@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch

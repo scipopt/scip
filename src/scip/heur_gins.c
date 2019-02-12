@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_gins.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
  * @author Gregor Hendel
  *

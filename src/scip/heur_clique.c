@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_clique.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
  * @author Stefan Heinz

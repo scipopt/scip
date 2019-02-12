@@ -8264,13 +8264,3 @@
  *
  *  Relevant core and other functionality of SCIP.
  */
-
-/** @defgroup DEFPLUGINS_HEUR Default Primal Heuristics
- *  @ingroup DEFPLUGINS
- *  @brief implementation files (.c files) of the default primal heuristics of SCIP
- */
-
-/** @defgroup DEFPLUGINS_PRESOL Default Presolvers
- *  @ingroup DEFPLUGINS
- *  @brief implementation files (.c files) of the default presolvers of SCIP
- */

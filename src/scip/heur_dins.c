@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dins.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  DINS primal heuristic (according to Ghosh)
  * @author Timo Berthold
  * @author Robert Waniek

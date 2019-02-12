@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
  * @author Xin Liu

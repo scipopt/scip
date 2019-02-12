@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_rapidlearning.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  rapidlearning separator
  * @author Timo Berthold
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linear.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Tobias Achterberg
  * @author Timo Berthold

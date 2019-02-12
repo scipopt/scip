@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_localbranching.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Local branching heuristic according to Fischetti and Lodi
  * @author Timo Berthold
  * @author Marc Pfetsch

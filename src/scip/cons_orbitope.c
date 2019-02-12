@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
  * @author Marc Pfetsch

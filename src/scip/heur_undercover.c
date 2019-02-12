@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_undercover.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Undercover primal heuristic for MINLPs
  * @author Timo Berthold
  * @author Ambros Gleixner

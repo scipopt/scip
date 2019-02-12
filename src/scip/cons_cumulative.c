@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz

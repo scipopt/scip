@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbisack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for orbisack constraints
  * @author Christopher Hojny
  *

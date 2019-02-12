@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_symresack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
  *

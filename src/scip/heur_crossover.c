@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_crossover.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  crossover primal heuristic
  * @author Timo Berthold
  */

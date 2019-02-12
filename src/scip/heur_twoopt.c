@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_twoopt.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables
  * @author Timo Berthold
  * @author Gregor Hendel

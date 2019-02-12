@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
  */

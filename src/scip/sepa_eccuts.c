@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_eccuts.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  edge concave cut separator
  * @author Benjamin Müller
  */
