@@ -658,7 +658,10 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
             /* copy contraints but exchange variables according to hashmap */
             SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, exprconshdlr, varmap, NULL, NULL,
-                  FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+                  SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons1), SCIPconsIsEnforced(cons1),
+                  SCIPconsIsChecked(cons1), SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons1),
+                  SCIPconsIsModifiable(cons1), SCIPconsIsDynamic(cons1), SCIPconsIsRemovable(cons1),
+                  SCIPconsIsStickingAtNode(cons1), FALSE, &success) );
             assert(success);
             assert(permutedcons != NULL);
 
