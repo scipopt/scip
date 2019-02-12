@@ -2264,7 +2264,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          assert(consdata != NULL);
 
          consdata->ispropagated = FALSE;
-         consdata->issimplified = FALSE;
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+            consdata->issimplified = FALSE;
 
          SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(cons));
       }
@@ -7218,9 +7219,42 @@ static
 SCIP_DECL_CONSACTIVE(consActiveExpr)
 {  /*lint --e{715}*/
 
+   /* store variable expressions */
    if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(cons)) );
+   }
+
+   /* simplify root expression if the constraint has been added after presolving */
+   if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
+   {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      if( !consdata->issimplified )
+      {
+         SCIP_CONSEXPR_EXPR* simplified;
+         SCIP_Bool infeasible;
+         SCIP_Bool changed;
+
+         /* simplify constraint */
+         SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, consdata->expr, &simplified, &changed, &infeasible) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+         assert(simplified != NULL);
+         consdata->expr = simplified;
+         consdata->issimplified = TRUE;
+      }
+   }
+
+   /* add manually locks to constraints that are not checked for feasibility */
+   if( !SCIPconsIsChecked(cons) )
+   {
+      assert(SCIPconsGetData(cons)->nlockspos == 0);
+      assert(SCIPconsGetData(cons)->nlocksneg == 0);
+
+      SCIP_CALL( addLocks(scip, cons, 1, 0) );
    }
 
    return SCIP_OKAY;
@@ -7240,6 +7274,15 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
    {
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, cons) );
       SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(cons)) );
+   }
+
+   /* remove locks that have been added in consActiveExpr() */
+   if( !SCIPconsIsChecked(cons) )
+   {
+      SCIP_CALL( addLocks(scip, cons, -1, 0) );
+
+      assert(SCIPconsGetData(cons)->nlockspos == 0);
+      assert(SCIPconsGetData(cons)->nlocksneg == 0);
    }
 
    return SCIP_OKAY;
