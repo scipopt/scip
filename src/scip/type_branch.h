@@ -11,7 +11,7 @@
 /*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */q
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_branch.h
  * @ingroup TYPEDEFINITIONS
