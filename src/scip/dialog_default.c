@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold

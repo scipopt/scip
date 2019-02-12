@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_heur.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for primal heuristic plugins and divesets
  * @author Tobias Achterberg
  * @author Timo Berthold

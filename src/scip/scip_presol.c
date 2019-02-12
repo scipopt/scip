@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_presol.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for presolving plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

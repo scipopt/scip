@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   message.c
+ * @ingroup OTHER_CFILES
  * @brief  message output methods
  * @author Tobias Achterberg
  * @author Marc Pfetsch

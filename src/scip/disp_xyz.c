@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz display column
  * @author Kati Wolter
  */

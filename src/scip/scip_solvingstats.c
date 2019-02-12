@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solvingstats.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for querying solving statistics
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_feas.c
+ * @ingroup OTHER_CFILES
  * @brief  Standard feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
  */

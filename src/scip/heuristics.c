@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heuristics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */

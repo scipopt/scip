@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_probing.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the probing mode
  * @author Tobias Achterberg
  * @author Timo Berthold

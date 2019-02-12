@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solve.c
+ * @ingroup OTHER_CFILES
  * @brief  public solving methods
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_prob.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for global and local (sub)problems
  * @author Tobias Achterberg
  * @author Timo Berthold

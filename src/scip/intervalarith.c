@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.c
+ * @ingroup OTHER_CFILES
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske

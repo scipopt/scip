@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */

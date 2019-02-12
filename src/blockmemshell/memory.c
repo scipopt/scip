@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   memory.c
+ * @ingroup OTHER_CFILES
  * @brief  memory allocation routines
  * @author Tobias Achterberg
  * @author Gerald Gamrath

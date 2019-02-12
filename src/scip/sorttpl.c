@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sorttpl.c
+ * @ingroup OTHER_CFILES
  * @brief  template functions for sorting
  * @author Michael Winkler
  * @author Tobias Achterberg

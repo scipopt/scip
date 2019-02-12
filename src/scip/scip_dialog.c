@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_dialog.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for dialog handler plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

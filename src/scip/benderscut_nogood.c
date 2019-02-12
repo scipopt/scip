@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_nogood.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a no good cut for integer solutions that are infeasible for the subproblems
  * @author Stephen J. Maher
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_nonlinear.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for nonlinear functions
  * @author Tobias Achterberg
  * @author Timo Berthold

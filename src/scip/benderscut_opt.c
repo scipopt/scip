@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_opt.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
  */
