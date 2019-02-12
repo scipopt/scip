@@ -11248,6 +11248,20 @@ SCIP_RETCODE SCIPcreateConsExpr(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* TODO remove this once we allow for local expression constraints */
+   if( local && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* TODO remove this once we allow for non-initial expression constraints */
+   if( !initial )
+   {
+      SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
    /* create constraint data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
    consdata->expr = expr;
