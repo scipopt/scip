@@ -79,7 +79,7 @@ if( CRITERION_FOUND )
         #
         # link the executable against both criterion and the SCIP library target
         #
-        target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
+        target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m gmp)   
 
         #
         # use the directory name (relative to src/) to build the executable
