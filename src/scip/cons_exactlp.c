@@ -7180,7 +7180,7 @@ SCIP_RETCODE createRows(
    if( !SCIPuseFPRelaxation(scip) )
    {
       /** create row for fp relaxation */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
       /** create exact row */

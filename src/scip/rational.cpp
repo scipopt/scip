@@ -219,7 +219,7 @@ SCIP_Rational* Rcopy(
 
 
 /** cretae a rational from an mpq_t */
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
 SCIP_Rational* RcreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    const mpq_t           numb                /**< the gmp rational */

@@ -29,9 +29,9 @@
 #include "scip/intervalarith.h"
 #include "scip/mem.h"
 #include "scip/type_misc.h"
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
 #include <gmp.h>
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 #include "zimpl/numb.h"
 #endif
 #endif
