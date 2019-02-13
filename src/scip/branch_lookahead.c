@@ -266,7 +266,7 @@ SCIP_RETCODE candidateFreeWarmStartInfo(
    assert(scip != NULL);
    assert(candidate != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing warmstart info of candidate <%s>(%u/%u)...\n",
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "freeing warmstart info of candidate <%s>(%u/%u)...\n",
       SCIPvarGetName(candidate->branchvar),
       candidate->upwarmstartinfo != NULL, candidate->downwarmstartinfo != NULL);
 
@@ -293,7 +293,7 @@ SCIP_RETCODE candidateFree(
    assert(scip != NULL);
    assert(candidate != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "freeing candidate <%s>(%u/%u)...\n",
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "freeing candidate <%s>(%u/%u)...\n",
       (*candidate) != NULL ? SCIPvarGetName((*candidate)->branchvar) : "none",
       (*candidate)->upwarmstartinfo != NULL, (*candidate)->downwarmstartinfo != NULL);
 
@@ -1697,7 +1697,7 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
 
       (*candidatelist)->candidates[i] = candidate;
 
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "created candidate <%s>...\n",
+      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "created candidate <%s>...\n",
          (candidate) != NULL ? SCIPvarGetName((candidate)->branchvar) : "none");
    }
 
@@ -5305,7 +5305,6 @@ SCIP_RETCODE initBranchruleData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
    branchruledata->persistent->nvars = nvars;
-   branchruledata->persistent->restartindex = 0;
    branchruledata->persistent->oldntotalnodes = -1;
    branchruledata->persistent->oldnnodelpiterations = -1;
 
