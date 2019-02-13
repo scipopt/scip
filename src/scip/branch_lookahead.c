@@ -5278,7 +5278,6 @@ SCIP_RETCODE initBranchruleData(
 
    assert(scip != NULL);
    assert(branchruledata != NULL);
-   assert((branchruledata->persistent != NULL) == branchruledata->isinitialized);
 
    /* the branching rule data is already initialized and no new variables have been added in the meantime */
    if( branchruledata->isinitialized &&
