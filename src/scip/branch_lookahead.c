@@ -5290,8 +5290,6 @@ SCIP_RETCODE initBranchruleData(
       SCIP_CALL( freePersistent(scip, branchruledata) );
    }
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
-
    /* The variables given by the SCIPgetVars() array are sorted with the binaries at first and the integer variables
     * directly afterwards. With the SCIPvarGetProbindex() method we can access the index of a given variable in the
     * SCIPgetVars() array and as such we can use it to access our arrays which should only contain binary and integer
@@ -5355,6 +5353,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    assert(branchruledata->config != NULL);
    assert(branchruledata->persistent != NULL);
 
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
    SCIPfreeBlockMemory(scip, &branchruledata->config);
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -5375,7 +5374,9 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-   assert(branchruledata->persistent == NULL);
+   assert(branchruledata->persistent != NULL);
+
+   branchruledata->persistent->restartindex = 0;
 
 #ifdef SCIP_STATISTIC
    {
@@ -5429,8 +5430,6 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-
-   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
 
 #ifdef SCIP_STATISTIC
    statistics = branchruledata->statistics;
@@ -5714,8 +5713,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->config) );
-
-   branchruledata->persistent = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
+   branchruledata->persistent->restartindex = 0;
    branchruledata->isinitialized = FALSE;
 
    /* include branching rule */
