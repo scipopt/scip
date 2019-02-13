@@ -71,14 +71,14 @@ BRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
 fi
-#if [ "${DAY_OF_WEEK}" == "6" ]; then
-#  git checkout ${BRANCHNAME}
-#  git pull
-#  git checkout performance-${GITBRANCH}
-#  git merge ${BRANCHNAME} --ff-only
-#  git push
-#  git checkout ${BRANCHNAME}
-#fi
+if [ "${DAY_OF_WEEK}" == "6" ]; then
+  git checkout ${BRANCHNAME}
+  git pull
+  git checkout performance-${GITBRANCH}
+  git merge ${BRANCHNAME} --ff-only
+  git push
+  git checkout ${BRANCHNAME}
+fi
 
 ####################################
 ### jobs configuration variables ###

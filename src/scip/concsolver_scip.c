@@ -272,6 +272,26 @@ SCIP_RETCODE initConcsolver(
       data->vars[i] = var;
    }
 
+   if( SCIPgetNSols(scip) != 0 )
+   {
+      SCIP_Bool stored;
+      SCIP_Real* solvals;
+      SCIP_SOL* sol = SCIPgetBestSol(scip);
+      SCIP_SOL* solversol;
+
+      SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
+
+      SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, vars, solvals) );
+      SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
+      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, data->nvars, data->vars, solvals) );
+
+      SCIPfreeBufferArray(data->solverscip, &solvals);
+
+      SCIP_CALL( SCIPaddSol(data->solverscip, solversol, &stored) );
+
+      assert(stored);
+   }
+
    /* create the concurrent data structure for the concurrent solver's SCIP */
    /* this assert fails on check/instances/Orbitope/packorb_1-FullIns_3.cip
     * assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
