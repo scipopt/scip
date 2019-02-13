@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,19 +66,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
  * \f$x_{ij}\f$, \f$i \in \{1, \dots, n\}\f$, \f$j \in \{1, 2\}\f$. Permuting columns of
  * \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
-
-/** separate orbisack solutions */
-EXTERN
-SCIP_RETCODE SCIPseparateCoversOrbisack(
-   SCIP*                 scip,               /**< pointer to scip */
-   SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
-   SCIP_SOL*             sol,                /**< solution to be separated */
-   SCIP_VAR**            vars1,              /**< variables of first columns */
-   SCIP_VAR**            vars2,              /**< variables of second columns */
-   int                   nrows,              /**< number of rows */
-   SCIP_Bool*            infeasible,         /**< memory address to store whether we detected infeasibility */
-   int*                  ngen                /**< memory address to store number of generated cuts */
-   );
 
 
 /** checks whether a given binary solution is feasible for the orbisack */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1499,7 +1499,7 @@ SCIP_RETCODE tightenBounds(
             /* only check if new fixing value is consistent with variable bounds, otherwise cutoff */
             if( SCIPisLT(scip, bounds.sup, SCIPvarGetUbLocal(var)) || SCIPisGT(scip, bounds.inf, SCIPvarGetLbLocal(var)) )
             {
-               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.20g,%.20g] to [%.20g,%.20g]\n",
+               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.15g,%.15g] to [%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bounds.inf, bounds.sup);
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
@@ -1629,7 +1629,7 @@ void computeBoundsZ(
          zbnds->sup = bnd / consdata->zcoef;
    }
 
-   SCIPdebugMsg(scip, "given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
+   SCIPdebugMsg(scip, "given x = [%.15g, %.15g], computed z = [%.15g, %.15g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *zbnds));
@@ -1682,7 +1682,7 @@ void computeBoundsX(
       xbnds->inf = bnd - consdata->xoffset;
    }
 
-   SCIPdebugMsg(scip, "given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
+   SCIPdebugMsg(scip, "given z = [%.15g, %.15g], computed x = [%.15g, %.15g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *xbnds));
@@ -3651,7 +3651,7 @@ SCIP_RETCODE generateSecantCut(
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
    {
-      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.15g,%.15g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
    }
 
@@ -3893,7 +3893,7 @@ SCIP_RETCODE generateCut(
       }
       else
       {
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -5568,7 +5568,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
             SCIPerrorMessage("failed to compute root for exponent %g\n", consdata->exponent);
             return SCIP_ERROR;
          }
-         SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", consdata->exponent, root, polyval);
+         SCIPdebugMsg(scip, "root for %g is %.15g, certainty = %g\n", consdata->exponent, root, polyval);
          /* @todo cache root value?? (they are actually really fast to compute...) */
 
          consdata->root = root;
@@ -5757,7 +5757,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5781,7 +5781,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5808,7 +5808,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5838,7 +5838,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5862,7 +5862,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5889,7 +5889,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -7465,4 +7465,39 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIPdebugMsg(scip, "computing slack: linear: %f, power: %f, projected: %f\n", z_val, x_val, proj_val);
 
    return x_val - proj_val;
+}
+
+/** returns whether constraint is convex w.r.t. global bounds
+ *
+ * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
+ */
+SCIP_Bool SCIPisConvexAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< absolute power constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   xlb = SCIPvarGetLbGlobal(consdata->x);
+   xub = SCIPvarGetLbGlobal(consdata->x);
+
+   /* if mixed sign, then cannot be convex */
+   if( SCIPisNegative(scip, xlb + consdata->xoffset) && SCIPisPositive(scip, xub + consdata->xoffset) )
+      return FALSE;
+
+   /* if not negative, then constraint function is like x^n, n > 1, x >= 0, i.e., convex, thus need no lhs to be convex */
+   if( !SCIPisNegative(scip, xlb + consdata->xoffset) )
+      return SCIPisInfinity(scip, -consdata->lhs);
+
+   /* if not positive, then constraint function is like -|x|^n, n > 0, x <= 0, i.e., concave, thus need no rhs to be convex */
+   return SCIPisInfinity(scip, consdata->rhs);
 }

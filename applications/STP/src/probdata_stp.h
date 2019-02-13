@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,7 +20,7 @@
  * @author Michael Winkler
  * @author Daniel Rehfeldt
  *
- * This file implements the problem data for Steiner problems. For more details see \ref PROBLEMDATA page.
+ * This file implements the problem data for Steiner problems. For more details see \ref STP_PROBLEMDATA page.
  *
  */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -451,7 +451,7 @@ int SCIPgetPtrarrayMaxIdx(
  * @{
  */
 
-/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+/** creates a disjoint set (union find) structure \p djset for \p ncomponents many components (of size one) */
 EXTERN
 SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */

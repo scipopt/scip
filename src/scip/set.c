@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -224,6 +224,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+#define SCIP_DEFAULT_LP_MARKOWITZ          0.01 /**< minimal Markowitz threshold to control sparsity/stability in LU factorization */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
@@ -463,7 +464,7 @@
 
 /* Timing */
 
-#define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
+#define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_WALL  /**< default clock type for timing */
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
@@ -1016,7 +1017,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          SCIP_NLPI* nlpicopy;
 
-         SCIP_CALL( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy) );
+         SCIP_CALL_FINALLY( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(&nlpicopy) );
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
       }
    }
@@ -1161,6 +1162,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
+   (*set)->subscipsoff = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -1693,6 +1695,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/conditionlimit",
          "maximum condition number of LP basis counted as stable (-1.0: no limit)",
          &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/minmarkowitz",
+         "minimal Markowitz threshold to control sparsity/stability in LU factorization",
+         &(*set)->lp_markowitz, TRUE, SCIP_DEFAULT_LP_MARKOWITZ, 1e-4, 0.9999,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkprimfeas",
@@ -5758,6 +5765,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
+#undef SCIPsetGetSubscipsOff
 
 /** returns value treated as infinity */
 SCIP_Real SCIPsetInfinity(
@@ -7002,6 +7010,16 @@ SCIP_Bool SCIPsetIsSumRelGE(
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
+}
+
+/** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
+SCIP_Bool SCIPsetGetSubscipsOff(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->subscipsoff;
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,6 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
-   SCIP_Shortbool*       activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */

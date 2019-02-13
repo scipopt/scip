@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4098,9 +4098,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIPdebugMsg(scip, "resulting quadratic constraint: ");
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   SCIPfreeBufferArrayNull(scip, &xvars);
-   SCIPfreeBufferArrayNull(scip, &xcoef);
    SCIPfreeBufferArrayNull(scip, &todelete);
+   SCIPfreeBufferArrayNull(scip, &xcoef);
+   SCIPfreeBufferArrayNull(scip, &xvars);
 
    return SCIP_OKAY;
 }
@@ -5416,8 +5416,8 @@ SCIP_RETCODE checkFactorable(
    }
 
  CLEANUP:
-   SCIPfreeBufferArray(scip, &a);
    SCIPfreeBufferArray(scip, &eigvals);
+   SCIPfreeBufferArray(scip, &a);
 
    return SCIP_OKAY;
 }
@@ -7758,7 +7758,7 @@ SCIP_RETCODE generateCut(
    /* generate row */
    if( success )
    {
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, cons) );
 
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, efficacy=%g\n",
          SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
@@ -8515,20 +8515,20 @@ SCIP_RETCODE evaluateGauge(
       if( SCIPisLE(scip, aterm, 0.0) )
       {
          printf("For current level, there is no interior point. ");
-         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+         printf("rhs: %g level: %.15g interiorpointval: %.15g\n", consdata->rhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+            printf("var <%s> = %g in [%.15g, %.15g] is linpart\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
       }
       else
       {
          printf("For current level, there is interior point. ");
-         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+         printf("rhs: %g level: %.15g interiorpointval: %.15g\n", consdata->rhs, side, consdata->interiorpointval);
       }
 #endif
       if( !SCIPisPositive(scip, aterm) )
@@ -8549,20 +8549,20 @@ SCIP_RETCODE evaluateGauge(
       if( SCIPisGE(scip, aterm, 0.0) )
       {
          printf("For current level, there is no interior point. ");
-         printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
+         printf("lhs: %g level: %.15g interiorpointval: %.15g\n", consdata->lhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+            printf("var <%s> = %g in [%.15g, %.15g] is linpart\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
       }
       else
       {
          printf("For current level, there is interior point. ");
-         printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
+         printf("lhs: %g level: %.15g interiorpointval: %.15g\n", consdata->lhs, side, consdata->interiorpointval);
       }
 #endif
       if( !SCIPisNegative(scip, aterm) )
@@ -10103,7 +10103,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          val1 = (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
 
-         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.15g, %.15g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          /* if variable is not fixed w.r.t. absolute eps yet, then try to fix it
           * (SCIPfixVar() doesn't allow for small tightenings, so tighten lower and upper bound separately)
@@ -10170,9 +10170,9 @@ SCIP_RETCODE replaceByLinearConstraints(
          else
             rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %.20g <= %g <%s> <= %.20g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %.15g <= %g <%s> <= %.15g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
-         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.15g, %.15g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          if ( coef < 0.0 )
          {
@@ -10182,7 +10182,7 @@ SCIP_RETCODE replaceByLinearConstraints(
             rhs = -lhs;
             lhs = -h;
          }
-         SCIPdebugMsg(scip, "Linear constraint is a bound: %.20g <= <%s> <= %.20g\n", lhs, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %.15g <= <%s> <= %.15g\n", lhs, SCIPvarGetName(var), rhs);
 
          if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
          {
@@ -11279,7 +11279,7 @@ SCIP_RETCODE propagateBoundsCons(
                       */
                      if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
                      {
-                        assert(SCIPisSumRelEQ(scip, rhs2.inf, rhs2.sup));
+                        assert(SCIPrelDiff(rhs2.inf, rhs2.sup) < 1e-6);
                         SCIPswapReals(&rhs2.inf, &rhs2.sup);
                      }
 
@@ -11472,6 +11472,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real delta;
    SCIP_Real gap;
    SCIP_Bool solviolbounds;
+   SCIP_Bool solchanged;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -11496,6 +11497,8 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   solchanged = FALSE;
+
    SCIPdebugMsg(scip, "attempt to make solution from <%s> feasible by shifting linear variable\n",
       sol != NULL ? (SCIPsolGetHeur(sol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(sol)) : "tree") : "LP");
 
@@ -11504,22 +11507,17 @@ SCIP_RETCODE proposeFeasibleSolution(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* recompute violation of solution in case solution has changed
-       * get absolution violation and sign
-       * @todo do this only if solution has changed
-       */
+      /* recompute violation of constraint in case newsol is not identical to sol anymore */
+      if( solchanged )
+      {
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         assert(!solviolbounds);
+      }
+
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->lhs - consdata->activity;
-      }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->rhs - consdata->activity;
-      }
       else
          continue; /* constraint is satisfied */
 
@@ -11547,6 +11545,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             /*lint --e{613} */
             SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -11579,6 +11579,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             /*lint --e{613} */
             SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
+            solchanged = TRUE;
+
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
             if( SCIPisZero(scip, viol) )
@@ -11596,6 +11598,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    if( c == nconss && (SCIPisInfinity(scip, SCIPgetUpperbound(scip)) || SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip))) )
    {
       SCIPdebugMsg(scip, "pass solution with objective val %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+      assert(solchanged);
 
       assert(conshdlrdata->trysolheur != NULL);
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
@@ -12458,7 +12461,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
       if( consdata->nquadvars == 0 )
       {
          /* if we are actually linear, add the constraint as row to the LP */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
@@ -13520,16 +13523,16 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
 
       SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
-      for( j = 0; j < nmonomials; ++j )
+      for( j = nmonomials - 1; j >= 0 ; --j )
       {
-         SCIPfreeBufferArray(scip, &monomialvars[j]);
          SCIPfreeBufferArrayNull(scip, &monomialexps[j]);
+         SCIPfreeBufferArray(scip, &monomialvars[j]);
       }
 
-      SCIPfreeBufferArray(scip, &monomialvars);
-      SCIPfreeBufferArray(scip, &monomialexps);
-      SCIPfreeBufferArray(scip, &monomialcoefs);
       SCIPfreeBufferArray(scip, &monomialnvars);
+      SCIPfreeBufferArray(scip, &monomialcoefs);
+      SCIPfreeBufferArray(scip, &monomialexps);
+      SCIPfreeBufferArray(scip, &monomialvars);
    }
 
    /* print right hand side */
@@ -16607,7 +16610,7 @@ void rowprepCleanupIntegralCoefs(
          if( !SCIPisInfinity(scip, REALABS(xbnd)) )
          {
             /* if there is a bound, then relax row side so rounding coef will not introduce an error */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.15g, round coefficient to %g and add constant %g\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
             SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
          }
@@ -16617,7 +16620,7 @@ void rowprepCleanupIntegralCoefs(
              * however, SCIP_ROW would do this anyway, but doing this here might eliminate some epsilon coefs (so they don't determine mincoef below)
              * and helps to get a more accurate row violation value
              */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.15g, round coefficient to %g without relaxing side (!)\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
          }
          rowprep->coefs[i] = roundcoef;
@@ -16799,7 +16802,7 @@ int SCIPscaleRowprep(
 }
 
 /** generates a SCIP_ROW from a rowprep */
-SCIP_RETCODE SCIPgetRowprepRowCons(
+SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
@@ -16809,8 +16812,32 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
    assert(scip != NULL);
    assert(row != NULL);
    assert(rowprep != NULL);
+   assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowprep->name,
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, row, conshdlr, rowprep->name,
+      rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
+      rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
+      rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, rowprep->nvars, rowprep->vars, rowprep->coefs) );
+
+   return SCIP_OKAY;
+}
+
+/** generates a SCIP_ROW from a rowprep */
+SCIP_RETCODE SCIPgetRowprepRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(scip != NULL);
+   assert(row != NULL);
+   assert(rowprep != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, rowprep->name,
       rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
       rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
       rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );

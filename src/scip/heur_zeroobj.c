@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -322,7 +322,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj",  TRUE, FALSE, FALSE, TRUE, &valid) );
    SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */

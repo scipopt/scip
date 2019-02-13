@@ -21,6 +21,10 @@
 
 echo "This is debug_runs.sh running."
 
+# arguments and defaults
+# Find out what day of week it is: mon-1 .. sun-7
+: ${DAY_OF_WEEK:=$(date +%u)}
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
@@ -57,9 +61,6 @@ export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
 export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
-# Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=`date +%u`
-
 # create all required directories
 mkdir -p settings
 
@@ -74,6 +75,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
+#  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 #    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
@@ -84,6 +86,7 @@ RANDOMSEED=`date +%Y%m%d`
 # declaration
 declare -A JOBS
 
+# for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running on monday
 JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
 JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
@@ -204,11 +207,10 @@ ln -fs /nfs/optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+  for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
-

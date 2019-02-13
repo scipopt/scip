@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1184,6 +1184,7 @@ SCIP_RETCODE initLP(
    )
 {
    SCIP_VAR* var;
+   int oldnvars = 0;
    int v;
 
    assert(set != NULL);
@@ -1200,6 +1201,9 @@ SCIP_RETCODE initLP(
       assert(SCIPlpGetNRows(lp) == 0);
       assert(lp->nremovablecols == 0);
       assert(lp->nremovablerows == 0);
+
+      /* store number of variables for later */
+      oldnvars = transprob->nvars;
 
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
@@ -1234,6 +1238,39 @@ SCIP_RETCODE initLP(
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
+
+   /* putting all initial constraints into the LP might have added new variables */
+   if( root && !(*cutoff) && transprob->nvars > oldnvars )
+   {
+      /* inform pricing storage, that LP is now filled with initial data */
+      SCIPpricestoreStartInitialLP(pricestore);
+
+      /* check all initial variables */
+      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      {
+         var = transprob->vars[v];
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         if( SCIPvarIsInitial(var) )
+         {
+            SCIP_COL* col;
+
+            col = SCIPvarGetCol(var);
+            if( col == NULL || ! SCIPcolIsInLP(col) )
+            {
+               SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
+            }
+         }
+
+         /* check for empty domains (necessary if no presolving was performed) */
+         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            *cutoff = TRUE;
+      }
+      SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
+
+      /* inform pricing storage, that initial LP setup is now finished */
+      SCIPpricestoreEndInitialLP(pricestore);
+   }
 
    return SCIP_OKAY;
 }
@@ -4236,7 +4273,7 @@ SCIP_RETCODE solveNode(
       }
 
       /* if an improved solution was found, propagate and solve the relaxations again */
-      if( foundsol )
+      if( foundsol && !(*cutoff) )
       {
          propagateagain = TRUE;
          solvelpagain = TRUE;
@@ -4612,6 +4649,9 @@ SCIP_RETCODE solveNode(
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+
+      /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
+      *unbounded = FALSE;
    }
    else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {

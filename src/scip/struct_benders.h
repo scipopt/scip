@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct SCIP_BenderscutCut
+{
+   SCIP_VAR**            vars;               /**< the variables forming the cut */
+   SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs;                /**< the left hand side of the cut */
+   SCIP_Real             rhs;                /**< the right hand side of the cut */
+   int                   nvars;              /**< the number of variables in the cut */
+};
+typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
 
 /** Benders' decomposition data */
 struct SCIP_Benders
@@ -72,10 +82,14 @@ struct SCIP_Benders
    SCIP_Bool             transfercuts;       /**< should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< should Benders' decomposition be used in LNS heuristics? */
    int                   lnsmaxdepth;        /**< maximum depth at which the LNS check is performed */
+   int                   lnsmaxcalls;        /**< maximum number of Benders' decomposition call in LNS heuristics */
+   int                   lnsmaxcallsroot;    /**< maximum number of root node Benders' decomposition call in LNS heuristics */
    SCIP_Bool             cutsasconss;        /**< should the transferred cuts be added as constraints? */
    SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
    SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
+   SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
+   SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -112,6 +126,12 @@ struct SCIP_Benders
    int                   benderscutssize;    /**< the size of the Benders' cuts algorithms array */
    SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
    SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
+
+   /* cut storage information */
+   SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
+   int                   storedcutssize;     /**< the size of the added cuts array */
+   int                   nstoredcuts;        /**< the number of the added cuts */
+
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

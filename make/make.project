@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -79,7 +79,7 @@ SLURMACCOUNT    =       ""
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	6.0.0.2
+SCIP_VERSION	=	6.0.1.3
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -167,8 +167,8 @@ LIBBUILDFLAGS	=       $(ARFLAGS)
 LINT		=	flexelint
 DOXY		=	doxygen
 SPLINT		=       splint
-#SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
-SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
+#SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes
+SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
@@ -296,6 +296,8 @@ CXXFLAGS	+=	$(USRCXXFLAGS)
 LDFLAGS		+=	$(USRLDFLAGS)
 ARFLAGS		+=	$(USRARFLAGS)
 
+# skip config header
+FLAGS		+=  -DNO_CONFIG_HEADER
 
 #-----------------------------------------------------------------------------
 # Memory Management
@@ -372,9 +374,16 @@ endif
 # define flags for Mosek
 ifeq ($(LPS),msk)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+                        $(LINKCC_l)cilkrts.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) \
-			$(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+                        $(SCIPREALPATH)/$(LIBDIR)/shared/libcilkrts.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+
+ifneq ("$(wildcard $(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT))", "")
+LPSLDFLAGS	+=	$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+endif
+
 ifneq ($(LINKRPATH),)
 MOSEKDIR	= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
 LPSLDFLAGS	+=      $(LINKRPATH)$(MOSEKDIR)
@@ -493,7 +502,7 @@ ZLIB		=	false
 endif
 
 ifeq ($(ZLIB),true)
-FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+FLAGS		+=	-DSCIP_WITH_ZLIB $(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
@@ -520,7 +529,7 @@ LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libzimpl.$(OSTYPE).$
 endif
 
 ifeq ($(GMP),true)
-FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
+FLAGS		+=	-DSCIP_WITH_GMP $(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
@@ -529,7 +538,7 @@ READLINE	=	false
 endif
 
 ifeq ($(READLINE),true)
-FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+FLAGS		+=	-DSCIP_WITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 

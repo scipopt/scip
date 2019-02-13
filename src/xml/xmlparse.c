@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,7 +35,7 @@
 
 
 #include <sys/types.h>
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #if defined(_WIN32) || defined(_WIN64)
 #define R_OK _A_RDONLY
 #define access _access
@@ -1088,7 +1088,7 @@ XML_NODE* xmlProcess(
       return NULL;
    BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    if ( access(filename, R_OK) != 0 )
    {
       strcat(myfilename, ".gz");

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -114,9 +114,7 @@ int SCIPtpiGetNewJobID(
    void
    );
 
-/** submit a job for parallel processing
- *  the return is a globally defined status
- */
+/** submit a job for parallel processing the return is a globally defined status */
 EXTERN
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */

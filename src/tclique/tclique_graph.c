@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -615,6 +615,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    BMSfreeMemoryArray(&tmp);
 
    /* set number of nodes and number of edges in graph */
+   /* coverity[tainted_data] */
    result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
    if( result <= 0 )
    {
@@ -623,6 +624,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
 
+   /* coverity[tainted_data] */
    result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
    if( result <= 0 )
    {
@@ -689,6 +691,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    for( i = 0; i < (*tcliquegraph)->nedges; i++ )
    {
       /* read edge (node1, node2) */
+      /* coverity[secure_coding] */
       result = fscanf(file, "%d%d", &node1, &node2);
       if( result <= 1 )
       {
@@ -697,7 +700,7 @@ TCLIQUE_Bool tcliqueLoadFile(
          return FALSE;
       }
 
-      if( node1 < 0 || node2 < 0 )
+      if( node1 < 0 || node2 < 0 || node1 >= (*tcliquegraph)->nnodes || node2 >= (*tcliquegraph)->nnodes )
       {
          infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
          fclose(file);
@@ -708,6 +711,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       if( node1 != currentnode )
       {
          currentnode = node1;
+         /* coverity[tainted_data] */
          (*tcliquegraph)->degrees[currentnode] = 0;
          (*tcliquegraph)->adjedges[currentnode].first = i;
          (*tcliquegraph)->adjedges[currentnode].last = (*tcliquegraph)->adjedges[currentnode].first;
