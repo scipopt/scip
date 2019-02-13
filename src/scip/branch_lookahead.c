@@ -1306,8 +1306,11 @@ void statisticsPrint(
 
       for( i = 0; i < statistics->maxnbestcands; i++ )
       {
-         SCIPinfoMessage(scip, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
-            i+1, statistics->chosenfsbcand[i]);
+         if( statistics->chosenfsbcand[i] > 0 )
+         {
+            SCIPinfoMessage(scip, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
+               i+1, statistics->chosenfsbcand[i]);
+         }
       }
 
       for( i = 0; i < statistics->recursiondepth; i++ )
@@ -1920,6 +1923,7 @@ SCIP_RETCODE scoreContainerCreate(
    )
 {
    int ntotalvars;
+   int ncands = config->maxncands;
    int i;
 
    assert(scip != NULL);
@@ -1929,11 +1933,13 @@ SCIP_RETCODE scoreContainerCreate(
    /* the container saves the score for all variables in the problem via the ProbIndex, see SCIPvarGetProbindex() */
    ntotalvars = SCIPgetNVars(scip);
 
+   ncands = MIN(ncands, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
+
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, config->maxncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, ncands) );
 
-   (*scorecontainer)->nbestsortedindices = config->maxncands;
+   (*scorecontainer)->nbestsortedindices = ncands;
 
    scoreContainterResetBestSortedIndices(*scorecontainer);
 
@@ -5386,6 +5392,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 
       recursiondepth = branchruledata->config->recursiondepth;
       maxncands = branchruledata->config->maxncands;
+      maxncands = MIN(maxncands, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 
       SCIP_CALL( SCIPallocMemory(scip, &branchruledata->statistics) );
       /* RESULT enum is 1 based, so use MAXRESULT + 1 as array size with unused 0 element */
