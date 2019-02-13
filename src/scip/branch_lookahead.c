@@ -3395,12 +3395,12 @@ SCIP_RETCODE getFSBResult(
       config->scoringfunction = 'f';
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( selectVarRecursive(scip, status, NULL, config, baselpsol, domainreductions,
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
          lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
          statistics, localstats) );
 #else
-   SCIP_CALL( selectVarRecursive(scip, status, NULL, config, baselpsol, domainreductions,
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
          lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
