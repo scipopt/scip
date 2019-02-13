@@ -957,11 +957,11 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                      SCIPsepaIncNCutsFound(sepa);
                      SCIPsepaIncNCutsFoundAtNode(sepa);
                   }
-                  else if ( SCIProwGetOriginCons(row) != NULL )
+                  else if ( SCIProwGetOriginConshdlr(row) != NULL )
                   {
                      SCIP_CONSHDLR* conshdlr;
 
-                     conshdlr = SCIProwGetOriginCons(row);
+                     conshdlr = SCIProwGetOriginConshdlr(row);
                      SCIPconshdlrIncNCutsFound(conshdlr);
                   }
                }
