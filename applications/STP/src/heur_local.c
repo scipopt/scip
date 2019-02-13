@@ -1693,6 +1693,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    return SCIP_OKAY;
 }
+//#define NEW
 
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
@@ -1718,6 +1719,13 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    int nextensions;
    int greedyextensions;
    STP_Bool* stvertextmp;
+
+#ifdef NEW
+   SCIP_Real* costbiased;
+   SCIP_Real* prizebiased;
+   SCIP_CALL( SCIPallocBufferArray(scip, &costbiased, graph->edges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prizebiased, graph->knots) );
+#endif
 
    assert(scip != NULL);
    assert(path != NULL);
@@ -1748,7 +1756,20 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
          stvertex[i] = TRUE;
       }
 
+#ifdef NEW
+   {
+
+
+      graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
+
+      graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, extensions);
+
+
+   }
+
+#else
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
+#endif
 
    BMScopyMemoryArray(orgpath, path, nnodes);
 
@@ -1849,8 +1870,12 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
                assert(orgpath[k].edge != UNKNOWN);
                k = graph->tail[orgpath[k].edge];
             }
+#ifdef NEW
+            graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertextmp, &extensionstmp);
 
+#else
             graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
+#endif
 
             for( int j = 0; j < nnodes; j++ )
             {
@@ -1933,7 +1958,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    /* have vertices been added? */
    if( *extensions )
    {
-      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw found extensions \n");
       for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
       SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, cost, stedge, stvertex) );
@@ -1943,7 +1967,10 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIPfreeBufferArray(scip, &orgpath);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-   SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", graph_sol_getObj(graph->cost, stedge, 0.0, nedges));
+#ifdef NEW
+   SCIPfreeBufferArray(scip, &prizebiased);
+   SCIPfreeBufferArray(scip, &costbiased);
+#endif
 
    return SCIP_OKAY;
 }

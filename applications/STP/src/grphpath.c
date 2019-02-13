@@ -1629,8 +1629,7 @@ void graph_path_st_pcmw(
       if( !Is_pterm(g->term[k]) )
          continue;
 
-      if( SCIPisPositive(scip, prize[k]) )
-         ntermspos++;
+      ntermspos++;
    }
 
    pathdist[start] = 0.0;
@@ -1644,7 +1643,7 @@ void graph_path_st_pcmw(
 
       int nterms = 0;
 
-      if( Is_pterm(g->term[start]) && SCIPisPositive(scip, prize[start]) )
+      if( Is_pterm(g->term[start]) )
          nterms++;
 
       updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
@@ -1662,7 +1661,7 @@ void graph_path_st_pcmw(
          state[k] = UNKNOWN;
 
          /* if k is positive vertex and close enough, connect k to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) && (prize[k] >= pathdist[k]) && SCIPisPositive(scip, prize[k]) )
+         if( !connected[k] && Is_pterm(g->term[k]) && (prize[k] >= pathdist[k]) )
          {
             int node;
             assert(k != start);
@@ -1685,7 +1684,7 @@ void graph_path_st_pcmw(
                resetX(scip, pathdist, heap, state, &count, node, 0.0);
                assert(state[node]);
 
-               if( Is_pterm(g->term[node]) && SCIPisPositive(scip, prize[node]) )
+               if( Is_pterm(g->term[node]) )
                   nterms++;
             }
 
@@ -1970,7 +1969,6 @@ void graph_path_st_pcmw_extend(
             /* have all terminals been reached? */
             if( ++nterms == g->terms - 1 )
                break;
-            {  int todo; } //wtf? and use full bias!
          }
          else if( SCIPisGT(scip, path[k].dist, maxprize) )
          {
@@ -1987,6 +1985,136 @@ void graph_path_st_pcmw_extend(
 
             /* is m not connected, allowed and closer (as close)? */
 
+            if( !connected[m] && path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )
+               correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
+         }
+      }
+   }
+}
+
+
+/** greedy extension of a given tree for PC or MW problems */
+void graph_path_st_pcmw_extendBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      prize,              /**< (possibly biased) prize */
+   PATH*                 path,               /**< shortest paths data structure */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   SCIP_Bool*            extensions          /**< extensions performed? */
+   )
+{
+   SCIP_Real maxprize;
+   int count;
+   int nstnodes;
+   int outtermscount;
+   const int nnodes = g->knots;
+   int* const heap = g->path_heap;
+   int* const state = g->path_state;
+
+   assert(path   != NULL);
+   assert(g      != NULL);
+   assert(cost   != NULL);
+   assert(connected != NULL);
+   assert(g->extended);
+
+   maxprize = 0.0;
+   count = 0;
+   nstnodes = 0;
+   outtermscount = 0;
+
+   *extensions = FALSE;
+
+   /* initialize */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
+      if( connected[k] && g->mark[k] )
+      {
+         /* add node to heap */
+         nstnodes++;
+         if( nnodes > 1 )
+            heap[++count] = k;
+
+         state[k]     = count;
+         path[k].dist = 0.0;
+         assert(path[k].edge != UNKNOWN || k == g->source);
+      }
+      else
+      {
+         state[k]     = UNKNOWN;
+         path[k].dist = FARAWAY;
+
+         if( Is_pterm(g->term[k]) && SCIPisGT(scip, prize[k], maxprize) && g->mark[k] )
+            maxprize = prize[k];
+      }
+
+      if( !connected[k] )
+      {
+         path[k].edge = UNKNOWN;
+
+         if( Is_pterm(g->term[k]) )
+         {
+            assert(g->mark[k]);
+            outtermscount++;
+         }
+      }
+   }
+
+   /* nothing to extend? */
+   if( nstnodes == 0 )
+      return;
+
+   if( nnodes > 1 )
+   {
+      int node;
+      int nterms = 0;
+
+      /* repeat until heap is empty */
+      while( count > 0 )
+      {
+         /* get closest node */
+         const int k = nearest(heap, state, &count, path);
+         state[k] = UNKNOWN;
+
+         /* if k is positive vertex and close enough (or fixnode), connect its path to current subtree */
+         if( !connected[k] && Is_pterm(g->term[k]) &&
+                SCIPisGE(scip, prize[k], path[k].dist) )
+         {
+            connected[k] = TRUE;
+            *extensions = TRUE;
+            path[k].dist = 0.0;
+            node = k;
+
+            assert(path[k].edge != UNKNOWN);
+
+            while( !connected[node = g->tail[path[node].edge]] )
+            {
+               assert(path[node].edge != UNKNOWN);
+               connected[node] = TRUE;
+               reset(scip, path, heap, state, &count, node);
+               assert(state[node]);
+            }
+
+            /* have all terminals been reached? */
+            if( ++nterms == outtermscount )
+            {
+               break;
+            }
+         }
+         else if( path[k].dist > maxprize )
+         {
+            break;
+         }
+
+         /* update adjacent vertices */
+         for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
+         {
+            const int m = g->head[e];
+
+            assert(state[m]);
+
+            /* is m not connected, allowed and closer */
             if( !connected[m] && path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )
                correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }

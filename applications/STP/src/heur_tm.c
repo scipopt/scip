@@ -2063,6 +2063,7 @@ SCIP_RETCODE runPcMW(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
+   SCIP_Real*            best_resultObj,     /**< objective value */
    int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best solution */
    int*                  result,             /**< temporary array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int*                  best_result,        /**< final array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
@@ -2079,7 +2080,6 @@ SCIP_RETCODE runPcMW(
 )
 {
    SCIP_Real* terminalprio;
-   SCIP_Real min = FARAWAY;
    SCIP_Real* costbiased;
    SCIP_Real* prizebiased;
    SCIP_Real* orderedprizes;
@@ -2172,12 +2172,12 @@ SCIP_RETCODE runPcMW(
          if( result[e] == CONNECT )
             obj += graph->cost[e];
 
-      if( obj < min )
+      if( obj < *best_resultObj )
       {
          if( bestnewstart != NULL )
             *bestnewstart = start;
 
-         min = obj;
+         *best_resultObj = obj;
 
          SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) heurdata->nexecs, obj);
 
@@ -2340,8 +2340,22 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    if( graph_pc_isPcMw(graph) )
    {
       enum PCMW_Bias bias = heurdata->pcmwbias;
-      SCIP_CALL( runPcMW(scip, heurdata, graph, bestnewstart, result, best_result, dijkedge, runs, best,
+      SCIP_Real best_resultObj = FARAWAY;
+
+      if( bias == both )
+      {
+         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, bestnewstart, result, best_result, dijkedge, runs, best,
+               dijkdist, cost, costrev, nodepriority, success, pcmwfull, partial) );
+
+         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, bestnewstart, result, best_result, dijkedge, runs, best,
+                       dijkdist, cost, costrev, nodepriority, success, pcmwfull, full) );
+
+      }
+      else
+      {
+         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, bestnewstart, result, best_result, dijkedge, runs, best,
             dijkdist, cost, costrev, nodepriority, success, pcmwfull, bias) );
+      }
    }
    else
    {
