@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
-   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best soluton */
+   SCIP_Real*            prize,              /**< prizes (for PCMW) or NULL */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
    int                   bestincstart,       /**< best incumbent start vertex */

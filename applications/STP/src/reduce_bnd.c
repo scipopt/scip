@@ -3205,7 +3205,6 @@ SCIP_RETCODE reduce_da(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    int nfixed;
-   int best_start;
    STP_Bool* marked;
 
    assert(ub != NULL);
@@ -3289,7 +3288,7 @@ SCIP_RETCODE reduce_da(
          SCIPStpHeurTMCompStarts(graph, startstm, &runstm);
       }
 
-      SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, &best_start, result, runstm, graph->source, cost, costrev, NULL, NULL, 0.0, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runstm, graph->source, cost, costrev, NULL, NULL, 0.0, &success, FALSE) );
       assert(success);
 
       /* calculate objective value of solution */
@@ -4524,7 +4523,6 @@ SCIP_RETCODE reduce_daSlackPruneMw(
    int nnodes;
    int nfixed;
    int redrounds;
-   int best_start;
    int transnnodes;
    int transnedges;
    STP_Bool* marked;
@@ -4636,7 +4634,7 @@ SCIP_RETCODE reduce_daSlackPruneMw(
 
 
    /* compute Steiner tree to obtain upper bound */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, NULL, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
 
    /* feasible solution found? */
    if( success )
@@ -4933,7 +4931,6 @@ SCIP_RETCODE reduce_bound(
    int nterms;
    int nnodes;
    int nedges;
-   int best_start;
    STP_Bool* stnode;
    SCIP_Bool ub;
    SCIP_Bool pc;
@@ -4963,7 +4960,6 @@ SCIP_RETCODE reduce_bound(
    mstobj = 0.0;
    *nelims = 0;
    mstobj2 = 0.0;
-   best_start = 0;
    ub = SCIPisGT(scip, *upperbound, 0.0);
    mw = (graph->stp_type == STP_MWCSP);
    pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
@@ -5197,7 +5193,7 @@ SCIP_RETCODE reduce_bound(
       if( pcmw )
          graph_pc_2trans(graph);
 
-      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, NULL, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
       /* PC or RPC? Then restore original graph */
       if( pcmw )
@@ -6498,7 +6494,6 @@ SCIP_RETCODE reduce_boundHopRc(
    int etemp;
    int nnodes;
    int nedges;
-   int best_start;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -6514,7 +6509,6 @@ SCIP_RETCODE reduce_boundHopRc(
    hopfactor = DEFAULT_HOPFACTOR;
    bound = 0.0;
    *nelims = 0;
-   best_start = 0;
    success = TRUE;
    vars = NULL;
    root = graph->source;
@@ -6609,7 +6603,7 @@ SCIP_RETCODE reduce_boundHopRc(
       tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
       /* compute UB */
-      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, 50, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, NULL, result, 50, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
 
       objval = 0.0;
       for( e = 0; e < nedges; e++ )

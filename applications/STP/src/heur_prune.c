@@ -144,7 +144,6 @@ SCIP_RETCODE computeNewSols(
    int* const pmark = prunegraph->mark;
    SCIP_Real dummyhop = 0.0;
    int nruns;
-   int best_start;
    const int nnodes = g->knots;
 
    assert(graph_valid(prunegraph));
@@ -166,7 +165,7 @@ SCIP_RETCODE computeNewSols(
    SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
    /* run shortest path heuristic */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, &best_start, soledge, nruns,
+   SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, NULL, soledge, nruns,
          prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, 0.0, success, FALSE));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge) );
