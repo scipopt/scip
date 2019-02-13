@@ -587,9 +587,9 @@ SCIP_RETCODE initLP(
    /* add ordering inequality */
 #ifdef SCIP_DEBUG
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_init_%s", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[consdata->invperm[0]], 1.0) );
@@ -648,9 +648,9 @@ SCIP_RETCODE initLP(
 
 #ifdef SCIP_DEBUG
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", i, SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
          SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
 
@@ -836,10 +836,10 @@ SCIP_RETCODE addSymresackInequality(
 #ifdef SCIP_DEBUG
    consdata = SCIPconsGetData(cons);
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    consdata->debugcnt += 1;
 #else
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 

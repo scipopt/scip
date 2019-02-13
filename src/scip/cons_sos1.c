@@ -6430,7 +6430,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6438,7 +6438,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6553,7 +6553,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6561,7 +6561,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -7125,7 +7125,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasGT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7134,7 +7134,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasLT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;

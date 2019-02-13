@@ -21,6 +21,8 @@ Features
 - additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
   instances, e.g., when used in UG
 
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
 Performance improvements
 ------------------------
 
@@ -80,6 +82,11 @@ Interface changes
 - functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
   receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
 
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -87,11 +94,15 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
+<<<<<<< HEAD
 - new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
   SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
   about the origin of the solution, ie, whether it was created by a relaxation handler,
   by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
+=======
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+>>>>>>> master
 
 ### Command line interface
 
@@ -202,6 +213,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
 ### Changed parameters
 
 ### New parameters
@@ -228,6 +241,7 @@ Fixed bugs
 ----------
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
 
 Miscellaneous
 -------------
