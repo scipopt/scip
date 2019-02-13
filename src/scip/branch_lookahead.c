@@ -5261,8 +5261,6 @@ SCIP_RETCODE freePersistent(
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchnlps, nvars);
    SCIPfreeBlockMemoryArray(scip, &persistent->lastbranchid, nvars);
 
-   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
-
    branchruledata->isinitialized = FALSE;
 
    return SCIP_OKAY;
@@ -5356,7 +5354,7 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->config != NULL);
-   assert(branchruledata->persistent == NULL);
+   assert(branchruledata->persistent != NULL);
 
    SCIPfreeBlockMemory(scip, &branchruledata->config);
    SCIPfreeBlockMemory(scip, &branchruledata);
@@ -5420,17 +5418,22 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_STATISTIC
+
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 static
 SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+#ifdef SCIP_STATISTIC
    STATISTICS* statistics;
+#endif
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   SCIPfreeBlockMemory(scip, &branchruledata->persistent);
+
+#ifdef SCIP_STATISTIC
    statistics = branchruledata->statistics;
    assert(statistics != NULL);
 
@@ -5452,10 +5455,10 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
    SCIPfreeMemoryArray(scip, &statistics->nsinglecutoffs);
    SCIPfreeMemoryArray(scip, &statistics->nresults);
    SCIPfreeMemory(scip, &statistics);
+#endif
 
    return SCIP_OKAY;
 }
-#endif
 
 /** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
 static
@@ -5726,9 +5729,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyLookahead) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeLookahead) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitLookahead) );
-#ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitLookahead) );
-#endif
    SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitSolLookahead) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
