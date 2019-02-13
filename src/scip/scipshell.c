@@ -28,6 +28,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
+#include "scip/rational.h"
 
 /*
  * Message Handler

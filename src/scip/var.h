@@ -254,6 +254,24 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
+/** create and set the exact variable bounds and objective value */
+extern
+SCIP_RETCODE SCIPvarAddExactData(
+   SCIP_VAR*             var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational*        lb,                 /**< lower bound of variable */
+   SCIP_Rational*        ub,                 /**< upper bound of variable */
+   SCIP_Rational*        obj                 /**< objective function value */
+   );
+
+/** copy exact variable data from one variable to another */
+extern
+SCIP_RETCODE SCIPvarCopyExactData(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
+   SCIP_VAR*             sourcevar           /**< variable the data gets copied from */
+   );
+
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
  *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all

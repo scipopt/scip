@@ -1975,6 +1975,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->exactdata = NULL;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
@@ -2749,6 +2750,18 @@ SCIP_RETCODE varFree(
    SCIPhistoryFree(&(*var)->history, blkmem);
    SCIPhistoryFree(&(*var)->historycrun, blkmem);
    SCIPvaluehistoryFree(&(*var)->valuehistory, blkmem);
+
+   /* free exact variable data if it was created */
+   if( (*var)->exactdata != NULL )
+   {
+      if( (*var)->exactdata->glbdom.lb != NULL )
+      Rdelete(blkmem, &(*var)->exactdata->glbdom.lb);
+      Rdelete(blkmem, &(*var)->exactdata->glbdom.ub);
+      Rdelete(blkmem, &(*var)->exactdata->obj );
+
+      BMSfreeBlockMemory(blkmem, &(*var)->exactdata);
+      assert((*var)->exactdata == NULL);
+   }
 
    /* free variable data structure */
    BMSfreeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);

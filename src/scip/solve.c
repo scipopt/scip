@@ -25,6 +25,7 @@
 #include <assert.h>
 
 #include "lpi/lpi.h"
+#include "scip/bounding_exact.h"
 #include "scip/branch.h"
 #include "scip/clock.h"
 #include "scip/concurrent.h"
@@ -1465,6 +1466,12 @@ SCIP_RETCODE solveNodeInitialLP(
       stat->firstlptime = SCIPclockGetTime(stat->solvingtime) - starttime;
    }
 
+   if( !(*lperror) )
+   {
+      SCIP_CALL( computeSafeBound(lp, NULL, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
+            set->lp_iterlim, lperror, NULL) );
+   }
+
    /* remove previous primal ray, store new one if LP is unbounded */
    SCIP_CALL( updatePrimalRay(blkmem, set, stat, transprob, primal, tree, lp, *lperror) );
 
@@ -1487,10 +1494,10 @@ SCIP_RETCODE solveNodeInitialLP(
       /* update lower bound of current node w.r.t. initial lp */
       assert(!(*cutoff));
       if( (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
-	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
-	 && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+	      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+	      && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
       {
-	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+	      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
 
          /* if this is the first LP solved at the root, store its iteration count and solution value */
          if( stat->nnodelps == 0 && focusnode->depth == 0 )
@@ -1500,12 +1507,7 @@ SCIP_RETCODE solveNodeInitialLP(
             assert(stat->nrootfirstlpiterations == 0);
             stat->nrootfirstlpiterations = stat->nlpiterations - nlpiterations;
 
-            if( set->misc_exactsolve )
-            {
-               SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lowerbound) );
-            }
-            else
-               lowerbound = SCIPlpGetObjval(lp, set, transprob);
+            lowerbound = SCIPnodeGetLowerbound(focusnode);
 
             stat->firstlpdualbound = SCIPprobExternObjval(transprob, origprob, set, lowerbound);
          }
@@ -2339,7 +2341,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-      while( mustprice && !(*lperror) )
+      while( mustprice && !(*lperror) && !set->misc_exactsolve ) // exactip-note: disabled this for now
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
                pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, root, root, -1, &npricedcolvars,
@@ -2645,6 +2647,11 @@ SCIP_RETCODE priceAndCutLoop(
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
+                  if( !(*lperror) )
+                  {
+                     SCIP_CALL( computeSafeBound(lp, NULL, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                           transprob, set->lp_iterlim, lperror, NULL) );
+                  }
                   /* remove previous primal ray, store new one if LP is unbounded */
                   SCIP_CALL( updatePrimalRay(blkmem, set, stat, transprob, primal, tree, lp, *lperror) );
 
@@ -3030,7 +3037,7 @@ SCIP_RETCODE solveNodeLP(
    }
 #endif
 
-   if( !(*cutoff) && !(*lperror) )
+   if( !(*cutoff) && !(*lperror) && !set->misc_exactsolve )
    {
       SCIP_Longint oldninitconssadded;
       SCIP_Longint oldnboundchgs;

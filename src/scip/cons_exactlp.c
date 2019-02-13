@@ -20,7 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_exactlp.h"
@@ -59,6 +58,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/sepastoreex.h"
+#include "scip/struct_scip.h"
 #include <ctype.h>
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -84,10 +85,10 @@
 #define CONSHDLR_PRESOLTIMING    (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE) /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
-#define EVENTHDLR_NAME         "linear"
+#define EVENTHDLR_NAME         "linear-exact"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
-#define CONFLICTHDLR_NAME      "linear"
+#define CONFLICTHDLR_NAME      "linear-exact"
 #define CONFLICTHDLR_DESC      "conflict handler creating linear constraints"
 #define CONFLICTHDLR_PRIORITY  -1000000
 
@@ -526,10 +527,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
    (*conshdlrdata)->naddconss = 0;
-   (*conshdlrdata)->maxaggrnormscale = 0;
-   (*conshdlrdata)->maxcardbounddist = 0;
-   (*conshdlrdata)->maxeasyactivitydelta = 0;
-   (*conshdlrdata)->mingainpernmincomp = 0;
+   (*conshdlrdata)->maxaggrnormscale = Rcreate(SCIPblkmem(scip));
+   (*conshdlrdata)->maxcardbounddist = Rcreate(SCIPblkmem(scip));
+   (*conshdlrdata)->maxeasyactivitydelta = Rcreate(SCIPblkmem(scip));
+   (*conshdlrdata)->mingainpernmincomp = Rcreate(SCIPblkmem(scip));
 
    /* set event handler for updating linear constraint activity bounds */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -555,6 +556,11 @@ void conshdlrdataFree(
       linconsupgradeFree(scip, &(*conshdlrdata)->linconsupgrades[i]);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
+
+   Rdelete(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
+   Rdelete(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
+   Rdelete(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta);
+   Rdelete(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
@@ -861,7 +867,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->vals = NULL;
    (*consdata)->valsreal = NULL;
 
-   constant = RcreateInt(SCIPblkmem(scip), 0, 1);
+   constant = RcreateTemp(SCIPbuffer(scip));
    if( nvars > 0 )
    {
       int k;
@@ -869,7 +875,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_VAR** varsbuffer;
       SCIP_Rational** valsbuffer;
       SCIP_Real* valsrealbuffer;
-      SCIP_Rational* temp = RcreateInt(SCIPblkmem(scip), 0, 1);
+      SCIP_Rational* temp = RcreateTemp(SCIPbuffer(scip));
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
@@ -890,10 +896,11 @@ SCIP_RETCODE consdataCreate(
          if( !RisZero(val) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
-            if( SCIPisConsCompressionEnabled(scip) && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            if( SCIPisConsCompressionEnabled(scip) && RisEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)) )
             {
                RmultReal(temp, val, SCIPvarGetLbGlobal(var));
                Radd(constant, constant, temp);
+               Rdelete(SCIPblkmem(scip), &val);
             }
             else
             {
@@ -929,16 +936,11 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->valsreal, valsrealbuffer, k) );
          (*consdata)->varssize = k;
       }
-      /* free temporary buffer */
-      for( k = 0; k < nvars; ++k )
-      {
-         Rdelete(SCIPblkmem(scip), &valsbuffer[k]);
-      }
 
       SCIPfreeBufferArray(scip, &valsbuffer);
       SCIPfreeBufferArray(scip, &varsbuffer);
       SCIPfreeBufferArray(scip, &valsrealbuffer);
-      Rdelete(SCIPblkmem(scip), &temp);
+      RdeleteTemp(SCIPbuffer(scip), &temp);
    }
 
    (*consdata)->eventdata = NULL;
@@ -1030,7 +1032,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
-   Rdelete(SCIPblkmem(scip), &constant);
+   RdeleteTemp(SCIPbuffer(scip), &constant);
 
    return SCIP_OKAY;
 }
@@ -1580,7 +1582,10 @@ void checkMaxActivityDelta(
          }
       }
       assert(RisEqual(maxactdelta, consdata->maxactdelta));
-   }
+
+      RdeleteTemp(SCIPbuffer(scip), delta);
+      RdeleteTemp(SCIPbuffer(scip), domain);
+      RdeleteTemp(SCIPbuffer(scip), maxactdelta);   }
 }
 #else
 #define checkMaxActivityDelta(scip, consdata) /**/
@@ -1937,9 +1942,9 @@ void consdataUpdateActivities(
       Rset(lastactivity, activity);
    }
 
+   RdeleteTemp(SCIPbuffer(scip), &delta);
    RdeleteTemp(SCIPbuffer(scip), &newcontribution);
    RdeleteTemp(SCIPbuffer(scip), &oldcontribution);
-   RdeleteTemp(SCIPbuffer(scip), &delta);
 }
 
 /** updates minimum and maximum activity for a change in lower bound */
@@ -2223,8 +2228,8 @@ void consdataUpdateChgCoef(
             RsetString(consdata->maxactdelta, "inf");
       }
 
-      RdeleteTemp(SCIPbuffer(scip), &domain);
       RdeleteTemp(SCIPbuffer(scip), &delta);
+      RdeleteTemp(SCIPbuffer(scip), &domain);
    }
 
    /* @todo do something more clever here, e.g. if oldval * newval >= 0, do the update directly */
@@ -2917,6 +2922,11 @@ void consdataGetGlbActivityResiduals(
             goodrelax, maxresactivity, maxisrelax, ismaxsettoinfinity);
       }
    }
+
+   RdeleteTemp(SCIPbuffer(scip), &tmp);
+   RdeleteTemp(SCIPbuffer(scip), &absval);
+   RdeleteTemp(SCIPbuffer(scip), &maxactbound);
+   RdeleteTemp(SCIPbuffer(scip), &minactbound);
 }
 
 /** calculates the activity of the linear constraint for given solution */
@@ -2935,7 +2945,7 @@ void consdataGetActivity(
       consdataComputePseudoActivity(scip, consdata, activity);
    else
    {
-     SCIP_Rational* solval = RcreateTemp(SCIPbuffer(scip));
+      SCIP_Rational* solval = RcreateTemp(SCIPbuffer(scip));
       int nposinf;
       int nneginf;
       SCIP_Bool negsign;
@@ -2967,7 +2977,7 @@ void consdataGetActivity(
       }
       assert(nneginf >= 0 && nposinf >= 0);
 
-      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", activity, nposinf, nneginf);
+      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", RgetRealApprox(activity), nposinf, nneginf);
 
       /* check for amount of infinity values and correct the activity */
       if( nposinf > 0 && nneginf > 0 )
@@ -2981,6 +2991,7 @@ void consdataGetActivity(
          RsetString(activity, "-inf");
 
       SCIPdebugMsg(scip, "corrected activity of linear constraint: %.15g\n", activity);
+      RdeleteTemp(SCIPbuffer(scip), &solval);
    }
 }
 
@@ -3577,7 +3588,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
-   Rset(consdata->vals[consdata->nvars], val);
+   consdata->vals[consdata->nvars] = Rcopy(SCIPblkmem(scip), val);
    consdata->valsreal[consdata->nvars] = RgetRealApprox(val);
    consdata->nvars++;
 
@@ -7083,7 +7094,7 @@ SCIP_RETCODE checkCons(
       consdataGetActivity(scip, consdata, sol, activity);
 
    SCIPdebugMsg(scip, "  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
-      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
+      RgetRealApprox(activity), RgetRealApprox(consdata->lhs), RgetRealApprox(consdata->rhs), (void*)consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
@@ -7091,12 +7102,12 @@ SCIP_RETCODE checkCons(
    Rdiff(lhsviol, consdata->lhs, activity);
    Rdiff(rhsviol, activity, consdata->rhs);
 
-   if( (lhsviol > 0) && (lhsviol > rhsviol) )
+   if( RisPositive(lhsviol) && RisGT(lhsviol, rhsviol) )
    {
       Rset(absviol, lhsviol);
       RrelDiff(relviol, consdata->lhs, activity);
    }
-   else if( rhsviol > 0 )
+   else if( RisPositive(rhsviol) )
    {
       Rset(absviol, rhsviol);
       RrelDiff(relviol, activity, consdata->rhs);
@@ -7118,9 +7129,8 @@ SCIP_RETCODE checkCons(
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
    /* check with absolute tolerances, always do this for exact constraints */
-   else if( consdata->checkabsolute &&
-      ((!RisNegInfinity(consdata->lhs) && RisLT(activity, consdata->lhs)) ||
-       (!RisInfinity(consdata->rhs) && RisGT(activity, consdata->rhs))) )
+   else if( ((!RisNegInfinity(consdata->lhs) && RisLT(activity, consdata->lhs)) ||
+      (!RisInfinity(consdata->rhs) && RisGT(activity, consdata->rhs))) )
    {
       *violated = TRUE;
 
@@ -7143,12 +7153,18 @@ SCIP_RETCODE checkCons(
    if( sol != NULL )
       SCIPupdateSolLPConsViolation(scip, sol, RgetRealApprox(absviol), RgetRealApprox(relviol));
 
+   Rdelete(SCIPblkmem(scip), &activity);
+   Rdelete(SCIPblkmem(scip), &absviol);
+   Rdelete(SCIPblkmem(scip), &relviol);
+   Rdelete(SCIPblkmem(scip), &lhsviol);
+   Rdelete(SCIPblkmem(scip), &rhsviol);
+
    return SCIP_OKAY;
 }
 
 /** creates an LP row in a linear constraint data */
 static
-SCIP_RETCODE createRow(
+SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linear constraint */
    )
@@ -7191,6 +7207,7 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7200,10 +7217,11 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->row == NULL )
    {
-      /* convert consdata object into LP row */
-      SCIP_CALL( createRow(scip, cons) );
+      /* convert consdata object into LP row and exact lp row */
+      SCIP_CALL( createRows(scip, cons) );
    }
    assert(consdata->row != NULL);
+   assert(consdata->exrow != NULL);
 
    if( consdata->nvars == 0 )
    {
@@ -7215,10 +7233,13 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRowex(scip, consdata->exrow, NULL)) );
       /* if presolving is turned off, the row might be trivial */
       if ( !RisNegInfinity(consdata->lhs) || !RisInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
+         SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreex, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->lpex, consdata->exrow, &infeasible) );
       }
 #ifndef NDEBUG
       else
@@ -7265,10 +7286,6 @@ SCIP_RETCODE separateCons(
    oldncuts = *ncuts;
    *cutoff = FALSE;
 
-   SCIPerrorMessage("Exact separation callback not implemented yet \n");
-   SCIPABORT();
-
-#if 0
    SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
 
    if( violated )
@@ -7277,6 +7294,7 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
+   #if 0
    else if( !SCIPconsIsModifiable(cons) && separatecards )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
@@ -7320,12 +7338,13 @@ SCIP_RETCODE separateCons(
          }
       }
    }
+   #endif
 
    if( *ncuts > oldncuts )
    {
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
-#endif
+
    return SCIP_OKAY;
 }
 
@@ -15240,7 +15259,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
    assert(scip != NULL);
 
    SCIPerrorMessage("Exact presolving not implemented yet \n");
-   SCIPABORT();
+   //SCIPABORT();
 
 #if 0
 #ifdef SCIP_STATISTIC
@@ -15756,8 +15775,8 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPerrorMessage("Exact propagation not implemented yet \n");
-   SCIPABORT();
+   // SCIPerrorMessage("Exact propagation not implemented yet \n");
+   *result = SCIP_DIDNOTFIND;
    return SCIP_OKAY;
 
 #if 0
@@ -16773,8 +16792,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPerrorMessage("Exact event handling not implemented yet \n");
-   SCIPABORT();
    return SCIP_OKAY;
 # if 0
    /* we can skip events droped for deleted constraints */
@@ -17312,7 +17329,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, vals, nconsvars) );
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
+      //SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -17320,7 +17337,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, requiredsize, constant, &requiredsize, TRUE) );
+         //SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, requiredsize, constant, &requiredsize, TRUE) );
          assert(requiredsize <= nconsvars);
       }
 
@@ -17385,7 +17402,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
       assert(consdata != NULL);
 
-      RdeleteArrayVals(SCIPblkmem(scip), &consvals, nconsvars);
+      RdeleteArray(SCIPblkmem(scip), &consvals, nconsvars);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
@@ -17507,14 +17524,14 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    {
       SCIPerrorMessage("method not implemented in exact cons handler \n");
       SCIPABORT();
-      SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, nvars, constant, &requiredsize, TRUE) );
+      //SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, nvars, constant, &requiredsize, TRUE) );
 
       if( requiredsize > nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, requiredsize, constant, &requiredsize, TRUE) );
+         //SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert(requiredsize <= nvars);
       }
    }
@@ -17606,7 +17623,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       constant = RcreateInt(SCIPblkmem(scip), 0, 1);
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
+      //SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -17614,7 +17631,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, requiredsize, constant, &requiredsize, TRUE) );
+         //SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, requiredsize, constant, &requiredsize, TRUE) );
          assert(requiredsize <= nconsvars);
       }
 

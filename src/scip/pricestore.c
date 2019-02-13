@@ -22,6 +22,7 @@
 
 #include "scip/clock.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/pricestore.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
@@ -34,6 +35,7 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
+#include "scip/varex.h"
 
 
 
@@ -331,7 +333,7 @@ SCIP_RETCODE addBoundViolated(
       {
          SCIPsetDebugMsg(set, " -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
-         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 
+         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var,
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
@@ -429,7 +431,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                {
                   /* The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
                    * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
-                   * inequality most feasible solution) x' defined by 
+                   * inequality most feasible solution) x' defined by
                    *    x'_i = ub_i, if y^T A_i > 0
                    *    x'_i = lb_i, if y^T A_i <= 0.
                    * Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0
@@ -507,8 +509,15 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         /* transform loose variable into column variable */
-         SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         if( set->misc_exactsolve )
+         {
+            SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, set->scip->lpex) );
+         }
+         else
+         {
+            /* transform loose variable into column variable */
+            SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         }
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -535,7 +544,15 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       /* transform variable into column variable, if needed */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         if( set->misc_exactsolve )
+         {
+            SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, set->scip->lpex) );
+         }
+         else
+         {
+            /* transform loose variable into column variable */
+            SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         }
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -669,4 +686,3 @@ int SCIPpricestoreGetNVarsApplied(
 
    return pricestore->nvarsapplied;
 }
-

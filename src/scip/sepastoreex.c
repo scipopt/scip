@@ -213,19 +213,71 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LPEX*            lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< are we at the root node? */
-   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
-   SCIPerrorMessage("under construction \n");
-   SCIPABORT();
+   SCIP_LP* fplp;
+   SCIP_ROW** fprows;
+   SCIP_ROWEX* rowex;
+   int nrowsfp;
+   int nrowsex;
+   int nreleases;
+   int nadded;
+   int i;
+
+   fplp = lp->fplp;
+   nreleases = 0;
+   nadded = 0;
+
+   assert(fplp != NULL);
+
+   fprows = SCIPlpGetRows(fplp);
+   nrowsfp = SCIPlpGetNRows(fplp);
+   nrowsex = SCIPlexGetNRows(lp);
+
+   assert(fprows != NULL);
+
+   /** this method should sync the fp-lp withe the exact lp */
+
+   /** remove all rows from exact lp that are not in the floating point lp */
+   for( i = 0; i < nrowsex; ++i )
+   {
+      SCIP_ROW* fprow =lp->rows[i]->fprow;
+      if( !SCIProwIsInLP(fprow) )
+      {
+         SCIPlpexReleaseRow(lp->rows[i]);
+         nreleases++;
+      }
+   }
+
+   for( i = 0; i < nrowsfp; ++i )
+   {
+      rowex = SCIProwGetExRow(lp, lp->rows[i]);
+      if( rowex != NULL )
+      {
+         /* corresponding exact row has already been created, add it to lp */
+         assert(...);         
+      }
+      else
+      {
+         /* corresponding excact row still needs to be created */
+         if( fprows[i]->origintype != SCIP_ROWORIGINTYPE_CONS )
+         {
+            SCIPerrorMessage("under construction \n");
+            SCIPABORT();
+         }
+         
+         SCIProwGetOriginCons(fprow[i]);
+      }
+   }
+
+
    return SCIP_OKAY;
 }
 

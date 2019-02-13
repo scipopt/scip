@@ -165,6 +165,12 @@ struct SCIP_Dom
    SCIP_HOLELIST*        holelist;           /**< list of holes */
 };
 
+struct SCIP_DomEx
+{
+   SCIP_Rational*        lb;
+   SCIP_Rational*        ub;
+};
+
 /** original variable information */
 struct SCIP_Original
 {
@@ -199,12 +205,9 @@ struct SCIP_Negate
 struct SCIP_ExVarData
 {
    SCIP_Rational*        obj;
-   SCIP_Rational*        lbglb;
-   SCIP_Rational*        ubglb;
-   SCIP_Rational*        lbloc;
-   SCIP_Rational*        ubloc;
-   SCIP_Rational*        lborig;
-   SCIP_Rational*        uborig;
+   SCIP_DOMEX            locdom;
+   SCIP_DOMEX            glbdom;
+   SCIP_DOMEX            origdom;
    SCIP_COLEX*           excol;
 };
 
