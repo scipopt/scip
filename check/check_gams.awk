@@ -102,6 +102,11 @@ BEGIN {
 #18 NumberOfNodes
 
 $3 == solver || $3 == "EXAMINER2" {
+   # with GAMS >= 26, the full filename is written to the trace file
+   # we remove some extensions for easier matching with solu file entries
+   sub("\\.gms.gz", "", $1);
+   sub("\\.gms", "", $1);
+
    model[nprobs] = $1;
    type[nprobs] = $2;
    maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
