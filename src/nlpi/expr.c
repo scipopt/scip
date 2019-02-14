@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8391,7 +8391,7 @@ void SCIPexprPrint(
 
       if( expr->nchildren == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
          break;
       }
 
@@ -8399,12 +8399,12 @@ void SCIPexprPrint(
 
       if( constant != 0.0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
       }
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", ((SCIP_Real*)expr->data.data)[i]);
          SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
       }
 
@@ -8423,20 +8423,20 @@ void SCIPexprPrint(
       SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->lincoefs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->lincoefs[i]);
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->quadelems[i].coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->quadelems[i].coef);
          SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], messagehdlr, file, varnames, paramnames, paramvals);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
          {
@@ -8467,13 +8467,13 @@ void SCIPexprPrint(
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g", monomialdata->coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
@@ -8482,11 +8482,11 @@ void SCIPexprPrint(
             SCIPexprPrint(expr->children[monomialdata->childidxs[j]], messagehdlr, file, varnames, paramnames, paramvals);
             if( monomialdata->exponents[j] < 0.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.20g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.15g)", monomialdata->exponents[j]);
             }
             else if( monomialdata->exponents[j] != 1.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^%.20g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%.15g", monomialdata->exponents[j]);
             }
          }
       }

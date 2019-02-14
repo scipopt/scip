@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1667,7 +1667,7 @@ SCIP_RETCODE createRelaxation(
 
       /* create LP row */
       rhsval = (consdata->rhs ? 1.0 : 0.0);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), rhsval, rhsval,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], cons, SCIPconsGetName(cons), rhsval, rhsval,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->intvar, -2.0) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], consdata->nvars, consdata->vars, 1.0) );
@@ -1683,7 +1683,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], cons, rowname, -SCIPinfinity(scip), 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -1693,14 +1693,14 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= 2 row with all positive signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 2.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], cons, rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
 
       /* create extra LP row if integer variable exists */
       if( consdata->intvar != NULL )
       {
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 0.0, 0.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], cons, SCIPconsGetName(cons), 0.0, 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
          SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
@@ -1717,7 +1717,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 1.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], cons, rowname, -SCIPinfinity(scip), 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -1727,14 +1727,14 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= -1 row with all negative signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), -1.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], cons, rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
 
       /* create extra LP row if integer variable exists */
       if( consdata->intvar != NULL )
       {
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 1.0, 1.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], cons, SCIPconsGetName(cons), 1.0, 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
          SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
@@ -2012,7 +2012,7 @@ SCIP_RETCODE separateCons(
             SCIPdebugMsg(scip, "found violated parity cut (efficiacy: %f)\n", 1.0 - sum);
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 1), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 1), FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -2048,7 +2048,7 @@ SCIP_RETCODE separateCons(
 
             /* the rhs of the inequality is the corrected set size minus 1 */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 2), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 2), FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -2084,7 +2084,7 @@ SCIP_RETCODE separateCons(
 
             /* the rhs of the inequality is the size of the corrected set */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) cnt, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) cnt, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -3638,6 +3638,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int                   nconss,             /**< number of constraints in constraint set */
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  nchgcoefs,          /**< pointer to add up the number of changed coefficients */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
    int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  naddconss,          /**< pointer to count number of added constraints */
@@ -3690,6 +3691,53 @@ SCIP_RETCODE detectRedundantConstraints(
       consdata0 = SCIPconsGetData(cons0);
 
       assert(consdata0 != NULL);
+
+      /* applyFixings() led to an empty or trivial constraint */
+      if( consdata0->nvars <= 1 )
+      {
+         if( consdata0->nvars == 0 )
+         {
+            /* the constraints activity cannot match an odd right hand side */
+            if( consdata0->rhs )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
+         else
+         {
+            /* exactly 1 variable left. */
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            /* fix remaining variable */
+            SCIP_CALL( SCIPfixVar(scip, consdata0->vars[0], (SCIP_Real) consdata0->rhs, &infeasible, &fixed) );
+            assert(!infeasible);
+
+            if( fixed )
+               ++(*nfixedvars);
+
+         }
+
+         /* fix integral variable if present */
+         if( consdata0->intvar != NULL && !consdata0->deleteintvar )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            SCIP_CALL( SCIPfixVar(scip, consdata0->intvar, 0.0, &infeasible, &fixed) );
+            assert(!infeasible);
+
+            if( fixed )
+               ++(*nfixedvars);
+         }
+
+         /* delete empty constraint */
+         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         ++(*ndelconss);
+
+         continue;
+      }
 
       /* sort the constraint */
       consdataSort(consdata0);
@@ -3893,6 +3941,15 @@ SCIP_RETCODE preprocessConstraintPairs(
          }
          else
          {
+            /* fix integral variable if present */
+            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               if( fixed )
+                  ++(*nfixedvars);
+            }
+
             /* delete empty constraint */
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             ++(*ndelconss);
@@ -3908,6 +3965,15 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          if( fixed )
             ++(*nfixedvars);
+
+         /* fix integral variable if present */
+         if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+         {
+            SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+            assert(!infeasible);
+            if( fixed )
+               ++(*nfixedvars);
+         }
 
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          ++(*ndelconss);
@@ -3953,8 +4019,18 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(consdata0->sorted);
          }
 
-         if( redundant )
+         /* we can only fix the intvar if var0 == 1 - var1, because intvar will then always be 0 */
+         if( redundant && (consdata1->intvar == NULL || consdata1->deleteintvar || consdata1->rhs) )
          {
+            /* fix integral variable if present */
+            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            {
+               SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               if( fixed )
+                  ++(*nfixedvars);
+            }
+
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             ++(*ndelconss);
          }
@@ -4370,16 +4446,37 @@ SCIP_RETCODE createConsXorIntvar(
 
 /** tries to upgrade a linear constraint into an xor constraint
  *
- *  Assuming the only coefficients with an absolute value unequal to one is two in absolute value we can transform:
+ *  Assuming all variables are binary and have coefficients with an absolute value 1, except for an integer (or binary) variable
+ *  \f$z\f$ which has coefficient \f$a \in \{-2,2\}\f$ with absolute value 2 and appears only in this constraint,
+ *  we can transform:
  *  \f[
  *    \begin{array}{ll}
- *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = rhs \\
- *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} + a \cdot z = rhs + |I| \\
- *     \Leftrightarrow & \sum_{i \in I} ~x_i + \sum_j x_{j \in J} - 2 \cdot y = (rhs + |I|) mod 2 \\
- *                     & z \in [lb_z,ub_z] \Rightarrow y \in (\left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; lb_z : -ub_z), \left\lfloor \frac{rhs + |I|}{2} \right\rfloor + (a = -2\; ?\; ub_z : -lb_z) ) \\
- *                     & z = (a = -2\; ?\; y - \left\lfloor \frac{rhs + |I|}{2} \right\rfloor\; :\; -y + \left\lfloor \frac{rhs + |I|}{2} \right\rfloor)
+ *                     & -\sum_{i \in I} x_i + \sum_{j \in J} x_j + a \cdot z = r \\
+ *     \Leftrightarrow & \sum_{i \in I} \bar{x}_i + \sum_{j \in J} x_j + a \cdot z = r + |I| \\
+ *     \Leftrightarrow & \sum_{i \in I} \bar{x}_i + \sum_{j \in J} x_j - 2 \cdot y = (r + |I|) \text{ mod } 2,
  *    \end{array}
  *  \f]
+ *  where
+ *  \f[
+ *    y = \begin{cases}
+ *            \left\lfloor \frac{r + |I|}{2} \right\rfloor + z & \text{if }a = -2\\
+ *            \left\lfloor \frac{r + |I|}{2} \right\rfloor - z & \text{if }a = 2.
+ *        \end{cases}
+ *  \f]
+ *  If \f$a = -2\f$ and \f$z \in [\ell_z, u_z]\f$, then \f$y \in [\ell_y, u_y]\f$, where \f$\ell_y = \left\lfloor
+ *  \frac{r + |I|}{2} \right\rfloor + \ell_z\f$ and \f$u_y = \left\lfloor \frac{r + |I|}{2} \right\rfloor + u_z\f$.
+ *
+ *  If \f$a = 2\f$, then \f$\ell_y = \left\lfloor \frac{r + |I|}{2} \right\rfloor - u_z\f$ and \f$u_y = \left\lfloor
+ *  \frac{r + |I|}{2} \right\rfloor - \ell_z\f$.
+ *
+ *  Then consider the resulting XOR-constraint
+ *  \f[
+ *      \bigoplus_{i \in I} \bar{x}_i \oplus \bigoplus_{j \in j} x_j = (r + |I|) \text{ mod } 2.
+ *  \f]
+ *  If \f$\ell_y \leq 0\f$ and \f$u_y \geq (|I| + |J|)/2\f$, then the XOR constraint is a reformulation of the above
+ *  transformed constraint, otherwise it is a relaxation because the bounds on the \f$y\f$-variable may disallow
+ *  too many (or too few) operators set to 1. Therefore, the XOR constraint handler verifies in this case that the linear
+ *  equation holds, ie., that the \f$y\f$-variable has the correct value.
  */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
@@ -5164,7 +5261,8 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
       if( firstchange < nconss && conshdlrdata->presolusehashing )
       {
          /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs, naggrvars, ndelconss, naddconss, &cutoff) );
+         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs,
+               nfixedvars, naggrvars, ndelconss, naddconss, &cutoff) );
       }
       if( conshdlrdata->presolpairwise )
       {
