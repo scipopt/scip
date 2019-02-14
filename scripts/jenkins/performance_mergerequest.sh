@@ -10,34 +10,22 @@
 ###################
 
 # This script is used by cijenkins.zib.de.
-# Depending on the day of the week this script will start different testruns on the cluster.
 
 # Usage: from scip root execute
-#        GITBRANCH=master ./performance_runs.sh
+#        GITBRANCH=master ./performance_mergerequest.sh
 
 # Arguments | defaultvalue                             | possibilities
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, bugfix
 
-echo "This is performance_runs.sh running."
-
-# arguments and defaults
-# Find out what day of week it is: mon-1 .. sun-7
-: ${DAY_OF_WEEK:=$(date +%u)}
+echo "This is performance_mergerequest.sh running."
+: ${TESTMODE:="full"}
 
 ######################################
 ### evaluate commandline arguments ###
 ######################################
 
-# set default arguments
-# If no branch is given, try to guess the branch based on the current directory
-if [ "${GITBRANCH}" == "" ]; then
-  # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
-  GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
-  if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
-  fi
-fi
+export GITBRANCH=${gitlabTargetBranch}
 
 if [ "${GITBRANCH}" != "master" ]; then
   if [[ ${GITBRANCH} =~ "bugfix" ]]; then
@@ -48,7 +36,6 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
-export GITBRANCH
 export MODE=performance
 
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
@@ -63,108 +50,74 @@ export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 # create required directory
 mkdir -p settings
 
-#######################
-### Update Branches ###
-#######################
-
-BRANCHNAME=${GITBRANCH}
-if [ "${GITBRANCH}" == "bugfix" ]; then
-  BRANCHNAME="v60-bugfix"
-fi
-if [ "${DAY_OF_WEEK}" == "6" ]; then
-  git checkout ${BRANCHNAME}
-  git pull
-  git checkout performance-${GITBRANCH}
-  git merge ${BRANCHNAME} --ff-only
-  git push
-  git checkout ${BRANCHNAME}
-fi
-
 ####################################
 ### jobs configuration variables ###
 ####################################
 # NOTES:
 #  - If you change the configuration, you have to make sure that you update the number of jobs in the N_JOBS array.
-#  - Jobs indices start at DAY_OF_WEEK,1 and not at zero.
+#  - Jobs indices start at 1 and not at zero.
 #  - For all jobs the calls to 'make' and 'make testcluster' the flags are concatenated from
 #      the given flags and the SCIP_FLAGS.
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
-#  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
+#  - Only 10 runs will be executed. If you need more you should overthink you overall concept.
 #  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
-#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=mergerequest"
 
-RANDOMSEED=$(date +%Y%m%d)
+RANDOMSEED=$(date +%Y%m%d%H%M)
 
 # use associative arrays, this requires bash4
 # declaration
 declare -A JOBS
-declare -A TRIGGER
 
 # for descriptions on the testsets see scip/check/testsets/README.md
- running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
-JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
-TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
+# jobs running
 
-# jobs running on sunday
+if [ "${TESTMODE}" == "full" ]; then
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
+  JOBS[2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
+  JOBS[3]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
+else
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=mip-dbg TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
+fi
 
 SAPSETTINGS=sap-next-release-pure-diff
-
 if [ "${GITBRANCH}" != "master" ]; then
   SAPSETTINGS=sap-600-pure-diff
 fi
 
-JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
-
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
 ln -fs ~/sap-600-pure-diff.set settings/.
-
 
 #########################
 ### process variables ###
 #########################
 
 # To improve accessibility move todays jobs into separate array
-TODAYS_N_JOBS=0
-TODAYS_N_TRIGGERS=0
+N_JOBS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
 for i in `seq 1 10`; do
-  if [ "${JOBS[${DAY_OF_WEEK},$i]}" == "" ]; then
+  if [ "${JOBS[$i]}" == "" ]; then
     break
   fi
-  TODAYS_N_JOBS=$i
+  N_JOBS=$i
 done
 
 declare -A TODAYS_JOBS
 
-for i in `seq 1 ${TODAYS_N_JOBS}`; do
-  TODAYS_JOBS[$i]="${JOBS[${DAY_OF_WEEK},$i]} OUTPUTDIR=results${RANDOMSEED}_${i}"
+for i in `seq 1 ${N_JOBS}`; do
+  TODAYS_JOBS[$i]="${JOBS[$i]} OUTPUTDIR=results${RANDOMSEED}_${i}"
 done
 
 # Print some information about what is happening
-echo "Today is `date +%A`. Running the following ${TODAYS_N_JOBS} jobs (index ${DAY_OF_WEEK},*):"
-for i in `seq 1 ${TODAYS_N_JOBS}`; do
+echo "Today is `date +%A`. Running the following ${N_JOBS} jobs:"
+for i in `seq 1 ${N_JOBS}`; do
   echo "- job configuration: '${TODAYS_JOBS[$i]}'"
 done
-echo "Triggering the following jobs:"
-for i in `seq 1 10`; do
-  if [ "${TRIGGER[${DAY_OF_WEEK},$i]}" == "" ]; then
-    break
-  fi
-  echo "- ${TRIGGER[${DAY_OF_WEEK},$i]}"
-  TODAYS_N_TRIGGERS=$i
-done
 
-# exit if nothing to do
-if [ "${TODAYS_N_JOBS}" == "0" -a "${TODAYS_N_TRIGGERS}" == "0" ]; then
-  echo "No schedules for today! Exiting."
-  exit 0
-fi
-
-if [ "${TODAYS_N_JOBS}" != "0" ]; then
+if [ "${N_JOBS}" != "0" ]; then
   ###################
   ### Compilation ###
   ###################
@@ -178,9 +131,6 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
   make -j4
   cd ..
-
-  # TODO tag this
-
 
   ######################
   ### Setup testruns ###
@@ -204,7 +154,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   ### Submit Testruns ###
   #######################
 
-  for i in `seq 1 ${TODAYS_N_JOBS}`; do
+  for i in `seq 1 ${N_JOBS}`; do
     FLAGS=${TODAYS_JOBS[$i]}
     for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
       unset $j
@@ -215,10 +165,3 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   done
 fi
 
-if [ "${TODAYS_N_TRIGGERS}" != "0" ]; then
-  # NOTE: only check up to 10 triggers. If there are more there is something wrong...
-  echo "Will trigger the following jobs:"
-  for i in `seq 1 ${TODAYS_N_TRIGGERS}`; do
-    curl -f -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
-  done
-fi
