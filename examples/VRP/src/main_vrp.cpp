@@ -20,7 +20,7 @@
  *
  * We want to solve the vehicle routing problem on a graph G = (V,E) with
  * V = J cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{<= 0}.
+ * length function l_e: E -> R_{>= 0}.
  *
  * Consider the MIP formulation
  *
