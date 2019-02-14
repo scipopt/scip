@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1710,7 +1710,7 @@ SCIP_RETCODE createAndAddTransferredCut(
       SCIPbendersGetNTransferredCuts(sourcebenders) );
 
    /* TODO: It could be more efficient to pass an updated vars array with the vals array to the
-    * SCIPcreateConsBasicLinear/SCIPcreateEmptyRowCons. This should be implemented to improve the performance of the
+    * SCIPcreateConsBasicLinear/SCIPcreateEmptyRowConshdlr. This should be implemented to improve the performance of the
     * Large Neighbourhood Benders Search.
     */
 
@@ -1722,7 +1722,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    }
    else
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
             FALSE, TRUE) );
    }
 

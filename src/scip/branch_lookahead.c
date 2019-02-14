@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -665,7 +665,7 @@ const char* getStatusString(
    case SCIP_NEWROUND:
       return "SCIP_NEWROUND";
    case SCIP_REDUCEDDOM:
-      return "SCIP_REDUCEDDOM"
+      return "SCIP_REDUCEDDOM";
    case SCIP_CONSADDED:
       return "SCIP_CONSADDED";
    case SCIP_CONSCHANGED:
@@ -684,7 +684,7 @@ const char* getStatusString(
       return "SCIP_DELAYNODE";
    default:
       SCIPerrorMessage("result code %d not treated in lookahead branching rule\n", result);
-      SCIP_ABORT();
+      SCIPABORT();
       return "UNKNOWN";
    }
 }
@@ -2794,7 +2794,7 @@ SCIP_RETCODE applyBinaryConstraints(
    assert(config != NULL);
    assert(consadded != NULL);
    assert(cutoff != NULL);
-   assert(boundchange != NULL)
+   assert(boundchange != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nelements);
 
