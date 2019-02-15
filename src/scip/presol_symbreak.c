@@ -791,8 +791,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   int* components;
-   int* componentbegins;
+   int* components = NULL;
+   int* componentbegins = NULL;
    int* vartocomponent;
    int ncomponents;
    int usesymmetry;

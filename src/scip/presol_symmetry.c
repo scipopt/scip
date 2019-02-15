@@ -1296,7 +1296,8 @@ SCIP_RETCODE computeComponents(
    perms = presoldata->perms;
    permstrans = presoldata->permstrans;
    assert( npermvars > 0 );
-   assert( perms != NULL || permstrans != NULL );
+   assert( (! ISORBITALFIXINGACTIVE(presoldata->usesymmetry) && perms != NULL)
+      || (ISORBITALFIXINGACTIVE(presoldata->usesymmetry) && permstrans != NULL) );
 
    SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
    ncomponents = npermvars;
@@ -1316,7 +1317,7 @@ SCIP_RETCODE computeComponents(
       {
          int img;
 
-         img = ISORBITALFIXINGACTIVE(presoldata->usesymmetry) ? permstrans[i][p] : perms[p][i];
+         img = ISORBITALFIXINGACTIVE(presoldata->usesymmetry) ? permstrans[i][p] : perms[p][i]; /*lint !e613*/
 
          /* perm p affects i -> possibly merge var components */
          if ( img != i )
@@ -2343,7 +2344,7 @@ SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
    if ( presol == NULL )
    {
       SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return FALSE;
+      return SCIP_PLUGINNOTFOUND;
    }
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
