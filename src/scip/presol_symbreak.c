@@ -477,7 +477,7 @@ SCIP_RETCODE detectOrbitopes(
          }
       }
 
-      /* if no orbitope was detected or orbitope has too few rows */
+      /* if no orbitope was detected */
       if ( ! isorbitope )
          continue;
       assert( ntwocyclescomp > 0 );
