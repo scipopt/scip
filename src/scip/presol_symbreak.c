@@ -326,7 +326,7 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
          /* elements in first column of orbitope have to appear exactly once in the orbitope */
-         if ( nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
+         if ( nfilledcols == 0 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
          {
             *infeasible = TRUE;
             break;
