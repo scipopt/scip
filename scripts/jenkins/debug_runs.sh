@@ -117,7 +117,7 @@ JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 ### process variables ###
 #########################
 
-# To improve accessibility move todays jobs into seperate array
+# To improve accessibility move todays jobs into separate array
 TODAYS_N_JOBS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
