@@ -56,7 +56,11 @@ export MODE=performance
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_master_Release/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+fi
 
 export CRITERION_DIR=""
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
