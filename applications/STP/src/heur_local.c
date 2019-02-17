@@ -1693,7 +1693,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    return SCIP_OKAY;
 }
-#define NEW
+//#define NEW
 
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
