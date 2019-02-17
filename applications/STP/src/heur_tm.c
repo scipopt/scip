@@ -2831,7 +2831,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
 
 
-
    if( xval == NULL )
    {
       BMScopyMemoryArray(cost, graph->cost, nedges);
@@ -2898,9 +2897,8 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
 
    heurdata->pcmwbias = save;
 
-
    SCIPfreeBufferArrayNull(scip, &prize);
-   SCIPfreeBufferArray(scip, &nodepriority);
+   SCIPfreeBufferArrayNull(scip, &nodepriority);
 
    return SCIP_OKAY;
 }
