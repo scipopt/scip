@@ -107,6 +107,16 @@ RANDOMSEED=$(date +%Y%m%d)
 declare -A JOBS
 declare -A TRIGGER
 
+# SAPSETTINGS
+SAPSETTINGS=sap-next-release-pure-diff
+if [ "${GITBRANCH}" != "master" ]; then
+  SAPSETTINGS=sap-600-pure-diff
+fi
+
+# symlink to SAP settings for the next release settings
+ln -fs ~/sap-next-release-pure-diff.set settings/.
+ln -fs ~/sap-600-pure-diff.set settings/.
+
 # for descriptions on the testsets see scip/check/testsets/README.md
 
 if [ "${GITBRANCH}" == "master" ]; then
@@ -131,16 +141,6 @@ else # on bugfix
   JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 fi
-
-SAPSETTINGS=sap-next-release-pure-diff
-if [ "${GITBRANCH}" != "master" ]; then
-  SAPSETTINGS=sap-600-pure-diff
-fi
-
-# symlink to SAP settings for the next release settings
-ln -fs ~/sap-next-release-pure-diff.set settings/.
-ln -fs ~/sap-600-pure-diff.set settings/.
-
 
 #########################
 ### process variables ###
