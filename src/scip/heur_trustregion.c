@@ -78,7 +78,7 @@
 
 #define HEUR_NAME             "trustregion"
 #define HEUR_DESC             "LNS heuristic for Benders' decomposition based on trust region methods"
-#define HEUR_DISPCHAR         '?'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1102000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
