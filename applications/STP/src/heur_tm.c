@@ -1932,16 +1932,15 @@ void initCostsAndPrioLP(
    SCIP_HEURDATA*        heurdata,           /**< heurdata */
    SCIP_VAR**            vars,               /**< variables */
    const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             randupper,          /**< random value bound */
+   SCIP_Real             randlower,          /**< random value bound */
    const SCIP_Real*      xval,               /**< xval */
    SCIP_Real*            nodepriority,       /**< node priority (uninitialized) */
    SCIP_Real*            prize,              /**< prize (uninitialized) or NULL */
    SCIP_Real*            cost,               /**< arc costs (uninitialized) */
-   SCIP_Real*            costrev,            /**< reversed arc costs (uninitialized) */
    SCIP_Real*            maxcost_p           /**< maximum cost for DHPCSTP */
 )
 {
-   const SCIP_Real randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
-   const SCIP_Real randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
    SCIP_Bool partrand = FALSE;
    SCIP_Bool totalrand = FALSE;
    const int nedges = graph->edges;
@@ -2221,7 +2220,6 @@ SCIP_RETCODE runPcMW(
    int                   bestincstart,       /**< best incumbent start vertex */
    SCIP_Real*            dijkdist,           /**< temp */
    SCIP_Real*            cost,               /**< arc costs */
-   SCIP_Real*            costrev,            /**< reversed arc costs */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
    SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
    SCIP_Bool             pcmwfull,           /**< use full computation of tree (i.e. connect all terminals and prune) */
@@ -2499,16 +2497,16 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       if( bias == both )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
-               dijkdist, cost, costrev, nodepriority, success, pcmwfull, partial) );
+               dijkdist, cost, nodepriority, success, pcmwfull, partial) );
 
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
-                       dijkdist, cost, costrev, nodepriority, success, pcmwfull, full) );
+                       dijkdist, cost, nodepriority, success, pcmwfull, full) );
 
       }
       else
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
-            dijkdist, cost, costrev, nodepriority, success, pcmwfull, bias) );
+            dijkdist, cost, nodepriority, success, pcmwfull, bias) );
       }
    }
    else
@@ -2795,6 +2793,8 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    int save;
+   SCIP_Real randupper;
+   SCIP_Real randlower;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -2808,6 +2808,9 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
 
    vars = SCIPprobdataGetVars(scip);
    assert(vars != NULL);
+
+   randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
+   randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
 
    /* LP was not solved */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -2869,7 +2872,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    else
    {
       SCIP_CALL(SCIPallocBufferArray(scip, &nodepriority, nnodes));
-      initCostsAndPrioLP(scip, heurdata, vars, graph, xval, nodepriority, prize, cost, costrev, &maxcost);
+      initCostsAndPrioLP(scip, heurdata, vars, graph, randupper, randlower, xval, nodepriority, prize, cost, &maxcost);
    } /* xval != NULL */
 
 
