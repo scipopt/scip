@@ -119,25 +119,25 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
-   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
-   int                   minnodes;           /**< minimum number of nodes required to start the subproblem */
-   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem */
+   SCIP_SOL*             lastsol;            /**< the last incumbent trustregion used as reference point */
    SCIP_Longint          usednodes;          /**< amount of nodes trust region used during all calls */
    SCIP_Real             nodesquot;          /**< contingent of sub problem nodes in relation to original nodes */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
+   SCIP_Real             violpenalty;        /**< the penalty for violating the trust region */
+   SCIP_Real             objminimprove;      /**< the minimum improvement in the objective function value */
+   int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
+   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   int                   minnodes;           /**< minimum number of nodes required to start the subproblem */
+   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    int                   minbinvars;         /**< minimum number of binary variables necessary to run the heuristic */
    int                   callstatus;         /**< current status of trustregion heuristic */
-   SCIP_SOL*             lastsol;            /**< the last incumbent trustregion used as reference point */
    int                   curminnodes;        /**< current minimal number of nodes required to start the subproblem */
+   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
-   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search? */
-   SCIP_Real             violpenalty;        /**< the penalty for violating the trust region */
-   SCIP_Real             objminimprove;      /**< the minimum improvement in the objective function value */
 };
 
 
