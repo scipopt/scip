@@ -43,7 +43,7 @@
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
-#define HEUR_DISPCHAR         'i'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -10000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0

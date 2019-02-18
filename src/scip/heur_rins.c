@@ -49,7 +49,7 @@
 
 #define HEUR_NAME             "rins"
 #define HEUR_DESC             "relaxation induced neighborhood search by Danna, Rothberg, and Le Pape"
-#define HEUR_DISPCHAR         'N'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1101000
 #define HEUR_FREQ             25
 #define HEUR_FREQOFS          0

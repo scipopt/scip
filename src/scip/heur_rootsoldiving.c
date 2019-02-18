@@ -41,7 +41,7 @@
 
 #define HEUR_NAME         "rootsoldiving"
 #define HEUR_DESC         "LP diving heuristic that changes variable's objective values using root LP solution as guide"
-#define HEUR_DISPCHAR     'S'
+#define HEUR_DISPCHAR     SCIP_HEURDISPCHAR_OBJDIVING
 #define HEUR_PRIORITY     -1005000
 #define HEUR_FREQ         20
 #define HEUR_FREQOFS       5
