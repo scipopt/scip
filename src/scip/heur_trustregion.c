@@ -86,22 +86,22 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MINBINVARS    10        /* the minimum number of binary variables necessary to run the heuristic */
-#define DEFAULT_NODESOFS      1000      /* number of nodes added to the contingent of the total nodes */
-#define DEFAULT_MAXNODES      10000     /* maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINNODES      100       /* minimum number of nodes required to start the subproblem */
-#define DEFAULT_NODESQUOT     0.05      /* contingent of sub problem nodes in relation to original nodes */
-#define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit */
-#define DEFAULT_NWAITINGNODES 1         /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
+#define DEFAULT_MINBINVARS    10        /**< the minimum number of binary variables necessary to run the heuristic */
+#define DEFAULT_NODESOFS      1000      /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_MAXNODES      10000     /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MINNODES      100       /**< minimum number of nodes required to start the subproblem */
+#define DEFAULT_NODESQUOT     0.05      /**< contingent of sub problem nodes in relation to original nodes */
+#define DEFAULT_LPLIMFAC      1.5       /**< factor by which the limit on the number of LP depends on the node limit */
+#define DEFAULT_NWAITINGNODES 1         /**< number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     FALSE     /**< should subproblem be created out of the rows in the LP rows,
                                          * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
+#define DEFAULT_COPYCUTS      TRUE      /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip */
-#define DEFAULT_BESTSOLLIMIT   3         /* limit on number of improving incumbent solutions in sub-CIP */
-#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search? */
+#define DEFAULT_BESTSOLLIMIT   3         /**< limit on number of improving incumbent solutions in sub-CIP */
+#define DEFAULT_USEUCT        FALSE     /**< should uct node selection be used at the beginning of the search? */
 
-#define DEFAULT_VIOLPENALTY   100.0     /* the penalty for violating the trust region */
-#define DEFAULT_OBJMINIMPROVE 1e-2      /* the minimum improvement in the objective function value */
+#define DEFAULT_VIOLPENALTY   100.0     /**< the penalty for violating the trust region */
+#define DEFAULT_OBJMINIMPROVE 1e-2      /**< the minimum improvement in the objective function value */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Trustregion"
@@ -145,7 +145,7 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** create the extra constraint of trust region and add it to subscip */
+/** create the extra constraint of trust region and add it to \p subscip */
 static
 SCIP_RETCODE addTrustRegionConstraints(
    SCIP*                 scip,               /**< SCIP data structure of the original problem */

@@ -99,8 +99,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
 /** creates a new solution for the original problem by copying the solution from the subproblem */
 EXTERN
 SCIP_RETCODE SCIPheuristicsCreateNewSol(
-   SCIP*                 scip,               /**< SCIP data structure  of the original problem */
-   SCIP*                 subscip,            /**< SCIP data structure  of the subproblem */
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_HEUR*            heur,               /**< the heuristic where the solution was found */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */

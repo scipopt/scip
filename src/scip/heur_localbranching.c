@@ -312,7 +312,7 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
    return SCIP_OKAY;
 }
 
-/** todo setup And Solve Subscip */
+/** setup And solve local branching subscip */
 static
 SCIP_RETCODE setupAndSolveSubscipLocalbranching(
    SCIP*                 scip,               /**< SCIP data structure */
