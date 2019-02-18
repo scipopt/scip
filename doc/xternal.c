@@ -3854,9 +3854,11 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral
  * LP-relaxation.
- * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
- * SCIP interactive shell.
+ * It is recommended to select a lower or upper case letter as display character. The default primal heuristics of
+ * SCIP use characters that describe the class to which the heuristic belongs. As an example all LP rounding heuristics
+ * have an 'r' and all Large Neighborhood Search heuristics use the letter 'L'.
+ * Users find commonly used display characters in type_heur.h.
+ *
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are
@@ -4194,7 +4196,7 @@
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
- * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * the user defined problem data, the LP information, or the integrality conditions), or it must be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
@@ -4222,11 +4224,11 @@
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
  *
- * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
- * These are given as compiler defines.
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties,
+ * which are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class scip::ObjRelax from within your constructor.
- * The properties you have to set have the following meaning:
+ * The properties have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.

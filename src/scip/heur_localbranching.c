@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "localbranching"
 #define HEUR_DESC             "local branching heuristic by Fischetti and Lodi"
-#define HEUR_DISPCHAR         'L'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1102000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

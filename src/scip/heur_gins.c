@@ -68,7 +68,7 @@
 
 #define HEUR_NAME             "gins"
 #define HEUR_DESC             "gins works on k-neighborhood in a variable-constraint graph"
-#define HEUR_DISPCHAR         'K'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          8
