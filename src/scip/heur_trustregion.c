@@ -522,20 +522,6 @@ SCIP_DECL_HEUREXEC(heurExecTrustregion)
    if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "trivial") == 0 )
       return SCIP_OKAY;
 
-   /* reset minnodes if new solution was found */
-   if( heurdata->lastsol != bestsol )
-   {
-      heurdata->curminnodes = heurdata->minnodes;
-      heurdata->callstatus = EXECUTE;
-      heurdata->lastsol = bestsol;
-   }
-
-   /* if no new solution was found and trust region also seems to fail, just keep on waiting */
-   if( heurdata->callstatus == WAITFORNEWSOL )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTRUN;
-
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
@@ -546,42 +532,63 @@ SCIP_DECL_HEUREXEC(heurExecTrustregion)
    maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    maxnnodes += heurdata->nodesofs;
 
-   /* determine the node limit for the current process */
-   nsubnodes = maxnnodes - heurdata->usednodes;
-   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
+   *result = SCIP_DIDNOTRUN;
 
-   /* check whether we have enough nodes left to call sub problem solving */
-   if( nsubnodes < heurdata->curminnodes )
-      return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP */
-   if( !success )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   SCIPdebugMsg(scip, "running trust region heuristic ...\n");
-
-   SCIP_CALL( SCIPcreate(&subscip) );
-
-   retcode = setupAndSolveSubscipTrustregion(scip, subscip, heur, nsubnodes, result);
-
-   SCIP_CALL( SCIPfree(&subscip) );
-
-   /* if a solution is found, then we execute the trust region heuristic again */
-   if( bestsol != SCIPgetBestSol(scip) )
+   /* we continue to execute the trust region heuristic until no new best solution is found */
+   do
    {
-      prevnwaitingnodes = heurdata->nwaitingnodes;
-      heurdata->nwaitingnodes = 0;
-      SCIP_CALL( heurExecTrustregion(scip, heur, heurtiming, nodeinfeasible, result) );
-      heurdata->nwaitingnodes = prevnwaitingnodes;
+      SCIP_RESULT heurresult;
+
+      /* storing the best solution again since it is needed for the execution loop */
+      bestsol = SCIPgetBestSol(scip);
+
+      /* reset minnodes if new solution was found */
+      if( heurdata->lastsol != bestsol )
+      {
+         heurdata->curminnodes = heurdata->minnodes;
+         heurdata->callstatus = EXECUTE;
+         heurdata->lastsol = bestsol;
+      }
+
+      /* if no new solution was found and trust region also seems to fail, just keep on waiting */
+      if( heurdata->callstatus == WAITFORNEWSOL )
+         return SCIP_OKAY;
+
+      /* determine the node limit for the current process */
+      nsubnodes = maxnnodes - heurdata->usednodes;
+      nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
+
+      /* check whether we have enough nodes left to call sub problem solving */
+      if( nsubnodes < heurdata->curminnodes )
+         return SCIP_OKAY;
+
+      if( SCIPisStopped(scip) )
+         return SCIP_OKAY;
+
+      /* check whether there is enough time and memory left */
+      SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+      /* abort if no time is left or there is not enough memory to create a copy of SCIP */
+      if( !success )
+         return SCIP_OKAY;
+
+      heurresult = SCIP_DIDNOTFIND;
+
+      SCIPdebugMsg(scip, "running trust region heuristic ...\n");
+
+      SCIP_CALL( SCIPcreate(&subscip) );
+
+      retcode = setupAndSolveSubscipTrustregion(scip, subscip, heur, nsubnodes, &heurresult);
+
+      SCIP_CALL( SCIPfree(&subscip) );
+
+      /* if the result is FOUNDSOL, this means that a solution was found during a previous execution of the heuristic.
+       * So the heuristic result should only be updated if the result is not FOUNDSOL.
+       */
+      if( *result != SCIP_FOUNDSOL )
+         *result = heurresult;
    }
+   while( bestsol != SCIPgetBestSol(scip) && retcode == SCIP_OKAY );
 
    return retcode;
 }
