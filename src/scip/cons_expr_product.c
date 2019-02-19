@@ -1360,7 +1360,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    {
       SCIP_INTERVAL childinterval;
 
-      childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
+      childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[c]);
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
       /* multiply childinterval with the so far computed interval */
@@ -1538,7 +1538,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
       return SCIP_OKAY;
 
    /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
       return SCIP_OKAY;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1558,12 +1558,12 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
             continue;
 
          SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor,
-               SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
+               SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[j]));
       }
 
       /* solve x*otherfactor = f for x in c_i */
       SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
-         SCIPgetConsExprExprInterval(expr), SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]));
+         SCIPgetConsExprExprActivity(scip, expr), SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]));
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
@@ -1614,7 +1614,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
          continue;
 
       assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
-      interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]);
+      interval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]);
 
       if( SCIPintervalGetSup(interval) <= 0.0 )
          nneg++;

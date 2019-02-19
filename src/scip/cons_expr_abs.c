@@ -192,7 +192,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
    SCIPintervalAbs(SCIP_INTERVAL_INFINITY, interval, childinterval);
@@ -485,15 +485,15 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= 0.0);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= 0.0);
 
    *nreductions = 0;
 
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
-   right = SCIPgetConsExprExprInterval(expr);  /* I */
+   right = SCIPgetConsExprExprActivity(scip, expr);  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
 
-   childbounds = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childbounds = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    SCIPintervalIntersect(&left, left, childbounds);    /* -I \cap bounds(x), could become empty */
    SCIPintervalIntersect(&right, right, childbounds);  /*  I \cap bounds(x), could become empty */
    /* compute smallest interval containing (-I \cap bounds(x)) \cup (I \cap bounds(x)) = (-I \cup I) \cap bounds(x)
@@ -530,6 +530,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_EXPRCURV childcurv;
+   SCIP_INTERVAL childbounds;
    SCIP_Real childinf;
    SCIP_Real childsup;
 
@@ -542,8 +543,9 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
    assert(child != NULL);
 
    childcurv = SCIPgetConsExprExprCurvature(child);
-   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
-   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, TRUE) );
+   childinf = SCIPintervalGetInf(childbounds);
+   childsup = SCIPintervalGetSup(childbounds);
 
    *curvature = SCIP_EXPRCURV_UNKNOWN;
 
@@ -581,6 +583,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_INTERVAL childbounds;
    SCIP_Real childinf;
    SCIP_Real childsup;
 
@@ -592,8 +595,9 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
-   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+   childbounds = SCIPgetConsExprExprActivity(scip, child);
+   childinf = SCIPintervalGetInf(childbounds);
+   childsup = SCIPintervalGetSup(childbounds);
 
    if( childsup <= 0.0 )
       *result = SCIP_MONOTONE_DEC;

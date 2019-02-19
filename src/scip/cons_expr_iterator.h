@@ -58,9 +58,9 @@ SCIP_Bool SCIPexpriteratorIsInit(
 
 /** initializes an expression iterator
  *
- * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ * @note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
  *
- * \note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
+ * @note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
  *
  * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
  *
@@ -225,7 +225,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
 
 /** gives the iterator specific user data of the current expression
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
@@ -234,7 +234,7 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
 
 /** gives the iterator specific user data of the current expressions current child
  *
- * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 EXTERN
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
@@ -243,7 +243,7 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
 
 /** gives the iterator specific user data of a given expression
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
@@ -253,7 +253,7 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
 
 /** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 EXTERN
 void SCIPexpriteratorSetCurrentUserData(
@@ -263,7 +263,7 @@ void SCIPexpriteratorSetCurrentUserData(
 
 /** sets the iterator specific user data of the current expressions current child
  *
- * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 EXTERN
 void SCIPexpriteratorSetChildUserData(

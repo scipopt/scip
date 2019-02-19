@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -411,6 +411,7 @@ SCIP_RETCODE setupAggregationData(
                   continue;
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
+               /* coverity[var_deref_op] */
                aggrdata->aggrrows[aggrdata->naggrrows] = colrows[k];
                aggrdata->aggrrowscoef[aggrdata->naggrrows] = colrowvals[k];
                ++aggrdata->naggrrows;
@@ -445,6 +446,7 @@ SCIP_RETCODE setupAggregationData(
          ngoodrows = 0;
          for( k = beg; k < end; ++k )
          {
+            /* coverity[var_deref_op] */
             int lppos = SCIProwGetLPPos(aggrdata->aggrrows[k]);
 
             if( aggrdata->nbadvarsinrow[lppos] == 1 &&

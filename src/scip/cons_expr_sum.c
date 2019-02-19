@@ -871,7 +871,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    {
       SCIP_INTERVAL childinterval;
 
-      childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
+      childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[c]);
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
       /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
@@ -1217,7 +1217,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSum)
 
    SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, SCIPgetConsExprExprNChildren(expr),
             SCIPgetConsExprExprChildren(expr), exprdata->coefficients, exprdata->constant,
-            SCIPgetConsExprExprInterval(expr), reversepropqueue, infeasible, nreductions, force) );
+            SCIPgetConsExprExprActivity(scip, expr), reversepropqueue, infeasible, nreductions, force) );
 
    return SCIP_OKAY;
 }
@@ -1475,8 +1475,7 @@ void SCIPmultiplyConsExprExprSumByConstant(
 }
 
 /** reverse propagate a weighted sum of expressions in the given interval */
-SCIP_RETCODE
-SCIPreverseConsExprExprPropagateWeightedSum(
+SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nexprs,             /**< number of expressions to propagate */
    SCIP_CONSEXPR_EXPR**  exprs,              /**< expressions to propagate */
@@ -1523,7 +1522,7 @@ SCIPreverseConsExprExprPropagateWeightedSum(
    /* shift coefficients into the intervals of the children; compute the min and max activities */
    for( c = 0; c < nexprs; ++c )
    {
-      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprInterval(exprs[c]),
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
          weights[c]);  /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
