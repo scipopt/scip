@@ -94,15 +94,12 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
-<<<<<<< HEAD
 - new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
   SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
   about the origin of the solution, ie, whether it was created by a relaxation handler,
   by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
-=======
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
->>>>>>> master
 
 ### Command line interface
 
