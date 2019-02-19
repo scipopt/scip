@@ -101,7 +101,7 @@
 #define DEFAULT_USEUCT        FALSE     /**< should uct node selection be used at the beginning of the search? */
 
 #define DEFAULT_VIOLPENALTY   100.0     /**< the penalty for violating the trust region */
-#define DEFAULT_OBJMINIMPROVE 1e-2      /**< the minimum improvement in the objective function value */
+#define DEFAULT_OBJMINIMPROVE 1e-2      /**< the minimum absolute improvement in the objective function value */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Trustregion"
@@ -125,7 +125,7 @@ struct SCIP_HeurData
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Real             violpenalty;        /**< the penalty for violating the trust region */
-   SCIP_Real             objminimprove;      /**< the minimum improvement in the objective function value */
+   SCIP_Real             objminimprove;      /**< the minimum absolute improvement in the objective function value */
    int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
    int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
    int                   minnodes;           /**< minimum number of nodes required to start the subproblem */
@@ -217,7 +217,11 @@ SCIP_RETCODE addTrustRegionConstraints(
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
-   /* create the upper bounding constraint */
+   /* create the upper bounding constraint. An absolute minimum improvement is used for this heuristic. This is
+    * different to other LNS heuristics, where a relative improvement is used. The absolute improvement tries to take
+    * into account problem specific information that is available to the user, such as a minimum step in the objective
+    * limit if the objective function is integer
+    */
    lhs = -SCIPinfinity(subscip);
    rhs = SCIPgetSolTransObj(scip, bestsol) - heurdata->objminimprove;
 
@@ -671,7 +675,7 @@ SCIP_RETCODE SCIPincludeHeurTrustregion(
          &heurdata->violpenalty, FALSE, DEFAULT_VIOLPENALTY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/objminimprove",
-         "the minimum improvement in the objective function value",
+         "the minimum absolute improvement in the objective function value",
          &heurdata->objminimprove, FALSE, DEFAULT_OBJMINIMPROVE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
