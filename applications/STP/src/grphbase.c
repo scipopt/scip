@@ -1532,6 +1532,8 @@ void graph_pc_getBiased(
    const int root = graph->source;
 
    assert(scip && graph && costbiased && prizebiased);
+   assert(graph->extended);
+   assert(!rpcmw || graph_pc_knotIsFixedTerm(graph, root));
 
    BMScopyMemoryArray(costbiased, graph->cost, nedges);
    for( int k = 0; k < nnodes; k++ )
@@ -1540,14 +1542,32 @@ void graph_pc_getBiased(
       {
          SCIP_Real mincost = FARAWAY;
 
-         for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            if( !rpcmw && graph->tail[e] == root )
+            const int head = graph->head[e];
+            if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
                continue;
 
             if( graph->cost[e] < mincost )
                mincost = graph->cost[e];
          }
+
+#ifndef NDEBUG
+         {
+            SCIP_Real mincostt = FARAWAY;
+
+            for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+            {
+               if( !rpcmw && graph->tail[e] == root )
+                  continue;
+
+               if( graph->cost[e] < mincostt )
+                  mincostt = graph->cost[e];
+            }
+            assert((graph->stp_type != STP_PCSPG && graph->stp_type != STP_RPCSPG )
+                  || SCIPisEQ(scip, mincostt, mincost) || graph->grad[k] <= 2 );
+         }
+#endif
 
          if( fullbias )
          {
@@ -1573,7 +1593,7 @@ void graph_pc_getBiased(
                continue;
 
             costbiased[e] -= mincost;
-            assert(!SCIPisNegative(scip, costbiased[e]));
+            assert(!SCIPisNegative(scip, costbiased[e]) || (graph->stp_type != STP_PCSPG && graph->stp_type != STP_RPCSPG));
          }
 
          prizebiased[k] = graph->prize[k] - mincost;

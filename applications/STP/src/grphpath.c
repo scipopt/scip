@@ -1634,7 +1634,6 @@ void graph_path_st_pcmw(
 
    pathdist[start] = 0.0;
    connected[start] = TRUE;
-   SCIPdebugMessage("start with %d \n", start);
 
    if( nnodes > 1 )
    {
@@ -1711,9 +1710,11 @@ void graph_path_st_pcmw(
 
             /* is m not connected, allowed and closer? */
             if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
+            {
                correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+            }
          }
-      }
+      } /* while( count > 0 ) */
    }
 }
 
