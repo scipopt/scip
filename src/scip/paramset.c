@@ -3888,6 +3888,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
                }
             }
          }
+
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "heuristics/useuctsubscip", TRUE, quiet) );
       }
       break;
    case SCIP_PARAMEMPHASIS_PHASEPROOF:
