@@ -952,12 +952,13 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    return SCIP_OKAY;
 }
 
-/** creates a new solution for the original problem by copying the solution from the subproblem */
-SCIP_RETCODE SCIPheuristicsCreateNewSol(
+/** translates a solution from the subproblem and tries to add it to the master SCIP */
+static
+SCIP_RETCODE translateSubSol(
    SCIP*                 scip,               /**< SCIP data structure of the original problem */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< the heuristic where the solution was found */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
    )
@@ -992,6 +993,46 @@ SCIP_RETCODE SCIPheuristicsCreateNewSol(
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
+
+   return SCIP_OKAY;
+}
+/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   )
+{
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+   assert(subvars != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   /* check, whether a solution was found */
+   if( SCIPgetNSols(subscip) > 0 )
+   {
+      SCIP_SOL** subsols;
+      int nsubsols;
+      int i;
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      for( i = 0; i < nsubsols && ! (*success); ++i )
+      {
+         SCIP_CALL( translateSubSol(scip, subscip, subvars, heur, subsols[i], success) );
+      }
+      if( *success )
+      {
+         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+      }
+   }
 
    return SCIP_OKAY;
 }

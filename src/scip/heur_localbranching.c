@@ -72,7 +72,6 @@
                                          * of the original scip be copied to constraints of the subscip
                                          */
 #define DEFAULT_BESTSOLLIMIT   3         /* limit on number of improving incumbent solutions in sub-CIP            */
-#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Localbranching"
@@ -110,7 +109,6 @@ struct SCIP_HeurData
                                               *   to constraints in subproblem?
                                               */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
-   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -220,10 +218,7 @@ SCIP_RETCODE addLocalbranchingConstraintAndObjcutoff(
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
- *
- * we interrupt the solution process
- */
+/** event handler execution callback to interrupt the solution process */
 static
 SCIP_DECL_EVENTEXEC(eventExecLocalbranching)
 {
@@ -380,8 +375,7 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
    SCIPhashmapFree(&varmapfw);
 
    heurdata->nodelimit = nsubnodes;
-   SCIP_CALL( SCIPlocalbranchingSetWorkingLimits(scip, subscip, nsubnodes, heurdata->bestsollimit,
-         heurdata->useuct) );
+   SCIP_CALL( SCIPsetCommonSubscipParams(scip, subscip, nsubnodes, MAX(10, nsubnodes/10), heurdata->bestsollimit) );
 
    /* adds the local branching constraint and the objective cutoff to the auxiliary problem */
    SCIP_CALL( addLocalbranchingConstraintAndObjcutoff(scip, subscip, heur, subvars) );
@@ -420,7 +414,10 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
-   SCIP_CALL( SCIPlocalbranchingCheckAndAddSolution(scip, subscip, heur, subvars, result) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+
+   if( success )
+      *result = SCIP_FOUNDSOL;
 
    /* check the status of the sub-MIP */
    switch( SCIPgetStatus(subscip) )
@@ -655,143 +652,6 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
          "limit on number of improving incumbent solutions in sub-CIP",
          &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
-         "should uct node selection be used at the beginning of the search?",
-         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
-
-/** sets the working limits for the auxiliary problem */
-SCIP_RETCODE SCIPlocalbranchingSetWorkingLimits(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,            /**< the subproblem created by localbranching */
-   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
-   int                   bestsollimit,       /**< the limit on the number of best solutions found */
-   SCIP_Bool             useuct              /**< should the uct node selector be used? */
-   )
-{
-   assert(scip != NULL);
-   assert(subscip != NULL);
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-   /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-   /* set limits for the subproblem */
-   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", bestsollimit) );
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-   /* disable cutting plane separation */
-   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* use best estimate node selection */
-   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
-   }
-
-   /* activate uct node selection at the top of the tree */
-   if( useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
-   }
-
-   /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-   }
-
-   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
-   if( !SCIPisParamFixed(subscip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
-   }
-
-   /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
-SCIP_RETCODE SCIPlocalbranchingCheckAndAddSolution(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP*                 subscip,            /**< the subproblem created by localbranching */
-   SCIP_HEUR*            heur,               /**< localbranching heuristic */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem */
-   SCIP_RESULT*          result              /**< result pointer */
-   )
-{
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(heur != NULL);
-   assert(subvars != NULL);
-   assert(result != NULL);
-
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-      int i;
-      SCIP_Bool success;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( SCIPheuristicsCreateNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      }
-      if( success )
-      {
-         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
-         *result = SCIP_FOUNDSOL;
-      }
-   }
 
    return SCIP_OKAY;
 }

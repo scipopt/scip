@@ -51,7 +51,6 @@
 #include "scip/cons_linear.h"
 #include "scip/heuristics.h"
 #include "scip/heur_trustregion.h"
-#include "scip/heur_localbranching.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -98,7 +97,6 @@
 #define DEFAULT_COPYCUTS      TRUE      /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip */
 #define DEFAULT_BESTSOLLIMIT   3         /**< limit on number of improving incumbent solutions in sub-CIP */
-#define DEFAULT_USEUCT        FALSE     /**< should uct node selection be used at the beginning of the search? */
 
 #define DEFAULT_VIOLPENALTY   100.0     /**< the penalty for violating the trust region */
 #define DEFAULT_OBJMINIMPROVE 1e-2      /**< the minimum absolute improvement in the objective function value */
@@ -137,7 +135,6 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
-   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search? */
 };
 
 
@@ -257,10 +254,7 @@ SCIP_RETCODE addTrustRegionConstraints(
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
- *
- * we interrupt the solution process
- */
+/** event handler execution callback to interrupt the solution process */
 static
 SCIP_DECL_EVENTEXEC(eventExecTrustregion)
 {
@@ -415,8 +409,7 @@ SCIP_RETCODE setupAndSolveSubscipTrustregion(
    SCIPhashmapFree(&varmapfw);
 
    heurdata->nodelimit = nsubnodes;
-   SCIP_CALL( SCIPlocalbranchingSetWorkingLimits(scip, subscip, nsubnodes, heurdata->bestsollimit,
-         heurdata->useuct) );
+   SCIP_CALL( SCIPsetCommonSubscipParams(scip, subscip, nsubnodes, MAX(10, nsubnodes/10), heurdata->bestsollimit) );
 
    SCIP_CALL( addTrustRegionConstraints(scip, subscip, subvars, heurdata) );
 
@@ -455,7 +448,10 @@ SCIP_RETCODE setupAndSolveSubscipTrustregion(
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
-   SCIP_CALL( SCIPlocalbranchingCheckAndAddSolution(scip, subscip, heur, subvars, result) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+
+   if( success )
+      *result = SCIP_FOUNDSOL;
 
    /* checking the status of the subscip */
    heurdata->callstatus = WAITFORNEWSOL;
@@ -488,8 +484,6 @@ SCIP_DECL_HEUREXEC(heurExecTrustregion)
 
    SCIP_Bool success;
    SCIP_RETCODE retcode;
-
-   int prevnwaitingnodes;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -665,10 +659,6 @@ SCIP_RETCODE SCIPincludeHeurTrustregion(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
          "limit on number of improving incumbent solutions in sub-CIP",
          &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
-         "should uct node selection be used at the beginning of the search?",
-         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/violpenalty",
          "the penalty for each change in the binary variables from the candidate solution",
