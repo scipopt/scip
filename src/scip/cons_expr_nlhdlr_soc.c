@@ -40,20 +40,16 @@
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
-   SCIP_VAR**            vars;               /**< variables on left hand side (x) */
-   SCIP_Real*            coefs;              /**< coefficients for left hand side (alpha_i) */
-   SCIP_Real*            offsets;            /**< offsets for left hand side (beta_i) */
-   SCIP_Real*            transcoefs;         /**< non-zeroes of linear transformation vectors on left hand side (v_i) */
+   SCIP_VAR**            vars;               /**< variables appearing ob both sides (x) */
+   SCIP_Real*            coefs;              /**< coefficients of both sides (alpha_i) */
+   SCIP_Real*            offsets;            /**< offsets of bot sides (beta_i) */
+   SCIP_Real*            transcoefs;         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  nnonzeroes;         /**< number of non-zeroes in each v_i */
    SCIP_Real             constant;           /**< constant on left hand side (gamma) */
-   int                   nvars;              /**< total number of variables appearing on left hand side */
-   int                   nterms;             /**< number of summands in the SQRT (excluding gamma) */
+   int                   nvars;              /**< total number of variables appearing */
+   int                   nterms;             /**< number of summands in the SQRT (excluding gamma) +1 for RHS (n+1)*/
    int                   ntranscoefs;        /**< total number of entries in transcoefs */
-
-   SCIP_VAR*             rhsvar;             /**< right-hand side variable (x_{n+1}) */
-   SCIP_Real             rhscoef;            /**< coefficient of right-hand side variable (alpha_{n+1}) */
-   SCIP_Real             rhsoffset;          /**< offset for variable on right hand side (beta_{n+1}) */
 
    /* variables for cone disaggregation */
    SCIP_VAR**            disvars;           /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
@@ -73,19 +69,16 @@ struct SCIP_ConsExpr_NlhdlrData
 static
 SCIP_RETCODE createNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variables on left hand side (x) */
-   SCIP_Real*            coefs,              /**< coefficients for left hand side (alpha_i) */
-   SCIP_Real*            offsets,            /**< offsets for left hand side (beta_i) */
-   SCIP_Real*            transcoefs,         /**< non-zeros of linear transformation vectors on left hand side (v_i) */
+   SCIP_VAR**            vars,               /**< variables appearing ob both sides (x) */
+   SCIP_Real*            coefs,              /**< coefficients of both sides (alpha_i) */
+   SCIP_Real*            offsets,            /**< offsets of bot sides (beta_i) */
+   SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
-   int*                  nnonzeroes,         /**< number of non-zeros in each v_i */
+   int*                  nnonzeroes,         /**< number of non-zeroes in each v_i */
    SCIP_Real             constant,           /**< constant on left hand side (gamma) */
-   int                   nvars,              /**< total number of variables appearing on left hand side */
-   int                   nterms,             /**< number of summands in the SQRT (excluding gamma) */
+   int                   nvars,              /**< total number of variables appearing */
+   int                   nterms,             /**< number of summands in the SQRT (excluding gamma) +1 for RHS */
    int                   ntranscoefs,        /**< total number of entries in transcoefs */
-   SCIP_VAR*             rhsvar,             /**< right-hand side variable */
-   SCIP_Real             rhscoef,            /**< coefficient of right-hand side variable */
-   SCIP_Real             rhsoffset,          /**< offset for variable on right hand side (beta_{n+1}) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
    )
 {
@@ -97,8 +90,7 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(transcoefs != NULL);
    assert(transcoefsidx != NULL);
    assert(nnonzeroes != NULL);
-   assert(rhsvar != NULL);
-   assert(rhscoef != 0.0);
+   assert(coefs[nterms-1] != 0.0);
    assert(nlhdlrexprdata != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
@@ -112,9 +104,6 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->nvars = nvars;
    (*nlhdlrexprdata)->nterms = nterms;
    (*nlhdlrexprdata)->ntranscoefs = ntranscoefs;
-   (*nlhdlrexprdata)->rhsvar = rhsvar;
-   (*nlhdlrexprdata)->rhscoef = rhscoef;
-   (*nlhdlrexprdata)->rhsoffset = rhsoffset;
 
    /* capture variables on LHS */
    for( i = 0; i < nvars; ++i )
@@ -122,9 +111,6 @@ SCIP_RETCODE createNlhdlrExprData(
       assert(vars[i] != NULL);
       SCIPcaptureVar(scip, vars[i]);
    }
-
-   /* capture RHS variable */
-   SCIP_CALL( SCIPcaptureVar(scip, rhsvar) );
 
    return SCIP_OKAY;
 }
@@ -140,9 +126,6 @@ SCIP_RETCODE freeNlhdlrExprData(
 
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
-
-   /* release RHS variable */
-   SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->rhsvar) );
 
    /* release LHS variables */
    for( i = 0; i < (*nlhdlrexprdata)->nvars; ++i )
@@ -491,7 +474,11 @@ SCIP_RETCODE detectSocNorm(
          return SCIP_OKAY;
    }
 
+   SCIP_CALL( SCIPhashmapCreate(&vars2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+
    ntranscoefs = 0;
+   nvars = 0;
+
 
    /* iterate over children and count number of summands (1 for non-sum-expressions) */
    for( i = 0; i < nchildren; ++i )
@@ -501,22 +488,67 @@ SCIP_RETCODE detectSocNorm(
 
       squarearg = SCIPgetConsExprExprChildren(children[i])[0];
 
-      if( SCIPgetConsExprExprHdlr(squarearg) == SCIPgetConsExprExprHdlrSum(conshdlr) )
-         ntranscoefs += SCIPgetConsExprExprNChildren(squarearg);
-      else
+      if( SCIPgetConsExprExprHdlr(squarearg) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      {
+         SCIP_VAR* argauxvar;
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, squarearg, &argauxvar) );
+         assert(argauxvar != NULL);
+
+         if( !SCIPhashmapExists(vars2idx, (void*) argauxvar) )
+         {
+            SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) argauxvar, nvars) );
+            ++nvars;
+         }
          ++ntranscoefs;
+      }
+      else
+      {
+         SCIP_CONSEXPR_EXPR** argchildren;
+         int nargchildren;
+         int j;
+
+         /* get data of children of square argument (sum expr) */
+         argchildren = SCIPgetConsExprExprChildren(squarearg);
+         nargchildren = SCIPgetConsExprExprNChildren(squarearg);
+
+         for( j = 0; j < nargchildren; ++j )
+         {
+            SCIP_VAR* childauxvar;
+
+            /* if the summand is not a variable, create/get the childauxvar, otherwise this just gives the resp. variable */
+            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, argchildren[j], &childauxvar) );
+            assert(childauxvar != NULL);
+
+            if( !SCIPhashmapExists(vars2idx, (void*) childauxvar) )
+            {
+               SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) childauxvar, nvars) );
+               ++nvars;
+            }
+         }
+
+         ntranscoefs += SCIPgetConsExprExprNChildren(squarearg);
+      }
    }
+
+   /* add the auxvar to hashmap */
+   SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) auxvar, nvars) );
+   ++nvars;
 
    /* allocate temporary memory for data to collect */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nchildren+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nchildren) );
-   SCIP_CALL( SCIPhashmapCreate(&vars2idx, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nchildren+1) );
 
-   nvars = 0;
-   nexttranscoef = 0;
+
+   /* add the auxiliary variable */
+   assert(SCIPhashmapExists(vars2idx, (void*) auxvar));
+   vars[nvars-1] = auxvar;
+   transcoefs[nexttranscoef] = 1.0;
+   transcoefsidx[nexttranscoef] = nvars-1;
+   nexttranscoef = 1;
 
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
@@ -529,24 +561,16 @@ SCIP_RETCODE detectSocNorm(
       /* for all but some expression, just make sure the auxiliary variable exists */
       if( SCIPgetConsExprExprHdlr(squarearg) != SCIPgetConsExprExprHdlrSum(conshdlr) )
       {
-         SCIP_VAR* childauxvar;
+         SCIP_VAR* argauxvar;
          int auxvarpos;
 
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, squarearg, &childauxvar) );
-         assert(childauxvar != NULL);
+         argauxvar = SCIPgetConsExprExprAuxVar(squarearg);
+         assert(argauxvar != NULL);
+         assert(SCIPhashmapExists(vars2idx, (void*) argauxvar));
 
-         /* check if childauxvar is already in vars array (possible for common subexpressions */
-         if( SCIPhashmapExists(vars2idx, (void*) childauxvar) )
-         {
-            auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) childauxvar);
-         }
-         else
-         {
-            SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) childauxvar, nvars) );
-            vars[nvars] = childauxvar;
-            auxvarpos = nvars;
-            ++nvars;
-         }
+         /* get position of argauxvar from hashmap */
+         auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) argauxvar);
+         vars[auxvarpos] = argauxvar;
 
          transcoefs[nexttranscoef] = 1.0;
          transcoefsidx[nexttranscoef] = auxvarpos;
@@ -572,22 +596,13 @@ SCIP_RETCODE detectSocNorm(
             SCIP_VAR* childauxvar;
             int auxvarpos;
 
-            /* if the summand is not a variable, create/get the childauxvar, otherwise this just gives the resp. variable */
-            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, argchildren[j], &childauxvar) );
+            childauxvar = SCIPgetConsExprExprAuxVar(argchildren[j]);
             assert(childauxvar != NULL);
+            assert(SCIPhashmapExists(vars2idx, (void*) childauxvar));
 
-            /* check if childauxvar is already in vars array */
-            if( SCIPhashmapExists(vars2idx, (void*) childauxvar) )
-            {
-               auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) childauxvar);
-            }
-            else
-            {
-               SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) childauxvar, nvars) );
-               vars[nvars] = childauxvar;
-               auxvarpos = nvars;
-               ++nvars;
-            }
+            /* get position of childauxvar from hashmap */
+            auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) childauxvar);
+            vars[auxvarpos] = childauxvar;
 
             transcoefs[nexttranscoef] = argcoefs[j];
             transcoefsidx[nexttranscoef] = auxvarpos;
@@ -605,7 +620,7 @@ SCIP_RETCODE detectSocNorm(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, SCIPgetConsExprExprSumCoefs(child), offsets, transcoefs, transcoefsidx,
-         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nvars, nchildren, ntranscoefs, auxvar, 1.0, 0.0, nlhdlrexprdata) );
+         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nextvar, nchildren, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
