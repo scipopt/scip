@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualsparsify.c
- * @brief  cancel non-zeros of the constraint matrix based on the column
+ * @brief  cancel nonzeros of the constraint matrix based on the columns
  * @author Dieter Weninger
  * @author Robert Lion Gottwald
  * @author Ambros Gleixner
@@ -26,10 +26,10 @@
  *       4. knapsack constraint (unknown error) @done
  *       5. update locked number control @done
  *       6. currently, it seems impossible to aggregated a binary variable in SCIP
- *          even after aggregation, the new variable is binary. This is because 
- *          the aggregated variable is marked as multi-aggregated variable but the 
+ *          even after aggregation, the new variable is binary. This is because
+ *          the aggregated variable is marked as multi-aggregated variable but the
  *          SCIPvarCompareActiveAndNegated function assert that this is wrong.
- *       7. update the fillins
+ *       7. update the fillins @done
  *
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled variables to other variables.
@@ -70,33 +70,22 @@
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should dualsparsify presolver be copied to sub-SCIPs? */
-#define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 #define DEFAULT_PRESERVEINTCOEFS    FALSE    /**< should we forbid cancellations that destroy integer coefficients? */
+#define DEFAULT_PRESERVEGOODLOCKS   FALSE    /**< should we preserve good locked properties of variables (at most one lock in one direction)? */
 #define DEFAULT_MAX_CONT_FILLIN         1    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          1    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          1    /**< default value for the maximal fillin for integer variables (including binary) */
-#define DEFAULT_MAXNONZEROS            -1    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
-#define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
-#define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
+#define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered nonzeros within one column (-1: no limit) */
+#define DEFAULT_MINELIMINATEDNONZEROS 100    /**< minimal eleminated nonzeros within one column if we need to add a constraint to the problem */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
-#define DEFAULT_ISLOCKEDLIMIT       FALSE    /**< should locked limited be used to stop some aggregation */
-#define DEFAULT_MINCANCELNNZSADDCONS  100    /**< minimalcancelledd nonzeros within one column if we need to add a constraint to the problem */
 
-#define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
-#define MINSCALE                    0.001    /**< minimal allowed scale for cancelling non-zeros */
+#define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling nonzeros */
 
-
-#define DEFAULT_MINACCEPTCANCELNNZS    10    /**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
-#define DEFAULT_MINCONSIDEREDNNZS      10    /**< minimal number of considered non-zeros within one column */
-#define DEFAULT_MAXCOMPAREDEVERYPAIR  200    /**< maximal number on the implementaion of doing reduction on every pair of variables */
-#define DEFAULT_MAX_FILLINRATE       0.02    /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
-#define DEFAULT_MAX_FILLINRATE_FREE  0.01    /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
 
 /*
  * Data structures
  */
-
 
 /** presolver data */
 struct SCIP_PresolData
@@ -105,26 +94,17 @@ struct SCIP_PresolData
    int                   nfillin;            /**< total number of added nonzeros */
    int                   nfailures;          /**< number of calls to presolver without success */
    int                   nwaitingcalls;      /**< number of presolver calls until next real execution */
+   int                   naggregated;        /**< number of aggregated variables */
    int                   maxcontfillin;      /**< maximal fillin for continuous variables */
    int                   maxintfillin;       /**< maximal fillin for integer variables*/
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
-   int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
-   int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
+   int                   maxconsiderednonzeros;/**< maximal number of considered nonzeros within one column (-1: no limit) */
+   int                   mineliminatednonzeros;/**< minimal eliminated nonzeros within one column if we need to add a constraint to the problem */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
-   char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             enablecopy;         /**< should dualsparsify presolver be copied to sub-SCIPs? */
-   SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
-   SCIP_Bool             islockedlimit;      /**< should locked limit be used to store some aggregation */
-   int                   naggregated;
-   int                   mincancelnnzsaddcons;/**< minimal cancelled nonzeros within one column if we need to add a constraint to the problem */
-
-   int                   minacceptcancelnnzs;/**< minimal cancel nonzeros when accepting to aggregate the (nonfree) variable */
-   int                   minconsiderednnzs;  /**< minimal number of considered non-zeros within one column */
-   int                   maxcompareeverypair;/**< maximal number on the implementaion of doing reduction on every pair of variables */
-   SCIP_Real             maxfillinrate;      /**< cancel the variable if nfillins/ncancels is less than or equal this rate */
-   SCIP_Real             maxfillinratefree;  /**< cancel the free variable if nfillins/ncancels is less than or equal this rate */
+   SCIP_Bool             preservegoodlocks;  /**< should we preserve good locked properties of variables (at most one lock in one direction)? */
 };
 
 /** structure representing a pair of constraints in a cols; used for lookup in a hashtable */
@@ -623,8 +603,8 @@ SCIP_RETCODE aggregation(
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    SCIP_VAR**            vars,               /**< the current variables*/
-   int                   colidx1,            /**< one of the indexes of column to try non-zero cancellation for */
-   int                   colidx2,            /**< one of the indexes of column to try non-zero cancellation for */
+   int                   colidx1,            /**< one of the indexes of column to try nonzero cancellation for */
+   int                   colidx2,            /**< one of the indexes of column to try nonzero cancellation for */
    SCIP_Bool             isimpliedfree,      /**< is the aggregated variable implied free? */
    SCIP_Real             weight1            /**< weight variable one in the aggregated expression */
       )
@@ -727,22 +707,22 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 }
 
-/** try non-zero cancellation for given row */
+/** try nonzero cancellation for given column */
 static
 SCIP_RETCODE cancelCol(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
-   SCIP_Bool*            isimpliedfrees,     /**< array to indicates whether it is impliedfree or not */
+   SCIP_Bool*            ishashingcols,     /**< array to indicates whether it is impliedfree or not */
    SCIP_VAR**            vars,               /**< array to store the current variables */
    SCIP_Bool*            isblockedvar,       /**< array to indicates whether it is blocked or not */
-   int                   colidx,             /**< index of row to try non-zero cancellation for */
+   int                   colidx,             /**< index of row to try nonzero cancellation for */
    int                   maxcontfillin,      /**< maximal fill-in allowed for continuous variables */
    int                   maxintfillin,       /**< maximal fill-in allowed for integral variables */
    int                   maxbinfillin,       /**< maximal fill-in allowed for binary variables */
-   int                   maxconsiderednonzeros, /**< maximal number of non-zeros to consider for cancellation */
-   SCIP_Bool             preserveintcoefs,   /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
+   int                   maxconsiderednonzeros, /**< maximal number of nonzeros to consider for cancellation */
+   SCIP_Bool             preserveintcoefs,   /**< only perform nonzero cancellation if integrality of coefficients is preserved? */
    SCIP_Longint*         nuseless,           /**< pointer to update number of useless hashtable retrieves */
    int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
    int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
@@ -767,21 +747,31 @@ SCIP_RETCODE cancelCol(
    int nchgcoef;
    int nretrieves;
    SCIP_Real mincancelrate;
-   SCIP_Bool colisimpl;
+   SCIP_Bool colishashing;
    SCIP_VAR* cancelvar;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_Bool cancelisbin;
    SCIP_Real ncols;
+   int maxfillin;
 
-   colisimpl = isimpliedfrees[colidx];
+
    ncols = SCIPmatrixGetNColumns(matrix);
-
+   colishashing = ishashingcols[colidx];
    cancelcollen = SCIPmatrixGetColNNonzs(matrix, colidx);
    colidxptr = SCIPmatrixGetColIdxPtr(matrix, colidx);
    colvalptr = SCIPmatrixGetColValPtr(matrix, colidx);
-
    cancelvar = vars[colidx];
+
+   if( SCIPvarIsIntegral(cancelvar) )
+   {
+      if( SCIPvarIsBinary(cancelvar) )
+         maxfillin = maxbinfillin;
+      else
+         maxfillin = maxintfillin;
+   }
+   else
+      maxfillin = maxcontfillin;
 
    mincancelrate = 0.0;
 
@@ -828,18 +818,15 @@ SCIP_RETCODE cancelCol(
          {
             int a,b;
             int ncancel;
-            int ncontfillin;
-            int nintfillin;
-            int nbinfillin;
             int ntotfillin;
-            int implcollen;
-            COLCONSPAIR* implcolconspair;
-            SCIP_Real* implcolvals;
-            int* implcolinds;
-            SCIP_VAR* implcolvar;
-            SCIP_Real implcollb;
-            SCIP_Real implcolub;
-            SCIP_Bool implcolisbin;
+            int hashingcollen;
+            COLCONSPAIR* hashingcolconspair;
+            SCIP_Real* hashingcolvals;
+            int* hashingcolinds;
+            SCIP_VAR* hashingcolvar;
+            SCIP_Real hashingcollb;
+            SCIP_Real hashingcolub;
+            SCIP_Bool hashingcolisbin;
             SCIP_Real scale;
             SCIP_Real cancelrate;
             int i1,i2;
@@ -849,8 +836,8 @@ SCIP_RETCODE cancelCol(
 
             i1 = tmpinds[i];
             i2 = tmpinds[j];
-         
-            
+
+
             assert(cancelcolinds[i] < cancelcolinds[j]);
 
             if( cancelcolinds[i1] < cancelcolinds[i2] )
@@ -868,49 +855,50 @@ SCIP_RETCODE cancelCol(
                colconspair.conscoef2 = cancelcolvals[i1];
             }
 
-            implcolconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &colconspair);
+            hashingcolconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &colconspair);
             nretrieves++;
 
 
-            if( implcolconspair == NULL || implcolconspair->colindex == colidx || isblockedvar[implcolconspair->colindex] )
+            if( hashingcolconspair == NULL || hashingcolconspair->colindex == colidx || isblockedvar[hashingcolconspair->colindex] )
                continue;
 
-            /* if the column we want to cancel is an implied free column, we will only use implied free columns
-             * for canceling with less non-zeros and if the number of non-zeros is equal we use the
-             * colindex as tie-breaker to avoid cyclic non-zero cancellation
+            /* if the column we want to cancel is a hashing column (which we stored for canceling other columns),
+             * we will only use the hashing columns for canceling with less nonzeros and if the number of nonzeros
+             * is equal we use the colindex as tie-breaker to avoid cyclic nonzero cancellation
              */
-            implcollen = SCIPmatrixGetColNNonzs(matrix, implcolconspair->colindex);
-            if( colisimpl && (cancelcollen < implcollen || (cancelcollen == implcollen && colidx < implcolconspair->colindex)) )
+            hashingcollen = SCIPmatrixGetColNNonzs(matrix, hashingcolconspair->colindex);
+            if( colishashing && (cancelcollen < hashingcollen || (cancelcollen == hashingcollen && colidx < hashingcolconspair->colindex)) )
                continue;
 
-            implcolvals = SCIPmatrixGetColValPtr(matrix, implcolconspair->colindex);
-            implcolinds = SCIPmatrixGetColIdxPtr(matrix, implcolconspair->colindex);
-            implcolvar = vars[implcolconspair->colindex];
-            implcollb = SCIPvarGetLbGlobal(implcolvar);
-            implcolub = SCIPvarGetUbGlobal(implcolvar);
-            implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
-                              (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisEQ(scip, implcolub, 1.0)));
- 
-            scale = -colconspair.conscoef1 / implcolconspair->conscoef1;
+            hashingcolvals = SCIPmatrixGetColValPtr(matrix, hashingcolconspair->colindex);
+            hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, hashingcolconspair->colindex);
+            hashingcolvar = vars[hashingcolconspair->colindex];
+            hashingcollb = SCIPvarGetLbGlobal(hashingcolvar);
+            hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
+            hashingcolisbin = ((SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
+                              (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) && SCIPisEQ(scip, hashingcolub, 1.0)));
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
             if( REALABS(scale) > MAXSCALE )
                continue;
 
-            /* @todo maybe do more reduction if knspsack constraint handler supports downgrading constraint,
+            /* @todo do more reduction if knspsack constraint handler supports downgrading constraint,
              * i.e., converting into a linear constraint
              */
-            if( implcolisbin )
+            if( hashingcolisbin )
                continue;
-            else if( SCIPvarIsIntegral(implcolvar) )
+            else if( SCIPvarIsIntegral(hashingcolvar) )
             {
                if( SCIPvarIsIntegral(cancelvar) )
                {
-                  if( (SCIPvarGetType(implcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
+                  /* skip if the hashing variable is an integer variable and the canceled variable is an implied integer variable */
+                  if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) && (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
                      continue;
-                  //if( !SCIPisIntegral(scip, scale) || isHoleExist(scip, vars, implcolconspair->colindex, colidx, -scale) )
+                  /* skip if the scale is non-integral */
                   if( !SCIPisIntegral(scip, scale) )
                      continue;
                }
+               /* skip if the canceled variable is a continuous variable */
                else
                   continue;
             }
@@ -918,21 +906,18 @@ SCIP_RETCODE cancelCol(
             a = 0;
             b = 0;
             ncancel = 0;
-
-            ncontfillin = 0;
-            nintfillin = 0;
-            nbinfillin = 0;
+            ntotfillin = 0;
             abortpair = FALSE;
 
-            while( a < cancelcollen && b < implcollen )
+            while( a < cancelcollen && b < hashingcollen )
             {
-               if( cancelcolinds[a] == implcolinds[b] )
+               if( cancelcolinds[a] == hashingcolinds[b] )
                {
                   SCIP_Real newcoef;
 
-                  newcoef = cancelcolvals[a] + scale * implcolvals[b];
+                  newcoef = cancelcolvals[a] + scale * hashingcolvals[b];
 
-                  /* check if coefficient is cancelled */
+                  /* check if coefficient is canceled */
                   if( SCIPisZero(scip, newcoef) )
                   {
                      ++ncancel;
@@ -940,7 +925,7 @@ SCIP_RETCODE cancelCol(
                   /* otherwise, check if integral coefficients are preserved if the column is integral */
                   else if( (preserveintcoefs && SCIPvarIsIntegral(cancelvar) &&
                             SCIPisIntegral(scip, cancelcolvals[a]) && !SCIPisIntegral(scip, newcoef)) )
-                  { 
+                  {
                      abortpair = TRUE;
                      break;
                   }
@@ -959,8 +944,8 @@ SCIP_RETCODE cancelCol(
                          * coefficient in a >= constraint, e.g. an uplock. If this was the only uplock we do not abort their
                          * cancelling, otherwise we abort if we had a single or no downlock and add one
                          */
-                        //TODO: we may change this 
-                        if( presoldata->islockedlimit && (SCIPmatrixGetColNUplocks(matrix, colidx) > 1 &&
+                        //TODO: we may change this
+                        if( presoldata->preservegoodlocks && (SCIPmatrixGetColNUplocks(matrix, colidx) > 1 &&
                             SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1) )
                         {
                            abortpair = TRUE;
@@ -972,7 +957,7 @@ SCIP_RETCODE cancelCol(
                          (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                      {
                         /* symmetric case where the variable had a downlock */
-                        if( presoldata->islockedlimit && (SCIPmatrixGetColNDownlocks(matrix, colidx) > 1 &&
+                        if( presoldata->preservegoodlocks && (SCIPmatrixGetColNDownlocks(matrix, colidx) > 1 &&
                             SCIPmatrixGetColNUplocks(matrix, colidx) <= 1) )
                         {
                            abortpair = TRUE;
@@ -984,7 +969,7 @@ SCIP_RETCODE cancelCol(
                   ++a;
                   ++b;
                }
-               else if( cancelcolinds[a] < implcolinds[b] )
+               else if( cancelcolinds[a] < hashingcolinds[b] )
                {
                   ++a;
                }
@@ -992,16 +977,14 @@ SCIP_RETCODE cancelCol(
                {
                   SCIP_Real newcoef;
 
-                  //TODO: be more careful about this
-                  rowrhs = SCIPmatrixGetRowRhs(matrix, implcolinds[b]);
-                  rowlhs = SCIPmatrixGetRowLhs(matrix, implcolinds[b]);
-
-                  newcoef = scale * implcolvals[b];
+                  newcoef = scale * hashingcolvals[b];
+                  rowrhs = SCIPmatrixGetRowRhs(matrix, hashingcolinds[b]);
+                  rowlhs = SCIPmatrixGetRowLhs(matrix, hashingcolinds[b]);
 
                   if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
                       (newcoef < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
-                     if( presoldata->islockedlimit && SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
+                     if( presoldata->preservegoodlocks && SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
                      {
                         abortpair = TRUE;
                         ++b;
@@ -1012,7 +995,7 @@ SCIP_RETCODE cancelCol(
                   if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
                       (newcoef > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
-                     if( presoldata->islockedlimit && SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
+                     if( presoldata->preservegoodlocks && SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
                      {
                         abortpair = TRUE;
                         ++b;
@@ -1022,77 +1005,38 @@ SCIP_RETCODE cancelCol(
 
                   ++b;
 
-                  if( SCIPvarIsIntegral(cancelvar) )
+                  if( ++ntotfillin > maxfillin )
                   {
-                     if( SCIPvarIsBinary(cancelvar) && ++nbinfillin > maxbinfillin )
-                     {
-                        abortpair = TRUE;
-                        break;
-                     }
-
-                     if( ++nintfillin > maxintfillin )
-                     {
-                        abortpair = TRUE;
-                        break;
-                     }
+                     abortpair = TRUE;
+                     break;
                   }
-                  else
-                  {
-                     if( ++ncontfillin > maxcontfillin )
-                     {
-                        abortpair = TRUE;
-                        break;
-                     }
-                  }
-                  if( abortpair )
-                  {
-                     //printf( "fail due to too many fillins\n" );
-                  }
-               }    
+               }
             }
 
             if( abortpair )
                continue;
 
-            //TODO: update the fillin here
-            while( b < implcollen )
+            while( b < hashingcollen )
             {
                ++b;
-               conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
-               conshdlrname = SCIPconshdlrGetName(conshdlr);
-               if( SCIPvarIsIntegral(cancelvar) )
+
+               if( ++ntotfillin > maxfillin )
                {
-                  if( SCIPvarIsBinary(cancelvar) && ++nbinfillin > maxbinfillin )
-                     break;
-                  if( ++nintfillin > maxintfillin )
-                     break;
-               }
-               else
-               {
-                  if( ++ncontfillin > maxcontfillin )
-                     break;
+                  abortpair = TRUE;
+                  break;
                }
             }
 
-
-            if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
-            {
-               //printf( "fail due to too many fillins\n" );
-               continue;
-            }
-
-            ntotfillin = nintfillin + ncontfillin;
-
-            if( ntotfillin >= ncancel )
+            if( ntotfillin > maxfillin || ntotfillin >= ncancel )
                continue;
 
-            cancelrate = (ncancel - ntotfillin) / (SCIP_Real) implcollen;
-            
+            cancelrate = (ncancel - ntotfillin) / (SCIP_Real) cancelcollen;
+
             /* if a linear constraint is needed to keep the validity, we require a large nonzero cancellation */
-            if( isaddedcons && (ncancel - ntotfillin < presoldata->mincancelnnzsaddcons) )
+            if( isaddedcons && (ncancel - ntotfillin < presoldata->mineliminatednonzeros) )
                continue;
 
-         
+
 
             if( cancelrate < mincancelrate )
                continue;
@@ -1100,7 +1044,7 @@ SCIP_RETCODE cancelCol(
             if( cancelrate > bestcancelrate )
             {
                bestnfillin = ntotfillin;
-               bestcand = implcolconspair->colindex;
+               bestcand = hashingcolconspair->colindex;
                bestscale = scale;
                bestcancelrate = cancelrate;
 
@@ -1119,37 +1063,34 @@ SCIP_RETCODE cancelCol(
       {
          int a;
          int b;
-         SCIP_Real* implcolvals;
-         int* implcolinds;
-         int implcollen;
-         SCIP_Real implcollb;
-         SCIP_Real implcolub;
-         SCIP_VAR* implcolvar;
-         SCIP_Bool implcolisbin;
+         SCIP_Real* hashingcolvals;
+         int* hashingcolinds;
+         int hashingcollen;
+         SCIP_Real hashingcollb;
+         SCIP_Real hashingcolub;
+         SCIP_VAR* hashingcolvar;
          int tmpcollen;
-   
-         implcolvar = vars[bestcand];
-         implcolvals = SCIPmatrixGetColValPtr(matrix, bestcand);
-         implcolinds = SCIPmatrixGetColIdxPtr(matrix, bestcand);
-         implcollen = SCIPmatrixGetColNNonzs(matrix, bestcand);
-         implcollb = SCIPvarGetLbGlobal(implcolvar);
-         implcolub = SCIPvarGetUbGlobal(implcolvar);
-         implcolisbin = ((SCIPvarGetType(implcolvar) == SCIP_VARTYPE_BINARY) || 
-                           (SCIPvarIsIntegral(implcolvar) && SCIPisZero(scip, implcollb) && SCIPisEQ(scip, implcolub, 1.0)));
+
+         hashingcolvar = vars[bestcand];
+         hashingcolvals = SCIPmatrixGetColValPtr(matrix, bestcand);
+         hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, bestcand);
+         hashingcollen = SCIPmatrixGetColNNonzs(matrix, bestcand);
+         hashingcollb = SCIPvarGetLbGlobal(hashingcolvar);
+         hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
 
          a = 0;
          b = 0;
          tmpcollen = 0;
 
 
-         while( a < cancelcollen && b < implcollen )
+         while( a < cancelcollen && b < hashingcollen )
          {
-            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, hashingcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-            if( cancelcolinds[a] == implcolinds[b] )
+            if( cancelcolinds[a] == hashingcolinds[b] )
             {
-               SCIP_Real val = cancelcolvals[a] + bestscale * implcolvals[b];
+               SCIP_Real val = cancelcolvals[a] + bestscale * hashingcolvals[b];
 
                if( !SCIPisZero(scip, val) )
                {
@@ -1162,7 +1103,7 @@ SCIP_RETCODE cancelCol(
                ++a;
                ++b;
             }
-            else if( cancelcolinds[a] < implcolinds[b] )
+            else if( cancelcolinds[a] < hashingcolinds[b] )
             {
                tmpinds[tmpcollen] = cancelcolinds[a];
                tmpvals[tmpcollen] = cancelcolvals[a];
@@ -1171,8 +1112,8 @@ SCIP_RETCODE cancelCol(
             }
             else
             {
-               tmpinds[tmpcollen] = implcolinds[b];
-               tmpvals[tmpcollen] = implcolvals[b] * bestscale;
+               tmpinds[tmpcollen] = hashingcolinds[b];
+               tmpvals[tmpcollen] = hashingcolvals[b] * bestscale;
                ++nchgcoef;
                ++tmpcollen;
                ++b;
@@ -1187,12 +1128,12 @@ SCIP_RETCODE cancelCol(
             ++a;
          }
 
-         while( b < implcollen )
+         while( b < hashingcollen )
          {
-            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, implcolinds[b]));
+            conshdlr = SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, hashingcolinds[b]));
             conshdlrname = SCIPconshdlrGetName(conshdlr);
-            tmpinds[tmpcollen] = implcolinds[b];
-            tmpvals[tmpcollen] = implcolvals[b] * bestscale;
+            tmpinds[tmpcollen] = hashingcolinds[b];
+            tmpvals[tmpcollen] = hashingcolvals[b] * bestscale;
             ++nchgcoef;
             ++tmpcollen;
             ++b;
@@ -1321,7 +1262,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_PRESOLDATA* presoldata;
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
-   SCIP_Bool* isimpliedfrees;
+   SCIP_Bool* ishashingcols;
    int nimpliedfrees;
    SCIP_Bool* isblockedvar;
    SCIP_VAR** vars;
@@ -1355,11 +1296,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          presoldata->nwaitingcalls);
       return SCIP_OKAY;
    }
+
    SCIPdebugMsg(scip, "starting dualsparsify. . .\n");
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {
@@ -1376,7 +1318,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       SCIP_CALL( SCIPallocBufferArray(scip, &scores, SCIPmatrixGetNRows(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNRows(matrix)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &isimpliedfrees, SCIPmatrixGetNColumns(matrix)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ishashingcols, SCIPmatrixGetNColumns(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPmatrixGetNColumns(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &isblockedvar, SCIPmatrixGetNColumns(matrix)) );
 
@@ -1386,7 +1328,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       conspairs = NULL;
       SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, consPairsEqual, consPairHashval, (void*) scip) );
 
-      /* collect implied free variables and their number of non-zeros */
+      /* collect implied free variables and their number of nonzeros */
       for( c = 0; c < ncols; c++ )
       {
          int nnonz;
@@ -1397,18 +1339,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          lbimplied = isLowerBoundImplied(scip, matrix, c);
          ubimplied = isUpperBoundImplied(scip, matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
-         isimpliedfrees[c] = FALSE;
+         ishashingcols[c] = FALSE;
 
          if( lbimplied && ubimplied )
          {
             nimpliedfrees += 1;
-            isimpliedfrees[c] = TRUE;
+            ishashingcols[c] = TRUE;
          }
          isblockedvar[c] = FALSE;
 
          /* only consider implied free variables
           * skip singleton variables, because either the constraint is redundant
-          * or the variables can be cancelled by variables substitution
+          * or the variables can be canceled by variables substitution
           */
          if( nnonz >= 2 && (lbimplied && ubimplied) )
          {
@@ -1500,7 +1442,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
           */
          while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
          {
-            /* if the previous variable pair has fewer or the same number of non-zeros in the attached row
+            /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
              * we keep that pair and skip this one
              */
             if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
@@ -1509,7 +1451,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                break;
             }
 
-            /* this pairs row has fewer non-zeros, so remove the other pair from the hash table and loop */
+            /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
             SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
          }
 
@@ -1529,7 +1471,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       SCIPsortIntInt(colsparsity, colidxsorted, ncols);
 
 
-      /* loop over the columns and cancel non-zeros until maximum number of retrieves is reached */
+      /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
       nuseless = 0;
       oldnchgcoefs = *nchgcoefs;
@@ -1542,10 +1484,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          if( isblockedvar[colidx] )
             continue;
 
-
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
           * unlimited (-1) case due to implicit conversion rules */
-         SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, isimpliedfrees, vars, isblockedvar, colidx, \
+         SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, ishashingcols, vars, isblockedvar, colidx, \
                presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
                presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
                presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
@@ -1562,7 +1503,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPhashtableRemoveAll(pairtable);
          nconspairs = 0;
 
-         /* collect large nonzero entries variables and their number of non-zeros */
+         /* collect large nonzero entries variables and their number of nonzeros */
          for( c = 0; c < ncols; c++ )
          {
             int nnonz;
@@ -1571,17 +1512,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
             isblockedvar[c] = FALSE;
 
-            /* only consider large nonzero entries and nonimplied free variables
+            /* only consider large nonzero entries and nonimplied free variables (non-hashing columns in the previous step)
              * skip singleton variables, because either the constraint is redundant
-             * or the variables can be cancelled by variables substitution
+             * or the variables can be canceled by variables substitution
              */
-            if( nnonz >= presoldata->mincancelnnzsaddcons && !isimpliedfrees[c] )
+            if( nnonz >= presoldata->mineliminatednonzeros && !ishashingcols[c] )
             {
                int* colinds;
                SCIP_Real* colvals;
                int npairs;
                int failshift;
 
+               ishashingcols[c] = TRUE;
                colinds = SCIPmatrixGetColIdxPtr(matrix, c);
                colvals = SCIPmatrixGetColValPtr(matrix, c);
 
@@ -1643,6 +1585,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                   }
                }
             }
+            else
+            {
+               ishashingcols[c] = FALSE;
+            }
          }
 
          /* insert conspairs into hash table */
@@ -1660,7 +1606,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
              */
             while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
             {
-               /* if the previous variable pair has fewer or the same number of non-zeros in the attached row
+               /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
                 * we keep that pair and skip this one
                 */
                if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
@@ -1669,7 +1615,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                   break;
                }
 
-               /* this pairs row has fewer non-zeros, so remove the other pair from the hash table and loop */
+               /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
                SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
             }
 
@@ -1689,7 +1635,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPsortIntInt(colsparsity, colidxsorted, ncols);
 
 
-         /* loop over the columns and cancel non-zeros until maximum number of retrieves is reached */
+         /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
          maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
          nuseless = 0;
          oldnchgcoefs = *nchgcoefs;
@@ -1708,7 +1654,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
             /* since the function parameters for the max fillin are unsigned we do not need to handle the
              * unlimited (-1) case due to implicit conversion rules */
-            SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, isimpliedfrees, vars, isblockedvar, colidx, \
+            SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, ishashingcols, vars, isblockedvar, colidx, \
                   presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
                   presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
                   presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
@@ -1734,7 +1680,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       SCIPfreeBufferArray(scip, &isblockedvar);
       SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &isimpliedfrees);
+      SCIPfreeBufferArray(scip, &ishashingcols);
       SCIPfreeBufferArray(scip, &perm);
       SCIPfreeBufferArray(scip, &scores);
    }
@@ -1806,42 +1752,20 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDualsparsify) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitDualsparsify) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualsparsify/enablecopy",
+         "should dualsparsify presolver be copied to sub-SCIPs?",
+         &presoldata->enablecopy, TRUE, DEFAULT_ENABLECOPY, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/minacceptcancelnnzs",
-         "minimal cancel nonzeros when accepting to aggregate variables",
-         &presoldata->minacceptcancelnnzs, FALSE, DEFAULT_MINACCEPTCANCELNNZS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualsparsify/preserveintcoefs",
+         "should we forbid cancellations that destroy integer coefficients?",
+         &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/minconsiderednnzs",
-         "minimal number of considered non-zeros within one column",
-         &presoldata->minconsiderednnzs, FALSE, DEFAULT_MINCONSIDEREDNNZS, 0, INT_MAX, NULL, NULL) );
-
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/mincancelnnzsaddcons",
-         "minimal cancelled non-zeros within one column if we need to add a constraint to the problem",
-         &presoldata->mincancelnnzsaddcons, FALSE, DEFAULT_MINCANCELNNZSADDCONS, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/maxcompareeverypair",
-         "maximal number on the implementaion of doing reduction on every pair of variables",
-         &presoldata->maxcompareeverypair, FALSE, DEFAULT_MAXCOMPAREDEVERYPAIR, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "presolving/dualsparsify/maxfillinrate",
-         "cancel the variable if nfillins/ncancels is less than or equal this rate",
-         &presoldata->maxfillinrate, TRUE, DEFAULT_MAX_FILLINRATE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "presolving/dualsparsify/maxfillinratefree",
-         "cancel the free variable if nfillins/ncancels is less than or equal this rate",
-         &presoldata->maxfillinratefree, TRUE, DEFAULT_MAX_FILLINRATE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/maxconsiderednonzeros",
-         "maximal number of considered non-zeros within one row (-1: no limit)",
-         &presoldata->maxconsiderednonzeros, TRUE, DEFAULT_MAXCONSIDEREDNONZEROS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualsparsify/preservegoodlocks",
+         "should we preserve good locked properties of variables (at most one lock in one direction)?",
+         &presoldata->preservegoodlocks, TRUE, DEFAULT_PRESERVEGOODLOCKS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualsparsify/maxcontfillin",
@@ -1857,22 +1781,17 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "presolving/dualsparsify/maxintfillin",
          "maximal fillin for integer variables including binaries (-1: unlimited)",
          &presoldata->maxintfillin, FALSE, DEFAULT_MAX_INT_FILLIN, -1, INT_MAX, NULL, NULL) );
-#if 0
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/dualsparsify/maxnonzeros",
-         "maximal support of one equality to be used for cancelling (-1: no limit)",
-         &presoldata->maxnonzeros, TRUE, DEFAULT_MAXNONZEROS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualsparsify/maxconsiderednonzeros",
-         "maximal number of considered non-zeros within one row (-1: no limit)",
+         "maximal number of considered nonzeros within one column (-1: no limit)",
          &presoldata->maxconsiderednonzeros, TRUE, DEFAULT_MAXCONSIDEREDNONZEROS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip,
-         "presolving/dualsparsify/rowsort",
-         "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
-         &presoldata->rowsort, TRUE, DEFAULT_ROWSORT, "nid", NULL, NULL) );
-#endif
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/dualsparsify/mineliminatednonzeros",
+         "minimal eliminated nonzeros within one column if we need to add a constraint to the problem",
+         &presoldata->mineliminatednonzeros, FALSE, DEFAULT_MINELIMINATEDNONZEROS, 0, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/dualsparsify/maxretrievefac",
          "limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints",
@@ -1882,16 +1801,6 @@ SCIP_RETCODE SCIPincludePresolDualsparsify(
          "presolving/dualsparsify/waitingfac",
          "number of calls to wait until next execution as a multiple of the number of useless calls",
          &presoldata->waitingfac, TRUE, DEFAULT_WAITINGFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/dualsparsify/preserveintcoefs",
-         "should we forbid cancellations that destroy integer coefficients?",
-         &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/dualsparsify/islockedlimit",
-         "should locked limit be used to stop some aggregation",
-         &presoldata->islockedlimit, TRUE, DEFAULT_ISLOCKEDLIMIT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
