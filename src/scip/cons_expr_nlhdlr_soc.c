@@ -466,7 +466,7 @@ SCIP_RETCODE detectSocNorm(
    *success = FALSE;
 
    /* relation is not "<=" -> skip */
-   if( SCIPisInfinity(scip, SCIPvarGetUbLocal(auxvar)) )
+   if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
       return SCIP_OKAY;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
@@ -650,7 +650,7 @@ SCIP_RETCODE detectSOC(
       return SCIP_OKAY;
    }
 
-   /* check whether expression is given as */
+   /* check whether expression is given as norm */
    SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
@@ -746,14 +746,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   if( isroot )
-   {
-      SCIP_CALL( detectSOC(scip, expr, auxvar, nlhdlrexprdata, success) );
-   }
-   else
-   {
-      *success = FALSE;
-   }
+   SCIP_CALL( detectSOC(scip, expr, auxvar, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
 }
