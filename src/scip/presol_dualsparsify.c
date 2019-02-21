@@ -754,16 +754,18 @@ SCIP_RETCODE cancelCol(
    SCIP_Real* cancelcolvals;
    SCIP_Real cancellb;
    SCIP_Real cancelub;
+   int bestcand;
+   int bestnfillin;
+   SCIP_Real bestscale;
    SCIP_Real bestcancelrate;
    int* tmpinds;
-   SCIP_Real* rownnzs;
+   SCIP_Real* scores;
    SCIP_Real* tmpvals;
    int cancelcollen;
    int* colidxptr;
    SCIP_Real* colvalptr;
    int nchgcoef;
    int nretrieves;
-   int bestnfillin;
    SCIP_Real mincancelrate;
    SCIP_Bool colisimpl;
    SCIP_VAR* cancelvar;
@@ -783,19 +785,11 @@ SCIP_RETCODE cancelCol(
 
    mincancelrate = 0.0;
 
-#if 0
-//TODO: be careful about the method
-   /* for set packing and logicor constraints, only accept equalities where all modified coefficients are cancelled */
-   if( SCIPconsGetHdlr(cancelcons) == SCIPfindConshdlr(scip, "setppc") ||
-       SCIPconsGetHdlr(cancelcons) == SCIPfindConshdlr(scip, "logicor") )
-      mincancelrate = 1.0;
-#endif
-
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelcolinds, colidxptr, cancelcollen) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelcolvals, colvalptr, cancelcollen) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, cancelcollen) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvals, cancelcollen) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rownnzs, cancelcollen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, cancelcollen) );
 
    cancellb = SCIPvarGetLbGlobal(cancelvar);
    cancelub = SCIPvarGetUbGlobal(cancelvar);
@@ -806,25 +800,23 @@ SCIP_RETCODE cancelCol(
    nretrieves = 0;
    while( TRUE ) /*lint !e716 */
    {
-      SCIP_Real bestscale;
-      int bestcand;
       int i;
       int j;
       COLCONSPAIR colconspair;
       int maxlen;
 
-      bestscale = 1.0;
       bestcand = -1;
       bestnfillin = 0;
+      bestscale = 1.0;
       bestcancelrate = 0.0;
 
       for( i = 0; i < cancelcollen; ++i )
       {
          tmpinds[i] = i;
-         rownnzs[i] = -SCIPmatrixGetRowNNonzs(matrix, cancelcolinds[i]) - 1.0*cancelcolinds[i]/(ncols);
+         scores[i] = -SCIPmatrixGetRowNNonzs(matrix, cancelcolinds[i]) - 1.0*cancelcolinds[i]/(ncols);
       }
 
-      SCIPsortRealInt(rownnzs, tmpinds, cancelcollen);
+      SCIPsortRealInt(scores, tmpinds, cancelcollen);
 
       maxlen = cancelcollen;
       if( maxconsiderednonzeros >= 0 )
@@ -1245,7 +1237,7 @@ SCIP_RETCODE cancelCol(
       *nuseless += nretrieves;
    }
 
-   SCIPfreeBufferArray(scip, &rownnzs);
+   SCIPfreeBufferArray(scip, &scores);
    SCIPfreeBufferArray(scip, &tmpvals);
    SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeBufferArray(scip, &cancelcolvals);
@@ -1319,7 +1311,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    int nchgcoef;
    int ncancel;
    int* perm;
-   SCIP_Real* rownnzs;
+   SCIP_Real* scores;
    int* colidxsorted;
    int* colsparsity;
    COLCONSPAIR* conspairs;
@@ -1382,7 +1374,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, i));
       }
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &rownnzs, SCIPmatrixGetNRows(matrix)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scores, SCIPmatrixGetNRows(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNRows(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &isimpliedfrees, SCIPmatrixGetNColumns(matrix)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPmatrixGetNColumns(matrix)) );
@@ -1431,10 +1423,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             for( i = 0; i < nnonz; ++i )
             {
                perm[i] = i;
-               rownnzs[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
+               scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
             }
 
-            SCIPsortRealInt(rownnzs, perm, nnonz);
+            SCIPsortRealInt(scores, perm, nnonz);
 
             if( presoldata->maxconsiderednonzeros >= 0 )
                nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
@@ -1596,10 +1588,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                for( i = 0; i < nnonz; ++i )
                {
                   perm[i] = i;
-                  rownnzs[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i])-1.0*colinds[i]/ncols;
+                  scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
                }
 
-               SCIPsortRealInt(rownnzs, perm, nnonz);
+               SCIPsortRealInt(scores, perm, nnonz);
 
                if( presoldata->maxconsiderednonzeros >= 0 )
                   nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
@@ -1744,7 +1736,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &isimpliedfrees);
       SCIPfreeBufferArray(scip, &perm);
-      SCIPfreeBufferArray(scip, &rownnzs);
+      SCIPfreeBufferArray(scip, &scores);
    }
    /* if matrix construction fails once, we do not ever want to be called again */
    else
