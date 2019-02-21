@@ -1200,6 +1200,8 @@ SCIP_RETCODE SCIPcheckCopyLimits(
  *        in the target SCIP
  *  @note all other limits are disabled and need to be enabled afterwards, if needed
  *
+ *  @see SCIPsetCommonSubscipParams() to set further working limits and other parameters commonly used for auxiliary problems
+ *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -1217,6 +1219,20 @@ EXTERN
 SCIP_RETCODE SCIPcopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+
+/** sets the working limits as well as common search parameters for the auxiliary problem
+ *
+ *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead
+ */
+EXTERN
+SCIP_RETCODE SCIPsetCommonSubscipParams(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
+   SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
+   int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */
    );
 
 

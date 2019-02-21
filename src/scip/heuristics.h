@@ -96,6 +96,16 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
+/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
+EXTERN
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   );
+
 /* @} */
 
 #ifdef __cplusplus

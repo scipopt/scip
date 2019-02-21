@@ -126,6 +126,7 @@
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
 #include "scip/heur_trivialnegation.h"
+#include "scip/heur_trustregion.h"
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"

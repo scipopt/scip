@@ -23,6 +23,10 @@ Features
 
 - LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
 
+- Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It build upon the successful trust region approaches
+  applied to Benders' decomposition.
+
 Performance improvements
 ------------------------
 
@@ -100,6 +104,7 @@ Interface changes
   by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+- new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
 
 ### Command line interface
 
@@ -111,6 +116,8 @@ Interface changes
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
+- all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
+- deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
 
 ### New parameters
 
@@ -137,6 +144,8 @@ Interface changes
   decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
   branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
   parameters only have effect if the lnscheck parameter is set to TRUE.
+
+- new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
 
 ### Data structures
 
