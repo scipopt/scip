@@ -3085,9 +3085,10 @@ SCIP_RETCODE SCIPsetCommonSubscipParams(
    int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */
    )
 {
+   SCIP_Bool useuct;
+
    assert(sourcescip != NULL);
    assert(subscip != NULL);
-   SCIP_Bool useuct;
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
