@@ -233,7 +233,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
     done
     export ${FLAGS}
 
-    cp check/IP/instancedata/testsets/${TEST}.test check/testset/
+    cp check/IP/instancedata/testsets/*.test check/testset/
 
     echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
     make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
