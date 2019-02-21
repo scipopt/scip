@@ -472,10 +472,13 @@ SCIP_RETCODE detectSocNorm(
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   /* check whether expression is a SQRT and has a sum as children with at least 2 children */
+   /* check whether expression is a SQRT and has a sum as child with at least 2 children and a non-negative constant */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrPow(conshdlr) || SCIPgetConsExprExprPowExponent(expr) != 0.5
-      || SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(child) < 2 )
+      || SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(child) < 2
+      || SCIPgetConsExprExprSumConstant(child) < 0.0)
       return SCIP_OKAY;
+
+   assert(SCIPvarGetLbLocal(auxvar) >= 0.0);
 
    /* get children of the sum */
    children = SCIPgetConsExprExprChildren(child);
