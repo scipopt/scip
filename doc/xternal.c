@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.0.2
+ * @version  6.0.1.3
  *
  * \image html scippy.png
  */
@@ -95,7 +95,7 @@
  * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek
+ * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
@@ -3854,9 +3854,11 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral
  * LP-relaxation.
- * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
- * SCIP interactive shell.
+ * It is recommended to select a lower or upper case letter as display character. The default primal heuristics of
+ * SCIP use characters that describe the class to which the heuristic belongs. As an example all LP rounding heuristics
+ * have an 'r' and all Large Neighborhood Search heuristics use the letter 'L'.
+ * Users find commonly used display characters in type_heur.h.
+ *
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are
@@ -4194,7 +4196,7 @@
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
- * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * the user defined problem data, the LP information, or the integrality conditions), or it must be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
@@ -4222,11 +4224,11 @@
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
  *
- * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
- * These are given as compiler defines.
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties,
+ * which are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class scip::ObjRelax from within your constructor.
- * The properties you have to set have the following meaning:
+ * The properties have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
@@ -4707,16 +4709,7 @@
  * In case you want to add a dialog to the <b>root dialog</b>, you just use the following
  * lines of code to get/create the root dialog.
  *
- * \code
- * SCIP_DIALOG* root;
- *
- * root = SCIPgetRootDialog(scip);
- * if( root == NULL )
- * {
- *    SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
- * }
- * assert( root != NULL );
- * \endcode
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogCreate}
  *
  * Therefore, in this case you do not have to worry about the calls of
  * SCIPincludeDialogDefault() and SCIPincludeDefaultPlugins() .
@@ -4732,32 +4725,7 @@
  * (S)he copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
  * Then, (s)he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
  * src/scip/dialog_default.c:
- * \code
- * SCIP_RETCODE SCIPincludeDialogDrawgraph(
- *    SCIP*                 scip
- *    )
- * {
- *    SCIP_DIALOG* root;
- *    SCIP_DIALOG* dialog;
- *
- *    root = SCIPgetRootDialog(scip);
- *    if( root == NULL )
- *    {
- *       SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
- *    }
- *    assert( root != NULL );
- *
- *    if( !SCIPdialogHasEntry(root, "drawgraph") )
- *    {
- *       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDrawgraph, NULL, NULL,
- *             "drawgraph", "draws the graph for the current problem instance", FALSE, NULL) );
- *       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
- *       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
- *    }
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogInclude}
  *
  * Using this code, it is even possible to call SCIPincludeDialogDrawgraph() before including the default dialog plugins,
  * and you can also call it multiple times without causing inconsistencies in the dialog structure.
@@ -4795,22 +4763,8 @@
  *
  * If you are using dialog data, you have to implement this method in order to free the dialog data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_DIALOGFREE(dialogFreeMydialog)
- * {
- *    SCIP_DIALOGDATA* dialogdata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDialogFree}
  *
- *    dialogdata = SCIPdialogGetData(dialog);
- *    assert(dialogdata != NULL);
- *
- *    SCIPfreeMemory(scip, &dialogdata);
- *
- *    SCIPdialogSetData(dialog, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your dialog data, remember to free this memory
  * before freeing the dialog data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4977,22 +4931,8 @@
  *
  * If you are using display column data, you have to implement this method in order to free the display column data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
- * {
- *    SCIP_DISPDATA* dispdata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetDispFree}
  *
- *    dispdata = SCIPdispGetData(disp);
- *    assert(dispdata != NULL);
- *
- *    SCIPfreeMemory(scip, &dispdata);
- *
- *    SCIPdispSetData(disp, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your display column data, remember to free this memory
  * before freeing the display column data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -5721,22 +5661,8 @@
  *
  * If you are using statistics table data, you have to implement this method in order to free the statistics table data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
- * {
- *    SCIP_TABLEDATA* tabledata;
+ * @refsnippet{tests/src/misc/snippets.c,SnippetTableFree}
  *
- *    tabledata = SCIPtableGetData(table);
- *    assert(tabledata != NULL);
- *
- *    SCIPfreeMemory(scip, &tabledata);
- *
- *    SCIPtableSetData(disp, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your statistics table data, remember to free this memory
  * before freeing the statistics table data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -6572,13 +6498,13 @@
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
  * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
- * decomposition. Such problems are given by
+ * decomposition. In a purely mixed-integer linear setting, such problems are given by
  *
  * \f[
  *  \begin{array}[t]{rllclcl}
  *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *    \text{subject to} & \displaystyle & Ax & & & = & b \\
  *         & \\
  *         & \displaystyle & Tx & + & Hy & = & h \\
  *         & \\
@@ -6598,7 +6524,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *    \text{subject to} & \displaystyle & Hy  = h - T\bar{x} \\
  *         & \\
  *         & & y \in \mathbb{R}^{m} \\
  *  \end{array}
@@ -6631,7 +6557,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & c^{T}x + \varphi \\
  *         & \\
- *    subject \ to & \displaystyle & Ax = b \\
+ *    \text{subject to} & \displaystyle & Ax = b \\
  *         & \\
  *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
  *         & \\
@@ -6644,7 +6570,23 @@
  *
  * @section BENDERFRAMEWORK Overview
  *
- * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented.
+ *
+ * The current framework can be used to handle a Benders Decomposition of CIPs of the form
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *    \text{subject to} & \displaystyle & g(x & , & y) & \in & [\ell,u] \\
+ *         & & x & & & \in & X \\
+ *         & & & & y & \in & Y \\
+ *  \end{array}
+ * \f]
+ * when either
+ * - the subproblem is convex: \f$g_i(x,y)\f$ convex on \f$X\times Y\f$ if \f$u_i<\infty\f$, \f$g_i(x,y)\f$ concave on \f$X\times Y\f$ if \f$\ell_i>-\infty\f$, and \f$Y=\mathbb{R}^m\f$, or
+ * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
+ *
+ * This framework can be used in four different
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
@@ -6806,22 +6748,7 @@
  *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
  *
  *  An example code is:
- *  \code
- *  SCIP_RETCODE dosomething(
- *     SCIP*                 scip
- *     )
- *  {
- *     int nvars;
- *     int* array;
- *
- *     nvars = SCIPgetNVars(scip);
- *     SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nvars) );
- *
- *     do something ...
- *
- *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
- *  }
- *  \endcode
+ *  @refsnippet{tests/src/misc/snippets.c,SnippetArrayAllocAndFree}
  *  @n
  *
  *  @section BUFMEM Buffer memory

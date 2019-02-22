@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,7 +57,7 @@
 
 #define HEUR_NAME             "nlpdiving"
 #define HEUR_DESC             "NLP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
@@ -1288,7 +1288,8 @@ SCIP_RETCODE doSolveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, FALSE,
+         TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
@@ -2662,16 +2663,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    else
       assert(varincover == NULL);
 
-   /* free array of cover variables */
-   if( heurdata->prefercover || heurdata->solvesubmip )
-   {
-      assert(covervars != NULL || !covercomputed);
-      if( covervars != NULL )
-         SCIPfreeBufferArray(scip, &covervars);
-   }
-   else
-      assert(covervars == NULL);
-
    /* free NLP start solution */
    if( nlpstartsol != NULL )
    {
@@ -2696,14 +2687,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       assert(pseudocandsnlpsol != NULL);
       assert(pseudocandsnlpsol != NULL);
-      SCIPfreeBufferArray(scip, &pseudocandslpsol);
       SCIPfreeBufferArray(scip, &pseudocandsnlpsol);
+      SCIPfreeBufferArray(scip, &pseudocandslpsol);
    }
    else
    {
       assert(pseudocandsnlpsol == NULL);
       assert(pseudocandsnlpsol == NULL);
    }
+
+   /* free array of cover variables */
+   if( heurdata->prefercover || heurdata->solvesubmip )
+   {
+      assert(covervars != NULL || !covercomputed);
+      if( covervars != NULL )
+         SCIPfreeBufferArray(scip, &covervars);
+   }
+   else
+      assert(covervars == NULL);
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;

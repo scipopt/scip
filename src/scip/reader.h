@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,14 +39,12 @@ extern "C" {
 
 
 /** copies the given reader to a new scip */
-extern
 SCIP_RETCODE SCIPreaderCopyInclude(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a reader */
-extern
 SCIP_RETCODE SCIPreaderCreate(
    SCIP_READER**         reader,             /**< pointer to store reader */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -61,14 +59,12 @@ SCIP_RETCODE SCIPreaderCreate(
    );
 
 /** frees memory of reader */
-extern
 SCIP_RETCODE SCIPreaderFree(
    SCIP_READER**         reader,             /**< pointer to reader data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
-extern
 SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -78,7 +74,6 @@ SCIP_RETCODE SCIPreaderRead(
    );
 
 /** writes problem data to file with given reader or returns SCIP_DIDNOTRUN */
-extern
 SCIP_RETCODE SCIPreaderWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_PROB*            prob,               /**< problem data */
@@ -90,47 +85,40 @@ SCIP_RETCODE SCIPreaderWrite(
    );
 
 /** gets time in seconds used in this reader for reading */
-extern
 SCIP_Real SCIPreaderGetReadingTime(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** enables or disables all clocks of \p reader, depending on the value of the flag */
-extern
 void SCIPreaderEnableOrDisableClocks(
    SCIP_READER*          reader,             /**< the reader for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks be enabled? */
    );
 
 /** resets reading time of reader */
-extern
 SCIP_RETCODE SCIPreaderResetReadingTime(
    SCIP_READER*          reader              /**< reader */
    );
 
 /** sets copy method of reader */
-extern
 void SCIPreaderSetCopy(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERCOPY  ((*readercopy))     /**< copy method of reader or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** sets destructor of reader */
-extern
 void SCIPreaderSetFree(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERFREE  ((*readerfree))     /**< destructor of reader */
    );
 
 /** sets read method of reader */
-extern
 void SCIPreaderSetRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERREAD  ((*readerread))     /**< read method */
    );
 
 /** sets write method of reader */
-extern
 void SCIPreaderSetWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_DECL_READERWRITE ((*readerwrite))    /**< write method */

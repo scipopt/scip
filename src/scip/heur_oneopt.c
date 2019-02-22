@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
-#define HEUR_DISPCHAR         'b'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -307,7 +307,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    /* copy complete SCIP instance */
    *valid = FALSE;
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, FALSE, TRUE, valid) );
    SCIP_CALL( SCIPtransformProb(subscip) );
 
    /* get variable image */

@@ -1,12 +1,31 @@
-@page RN70 Release notes for SCIP 7.0
+@page RNNEXT Release notes for SCIP NEXT
 
-@section RN700 SCIP 7.0.0
+@section RNNEXT SCIP NEXT
 *************************
 
 Features
 --------
 
+- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
+  restart or not. Previously one could just turn off symmetry computation after a restart.
 - extended relaxators statistics in solve statistics about information on number of cutoffs, improved bounds, etc.
+
+- extends SMPS file reader for the stochastic information, the sto files, to read a lower bound for the discrete
+  scenarios. The lower bound is used when creating the auxiliary variables for Benders' decomposition.
+
+- extended Benders framework to solve NLPs and generate optimality and feasibility cuts from their solution
+  when the subproblem is convex nonlinear.
+
+- extended Benders framework to create copies of Benders decompositions that can be used in a multithreading environment
+
+- additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
+  instances, e.g., when used in UG
+
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
+- Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It build upon the successful trust region approaches
+  applied to Benders' decomposition.
 
 Performance improvements
 ------------------------
@@ -21,6 +40,15 @@ Performance improvements
 - consLockBenders callback implemented to add down locks on the Benders' decomposition auxiliary variables and
   up and down locks per subproblem for all master problem variables. This allows the use of presolving and propagation
   with Benders' decomposition.
+
+- improved performance of orbital fixing in several ways:
+  store permutations in transposed form to improve cache efficency;
+  reverse order to speed up filtering of permutations;
+  handle variables globally fixed to 1 in list;
+  use event handler to catch global fixings;
+  speed up orbit computations;
+  change handling of restarts;
+
 
 Examples and applications
 -------------------------
@@ -40,12 +68,43 @@ Interface changes
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
+- Benders' decomposition
+  + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
+    SCIP_BENDERSCUT pointer, it now accepts a SCIP_BENDERS pointer.
+  + the functions SCIPsolveBendersSubproblem() no longer accepts the parameter type. The type is not a necessary
+    argument for the subproblem solving method.
+  + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
+  - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+
+- new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
+  SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
+  parallel. Setting this argument to TRUE has a performance cost.
+
+- new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+- functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
+  receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
+
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
 
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
+- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+  SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
+  SCIPbendersGetStoredCutOrigData().
+- added SCIPisConvexAbspower()
+- new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
+  SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
+  about the origin of the solution, ie, whether it was created by a relaxation handler,
+  by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
+  The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+- new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
 
 ### Command line interface
 
@@ -53,14 +112,19 @@ Interface changes
 
 ### Changed parameters
 
+- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
+- all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
+- deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
 
 ### New parameters
 
 - the possibility to define the Benders' decomposition auxiliary variables as implicit integer is provided. This
   behavior is controlled with an additional parameter in the Benders' decomposition framework.
+- added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
+  checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
   branching strategy is provided
 
@@ -72,6 +136,16 @@ Interface changes
   chosen closer to the middle of the candidates domain if the variables local domain is still similar to its
   global domain, but is chosen closer to the LP solution if the local domain is much smaller than the global
   domain.
+
+- Added parameter lp/minmarkowitz to set the Markowitz stability threshold (range 0.0001 to 0.9999).
+  High values sacrifice performance for stability.
+
+- Added parameters benders/<bendersname>/lnsmaxcalls and benders/<bendersname>/lnsmaxcallsroot to the Benders'
+  decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
+  branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
+  parameters only have effect if the lnscheck parameter is set to TRUE.
+
+- new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
 
 ### Data structures
 
@@ -105,34 +179,29 @@ Build system
 Fixed bugs
 ----------
 
+- fix and improve memory handling in symmetry computation
+
 Miscellaneous
 -------------
+
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
+  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
 
 Known bugs
 ----------
 
 @page RN60 Release notes for SCIP 6.0
 
-@section RN601 SCIP 6.0.1
+@section RN602 SCIP 6.0.2
 *************************
 
 Features
 --------
 
-- Using the parameter "propagating/orbitalfixing/recomputerestart" one can now decide to recompute symmetries after a
-  restart or not. Previously one could just turn off symmetry computation after a restart.
-- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
-
 Performance improvements
 ------------------------
-
-- improved performance of orbital fixing in several ways:
-  store permutations in transposed form to improve cache efficency;
-  reverse order to speed up filtering of permutations;
-  handle variables globally fixed to 1 in list;
-  use event handler to catch global fixings;
-  speed up orbit computations;
-  change handling of restarts;
 
 Examples and applications
 -------------------------
@@ -146,16 +215,13 @@ Interface changes
 
 ### New API functions
 
-- SCIPhashmapInsertInt(), SCIPhashmapSetImageInt(), and SCIPhashmapGetImageInt() to use integer values as images in hashmaps
-
 ### Command line interface
 
 ### Interfaces to external software
 
-### Changed parameters
+- Updated the Mosek LP solver interface to support Mosek 9.0.
 
-- renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
-- default clock type for timing is now wallclock
+### Changed parameters
 
 ### New parameters
 
@@ -175,11 +241,78 @@ Build system
 
 ### Cmake
 
+### Makefile
+
+Fixed bugs
+----------
+- fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
+  skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
+- fixed wrong behavior of concurrent solve ignoring initial solutions
+- fixed bug in concurrent solve when problem was already solved in presolving
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN601 SCIP 6.0.1
+*************************
+
+Features
+--------
+
+- when using a debug solution every (multi-)aggregation will be checked w.r.t. this solution
+
+Performance improvements
+------------------------
+
+- try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
+  compute greedy solution by weighted median selection.
+
+Interface changes
+-----------------
+
+### Deleted and changed API methods and macros
+
+- The preprocessor macro NO_CONFIG_HEADER now needs to be defined when
+  including SCIP header files from a SCIP build or installation that
+  has been build via the Makefile-only build system.
+
+- The following preprocessor macros have been renamed:
+  WITH_ZLIB to SCIP_WITH_ZLIB, WITH_GMP to SCIP_WITH_GMP, WITH_READLINE
+  to SCIP_WITH_READLINE, NO_SIGACTION to SCIP_NO_SIGACTION, NO_STRTOK_R
+  to SCIP_NO_STRTOK_R, ROUNDING_FE to SCIP_ROUNDING_FE, ROUNDING_FP to
+  SCIP_ROUNDING_FP, ROUNDING_MS to SCIP_ROUNDING_MS. Note, however, that
+  the names of macros NO_RAND_R and NO_STRERROR_R have not been changed
+  so far.
+
+### New API functions
+
+- SCIPhashmapInsertInt(), SCIPhashmapSetImageInt(), and SCIPhashmapGetImageInt() to use integer values as images in hashmaps
+
+### Command line interface
+
+- warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
+
+### Changed parameters
+
+- default clock type for timing is now wallclock
+
+Unit tests
+----------
+
+- added unit tests for exact knapsack solving and (weighted) median selection algorithms
+
+Build system
+------------
+
+### Cmake
+
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
 - new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -187,15 +320,33 @@ Fixed bugs
 - fixed handling of weights in cons_sos1 and cons_sos2 (NULL pointer to weights)
 - fixed handling of unbounded LPs in SCIP and in several LPIs; added heuristic method to guess solution
 - the STO reader is capable of handling scenarios defined using lower case "rhs"
-- fix and improve memory handling in symmetry computation
 - fixed OPB reader for instances without explicit plus signs
 - correct dual solution values for bound constraints
 - fixed recognition of variable with only one lock in cons_bivariate, cons_quadratic, and cons_nonlinear
 - fixed update of constraint violations in solution repair in cons_bivariate, cons_quadratic, and cons_nonlinear
 - print error message and terminate if matrix entries of a column are not consecutive in mps format
+- fixed incorrect handling of fixed variables when transfer of cuts from LNS heuristic for Benders' decomposition
+- fix returning local infeasible status by Ipopt interface if Ipopt finds problem locally infeasible
+- skip attempt to apply fixings in linear constraint handler during solving stage as LP rows cannot change anymore
+- fixed bug when reading >= indicator constraints in MPS format
+- fix issue with nodes without domain changes if we ran into solution limit in prop_orbitalfixing
+- fixed unresolved reference to CppAD's microsoft_timer() function on builds with MS/Intel compilers on Windows
+- ignore implications added through SCIPaddVarImplication() that are redundant to global bounds also in the
+  special case of an implication between two binary variables; also, use implications instead of cliques in the case
+  of a binary implied variable with nonbinary active representative
+- fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
+- fixed some special cases in SCIPselect/SCIPselectWeighted methods
+- relaxed too strict assertion in Zirounding heuristic
+- fixed the upgrade routine to XOR constraints: aggregate integer variable if its coefficient has the wrong sign
+- fixed handling of nonartificial parity variables when deleting redundant XOR constraints
+- earlier deletion of trivial XOR constraints (at most 1 operator left)
+- fixed wrong hashmap accesses and added sanity check for the correct hashmap type
+- avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
+- corrected the output of the first LP value in case of branch-and-price
 
 Miscellaneous
 -------------
+- do not scale linear constraints to integral coefficients
 
 Known bugs
 ----------

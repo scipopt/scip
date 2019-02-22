@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1070,6 +1070,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -4397,6 +4402,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4452,6 +4462,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->conditionlimit = dval;
       lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

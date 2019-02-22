@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** creates the symmetry breaking presolver and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */

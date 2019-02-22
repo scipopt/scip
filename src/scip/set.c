@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -165,12 +165,16 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISP_VERBLEVEL SCIP_VERBLEVEL_HIGH /**< verbosity level of output */
-#define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISP_WIDTH             143 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
 #define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
+
+/* Heuristics */
+
+#define SCIP_DEFAULT_HEUR_USEUCTSUBSCIP  FALSE  /**< should setting of common subscip parameters include the activation of the UCT node selector? */
 
 /* History */
 
@@ -224,6 +228,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+#define SCIP_DEFAULT_LP_MARKOWITZ          0.01 /**< minimal Markowitz threshold to control sparsity/stability in LU factorization */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
@@ -1157,6 +1162,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
+   (*set)->subscipsoff = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -1514,6 +1520,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
          NULL, NULL) );
 
+   /* heuristic parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "heuristics/useuctsubscip",
+         "should setting of common subscip parameters include the activation of the UCT node selector?",
+         &(*set)->heur_useuctsubscip, TRUE, SCIP_DEFAULT_HEUR_USEUCTSUBSCIP, NULL, NULL) );
+
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "history/valuebased",
@@ -1689,6 +1701,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/conditionlimit",
          "maximum condition number of LP basis counted as stable (-1.0: no limit)",
          &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/minmarkowitz",
+         "minimal Markowitz threshold to control sparsity/stability in LU factorization",
+         &(*set)->lp_markowitz, TRUE, SCIP_DEFAULT_LP_MARKOWITZ, 1e-4, 0.9999,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkprimfeas",
@@ -5744,6 +5761,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
+#undef SCIPsetGetSubscipsOff
 
 /** returns value treated as infinity */
 SCIP_Real SCIPsetInfinity(
@@ -6988,6 +7006,16 @@ SCIP_Bool SCIPsetIsSumRelGE(
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
+}
+
+/** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
+SCIP_Bool SCIPsetGetSubscipsOff(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->subscipsoff;
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

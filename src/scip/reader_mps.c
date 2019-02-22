@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1046,6 +1046,12 @@ SCIP_RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
+            /* warn the user in case the coefficient is infinite */
+            if( SCIPisInfinity(scip, REALABS(val)) )
+            {
+               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
+            }
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
@@ -2528,7 +2534,7 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* correct linear constraint and create new name */
-      if ( ! SCIPisInfinity(scip, -lhs) )
+      if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
          /* we have added lhs above and only need the rhs */
          SCIP_CALL( SCIPchgLhsLinear(scip, lincons, -SCIPinfinity(scip) ) );

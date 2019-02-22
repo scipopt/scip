@@ -127,6 +127,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -559,6 +560,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
@@ -947,12 +949,13 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+include(GenerateExportHeader)
+generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
 endif()
-
-target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
@@ -975,7 +978,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h DESTINATION include/scip)
+install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h ${CMAKE_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)

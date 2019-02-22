@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -312,8 +312,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_SOL* boundary_sol;
    POSITION position;
    SCIP_Real feas;
-   int nlrowsidx[2] = {0, 1};
+   int nlrowsidx[] = {0, 1};
    int nnlrowsidx = 2;
+   SCIP_NLROW* nlrows[2];
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -322,7 +323,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    /* create the nl rows */
    createNlRow1(convexsides[0]);
    createNlRow2(convexsides[1]);
-   SCIP_NLROW* nlrows[2] = {nlrow1, nlrow2};
+   nlrows[0] = nlrow1;
+   nlrows[1] = nlrow2;
+
 
    /** first point active only on nlrow1 **/
    /* set interior point */

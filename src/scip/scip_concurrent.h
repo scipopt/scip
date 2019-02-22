@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,7 +75,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConcsolverType(
    SCIP*                               scip,                       /**< SCIP data structure */
    const char*                         name,                       /**< name of concurrent_solver */
@@ -93,20 +93,20 @@ SCIP_RETCODE SCIPincludeConcsolverType(
    );
 
 /** returns the concurrent solver type with the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_CONCSOLVERTYPE* SCIPfindConcsolverType(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of concurrent_solver */
    );
 
 /** returns the array of included concurrent solver types */
-EXTERN
+SCIP_EXPORT
 SCIP_CONCSOLVERTYPE** SCIPgetConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of included concurrent solver types */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -139,7 +139,7 @@ int SCIPgetNConcsolverTypes(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPconstructSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    );

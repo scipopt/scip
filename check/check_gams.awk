@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -44,7 +44,7 @@ function isEQ(a, b)
 }
 
 BEGIN {
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    writesolufile = 0;        # should a solution file be created from the results
@@ -102,6 +102,11 @@ BEGIN {
 #18 NumberOfNodes
 
 $3 == solver || $3 == "EXAMINER2" {
+   # with GAMS >= 26, the full filename is written to the trace file
+   # we remove some extensions for easier matching with solu file entries
+   sub("\\.gms.gz", "", $1);
+   sub("\\.gms", "", $1);
+
    model[nprobs] = $1;
    type[nprobs] = $2;
    maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );

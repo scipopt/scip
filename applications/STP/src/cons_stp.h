@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,13 +41,11 @@ extern "C" {
 #endif
 
 /** creates the handler for element constraints and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a stp constraint */
-extern
 SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -62,7 +60,6 @@ void SCIPStpConshdlrSetGraph(
    );
 
 /** dual ascent heuristic */
-extern
 SCIP_RETCODE SCIPStpDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -82,7 +79,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    );
 
 /** dual ascent heuristic for the PCSPG and the MWCSP */
-extern
 SCIP_RETCODE SCIPStpDualAscentPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */

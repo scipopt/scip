@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -71,7 +71,7 @@ extern "C" {
  *
  *  @see debug.h for more information on debug solution mechanism
  */
-EXTERN
+SCIP_EXPORT
 void SCIPenableDebugSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -80,7 +80,7 @@ void SCIPenableDebugSol(
  *
  *  @see debug.h for more information on debug solution mechanism
  */
-EXTERN
+SCIP_EXPORT
 void SCIPdisableDebugSol(
    SCIP*                 scip                /**< SCIP data structure */
    );

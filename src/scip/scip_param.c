@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1087,4 +1087,18 @@ int SCIPgetNParams(
    assert(scip->set != NULL);
 
    return SCIPsetGetNParams(scip->set);
+}
+
+/** returns whether plugins with sub-SCIPs that could cause recursion have been disabled
+ *
+ *  @return the value of the variable set->subscipsoff
+ */
+SCIP_Bool SCIPgetSubscipsOff(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetGetSubscipsOff(scip->set);
 }

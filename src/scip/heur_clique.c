@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,7 +65,7 @@
 
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
-#define HEUR_DISPCHAR         'Q'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         5000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -521,6 +521,12 @@ SCIP_RETCODE createNewSol(
    assert(subsol != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
+   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
+      return SCIP_OKAY;
+
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -901,7 +907,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, FALSE,
+            TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
@@ -1075,8 +1082,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* free conflict variables */
-   SCIPfreeBufferArrayNull(scip, &onefixvars);
    SCIPfreeBufferArrayNull(scip, &onefixvals);
+   SCIPfreeBufferArrayNull(scip, &onefixvars);
 
    /* freeing solution */
    if( sol != NULL )

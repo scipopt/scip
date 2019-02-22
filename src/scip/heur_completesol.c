@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,7 @@
 
 #define HEUR_NAME             "completesol"
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
-#define HEUR_DISPCHAR         'h'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -789,7 +789,8 @@ SCIP_RETCODE setupAndSolve(
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapf, NULL, "completesol", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapf, NULL, "completesol", NULL, NULL, 0, FALSE, FALSE, FALSE,
+         TRUE, &valid) );
    SCIPdebugMsg(scip, "Copying the SCIP instance returned with valid=%d.\n", valid);
 
    /* create event handler for LP events */

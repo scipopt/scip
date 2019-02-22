@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,13 +31,13 @@ extern "C" {
 #endif
 
 /** creates the oneopt primal heuristic and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurCycKerlin(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** External method that adds a solution to the list of candidate-solutions that should be improved */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE addCandSolCyckerlin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< The given solution */

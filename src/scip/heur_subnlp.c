@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,6 +24,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/nlpi_ipopt.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -61,7 +62,7 @@
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
-#define HEUR_DISPCHAR    'q'
+#define HEUR_DISPCHAR    SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY    -2000000
 #define HEUR_FREQ        1
 #define HEUR_FREQOFS     0
@@ -162,6 +163,7 @@ SCIP_RETCODE createSubSCIP(
    static const SCIP_Bool copydisplays = FALSE;
    static const SCIP_Bool copyreader = FALSE;
 #endif
+   SCIP_NLPI* ipopt;
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -343,6 +345,11 @@ SCIP_RETCODE createSubSCIP(
    /* for debugging, enable SCIP output */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 5) );
 #endif
+
+   /* enable infeasible problem heuristic in Ipopt */
+   ipopt = SCIPfindNlpi(heurdata->subscip, "ipopt");
+   if( ipopt != NULL )
+      SCIPsetModifiedDefaultSettingsIpopt(ipopt, "expect_infeasible_problem yes\n", TRUE);
 
    return SCIP_OKAY;
 }
@@ -1675,9 +1682,9 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-      SCIPfreeBufferArray(scip, &consvars);
-      SCIPfreeBufferArray(scip, &boundtypes);
       SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* add and release constraint if created successfully */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
-#define HEUR_DISPCHAR         'z'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -500
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -271,11 +271,17 @@ SCIP_RETCODE updateSlacks(
       if( rowpos >= 0 )
       {
          SCIP_Real val;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_ROW* row;
 
          val = colvals[i] * shiftvalue;
+         row = rows[i];
+         lhs = SCIProwGetLhs(row);
+         rhs = SCIProwGetRhs(row);
 
          /* if the row is an equation, we update its slack variable instead of its activities */
-         if( SCIPisFeasEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])) )
+         if( SCIPisFeasEQ(scip, lhs, rhs) )
          {
             SCIP_Real slackvarshiftval;
             SCIP_Real slackvarsolval;
@@ -291,7 +297,7 @@ SCIP_RETCODE updateSlacks(
 
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvars[rowpos], slackvarsolval + slackvarshiftval) );
          }
-         else if( !SCIPisInfinity(scip, -activities[rowpos]) && !SCIPisInfinity(scip, activities[rowpos]) )
+         else if( !SCIPisInfinity(scip, REALABS(activities[rowpos])) )
             activities[rowpos] += val;
 
          /* the slacks of the row now can be updated independently of its type */
@@ -300,8 +306,8 @@ SCIP_RETCODE updateSlacks(
          if( !SCIPisInfinity(scip, -downslacks[rowpos]) )
             downslacks[rowpos] += val;
 
-         assert(!SCIPisFeasNegative(scip, upslacks[rowpos]));
-         assert(!SCIPisFeasNegative(scip, downslacks[rowpos]));
+         assert(SCIPisInfinity(scip, -lhs) || SCIPisFeasGE(scip, activities[rowpos], lhs));
+         assert(SCIPisInfinity(scip, rhs) || SCIPisFeasLE(scip, activities[rowpos], rhs));
       }
    }
    return SCIP_OKAY;

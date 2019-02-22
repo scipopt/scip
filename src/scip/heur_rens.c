@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,7 +54,7 @@
 /* default values for standard parameters that every primal heuristic has in SCIP */
 #define HEUR_NAME             "rens"
 #define HEUR_DESC             "LNS exploring fractional neighborhood of relaxation's optimum"
-#define HEUR_DISPCHAR         'E'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

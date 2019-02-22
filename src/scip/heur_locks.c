@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@
 
 #define HEUR_NAME             "locks"
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
-#define HEUR_DISPCHAR         'k'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         3000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -120,6 +120,12 @@ SCIP_RETCODE createNewSol(
    assert(subvars != NULL);
    assert(subsol != NULL);
    assert(success != NULL);
+
+   *success = FALSE;
+
+   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
+      return SCIP_OKAY;
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -897,7 +903,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_locks", FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_locks", FALSE, FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1186,14 +1186,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
+      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialvars);
-   SCIPfreeBufferArray(scip, monomialexps);
    SCIPfreeBufferArray(scip, monomialcoefs);
    SCIPfreeBufferArray(scip, monomialnvars);
+   SCIPfreeBufferArray(scip, monomialexps);
+   SCIPfreeBufferArray(scip, monomialvars);
 }
 
 /** increases usage counter of variable
@@ -2364,7 +2364,8 @@ SCIP_RETCODE SCIPgetVarSols(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPclearRelaxSolVals(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator data structure */
    )
 {
    SCIP_VAR** vars;
@@ -2374,6 +2375,9 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPclearRelaxSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* update the responsible relax pointer */
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    /* the relaxation solution is already cleared */
    if( SCIPrelaxationIsSolZero(scip->relaxation) )
@@ -2411,6 +2415,7 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  */
 SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_VAR*             var,                /**< variable to set value for */
    SCIP_Real             val                 /**< solution value of variable */
    )
@@ -2424,6 +2429,7 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
    if( val != 0.0 )
       SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
    SCIPrelaxationSetSolValid(scip->relaxation, FALSE, FALSE);
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    return SCIP_OKAY;
 }
@@ -2442,6 +2448,7 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
  */
 SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
    SCIP_Real*            vals,               /**< array with solution values of variables */
@@ -2456,7 +2463,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetRelaxSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+   SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
    for( v = 0; v < nvars; v++ )
    {
@@ -2465,6 +2472,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    return SCIP_OKAY;
 }
@@ -2482,6 +2490,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
  */
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_SOL*             sol,                /**< primal relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
@@ -2501,7 +2510,7 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
    SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, vals) );
 
-   SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+   SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
    for( v = 0; v < nvars; v++ )
    {
@@ -2512,6 +2521,7 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    SCIPfreeBufferArray(scip, &vals);
 
@@ -2548,6 +2558,7 @@ SCIP_Bool SCIPisRelaxSolValid(
  */
 SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure that set the current relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
@@ -2556,6 +2567,7 @@ SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmarkRelaxSolValid", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
+   SCIPrelaxationSetSolRelax(scip->relaxation, relax);
 
    return SCIP_OKAY;
 }
@@ -3099,8 +3111,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL ) /*lint !e774*/
-         *cutoff = FALSE;
+      *cutoff = FALSE;
 
       if( conflict != NULL )
          *conflict = FALSE;
@@ -4040,6 +4051,7 @@ SCIP_RETCODE SCIPtryStrongbranchLPSol(
       SCIPclockStart(scip->stat->sbsoltime, scip->set);
 
       SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+      SCIPsolSetStrongbranching(sol);
 
       /* try to round the strong branching solution */
       if( scip->set->branch_roundsbsol )
@@ -5130,10 +5142,10 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -5246,10 +5258,10 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -6700,6 +6712,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   SCIP_VAR* implprobvar;
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if ( nbdchgs != NULL )
@@ -6711,21 +6724,31 @@ SCIP_RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   /* transform implication containing two binary variables to clique */
-   if( SCIPvarIsBinary(implvar) )
+   implprobvar = SCIPvarGetProbvar(implvar);
+   /* transform implication containing two binary variables to clique; condition ensures that the active representative
+    * of implvar is actually binary
+    */
+   if( SCIPvarIsBinary(implvar) && (SCIPvarIsActive(implvar) || (implprobvar != NULL && SCIPvarIsBinary(implprobvar))) )
    {
-      SCIP_VAR* vars[2];
-      SCIP_Bool vals[2];
-
       assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
       assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
 
-      vars[0] = var;
-      vars[1] = implvar;
-      vals[0] = varfixing;
-      vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+      /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
+         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
+               )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
 
-      SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+      }
 
       return SCIP_OKAY;
    }

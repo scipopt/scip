@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,11 +46,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_copy.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_param.h"
-#include "scip/scip_prob.h"
+#include "scip/scip.h"
 
 #define BENDERS_NAME                "default"
 #define BENDERS_DESC                "default implementation of Benders' decomposition"
@@ -75,6 +71,8 @@ struct SCIP_BendersData
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             created;            /**< flag to indicate that the Benders' decomposition Data was created */
+   SCIP_Bool             subprobscopied;     /**< were the subproblems copied during the SCIP copy */
+   SCIP_Bool             mappingcreated;     /**< flag to indicate whether the variable mapping has been created */
 };
 
 
@@ -197,11 +195,18 @@ SCIP_RETCODE createVariableMappings(
 
          /* storing the subproblem variable */
          bendersdata->subproblemvars[j][i] = subvar;
+
+         if( subvar != NULL )
+         {
+            SCIP_CALL( SCIPcaptureVar(bendersdata->subproblems[j], bendersdata->subproblemvars[j][i]) );
+         }
       }
 
       /* storing the mapping of the master variable to the variable index */
       SCIP_CALL( SCIPhashmapInsertInt(bendersdata->mastervartosubindex, vars[i], i) );
    }
+
+   bendersdata->mappingcreated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -232,7 +237,51 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
    /* if the Benders' decomposition is active, then it must be created in the copy */
    if( SCIPbendersIsActive(benders) )
    {
-      SCIP_CALL( SCIPcreateBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
+      SCIP** subproblems;
+      int i;
+
+      /* copying the subproblems if the threadsafe flag was set to TRUE */
+      if( threadsafe )
+      {
+         /* allocating memory for the subproblems array */
+         SCIP_CALL( SCIPallocBufferArray(scip, &subproblems, bendersdata->nsubproblems) );
+
+         for( i = 0; i < bendersdata->nsubproblems; i++ )
+         {
+            SCIP_Bool valid;
+
+            /* creating the SCIP instance for the subproblem */
+            SCIP_CALL( SCIPcreate(&subproblems[i]) );
+
+            /* the original problem is copied so that the variable mappings are created correctly.
+             * TODO: use a varmap to create the mappings for the copies
+             */
+            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, FALSE, FALSE,
+                  &valid) );
+            assert(valid);
+         }
+      }
+      else
+         subproblems = bendersdata->subproblems;
+
+      SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, bendersdata->nsubproblems) );
+
+      /* freeing the buffer memory for the subproblems */
+      if( threadsafe )
+      {
+         SCIP_BENDERS* targetbenders;
+         SCIP_BENDERSDATA* targetbendersdata;
+
+         targetbenders = SCIPfindBenders(scip, BENDERS_NAME);
+         assert(targetbenders != NULL);
+
+         targetbendersdata = SCIPbendersGetData(targetbenders);
+
+         /* indicating that the subproblems have been copied */
+         targetbendersdata->subprobscopied = TRUE;
+
+         SCIPfreeBufferArray(scip, &subproblems);
+      }
    }
 
    return SCIP_OKAY;
@@ -253,15 +302,20 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
    assert(bendersdata != NULL);
 
+   /* should have been freed in bendersExitDefault (if mappingcreated), or not been created at the first place */
+   assert(bendersdata->subproblemvars == NULL);
+   assert(bendersdata->subvartomastervar == NULL);
+   assert(bendersdata->mastervartosubindex == NULL);
    if( bendersdata->created )
    {
-      for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
-         SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
-      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars, bendersdata->nsubproblems);
-
-      /* free hash map */
-      SCIPhashmapFree(&bendersdata->subvartomastervar);
-      SCIPhashmapFree(&bendersdata->mastervartosubindex);
+      /* if the subproblems were copied, then the copy needs to be freed */
+      if( bendersdata->subprobscopied )
+      {
+         for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
+         {
+            SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
+         }
+      }
 
       SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
    }
@@ -286,6 +340,45 @@ SCIP_DECL_BENDERSINIT(bendersInitDefault)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of Benders' decomposition (called before transformed problem is freed and the Benders'
+ * decomposition is active)
+ */
+static
+SCIP_DECL_BENDERSEXIT(bendersExitDefault)
+{
+   SCIP_BENDERSDATA* bendersdata;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   bendersdata = SCIPbendersGetData(benders);
+
+   assert(bendersdata != NULL);
+
+   if( bendersdata->mappingcreated )
+   {
+      for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
+      {
+         for( j = 0; j < bendersdata->nmastervars; j++ )
+         {
+            if( bendersdata->subproblemvars[i][j] != NULL )
+            {
+               SCIP_CALL( SCIPreleaseVar(bendersdata->subproblems[i], &bendersdata->subproblemvars[i][j]) );
+            }
+         }
+         SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
+      }
+      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars, bendersdata->nsubproblems);
+
+      /* free hash map */
+      SCIPhashmapFree(&bendersdata->subvartomastervar);
+      SCIPhashmapFree(&bendersdata->mastervartosubindex);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** mapping method between the master problem variables and the subproblem variables of Benders' decomposition */
 /**! [SnippetBendersGetvarDefault] */
@@ -430,7 +523,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    bendersdata = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
-   bendersdata->created = FALSE;
+   BMSclearMemory(bendersdata);
 
    benders = NULL;
 
@@ -444,6 +537,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP_CALL( SCIPsetBendersCopy(scip, benders, bendersCopyDefault) );
    SCIP_CALL( SCIPsetBendersFree(scip, benders, bendersFreeDefault) );
    SCIP_CALL( SCIPsetBendersInit(scip, benders, bendersInitDefault) );
+   SCIP_CALL( SCIPsetBendersExit(scip, benders, bendersExitDefault) );
 
    /* OPTIONAL: including the default cuts for Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );

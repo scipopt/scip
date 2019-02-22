@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,7 +42,7 @@
 
 #define HEUR_NAME             "octane"
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
-#define HEUR_DISPCHAR         'O'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -1008000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

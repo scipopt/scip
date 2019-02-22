@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2904,13 +2904,11 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    }
 #endif
    SCIPfreeCleanBufferArray(scip, &nodeinfeasible);
-
+   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &cliquecurrentexit);
    SCIPfreeBufferArray(scip, &cliquefirstentry);
-
    SCIPfreeBufferArray(scip, &nodelowlink);
    SCIPfreeBufferArray(scip, &nodeindex);
-   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &infeasnodes);
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);

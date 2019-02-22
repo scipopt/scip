@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,7 +29,6 @@
 #include "scip/scip.h"
 
 /** sets up the problem data */
-extern
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           probname,           /**< problem name */
@@ -40,49 +39,41 @@ SCIP_RETCODE SCIPprobdataCreate(
    );
 
 /** returns array of item ids */
-extern
 int* SCIPprobdataGetIds(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns array of item weights */
-extern
 SCIP_Longint* SCIPprobdataGetWeights(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns number of items */
-extern
 int SCIPprobdataGetNItems(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns bin capacity */
-extern
 SCIP_Longint SCIPprobdataGetCapacity(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns array of all variables ordered in the way they got generated */
-extern
 SCIP_VAR** SCIPprobdataGetVars(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns number of variables */
-extern
 int SCIPprobdataGetNVars(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns array of set partitioning constrains */
-extern
 SCIP_CONS** SCIPprobdataGetConss(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** adds given variable to the problem data */
-extern
 SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
