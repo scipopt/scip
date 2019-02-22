@@ -474,13 +474,13 @@ SCIP_RETCODE detectSocNorm(
          return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPhashmapCreate(&vars2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
+   SCIP_CALL( SCIPhashmapCreate(&vars2idx, SCIPblkmem(scip), nchildren) );
 
    ntranscoefs = 0;
    nvars = 0;
 
-
-   /* iterate over children and count number of summands (1 for non-sum-expressions) */
+   /* iterate over children and count number of appearing variables and summands (1 for non-sum-expressions) */
    for( i = 0; i < nchildren; ++i )
    {
       SCIP_CONSEXPR_EXPR* squarearg;
@@ -620,7 +620,7 @@ SCIP_RETCODE detectSocNorm(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, SCIPgetConsExprExprSumCoefs(child), offsets, transcoefs, transcoefsidx,
-         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nextvar, nchildren, ntranscoefs, nlhdlrexprdata) );
+         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nvars, nchildren, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
