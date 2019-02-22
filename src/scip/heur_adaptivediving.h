@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /** creates the adaptivediving heuristic and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP*                 scip                /**< SCIP data structure */
    );

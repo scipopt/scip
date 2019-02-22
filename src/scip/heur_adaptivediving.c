@@ -25,14 +25,11 @@
 
 #include "scip/heur_adaptivediving.h"
 #include "scip/heuristics.h"
-#include "scip/branch_distribution.h"
 #include "scip/scipdefplugins.h"
 
-#include "scip/heur_fracdiving.h"
-
 #define HEUR_NAME             "adaptivediving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
-#define HEUR_DISPCHAR         'a'
+#define HEUR_DESC             "diving heuristic that selects adaptively between the existing, public divesets"
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -70000
 #define HEUR_FREQ             2
 #define HEUR_FREQOFS          3

@@ -399,7 +399,7 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
    );
 
 /** is this dive set publicly available (ie., can be used by other primal heuristics?) */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdivesetIsPublic(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );

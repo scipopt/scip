@@ -253,7 +253,7 @@ SCIP_RETCODE SCIPcreateDiveset(
    );
 
 /** check specific preconditions for diving, e.g., if an incumbent solution is available */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPisDivesetAvailable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving heuristic settings */

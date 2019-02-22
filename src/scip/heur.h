@@ -102,7 +102,6 @@ SCIP_RETCODE SCIPdivesetGetScore(
    );
 
 /** check specific preconditions for diving, e.g., if an incumbent solution is available */
-extern
 SCIP_RETCODE SCIPdivesetIsAvailable(
    SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
    SCIP_SET*             set,                /**< SCIP settings */
