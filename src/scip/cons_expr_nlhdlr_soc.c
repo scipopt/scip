@@ -546,9 +546,9 @@ SCIP_RETCODE detectSocNorm(
    /* add the auxiliary variable */
    assert(SCIPhashmapExists(vars2idx, (void*) auxvar));
    vars[nvars-1] = auxvar;
-   transcoefs[nexttranscoef] = 1.0;
-   transcoefsidx[nexttranscoef] = nvars-1;
-   nexttranscoef = 1;
+   transcoefs[ntranscoefs-1] = 1.0;
+   transcoefsidx[ntranscoefs-1] = nvars-1;
+   nexttranscoef = 0;
 
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
@@ -614,7 +614,7 @@ SCIP_RETCODE detectSocNorm(
       }
    }
 
-   assert(nexttranscoef == ntranscoefs);
+   assert(nexttranscoef == ntranscoefs-1);
 
    *success = TRUE;
 
