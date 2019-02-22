@@ -3480,7 +3480,7 @@ SCIP_Real calculateScoreFromResult(
    if( !downbranchingresult->cutoff )
       downgain = MAX(downgain, downbranchingresult->dualbound - lpobjval);
    if( !upbranchingresult->cutoff )
-      upgain = MAX(downgain, upbranchingresult->dualbound - lpobjval);
+      upgain = MAX(upgain, upbranchingresult->dualbound - lpobjval);
 
    downgain = 100.0 * downgain;
    upgain = 100.0 * upgain;
