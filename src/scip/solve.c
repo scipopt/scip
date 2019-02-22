@@ -4237,9 +4237,14 @@ SCIP_RETCODE solveNode(
          markRelaxsUnsolved(set, relaxation);
       }
 
+      /* check for immediate restart */
+      *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
+	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+
       /* enforce constraints */
       branched = FALSE;
-      if( !(*postpone) && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
+      if( !(*postpone) && !(*restart) && !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
       {
          /* if the solution changed since the last enforcement, we have to completely reenforce it; otherwise, we
           * only have to enforce the additional constraints added in the last enforcement, but keep the infeasible
@@ -4284,7 +4289,7 @@ SCIP_RETCODE solveNode(
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
-      if( pricingaborted && !(*infeasible) && !(*cutoff) && !(*postpone) )
+      if( pricingaborted && !(*infeasible) && !(*cutoff) && !(*postpone) && !(*restart) )
       {
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
@@ -4348,7 +4353,7 @@ SCIP_RETCODE solveNode(
        */
       wasforcedlpsolve = forcedlpsolve;
       forcedlpsolve = FALSE;
-      if( (*infeasible) && !(*cutoff) && !(*postpone)
+      if( (*infeasible) && !(*cutoff) && !(*postpone) && !(*restart)
          && (!(*unbounded) || SCIPbranchcandGetNExternCands(branchcand) > 0 || SCIPbranchcandGetNPseudoCands(branchcand) > 0)
          && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
