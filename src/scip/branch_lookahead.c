@@ -2605,7 +2605,7 @@ SCIP_RETCODE branchOnVar(
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
 
-      if( decision->boundsvalid )
+      if( decision->boundsvalid && FALSE )
       {
          SCIP_VAR** vars;
          int nvars;
