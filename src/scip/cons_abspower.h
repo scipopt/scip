@@ -210,7 +210,7 @@ SCIP_Real SCIPgetViolationAbspower(
  *
  * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisConvexAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */

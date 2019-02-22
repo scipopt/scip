@@ -98,43 +98,43 @@ SCIP_Real SCIPrelaxGetTime(
    );
 
 /** gets the total number of times the relaxation handler was called */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNCalls(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler cut off a node */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNCutoffs(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler improved a node's lower bound */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the time in seconds spent for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPrelaxGetImprovedLowerboundTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler added constraints */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNAddedConss(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler reduced variable domains */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNReducedDomains(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler separated cutting planes */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNSeparatedCuts(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );

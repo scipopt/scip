@@ -192,13 +192,13 @@ SCIP_Real SCIPbendersGetSubproblemObjval(
    );
 
 /** returns the number of cuts that have been added for storage */
-EXTERN
+SCIP_EXPORT
 int SCIPbendersGetNStoredCuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition cut */
    );
 
 /** returns the data for the cuts that have been added by the Benders' cut plugin */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbendersGetStoredCutData(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
    int                   cutidx,             /**< the index for the cut data that is requested */
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPbendersGetStoredCutData(
  *  variables and values will populate the input vars and vals arrays. Thus, memory must be allocated for the vars and
  *  vals arrays
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbendersGetStoredCutOrigData(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
    int                   cutidx,             /**< the index for the cut data that is requested */

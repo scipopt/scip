@@ -403,7 +403,6 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    );
 
 /** adds the data for the generated cuts to the Benders' cut storage */
-extern
 SCIP_RETCODE SCIPbendersStoreCut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */

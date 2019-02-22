@@ -99,10 +99,6 @@
 #endif
 #endif
 
-#ifndef EXTERN
-#define EXTERN SCIP_EXPORT
-#endif
-
 /* define INLINE */
 #ifndef INLINE
 #if defined(_WIN32) || defined(__STDC__)

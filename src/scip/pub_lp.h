@@ -421,13 +421,13 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
    );
 
 /** returns origin constraint handler that created the row (NULL if not available) */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
    SCIP_ROW*             row                 /**< LP row */
    );
 
 /** returns origin constraint that created the row (NULL if not available) */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS* SCIProwGetOriginCons(
    SCIP_ROW*             row                 /**< LP row */
    );

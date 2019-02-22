@@ -1226,7 +1226,7 @@ SCIP_RETCODE SCIPcopyLimits(
  *
  *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetCommonSubscipParams(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */

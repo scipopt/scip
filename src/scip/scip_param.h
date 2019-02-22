@@ -669,7 +669,7 @@ int SCIPgetNParams(
  *
  *  @return the value of the variable set->subscipsoff
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPgetSubscipsOff(
    SCIP*                 scip                /**< SCIP data structure */
    );

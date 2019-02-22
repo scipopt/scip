@@ -1574,7 +1574,6 @@ SCIP_Bool SCIPsetIsSumRelGE(
    );
 
 /** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
-extern
 SCIP_Bool SCIPsetGetSubscipsOff(
    SCIP_SET*             set                 /**< global SCIP settings */
    );

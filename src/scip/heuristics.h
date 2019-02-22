@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    );
 
 /** checks the solutions from the subscip and adds them to the master SCIP is feasible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */

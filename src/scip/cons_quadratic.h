@@ -823,7 +823,7 @@ int SCIPscaleRowprep(
 );
 
 /** generates a SCIP_ROW from a rowprep */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
@@ -832,7 +832,7 @@ SCIP_RETCODE SCIPgetRowprepRowConshdlr(
 );
 
 /** generates a SCIP_ROW from a rowprep */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetRowprepRowCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
@@ -841,7 +841,7 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
 );
 
 /** generates a SCIP_ROW from a rowprep */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */

@@ -277,7 +277,7 @@ SCIP_Bool SCIPmatrixDownlockConflict(
  *  @note Completeness is checked by testing whether all check constraints are from a list of linear constraint handlers
  *        that can be represented.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */

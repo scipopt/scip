@@ -2986,7 +2986,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
  *
  *  @deprecated Please use SCIPallowStrongDualReds()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2998,7 +2998,7 @@ SCIP_Bool SCIPallowDualReds(
  *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
  *        locks.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallowStrongDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3007,7 +3007,7 @@ SCIP_Bool SCIPallowStrongDualReds(
  *
  *  @deprecated Please use SCIPallowWeakDualReds()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3018,7 +3018,7 @@ SCIP_Bool SCIPallowObjProp(
  *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
  *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallowWeakDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );

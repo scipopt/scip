@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
  * Only computes gradient w.r.t. master problem variables.
  * Computes also the directional derivative, that is, mult times gradient times solution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */

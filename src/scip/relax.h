@@ -238,14 +238,12 @@ void SCIPrelaxationUpdateVarObj(
    );
 
 /** store the most recent relaxation handler \p relax responsible for the solution */
-extern
 void SCIPrelaxationSetSolRelax(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_RELAX*           relax               /**< relaxation handler responsible for the most recent relaxation solution */
    );
 
 /** returns the most recent relaxation handler responsible for the solution, or NULL if unspecified */
-extern
 SCIP_RELAX* SCIPrelaxationGetSolRelax(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
