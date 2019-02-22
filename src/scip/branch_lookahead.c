@@ -83,6 +83,7 @@
 #define DEFAULT_ADDBINCONSROW                0     /**< should binary constraints be added as rows to the base LP?
                                                     *   (0: no, 1: separate, 2: as initial rows) */
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
+#define DEFAULT_ONLYVIOLDOMREDS              FALSE /**< Should only domain reductions that violate the LP solution be applied? */
 #define DEFAULT_MAXNVIOLATEDCONS             1     /**< How many constraints that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
 #define DEFAULT_MAXNVIOLATEDBINCONS          0     /**< How many binary constraints that are violated by the base lp
@@ -102,6 +103,7 @@
 #define DEFAULT_PROPAGATE                    TRUE  /**< Should domain propagation be executed before each temporary node is
                                                     *   solved? */
 #define DEFAULT_USELEVEL2DATA                TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
+#define DEFAULT_APPLYCHILDBOUNDS             TRUE  /**< should bounds known for child nodes be applied? */
 #define DEFAULT_MAXPROPROUNDS                -1    /**< maximum number of propagation rounds to perform at temporary
                                                     *   nodes (-1: unlimited) */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
@@ -1019,6 +1021,7 @@ typedef struct
    int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
                                               *   used. */
+   SCIP_Bool             onlyvioldomreds;    /**< Should only domain reductions that violate the LP solution be applied? */
    SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
                                               *   be gathered and used */
    int                   addbinconsrow;      /**< should binary constraints be added as rows to the base LP?
@@ -1036,6 +1039,7 @@ typedef struct
    SCIP_Bool             addclique;          /**< add binary constraints with two variables found at the root node also as a clique? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
    SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
+   SCIP_Bool             applychildbounds;   /**< should bounds known for child nodes be applied? */
    SCIP_Bool             inscoring;          /**< are we currently in FSB-scoring (only used internally) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to perform at temporary nodes
                                               *   (-1: unlimited) */
@@ -2372,6 +2376,7 @@ void applyDeeperDomainReductions(
 static
 SCIP_RETCODE applyDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< the configuration of the branching rule */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
    DOMAINREDUCTIONS*     domreds,            /**< The domain reductions that should be applied to the current node. */
@@ -2413,9 +2418,7 @@ SCIP_RETCODE applyDomainReductions(
    {
       SCIP_VAR* var;
       SCIP_Real proposedbound;
-#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
       SCIP_Real baselpval;
-#endif
 #ifdef SCIP_DEBUG
       SCIP_Real oldbound;
 #endif
@@ -2426,9 +2429,7 @@ SCIP_RETCODE applyDomainReductions(
 
       assert(var != NULL);
 
-#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
       baselpval = SCIPgetSolVal(scip, baselpsol, var);
-#endif
 
       if( SCIPisGT(scip, domreds->lowerbounds[i], SCIPvarGetLbLocal(var)) )
       {
@@ -2437,6 +2438,9 @@ SCIP_RETCODE applyDomainReductions(
          oldbound = SCIPvarGetLbLocal(var);
 #endif
          proposedbound = domreds->lowerbounds[i];
+
+         if( config->onlyvioldomreds && SCIPisGE(scip, baselpval, proposedbound) )
+            continue;
 
          /* add the new bound */
          SCIP_CALL( SCIPtightenVarLb(scip, var, proposedbound, TRUE, &infeasible, &tightened) );
@@ -2485,6 +2489,9 @@ SCIP_RETCODE applyDomainReductions(
          oldbound = SCIPvarGetUbLocal(var);
 #endif
          proposedbound = domreds->upperbounds[i];
+
+         if( config->onlyvioldomreds && SCIPisLE(scip, baselpval, proposedbound) )
+            continue;
 
          /* add the new bound */
          SCIP_CALL( SCIPtightenVarUb(scip, var, proposedbound, TRUE, &infeasible, &tightened) );
@@ -2560,6 +2567,7 @@ SCIP_RETCODE copyCurrentSolution(
 static
 SCIP_RETCODE branchOnVar(
    SCIP*                 scip                /**< SCIP data structure */,
+   CONFIGURATION*        config,             /**< config struct with the user configuration */
    BRANCHINGDECISION*    decision            /**< the decision with all the needed data */
    )
 {
@@ -2570,6 +2578,7 @@ SCIP_RETCODE branchOnVar(
 
    assert(scip != NULL);
    assert(decision != NULL);
+   assert(config != NULL);
 
    bestvar = decision->branchvar;
    bestval = decision->branchval;
@@ -2605,7 +2614,7 @@ SCIP_RETCODE branchOnVar(
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
 
-      if( decision->boundsvalid && FALSE )
+      if( decision->boundsvalid && config->applychildbounds )
       {
          SCIP_VAR** vars;
          int nvars;
@@ -5071,10 +5080,10 @@ SCIP_RETCODE selectVarStart(
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
 #ifdef SCIP_STATISTIC
-         SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+         SCIP_CALL( applyDomainReductions(scip, config, baselpsol, domainreductions, &status->domredcutoff,
                &status->domred, statistics) );
 #else
-         SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+         SCIP_CALL( applyDomainReductions(scip, config, baselpsol, domainreductions, &status->domredcutoff,
                &status->domred) );
 #endif
       }
@@ -5207,13 +5216,14 @@ SCIP_RETCODE usePreviousResult(
    assert(scip != NULL);
    assert(branchruledata != NULL);
    assert(result != NULL);
+   assert(branchruledata->config != NULL);
    assert(branchruledata->persistent != NULL);
    assert(branchruledata->persistent->olddecision != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Branching based on previous solution.\n");
 
    /* execute the actual branching */
-   SCIP_CALL( branchOnVar(scip, branchruledata->persistent->olddecision) );
+   SCIP_CALL( branchOnVar(scip, branchruledata->config, branchruledata->persistent->olddecision) );
    *result = SCIP_BRANCHED;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Branched based on previous solution. Variable <%s>\n",
@@ -5615,7 +5625,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
             decision->downdb, decision->updb);
 
          /* execute the branching as a result of the branching logic */
-         SCIP_CALL( branchOnVar(scip, decision) );
+         SCIP_CALL( branchOnVar(scip, config, decision) );
 
          *result = SCIP_BRANCHED;
       }
@@ -5774,6 +5784,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "should domain reductions be collected and applied?",
          &branchruledata->config->usedomainreduction, TRUE, DEFAULT_USEDOMAINREDUCTION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/onlyvioldomreds",
+         "should only domain reductions that violate the LP solution be applied?",
+         &branchruledata->config->onlyvioldomreds, TRUE, DEFAULT_ONLYVIOLDOMREDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addnonviocons",
          "should binary constraints, that are not violated by the base LP, be collected and added?",
          &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
@@ -5808,6 +5822,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/uselevel2data",
          "should branching data generated at depth level 2 be stored for re-using it?",
          &branchruledata->config->uselevel2data, TRUE, DEFAULT_USELEVEL2DATA, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/applychildbounds",
+         "should bounds known for child nodes be applied?",
+         &branchruledata->config->applychildbounds, TRUE, DEFAULT_APPLYCHILDBOUNDS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/maxproprounds",
          "maximum number of propagation rounds to perform at each temporary node (-1: unlimited)",
