@@ -77,7 +77,7 @@ extern "C" {
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
  *  of the original problem.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */

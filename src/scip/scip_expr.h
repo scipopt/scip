@@ -86,7 +86,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprtreeTransformedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPgetExprtreeTransformedVars(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPevalExprtreeSol(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeLocalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */

@@ -74,7 +74,6 @@
 #define COST_MIN_POLY_x0 100
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 

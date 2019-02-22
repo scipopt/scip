@@ -34,7 +34,6 @@ extern "C" {
 
 
 /** includes the gr file reader in SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderGr(
    SCIP*                 scip                /**< SCIP data structure */
    );

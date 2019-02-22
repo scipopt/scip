@@ -53,14 +53,12 @@ extern "C" {
  */
 
 /** frees a variable bounds data structure */
-extern
 void SCIPvboundsFree(
    SCIP_VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** adds a variable bound to the variable bounds data structure */
-extern
 SCIP_RETCODE SCIPvboundsAdd(
    SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -73,7 +71,6 @@ SCIP_RETCODE SCIPvboundsAdd(
    );
 
 /** removes from variable x a variable bound x >=/<= b*z + d with binary or integer z */
-extern
 SCIP_RETCODE SCIPvboundsDel(
    SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -90,25 +87,21 @@ void SCIPvboundsShrink(
 
 
 /** gets number of variable bounds contained in given variable bounds data structure */
-extern
 int SCIPvboundsGetNVbds(
    SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    );
 
 /** gets array of variables contained in given variable bounds data structure */
-extern
 SCIP_VAR** SCIPvboundsGetVars(
    SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    );
 
 /** gets array of coefficients contained in given variable bounds data structure */
-extern
 SCIP_Real* SCIPvboundsGetCoefs(
    SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    );
 
 /** gets array of constants contained in given variable bounds data structure */
-extern
 SCIP_Real* SCIPvboundsGetConstants(
    SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    );
@@ -134,7 +127,6 @@ SCIP_Real* SCIPvboundsGetConstants(
  */
 
 /** frees an implications data structure */
-extern
 void SCIPimplicsFree(
    SCIP_IMPLICS**        implics,            /**< pointer of implications data structure to free */
    BMS_BLKMEM*           blkmem              /**< block memory */
@@ -143,7 +135,6 @@ void SCIPimplicsFree(
 /** adds an implication x == 0/1 -> y <= b or y >= b to the implications data structure;
  *  the implication must be non-redundant
  */
-extern
 SCIP_RETCODE SCIPimplicsAdd(
    SCIP_IMPLICS**        implics,            /**< pointer to implications data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -159,7 +150,6 @@ SCIP_RETCODE SCIPimplicsAdd(
    );
 
 /** removes the implication  x <= 0 or x >= 1  ==>  y <= b  or  y >= b  from the implications data structure */
-extern
 SCIP_RETCODE SCIPimplicsDel(
    SCIP_IMPLICS**        implics,            /**< pointer to implications data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -170,7 +160,6 @@ SCIP_RETCODE SCIPimplicsDel(
    );
 
 /** returns which implications on given variable y are contained in implications for x == 0 or x == 1 */
-extern
 void SCIPimplicsGetVarImplics(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
@@ -180,7 +169,6 @@ void SCIPimplicsGetVarImplics(
    );
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
-extern
 SCIP_Bool SCIPimplicsContainsImpl(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
@@ -190,28 +178,24 @@ SCIP_Bool SCIPimplicsContainsImpl(
 
 
 /** gets number of implications for a given binary variable fixing */
-extern
 int SCIPimplicsGetNImpls(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
 /** gets array with implied variables for a given binary variable fixing */
-extern
 SCIP_VAR** SCIPimplicsGetVars(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
 /** gets array with implication types for a given binary variable fixing */
-extern
 SCIP_BOUNDTYPE* SCIPimplicsGetTypes(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
 /** gets array with implication bounds for a given binary variable fixing */
-extern
 SCIP_Real* SCIPimplicsGetBounds(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
@@ -221,7 +205,6 @@ SCIP_Real* SCIPimplicsGetBounds(
  *  If an implication is a shortcut, i.e., it was added as part of the transitive closure of another implication,
  *  its id is negative, otherwise it is nonnegative.
  */
-extern
 int* SCIPimplicsGetIds(
    SCIP_IMPLICS*         implics,            /**< implication data */
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
@@ -250,7 +233,6 @@ int* SCIPimplicsGetIds(
  */
 
 /** adds a single variable to the given clique */
-extern
 SCIP_RETCODE SCIPcliqueAddVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -262,7 +244,6 @@ SCIP_RETCODE SCIPcliqueAddVar(
    );
 
 /** removes a single variable from the given clique */
-extern
 void SCIPcliqueDelVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -271,14 +252,12 @@ void SCIPcliqueDelVar(
    );
 
 /** frees a clique list data structure */
-extern
 void SCIPcliquelistFree(
    SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** adds a clique to the clique list */
-extern
 SCIP_RETCODE SCIPcliquelistAdd(
    SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -288,7 +267,6 @@ SCIP_RETCODE SCIPcliquelistAdd(
    );
 
 /** removes a clique from the clique list */
-extern
 SCIP_RETCODE SCIPcliquelistDel(
    SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -299,7 +277,6 @@ SCIP_RETCODE SCIPcliquelistDel(
 /** returns whether the given clique lists have a non-empty intersection, i.e. whether there is a clique that appears
  *  in both lists
  */
-extern
 SCIP_Bool SCIPcliquelistsHaveCommonClique(
    SCIP_CLIQUELIST*      cliquelist1,        /**< first clique list data structure */
    SCIP_Bool             value1,             /**< value of first variable */
@@ -308,7 +285,6 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
    );
 
 /** removes all listed entries from the cliques */
-extern
 void SCIPcliquelistRemoveFromCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -318,7 +294,6 @@ void SCIPcliquelistRemoveFromCliques(
    );
 
 /** creates a clique table data structure */
-extern
 SCIP_RETCODE SCIPcliquetableCreate(
    SCIP_CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -326,7 +301,6 @@ SCIP_RETCODE SCIPcliquetableCreate(
    );
 
 /** frees a clique table data structure */
-extern
 SCIP_RETCODE SCIPcliquetableFree(
    SCIP_CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
@@ -335,7 +309,6 @@ SCIP_RETCODE SCIPcliquetableFree(
 /** adds a clique to the clique table, using the given values for the given variables;
  *  performs implications if the clique contains the same variable twice
  */
-extern
 SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -360,7 +333,6 @@ SCIP_RETCODE SCIPcliquetableAdd(
  *
  * @note cliques can be processed several times by this method
  */
-extern
 SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -384,7 +356,6 @@ SCIP_RETCODE SCIPcliquetableCleanup(
  *
  *  an update becomes necessary if a clique gets added with variables from different components
  */
-extern
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -396,65 +367,55 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    );
 
 /** returns the index of the connected component of the clique graph that the variable belongs to, or -1  */
-extern
 int SCIPcliquetableGetVarComponentIdx(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the number of cliques stored in the clique list */
-extern
 int SCIPcliquelistGetNCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_Bool             value               /**< value of the variable for which the cliques should be returned */
    );
 
 /** returns the cliques stored in the clique list, or NULL if the clique list is empty */
-extern
 SCIP_CLIQUE** SCIPcliquelistGetCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_Bool             value               /**< value of the variable for which the cliques should be returned */
    );
 
 /** checks whether variable is contained in all cliques of the cliquelist */
-extern
 void SCIPcliquelistCheck(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    );
 
 /** gets the number of cliques stored in the clique table */
-extern
 int SCIPcliquetableGetNCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** gets the number of cliques created so far by the clique table */
-extern
 int SCIPcliquetableGetNCliquesCreated(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** gets the array of cliques stored in the clique table */
-extern
 SCIP_CLIQUE** SCIPcliquetableGetCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** gets the number of entries in the whole clique table */
-extern
 SCIP_Longint SCIPcliquetableGetNEntries(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns the number of clique components, or -1 if update is necessary first */
-extern
 int SCIPcliquetableGetNCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns TRUE iff the connected clique components need an update (because new cliques were added) */
-extern
 SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
