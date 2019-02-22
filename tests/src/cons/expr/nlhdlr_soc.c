@@ -105,8 +105,11 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
+/* test suite */
+TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
+
 /* detects ||x|| as quadratic expression */
-Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
+Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
@@ -114,7 +117,6 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_VAR* auxvar
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
-   SCIP_VAR* var;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
