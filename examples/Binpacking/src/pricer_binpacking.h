@@ -31,13 +31,11 @@
 
 
 /** creates the binpacking variable pricer and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludePricerBinpacking(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** added problem specific data to pricer and activates pricer */
-extern
 SCIP_RETCODE SCIPpricerBinpackingActivate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< set covering constraints for the items */

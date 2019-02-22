@@ -69,7 +69,7 @@ extern "C" {
  *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
  *        call will be executed, @see SCIPgetLastDiveNode().
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< settings for diving */
@@ -80,7 +80,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    );
 
 /** get a sub-SCIP copy of the transformed problem */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP used by the heuristic */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    );
 
 /** checks the solutions from the subscip and adds them to the master SCIP is feasible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */

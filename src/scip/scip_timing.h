@@ -69,7 +69,7 @@ extern "C" {
  *
  *  @return the current time of day in seconds (standard time zone).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTimeOfDay(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -79,7 +79,7 @@ SCIP_Real SCIPgetTimeOfDay(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPcreateClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateCPUClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcreateCPUClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateWallClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPcreateWallClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK**          clck                /**< pointer to clock timer */
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPfreeClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
@@ -134,7 +134,7 @@ SCIP_RETCODE SCIPresetClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPstartClock(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstopClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
@@ -178,7 +178,7 @@ SCIP_RETCODE SCIPstopClock(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPstartSolvingTime(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstopSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -239,7 +239,7 @@ SCIP_RETCODE SCIPstopSolvingTime(
  *
  *  @return the measured time of a clock in seconds.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetClockTime(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
@@ -250,7 +250,7 @@ SCIP_Real SCIPgetClockTime(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetClockTime(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck,               /**< clock timer */
@@ -261,7 +261,7 @@ SCIP_RETCODE SCIPsetClockTime(
  *
  *  @return the current total SCIP time in seconds, ie. the total time since the SCIP instance has been created
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTotalTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -284,7 +284,7 @@ SCIP_Real SCIPgetTotalTime(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -307,7 +307,7 @@ SCIP_Real SCIPgetSolvingTime(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetReadingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -327,7 +327,7 @@ SCIP_Real SCIPgetReadingTime(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPresolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -349,7 +349,7 @@ SCIP_Real SCIPgetPresolvingTime(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetFirstLPTime(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -81,7 +81,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of primal heuristic */
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPincludeHeur(
  *
 *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeHeur() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR**           heur,               /**< pointer to the heuristic */
@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    );
 
 /** sets copy method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPsetHeurCopy(
    );
 
 /** sets destructor method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPsetHeurFree(
    );
 
 /** sets initialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPsetHeurInit(
    );
 
 /** sets deinitialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPsetHeurExit(
    );
 
 /** sets solving process initialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPsetHeurInitsol(
    );
 
 /** sets solving process deinitialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -179,26 +179,26 @@ SCIP_RETCODE SCIPsetHeurExitsol(
    );
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR* SCIPfindHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of primal heuristic */
    );
 
 /** returns the array of currently available primal heuristics */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR** SCIPgetHeurs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available primal heuristics */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNHeurs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPsetHeurPriority(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< pointer to created diving heuristic settings, or NULL if not needed */

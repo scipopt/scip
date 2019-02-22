@@ -223,7 +223,7 @@ extern "C" {
 #endif
 
 /** includes default SCIP plugins into SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );

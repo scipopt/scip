@@ -73,7 +73,6 @@ extern "C" {
  *
  *  @ingroup NodeSelectorIncludes
  */
-extern
 SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP*                 scip                /**< SCIP data structure */
    );

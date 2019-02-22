@@ -3171,7 +3171,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */

@@ -71,7 +71,7 @@ extern "C" {
  *
  *  @see debug.h for more information on debug solution mechanism
  */
-EXTERN
+SCIP_EXPORT
 void SCIPenableDebugSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -80,7 +80,7 @@ void SCIPenableDebugSol(
  *
  *  @see debug.h for more information on debug solution mechanism
  */
-EXTERN
+SCIP_EXPORT
 void SCIPdisableDebugSol(
    SCIP*                 scip                /**< SCIP data structure */
    );

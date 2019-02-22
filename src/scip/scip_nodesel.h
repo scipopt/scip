@@ -72,7 +72,7 @@ extern "C" {
  *        callback is added in future releases; consider using SCIPincludeNodeselBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of node selector */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPincludeNodesel(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeNodesel() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNodeselBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL**        nodesel,            /**< reference to a node selector, or NULL */
@@ -111,7 +111,7 @@ SCIP_RETCODE SCIPincludeNodeselBasic(
    );
 
 /** sets copy method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPsetNodeselCopy(
    );
 
 /** sets destructor method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPsetNodeselFree(
    );
 
 /** sets initialization method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPsetNodeselInit(
    );
 
 /** sets deinitialization method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPsetNodeselExit(
    );
 
 /** sets solving process initialization method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -151,7 +151,7 @@ SCIP_RETCODE SCIPsetNodeselInitsol(
    );
 
 /** sets solving process deinitialization method of node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -159,26 +159,26 @@ SCIP_RETCODE SCIPsetNodeselExitsol(
    );
 
 /** returns the node selector of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_NODESEL* SCIPfindNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of node selector */
    );
 
 /** returns the array of currently available node selectors */
-EXTERN
+SCIP_EXPORT
 SCIP_NODESEL** SCIPgetNodesels(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available node selectors */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNNodesels(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a node selector in standard mode */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselStdPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPsetNodeselStdPriority(
    );
 
 /** sets the priority of a node selector in memory saving mode */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNodeselMemsavePriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel,            /**< node selector */
@@ -194,7 +194,7 @@ SCIP_RETCODE SCIPsetNodeselMemsavePriority(
    );
 
 /** returns the currently used node selector */
-EXTERN
+SCIP_EXPORT
 SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
