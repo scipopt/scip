@@ -118,10 +118,6 @@ Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
 
-   /* skip when no ipopt */
-   if( ! SCIPisIpoptAvailableIpopt() )
-      return;
-
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"(<x>^2 + <y>^2 + <z>^2)^0.5", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
