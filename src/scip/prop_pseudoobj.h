@@ -44,7 +44,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
   */
 
 /** propagates the cutoff bound for the given variables */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< propagator, or NULL */

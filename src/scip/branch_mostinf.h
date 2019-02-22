@@ -52,7 +52,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    );

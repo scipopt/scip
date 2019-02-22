@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup DialogIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDialogXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -41,13 +41,11 @@ extern "C" {
 #endif
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeConshdlrLOP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a linear ordering constraint */
-extern
 SCIP_RETCODE SCIPcreateConsLOP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

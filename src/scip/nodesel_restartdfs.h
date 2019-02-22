@@ -36,7 +36,7 @@ extern "C" {
  *
  *  @ingroup NodeSelectorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    SCIP*                 scip                /**< SCIP data structure */
    );

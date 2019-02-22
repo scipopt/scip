@@ -35,43 +35,36 @@ extern "C" {
 #endif
 
 /** creates block and buffer memory structures */
-extern
 SCIP_RETCODE SCIPmemCreate(
    SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** frees block and buffer memory structures */
-extern
 SCIP_RETCODE SCIPmemFree(
    SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** returns the total number of bytes used in block and buffer memory */
-extern
 SCIP_Longint SCIPmemGetUsed(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** returns the total number of bytes in block and buffer memory */
-extern
 SCIP_Longint SCIPmemGetTotal(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** returns the maximal number of used bytes in block memory */
-extern
 SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** returns the maximal number of allocated but not used bytes in block memory */
-extern
 SCIP_Longint SCIPmemGetUnusedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
 /** returns the maximal number of allocated bytes in block memory */
-extern
 SCIP_Longint SCIPmemGetAllocatedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );

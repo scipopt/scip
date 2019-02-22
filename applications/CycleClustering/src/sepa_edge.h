@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaEdge(
    SCIP*                 scip                /**< SCIP data structure */
    );

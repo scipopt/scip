@@ -17,7 +17,6 @@ typedef struct GAMS_solvetrace GAMS_SOLVETRACE; /**< GAMS solve trace data struc
 /** creates a GAMS solve trace data structure and initializes trace file for writing
  * @return 0, if successful; nonzero, if failure
  */
-extern
 int GAMSsolvetraceCreate(
    GAMS_SOLVETRACE**     solvetrace,         /**< buffer to store pointer of GAMS solve trace data structure */
    const char*           filename,           /**< name of trace file to write */
@@ -30,13 +29,11 @@ int GAMSsolvetraceCreate(
 );
 
 /** closes trace file and frees GAMS solve trace data structure */
-extern
 void GAMSsolvetraceFree(
    GAMS_SOLVETRACE**     solvetrace          /**< pointer to GAMS solve trace data structure to be freed */
 );
 
 /** adds line to GAMS solve trace file */
-extern
 void GAMSsolvetraceAddLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
    long long             nnodes,             /**< number of enumerated nodes so far */
@@ -45,7 +42,6 @@ void GAMSsolvetraceAddLine(
 );
 
 /** adds end line to GAMS solve trace file */
-extern
 void GAMSsolvetraceAddEndLine(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
    long long             nnodes,             /**< number of enumerated nodes so far */
@@ -54,14 +50,12 @@ void GAMSsolvetraceAddEndLine(
 );
 
 /** set a new value for infinity */
-extern
 void GAMSsolvetraceSetInfinity(
    GAMS_SOLVETRACE*      solvetrace,         /**< GAMS solve trace data structure */
    double                infinity            /**< new value for infinity */
 );
 
 /** sets starttime to the current time */
-extern
 void GAMSsolvetraceResetStarttime(
    GAMS_SOLVETRACE*      solvetrace          /**< GAMS solve trace data structure */
 );

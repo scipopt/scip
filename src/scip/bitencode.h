@@ -35,7 +35,6 @@ typedef unsigned int SCIP_DUALPACKET;                  /**< storing bit pairs in
 
 
 /** encode a single bit vector into packed format */
-extern
 void SCIPencodeSingleBit(
    const int*            inp,                /**< unpacked input vector */
    SCIP_SINGLEPACKET*    out,                /**< buffer to store the packed vector */
@@ -43,7 +42,6 @@ void SCIPencodeSingleBit(
    );
 
 /** decode a packed single bit vector into unpacked format */
-extern
 void SCIPdecodeSingleBit(
    const SCIP_SINGLEPACKET* inp,             /**< packed input vector */
    int*                  out,                /**< buffer to store unpacked vector */
@@ -51,7 +49,6 @@ void SCIPdecodeSingleBit(
    );
 
 /** encode a dual bit vector into packed format */
-extern
 void SCIPencodeDualBit(
    const int*            inp,                /**< unpacked input vector */
    SCIP_DUALPACKET*      out,                /**< buffer to store the packed vector */
@@ -59,7 +56,6 @@ void SCIPencodeDualBit(
    );
 
 /** decode a packed dual bit vector into unpacked format */
-extern
 void SCIPdecodeDualBit(
    const SCIP_DUALPACKET* inp,               /**< packed input vector */
    int*                  out,                /**< buffer to store unpacked vector */
