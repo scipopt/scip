@@ -26,7 +26,6 @@
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
-#define SCIP_PRIVATE_ROWPREP
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_soc.c"
 
@@ -114,7 +113,7 @@ Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_VAR* auxvar
+   SCIP_VAR* auxvar;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
 
@@ -125,9 +124,11 @@ Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
-   /* create auxvar */
+   /* create auxvar and add locks */
    SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
    cr_assert(auxvar != NULL);
+   SCIPchgVarLbGlobal(scip, auxvar, 0.0);
+   expr->nlockspos = 1;
 
    /* detect */
    success = FALSE;
@@ -166,8 +167,10 @@ Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
    cr_expect_eq(nlhdlrexprdata->vars[2], z);
    cr_expect_eq(nlhdlrexprdata->vars[3], auxvar);
 
-   /* register enforcer info in expr and free */
-   SCIP_CALL( freeNlhdlrExprData(scip, &nlhdlrexprdata) );
+   expr->nlockspos = 0;
 
+   /* free expr and data */
+   SCIP_CALL( freeNlhdlrExprData(scip, &nlhdlrexprdata) );
+   SCIP_CALL( freeAuxVar(scip, expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

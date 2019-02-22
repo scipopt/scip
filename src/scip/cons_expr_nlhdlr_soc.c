@@ -431,6 +431,8 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR** vars;
    SCIP_HASHMAP* vars2idx;
+   SCIP_Real* childcoefs;
+   SCIP_Real* coefs;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
@@ -466,6 +468,7 @@ SCIP_RETCODE detectSocNorm(
    /* get children of the sum */
    children = SCIPgetConsExprExprChildren(child);
    nchildren = SCIPgetConsExprExprNChildren(child);
+   childcoefs = SCIPgetConsExprExprSumCoefs(child);
 
    /* check if all children are squares */
    for( i = 0; i < nchildren; ++i )
@@ -533,30 +536,37 @@ SCIP_RETCODE detectSocNorm(
 
    /* add the auxvar to hashmap */
    SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) auxvar, nvars) );
+   ++ntranscoefs;
    ++nvars;
 
    /* allocate temporary memory for data to collect */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nchildren+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nchildren+1) );
 
 
-   /* add the auxiliary variable */
+   /* add data for the auxiliary variable (RHS) */
    assert(SCIPhashmapExists(vars2idx, (void*) auxvar));
    vars[nvars-1] = auxvar;
    transcoefs[ntranscoefs-1] = 1.0;
    transcoefsidx[ntranscoefs-1] = nvars-1;
+   nnonzeroes[nchildren] = 1;
+   coefs[nchildren] = 1.0;
+   offsets[nchildren] = 0.0;
    nexttranscoef = 0;
 
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
    {
       SCIP_CONSEXPR_EXPR* squarearg;
+
       assert(SCIPgetConsExprExprNChildren(children[i]) == 1);
 
       squarearg = SCIPgetConsExprExprChildren(children[i])[0];
+      coefs[i] = childcoefs[i];
 
       /* for all but some expression, just make sure the auxiliary variable exists */
       if( SCIPgetConsExprExprHdlr(squarearg) != SCIPgetConsExprExprHdlrSum(conshdlr) )
@@ -619,8 +629,8 @@ SCIP_RETCODE detectSocNorm(
    *success = TRUE;
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, SCIPgetConsExprExprSumCoefs(child), offsets, transcoefs, transcoefsidx,
-         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nvars, nchildren, ntranscoefs, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
+         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nvars, nchildren+1, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
@@ -635,6 +645,7 @@ SCIP_RETCODE detectSocNorm(
    SCIPfreeBufferArray(scip, &transcoefsidx);
    SCIPfreeBufferArray(scip, &transcoefs);
    SCIPfreeBufferArray(scip, &offsets);
+   SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
