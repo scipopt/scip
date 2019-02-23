@@ -104,6 +104,7 @@
                                                     *   solved? */
 #define DEFAULT_USELEVEL2DATA                TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
 #define DEFAULT_APPLYCHILDBOUNDS             TRUE  /**< should bounds known for child nodes be applied? */
+#define DEFAULT_ENFORCEMAXDOMREDS            FALSE /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
 #define DEFAULT_MAXPROPROUNDS                -1    /**< maximum number of propagation rounds to perform at temporary
                                                     *   nodes (-1: unlimited) */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
@@ -1040,6 +1041,7 @@ typedef struct
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
    SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
    SCIP_Bool             applychildbounds;   /**< should bounds known for child nodes be applied? */
+   SCIP_Bool             enforcemaxdomreds;  /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
    SCIP_Bool             inscoring;          /**< are we currently in FSB-scoring (only used internally) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to perform at temporary nodes
                                               *   (-1: unlimited) */
@@ -2264,6 +2266,7 @@ void applySingleDeeperDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
+   int                   maxstoredomreds,    /**< maximum number of domain reductions to store */
    DOMAINREDUCTIONS*     targetdomreds,      /**< The target that should be filled with the merged data. */
    DOMAINREDUCTIONS*     domreds             /**< source domain reductions */
    )
@@ -2286,14 +2289,24 @@ void applySingleDeeperDomainReductions(
 
    for( i = 0; i < nvars; i++ )
    {
+      if( targetdomreds->nviolatedvars >= maxstoredomreds )
+         return;
+
 #ifdef SCIP_STATISTIC
       /* adjust the proof nodes */
       addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds,
          domreds->lowerboundnproofs[i], FALSE);
+#else
+      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds);
+#endif
+
+      if( targetdomreds->nviolatedvars >= maxstoredomreds )
+         return;
+
+#ifdef SCIP_STATISTIC
       addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds,
          domreds->upperboundnproofs[i], FALSE);
 #else
-      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds);
       addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds);
 #endif
    }
@@ -2307,6 +2320,7 @@ void applyDeeperDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
+   int                   maxstoredomreds,    /**< maximum number of domain reductions to store */
    DOMAINREDUCTIONS*     targetdomreds,      /**< The target that should be filled with the merged data. */
    DOMAINREDUCTIONS*     downdomreds,        /**< One of the source DOMAINREDUCTIONS. */
    DOMAINREDUCTIONS*     updomreds           /**< The other source DOMAINREDUCTIONS. */
@@ -2345,6 +2359,9 @@ void applyDeeperDomainReductions(
 
       assert(vars[i] != NULL);
 
+      if( targetdomreds->nviolatedvars >= maxstoredomreds )
+         return;
+
       /* the MIN of both lower bounds represents a valid lower bound at the parent node */
       newlowerbound = MIN(downdomreds->lowerbounds[i], updomreds->lowerbounds[i]);
 
@@ -2355,6 +2372,9 @@ void applyDeeperDomainReductions(
 #else
       addLowerBound(scip, vars[i], newlowerbound, baselpsol, targetdomreds);
 #endif
+
+      if( targetdomreds->nviolatedvars >= maxstoredomreds )
+         return;
 
       /* the MAX of both upper bounds represents a valid upper bound at the parent node */
       newupperbound = MAX(downdomreds->upperbounds[i], updomreds->upperbounds[i]);
@@ -4597,18 +4617,6 @@ SCIP_RETCODE selectVarRecursive(
             SCIP_CALL( updateOldBranching(scip, persistent, config, branchvar, branchval, downbranchingresult,
                   upbranchingresult, lpobjval) );
          }
-
-         /* merge domain changes from the two child nodes */
-         if( config->usedomainreduction && SCIPallColsInLP(scip) )
-         {
-            if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
-               applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions,
-                  updomainreductions);
-            else if( upbranchingresult->cutoff && !downbranchingresult->cutoff )
-               applySingleDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions);
-            else if( downbranchingresult->cutoff && !upbranchingresult->cutoff )
-               applySingleDeeperDomainReductions(scip, baselpsol, domainreductions, updomainreductions);
-         }
       }
 
       if( ndeepestcutoffs != NULL )
@@ -4709,6 +4717,26 @@ SCIP_RETCODE selectVarRecursive(
                      downbranchingresult->dualbound));
             }
          }
+
+         /* merge domain changes from the two child nodes */
+         if( updomainreductions != NULL && config->usedomainreduction && SCIPallColsInLP(scip) )
+         {
+            int maxstoredomreds = INT_MAX;
+
+            assert(downdomainreductions != NULL);
+
+            if( config->enforcemaxdomreds && config->maxnviolateddomreds > 0)
+               maxstoredomreds = config->maxnviolateddomreds;
+
+            if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
+               applyDeeperDomainReductions(scip, baselpsol, maxstoredomreds, domainreductions, downdomainreductions,
+                  updomainreductions);
+            else if( upbranchingresult->cutoff && !downbranchingresult->cutoff )
+               applySingleDeeperDomainReductions(scip, baselpsol, maxstoredomreds, domainreductions, downdomainreductions);
+            else if( downbranchingresult->cutoff && !upbranchingresult->cutoff )
+               applySingleDeeperDomainReductions(scip, baselpsol, maxstoredomreds, domainreductions, updomainreductions);
+         }
+
 
          /* the current candidate variable has a better score than the best candidate investigated so far */
          if( score > bestscore )
@@ -5826,6 +5854,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/applychildbounds",
          "should bounds known for child nodes be applied?",
          &branchruledata->config->applychildbounds, TRUE, DEFAULT_APPLYCHILDBOUNDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/enforcemaxdomreds",
+         "should the maximum number of domain reductions maxnviolateddomreds be enforced?",
+         &branchruledata->config->enforcemaxdomreds, TRUE, DEFAULT_ENFORCEMAXDOMREDS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/maxproprounds",
          "maximum number of propagation rounds to perform at each temporary node (-1: unlimited)",
