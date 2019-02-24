@@ -2119,6 +2119,8 @@ SCIP_RETCODE selectVarRecursive(
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
+   ,SCIP_Real*           firstscoreptr       /**< pointer to store score of first candidate, or NULL */
+   ,SCIP_Real*           bestscoreptr        /**< pointer to store best score, or NULL */
 #endif
    );
 
@@ -3433,11 +3435,11 @@ SCIP_RETCODE getFSBResult(
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
          lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
-         statistics, localstats) );
+               statistics, localstats, NULL, NULL) );
 #else
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
-         lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
+               lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
    /* inform configuration that we leave scoring mode now */
@@ -4272,7 +4274,7 @@ SCIP_RETCODE executeBranchingRecursive(
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
                      &branchingresult->ndeepestnodes,
-                     statistics, deeperlocalstats) );
+                     statistics, deeperlocalstats, NULL, NULL) );
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, recursiondepth - 1,
@@ -4388,6 +4390,8 @@ SCIP_RETCODE selectVarRecursive(
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
+   ,SCIP_Real*           firstscoreptr       /**< pointer to store score of first candidate, or NULL */
+   ,SCIP_Real*           bestscoreptr        /**< pointer to store best score, or NULL */
 #endif
    )
 {
@@ -4632,6 +4636,9 @@ SCIP_RETCODE selectVarRecursive(
          SCIP_Real score = calculateScore(scip, config, branchvar, downbranchingresult, upbranchingresult,
             scoringlpobjval);
 
+         if( i == 0 && firstscoreptr != NULL )
+            *firstscoreptr = score;
+
          /* both child nodes are infeasible -> the current node is infeasible */
          if( SCIPallColsInLP(scip) && upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
@@ -4747,6 +4754,9 @@ SCIP_RETCODE selectVarRecursive(
                SCIPvarGetName(decision->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
 
             bestscore = score;
+
+            if( bestscoreptr != NULL )
+               *bestscoreptr = score;
 
             decision->branchvar = candidate->branchvar;
             decision->branchval = candidate->branchval;
@@ -4931,6 +4941,8 @@ SCIP_RETCODE selectVarStart(
    LEVEL2DATA* level2data = NULL;
    SCIP_SOL* baselpsol = NULL;
    SCIP_Real lpobjval;
+   SCIP_Real firstscore = -1.0;
+   SCIP_Real bestscore = -1.0;
    int chosencandnr = -1;
 #ifdef SCIP_STATISTIC
    SCIP_Bool performedlab = FALSE;
@@ -5034,7 +5046,7 @@ SCIP_RETCODE selectVarStart(
 #ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
             decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
-            statistics, localstats) );
+            statistics, localstats, &firstscore, &bestscore) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
             decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -5169,7 +5181,18 @@ SCIP_RETCODE selectVarStart(
          {
 #ifdef SCIP_STATISTIC
             if( chosencandnr >= 0 )
+            {
                ++statistics->chosenfsbcand[chosencandnr];
+               // printf("node %lld chose candidate %d score %16.9g vs %16.9g FSB: %16.9g vs %16.9g\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
+               //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
+               //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+               //    bestscore, firstscore);
+               printf("##### %lld,%d,%.5f,%.5f,%.5f,%.5f,%.5f\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
+                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
+                  bestscore, firstscore);
+            }
             else
                assert(!performedlab);
 #endif
