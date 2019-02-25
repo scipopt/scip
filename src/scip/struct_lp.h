@@ -280,8 +280,8 @@ struct SCIP_Lp
    SCIP_Real             lpimarkowitz;       /**< current markowitz threshhold */
    SCIP_Real             objsqrnorm;         /**< squared Euclidean norm of objective function vector of problem variables */
    SCIP_Real             objsumnorm;         /**< sum norm of objective function vector of problem variables */
-   SCIP_Real             degeneracy;
-   SCIP_Real             varconsratio;
+   SCIP_Real             degeneracy;         /**< share of degenerate non-basic variables in the current LP */
+   SCIP_Real             varconsratio;       /**< variable-constraint ratio of the optimal face */
    SCIP_LPI*             lpi;                /**< LP solver interface */
    SCIP_COL**            lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROW**            lpirows;            /**< array with rows currently stored in the LP solver */
@@ -300,8 +300,8 @@ struct SCIP_Lp
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
    SCIP_Longint          validsoldirlp;      /**< LP number for which the currently stored solution direction vector is valid */
+   SCIP_Longint          validdegeneracylp;  /**< LP number for which the currently stored degeneracy information is valid */
    SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
-   SCIP_Longint          validdegeneracylp;
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
