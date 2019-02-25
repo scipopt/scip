@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,19 +77,14 @@ typedef struct Graph
 } GRAPH;
 
 
-extern
 SCIP_Bool create_graph(int n, int m, GRAPH** gr);
 
-extern
 void capture_graph(GRAPH* gr);
    
-extern
 void release_graph(GRAPH** gr);
    
-extern
 SCIP_Bool gmincut(GRAPH *gr, double *mincap, long *n_shore);
 
-extern
 SCIP_Bool ghc_tree(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol);
 
 #endif

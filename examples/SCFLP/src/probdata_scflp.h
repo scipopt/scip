@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,6 @@
 #include "scip/scip.h"
 
 /** sets up the problem data */
-extern
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           probname,           /**< problem name */
@@ -44,19 +43,16 @@ SCIP_RETCODE SCIPprobdataCreate(
    );
 
 /** returns the number of facilities */
-extern
 int SCIPprobdataGetNFacilities(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns the number of customers  */
-extern
 int SCIPprobdataGetNCustomers(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns the facility variables */
-extern
 SCIP_VAR** SCIPprobdataGetFacilityVars(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );

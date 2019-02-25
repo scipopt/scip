@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -174,6 +174,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
    SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
+   SCIP_CALL( SCIPincludeHeurTrustregion(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );

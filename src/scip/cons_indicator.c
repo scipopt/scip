@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3014,9 +3014,9 @@ SCIP_RETCODE extendToCover(
             /* create row */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -4576,7 +4576,7 @@ SCIP_RETCODE separatePerspective(
 
             SCIPdebugMsg(scip, "Found cut of lhs value %f > %f.\n", cutval, cutrhs);
             (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
@@ -4686,9 +4686,9 @@ SCIP_RETCODE separateIndicators(
                char name[50];
 
                (void) SCIPsnprintf(name, 50, "couple%d", c);
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -6008,7 +6008,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );

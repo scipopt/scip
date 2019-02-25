@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,7 @@
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'm'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -2100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

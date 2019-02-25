@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -165,12 +165,16 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISP_VERBLEVEL SCIP_VERBLEVEL_HIGH /**< verbosity level of output */
-#define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISP_WIDTH             143 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
 #define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
+
+/* Heuristics */
+
+#define SCIP_DEFAULT_HEUR_USEUCTSUBSCIP  FALSE  /**< should setting of common subscip parameters include the activation of the UCT node selector? */
 
 /* History */
 
@@ -1516,6 +1520,12 @@ SCIP_RETCODE SCIPsetCreate(
          "should the relevant statistics be displayed at the end of solving?",
          &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
          NULL, NULL) );
+
+   /* heuristic parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "heuristics/useuctsubscip",
+         "should setting of common subscip parameters include the activation of the UCT node selector?",
+         &(*set)->heur_useuctsubscip, TRUE, SCIP_DEFAULT_HEUR_USEUCTSUBSCIP, NULL, NULL) );
 
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,7 +67,7 @@ extern "C" {
  */
 
 /** creates a statistics table and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of statistics table */
@@ -86,20 +86,20 @@ SCIP_RETCODE SCIPincludeTable(
    );
 
 /** returns the statistics table of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_TABLE* SCIPfindTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of statistics table */
    );
 
 /** returns the array of currently available statistics tables */
-EXTERN
+SCIP_EXPORT
 SCIP_TABLE** SCIPgetTables(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available statistics tables */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNTables(
    SCIP*                 scip                /**< SCIP data structure */
    );

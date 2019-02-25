@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,7 +65,7 @@
 
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
-#define HEUR_DISPCHAR         'Q'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         5000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

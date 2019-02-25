@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -69,7 +69,7 @@ extern "C" {
  *
  *  @note The initial seed is changed using SCIPinitializeRandomSeed()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
@@ -78,7 +78,7 @@ SCIP_RETCODE SCIPcreateRandom(
    );
 
 /** frees a random number generator */
-EXTERN
+SCIP_EXPORT
 void SCIPfreeRandom(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
@@ -88,7 +88,7 @@ void SCIPfreeRandom(
  *
  *  @note The seed is changed using SCIPinitializeRandomSeed()
  */
-EXTERN
+SCIP_EXPORT
 void SCIPsetRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
@@ -97,7 +97,7 @@ void SCIPsetRandomSeed(
 
 
 /** modifies an initial seed value with the global shift of random seeds */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPinitializeRandomSeed(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          initialseedvalue    /**< initial seed value to be modified */

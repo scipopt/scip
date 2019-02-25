@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,13 +31,11 @@
 
 
 /** creates the binpacking variable pricer and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludePricerBinpacking(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** added problem specific data to pricer and activates pricer */
-extern
 SCIP_RETCODE SCIPpricerBinpackingActivate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< set covering constraints for the items */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,7 @@
  */
 #ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
+#include "scip/scip_export.h"
 #endif
 
 /*
@@ -78,27 +79,29 @@
 #endif
 
 /*
- * Define the marco EXTERN and some functions depending if the OS is Windows or not
+ * Add some macros for differing functions on Windows
  */
 #if defined(_WIN32) || defined(_WIN64)
 
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
-
-#ifndef EXTERN
-#define EXTERN __declspec(dllexport)
 #endif
 
+/*
+ * Define the marco SCIP_EXPORT if it is not included from the generated header
+ */
+#ifndef SCIP_EXPORT
+#if defined(_WIN32) || defined(_WIN64)
+#define SCIP_EXPORT __declspec(dllexport)
 #else
-#ifndef EXTERN
-#define EXTERN extern
+#define SCIP_EXPORT
 #endif
 #endif
 
 /* define INLINE */
 #ifndef INLINE
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#if defined(_WIN32) || defined(__STDC__)
 #define INLINE                 __inline
 #else
 #define INLINE                 inline
@@ -115,10 +118,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                600 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_APIVERSION              41 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                601 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_APIVERSION              44 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -409,12 +412,14 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
+#ifndef SCIP_DEPRECATED
 #if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
 #elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED
+#endif
 #endif
 
 #ifdef __cplusplus

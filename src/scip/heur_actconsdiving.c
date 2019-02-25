@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,7 @@
 
 #define HEUR_NAME             "actconsdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
-#define HEUR_DISPCHAR         'a'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003700
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          5
