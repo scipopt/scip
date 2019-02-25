@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,7 +43,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -85,7 +85,7 @@ typedef enum SCIP_SetppcType SCIP_SETPPCTYPE;
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSetpart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSetpart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -138,7 +138,7 @@ SCIP_RETCODE SCIPcreateConsBasicSetpart(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSetpack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -178,7 +178,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSetpack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPcreateConsBasicSetpack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSetcover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -231,7 +231,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSetcover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIPcreateConsBasicSetcover(
    );
 
 /** adds coefficient in set partitioning / packing / covering constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -249,35 +249,35 @@ SCIP_RETCODE SCIPaddCoefSetppc(
    );
 
 /** gets number of variables in set partitioning / packing / covering constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in set partitioning / packing / covering constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets type of set partitioning / packing / covering constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_SETPPCTYPE SCIPgetTypeSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualsolSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -286,21 +286,21 @@ SCIP_Real SCIPgetDualfarkasSetppc(
 /** returns the linear relaxation of the given set partitioning / packing / covering constraint; may return NULL if no
  *  LP row was yet created; the user must not modify the row!
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns current number of variables fixed to one in the constraint  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNFixedonesSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns current number of variables fixed to zero in the constraint  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNFixedzerosSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

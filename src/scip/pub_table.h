@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,50 +39,50 @@ extern "C" {
  */
 
 /** gets user data of statistics table */
-EXTERN
+SCIP_EXPORT
 SCIP_TABLEDATA* SCIPtableGetData(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** sets user data of statistics table; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT
 void SCIPtableSetData(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_TABLEDATA*       tabledata           /**< new statistics table user data */
    );
 
 /** gets name of statistics table */
-EXTERN
+SCIP_EXPORT
 const char* SCIPtableGetName(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets description of statistics table */
-EXTERN
+SCIP_EXPORT
 const char* SCIPtableGetDesc(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets position of statistics table */
-EXTERN
+SCIP_EXPORT
 int SCIPtableGetPosition(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** gets earliest stage of statistics table */
-EXTERN
+SCIP_EXPORT
 SCIP_STAGE SCIPtableGetEarliestStage(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** is statistics table currently active? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPtableIsActive(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
 /** is statistics table initialized? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPtableIsInitialized(
    SCIP_TABLE*           table               /**< statistics table */
    );

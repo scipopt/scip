@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
  *  solution feasibility.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsBendersEnforceSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */

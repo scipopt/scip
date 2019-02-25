@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludePricerBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of variable pricer */
@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPincludePricer(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePricer() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePricerBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER**         pricerptr,          /**< reference to a pricer, or NULL */
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -162,7 +162,7 @@ SCIP_RETCODE SCIPsetPricerCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -178,7 +178,7 @@ SCIP_RETCODE SCIPsetPricerFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -194,7 +194,7 @@ SCIP_RETCODE SCIPsetPricerInit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPsetPricerExit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -226,7 +226,7 @@ SCIP_RETCODE SCIPsetPricerInitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< pricer */
@@ -234,32 +234,32 @@ SCIP_RETCODE SCIPsetPricerExitsol(
    );
 
 /** returns the variable pricer of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_PRICER* SCIPfindPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
    );
 
 /** returns the array of currently available variable pricers; active pricers are in the first slots of the array */
-EXTERN
+SCIP_EXPORT
 SCIP_PRICER** SCIPgetPricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available variable pricers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently active variable pricers, that are used in the LP solving loop */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNActivePricers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a variable pricer */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPricerPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer,             /**< variable pricer */
@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPsetPricerPriority(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
@@ -292,7 +292,7 @@ SCIP_RETCODE SCIPactivatePricer(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */

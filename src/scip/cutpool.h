@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,7 +41,6 @@ extern "C" {
 #endif
 
 /** creates cut pool */
-extern
 SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -51,7 +50,6 @@ SCIP_RETCODE SCIPcutpoolCreate(
    );
 
 /** frees cut pool */
-extern
 SCIP_RETCODE SCIPcutpoolFree(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -60,7 +58,6 @@ SCIP_RETCODE SCIPcutpoolFree(
    );
 
 /** removes all rows from the cut pool */
-extern
 SCIP_RETCODE SCIPcutpoolClear(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -69,7 +66,6 @@ SCIP_RETCODE SCIPcutpoolClear(
    );
 
 /** checks if cut is already existing */
-extern
 SCIP_Bool SCIPcutpoolIsCutNew(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -77,7 +73,6 @@ SCIP_Bool SCIPcutpoolIsCutNew(
    );
 
 /** if not already existing, adds row to cut pool and captures it */
-extern
 SCIP_RETCODE SCIPcutpoolAddRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -88,7 +83,6 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    );
 
 /** adds row to cut pool and captures it; doesn't check for multiple cuts */
-extern
 SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -99,7 +93,6 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    );
 
 /** removes the LP row from the cut pool */
-extern
 SCIP_RETCODE SCIPcutpoolDelRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -110,7 +103,6 @@ SCIP_RETCODE SCIPcutpoolDelRow(
    );
 
 /** separates cuts of the cut pool */
-extern
 SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
