@@ -820,15 +820,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      if ( ISORBITALFIXINGACTIVE(usesymmetry) )
-      {
-         assert( ISSYMRETOPESACTIVE(usesymmetry) );
-         SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, FALSE,
-               &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), NULL,
-               &(presoldata->log10groupsize), &(presoldata->binvaraffected), &components, &componentbegins,
-               &vartocomponent, &ncomponents) );
-      }
-      else if ( presoldata->detectorbitopes )
+      if ( ISORBITALFIXINGACTIVE(usesymmetry) || presoldata->detectorbitopes )
       {
          SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE,
                &(presoldata->npermvars), &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), NULL,

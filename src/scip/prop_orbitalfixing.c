@@ -396,13 +396,25 @@ SCIP_RETCODE getSymmetries(
    /* now possibly (re)compute symmetries */
    if ( propdata->nperms < 0 )
    {
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, SYM_SPEC_INTEGER, recompute,
+      int i;
+
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, recompute,
             &(propdata->npermvars), &permvars, &(propdata->nperms), NULL, &(propdata->permstrans), NULL, NULL,
             &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent),
             &(propdata->ncomponents)) );
 
       SCIP_CALL( SCIPgetSyminfoGloballyFixedVars(scip, &(propdata->bg0), &(propdata->bg0list), &(propdata->nbg0),
             &(propdata->bg1), &(propdata->bg1list), &(propdata->nbg1), &(propdata->permvarmap)) );
+
+      /* prepare permutations for orbital fixing (ignore symmetry information on non-binary variables) */
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         if ( SCIPvarIsBinary(propdata->permvars[i]) )
+            continue;
+
+         for (v = 0; v < propdata->nperms; ++v)
+            propdata->permstrans[i][v] = i;
+      }
 
       /* store restart level */
       propdata->lastrestart = SCIPgetNRuns(scip);
