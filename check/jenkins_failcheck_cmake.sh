@@ -411,7 +411,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
         URLSTR=$(geturl "${THISWEEK}
-${THISWEEK}")
+${LASTWEEK}")
 
         PERF_MAIL="${PERF_MAIL}
 Compare permutation ${PERM}: https://rubberband.zib.de/result/${URLSTR}"
