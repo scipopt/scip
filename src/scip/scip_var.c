@@ -8244,13 +8244,29 @@ SCIP_RETCODE SCIPfixVar(
    case SCIP_STAGE_SOLVING:
       if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         *fixed = TRUE;
+         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
       }
       if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         *fixed = TRUE;
+         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
       }
       return SCIP_OKAY;
 
