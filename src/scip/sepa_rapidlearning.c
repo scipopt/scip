@@ -52,8 +52,8 @@
 #define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
 #define DEFAULT_CHECKLEAVES       FALSE /**< should the ration of leaves proven to be infeasible and exceeding the
                                          *   cutoff bound be checked? */
-#define DEFAULT_CHECKOBJ           TRUE /**< should the local objection function be checked? */
-#define DEFAULT_CHECKNSOLS        FALSE /**< should the number of solutions found so far be checked? */
+#define DEFAULT_CHECKOBJ          FALSE /**< should the local objection function be checked? */
+#define DEFAULT_CHECKNSOLS         TRUE /**< should the number of solutions found so far be checked? */
 #define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
 #define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before rapid learning is
                                          *   executed locally based on the progress of the dualbound */
@@ -344,7 +344,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    }
 
    /* set limits for the subproblem */
-   nodelimit = SCIPgetNLPIterations(scip);
+   nodelimit = SCIPgetNLPIterations(scip) / SCIPgetNLPs(scip);
    nodelimit = MAX(sepadata->minnodes, nodelimit);
    nodelimit = MIN(sepadata->maxnodes, nodelimit);
 
