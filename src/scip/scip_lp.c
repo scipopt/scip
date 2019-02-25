@@ -2752,7 +2752,7 @@ SCIP_RETCODE SCIPgetLPDegeneracy(
    assert(degeneracy != NULL);
    assert(varconsratio != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetLPDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpGetDegeneracy(scip->lp, scip->set, scip->stat, scip->branchcand, degeneracy, varconsratio) );
 
