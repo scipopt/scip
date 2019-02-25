@@ -54,7 +54,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaAggregation(
    SCIP*                 scip                /**< SCIP data structure */
    );

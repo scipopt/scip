@@ -49,7 +49,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderMps(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
  */
 
 /** reads problem from file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadMps(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPreadMps(
    );
 
 /** writes problem to file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteMps(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */

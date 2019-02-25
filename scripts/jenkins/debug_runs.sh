@@ -211,6 +211,9 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
+
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done

@@ -84,7 +84,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNRuns(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -107,7 +107,7 @@ int SCIPgetNRuns(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNReoptRuns(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -130,7 +130,7 @@ int SCIPgetNReoptRuns(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 void SCIPaddNNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Longint          nnodes              /**< number of processed nodes to add to the statistics */
@@ -154,7 +154,7 @@ void SCIPaddNNodes(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -177,7 +177,7 @@ SCIP_Longint SCIPgetNNodes(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNTotalNodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -200,7 +200,7 @@ SCIP_Longint SCIPgetNTotalNodes(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNFeasibleLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -223,7 +223,7 @@ SCIP_Longint SCIPgetNFeasibleLeaves(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNInfeasibleLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -246,7 +246,7 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNObjlimLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -315,7 +315,7 @@ int SCIPgetNRootboundChgsRun(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDelayedCutoffs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -338,7 +338,7 @@ SCIP_Longint SCIPgetNDelayedCutoffs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -353,7 +353,7 @@ SCIP_Longint SCIPgetNLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -375,7 +375,7 @@ SCIP_Longint SCIPgetNLPIterations(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNZs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -390,7 +390,7 @@ SCIP_Longint SCIPgetNNZs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNRootLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -405,7 +405,7 @@ SCIP_Longint SCIPgetNRootLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNRootFirstLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -419,7 +419,7 @@ SCIP_Longint SCIPgetNRootFirstLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -433,7 +433,7 @@ SCIP_Longint SCIPgetNPrimalLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNPrimalLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -447,7 +447,7 @@ SCIP_Longint SCIPgetNPrimalLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDualLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -461,7 +461,7 @@ SCIP_Longint SCIPgetNDualLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDualLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -475,7 +475,7 @@ SCIP_Longint SCIPgetNDualLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNBarrierLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -489,7 +489,7 @@ SCIP_Longint SCIPgetNBarrierLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNBarrierLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -503,7 +503,7 @@ SCIP_Longint SCIPgetNBarrierLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -519,7 +519,7 @@ SCIP_Longint SCIPgetNResolveLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -533,7 +533,7 @@ SCIP_Longint SCIPgetNResolveLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNPrimalResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -549,7 +549,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNPrimalResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -563,7 +563,7 @@ SCIP_Longint SCIPgetNPrimalResolveLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDualResolveLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -579,7 +579,7 @@ SCIP_Longint SCIPgetNDualResolveLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDualResolveLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -593,7 +593,7 @@ SCIP_Longint SCIPgetNDualResolveLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNodeLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -607,7 +607,7 @@ SCIP_Longint SCIPgetNNodeLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNodeLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -621,7 +621,7 @@ SCIP_Longint SCIPgetNNodeLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNodeInitLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -635,7 +635,7 @@ SCIP_Longint SCIPgetNNodeInitLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNNodeInitLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -649,7 +649,7 @@ SCIP_Longint SCIPgetNNodeInitLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDivingLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -663,7 +663,7 @@ SCIP_Longint SCIPgetNDivingLPs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNDivingLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -677,7 +677,7 @@ SCIP_Longint SCIPgetNDivingLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -691,7 +691,7 @@ SCIP_Longint SCIPgetNStrongbranchs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNStrongbranchLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -705,7 +705,7 @@ SCIP_Longint SCIPgetNStrongbranchLPIterations(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNRootStrongbranchs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -719,7 +719,7 @@ SCIP_Longint SCIPgetNRootStrongbranchs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -731,7 +731,7 @@ SCIP_Longint SCIPgetNRootStrongbranchLPIterations(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPriceRounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -745,7 +745,7 @@ int SCIPgetNPriceRounds(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPricevars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -759,7 +759,7 @@ int SCIPgetNPricevars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPricevarsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -773,7 +773,7 @@ int SCIPgetNPricevarsFound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPricevarsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -785,7 +785,7 @@ int SCIPgetNPricevarsApplied(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNSepaRounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -799,7 +799,7 @@ int SCIPgetNSepaRounds(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCutsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -813,7 +813,7 @@ int SCIPgetNCutsFound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCutsFoundRound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -827,7 +827,7 @@ int SCIPgetNCutsFoundRound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCutsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -847,7 +847,7 @@ int SCIPgetNCutsApplied(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNConflictConssFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -867,7 +867,7 @@ SCIP_Longint SCIPgetNConflictConssFound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNConflictConssFoundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -887,7 +887,7 @@ int SCIPgetNConflictConssFoundNode(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -907,7 +907,7 @@ SCIP_Longint SCIPgetNConflictConssApplied(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetMaxDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -927,7 +927,7 @@ int SCIPgetMaxDepth(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetMaxTotalDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -947,7 +947,7 @@ int SCIPgetMaxTotalDepth(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNBacktracks(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -963,7 +963,7 @@ SCIP_Longint SCIPgetNBacktracks(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNActiveConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -976,13 +976,13 @@ int SCIPgetNActiveConss(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNEnabledConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets average dual bound of all unprocessed nodes for original problem */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -996,7 +996,7 @@ SCIP_Real SCIPgetAvgDualbound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1015,7 +1015,7 @@ SCIP_Real SCIPgetAvgLowerbound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1034,7 +1034,7 @@ SCIP_Real SCIPgetDualbound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1051,7 +1051,7 @@ SCIP_Real SCIPgetLowerbound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1068,7 +1068,7 @@ SCIP_Real SCIPgetDualboundRoot(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1085,7 +1085,7 @@ SCIP_Real SCIPgetLowerboundRoot(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetFirstLPDualboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1102,14 +1102,14 @@ SCIP_Real SCIPgetFirstLPDualboundRoot(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetFirstLPLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** the primal bound of the very first solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetFirstPrimalBound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1129,7 +1129,7 @@ SCIP_Real SCIPgetFirstPrimalBound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1149,7 +1149,7 @@ SCIP_Real SCIPgetPrimalbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetUpperbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1172,7 +1172,7 @@ SCIP_Real SCIPgetUpperbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetCutoffbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1195,7 +1195,7 @@ SCIP_Real SCIPgetCutoffbound(
  *
  *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             cutoffbound         /**< new cutoff bound */
@@ -1217,7 +1217,7 @@ SCIP_RETCODE SCIPupdateCutoffbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisPrimalboundSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1233,7 +1233,7 @@ SCIP_Bool SCIPisPrimalboundSol(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1249,7 +1249,7 @@ SCIP_Real SCIPgetGap(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTransGap(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1269,7 +1269,7 @@ SCIP_Real SCIPgetTransGap(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1292,7 +1292,7 @@ SCIP_Longint SCIPgetNSolsFound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNLimSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1312,7 +1312,7 @@ SCIP_Longint SCIPgetNLimSolsFound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNBestSolsFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1325,7 +1325,7 @@ SCIP_Longint SCIPgetNBestSolsFound(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -1341,7 +1341,7 @@ SCIP_Real SCIPgetAvgPseudocost(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -1355,7 +1355,7 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostCount(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1371,7 +1371,7 @@ SCIP_Real SCIPgetAvgPseudocostCount(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1385,7 +1385,7 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPseudocostCount(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
@@ -1400,7 +1400,7 @@ SCIP_Real SCIPgetPseudocostCount(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1413,7 +1413,7 @@ SCIP_Real SCIPgetAvgPseudocostScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPseudocostVariance(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        branchdir,          /**< the branching direction, up or down */
@@ -1430,13 +1430,13 @@ SCIP_Real SCIPgetPseudocostVariance(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets the average conflict score value over all variables */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1449,7 +1449,7 @@ SCIP_Real SCIPgetAvgConflictScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1462,7 +1462,7 @@ SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgConflictlengthScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1477,7 +1477,7 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1490,7 +1490,7 @@ SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgInferences(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1506,7 +1506,7 @@ SCIP_Real SCIPgetAvgInferences(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgInferencesCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1520,7 +1520,7 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgInferenceScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1535,7 +1535,7 @@ SCIP_Real SCIPgetAvgInferenceScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1548,7 +1548,7 @@ SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgCutoffs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1564,7 +1564,7 @@ SCIP_Real SCIPgetAvgCutoffs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgCutoffsCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1578,7 +1578,7 @@ SCIP_Real SCIPgetAvgCutoffsCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgCutoffScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1591,7 +1591,7 @@ SCIP_Real SCIPgetAvgCutoffScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1605,7 +1605,7 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDeterministicTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1629,7 +1629,7 @@ SCIP_Real SCIPgetDeterministicTime(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1654,7 +1654,7 @@ SCIP_RETCODE SCIPprintOrigProblem(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1678,7 +1678,7 @@ SCIP_RETCODE SCIPprintTransProblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintStatusStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1696,7 +1696,7 @@ void SCIPprintStatusStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1714,7 +1714,7 @@ void SCIPprintTimingStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintOrigProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -1732,7 +1732,7 @@ void SCIPprintOrigProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintTransProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1749,7 +1749,7 @@ void SCIPprintTransProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1766,7 +1766,7 @@ void SCIPprintPresolverStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1783,7 +1783,7 @@ void SCIPprintConstraintStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1800,7 +1800,7 @@ void SCIPprintConstraintTimingStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1817,7 +1817,7 @@ void SCIPprintPropagatorStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1829,7 +1829,7 @@ void SCIPprintConflictStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1841,7 +1841,7 @@ void SCIPprintSeparatorStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintPricerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1853,7 +1853,7 @@ void SCIPprintPricerStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1868,7 +1868,7 @@ void SCIPprintBranchruleStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintHeuristicStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1883,7 +1883,7 @@ void SCIPprintHeuristicStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintCompressionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1895,7 +1895,7 @@ void SCIPprintCompressionStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1907,7 +1907,7 @@ void SCIPprintLPStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1919,7 +1919,7 @@ void SCIPprintNLPStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1931,7 +1931,7 @@ void SCIPprintRelaxatorStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintTreeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1943,7 +1943,7 @@ void SCIPprintTreeStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1958,7 +1958,7 @@ void SCIPprintRootStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1975,7 +1975,7 @@ void SCIPprintSolutionStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintConcsolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -1987,7 +1987,7 @@ void SCIPprintConcsolverStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintBendersStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
@@ -2012,7 +2012,7 @@ void SCIPprintBendersStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -2034,7 +2034,7 @@ SCIP_RETCODE SCIPprintStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintReoptStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -2056,7 +2056,7 @@ SCIP_RETCODE SCIPprintReoptStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintBranchingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -2070,7 +2070,7 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintDisplayLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -2091,7 +2091,7 @@ SCIP_RETCODE SCIPprintDisplayLine(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNImplications(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -2114,7 +2114,7 @@ int SCIPgetNImplications(
  *
  *  @deprecated because binary implications are now stored as cliques
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2123,7 +2123,7 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
 
 
 /** update statistical information when a new solution was found */
-EXTERN
+SCIP_EXPORT
 void SCIPstoreSolutionGap(
    SCIP*                 scip                /**< SCIP data structure */
    );

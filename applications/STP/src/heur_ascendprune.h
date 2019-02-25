@@ -37,14 +37,12 @@ extern "C" {
 #endif
 
 /** creates the prune primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** ascent and prune */
-extern
 SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */

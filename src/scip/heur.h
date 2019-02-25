@@ -40,7 +40,6 @@ extern "C" {
 #endif
 
 /** create a set of diving heuristic settings */
-extern
 SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
@@ -69,14 +68,12 @@ SCIP_RETCODE SCIPdivesetCreate(
    );
 
 /** resets diving settings counters */
-extern
 SCIP_RETCODE SCIPdivesetReset(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** update diveset statistics and global diveset statistics */
-extern
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
@@ -90,7 +87,6 @@ void SCIPdivesetUpdateStats(
    );
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
-extern
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
@@ -103,7 +99,6 @@ SCIP_RETCODE SCIPdivesetGetScore(
    );
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
-extern
 void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
@@ -111,14 +106,12 @@ void SCIPdivesetUpdateLPStats(
    );
 
 /** copies the given primal heuristic to a new scip */
-extern
 SCIP_RETCODE SCIPheurCopyInclude(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a primal heuristic */
-extern
 SCIP_RETCODE SCIPheurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -144,7 +137,6 @@ SCIP_RETCODE SCIPheurCreate(
    );
 
 /** calls destructor and frees memory of primal heuristic */
-extern
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -152,35 +144,30 @@ SCIP_RETCODE SCIPheurFree(
    );
 
 /** initializes primal heuristic */
-extern
 SCIP_RETCODE SCIPheurInit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of primal heuristic */
-extern
 SCIP_RETCODE SCIPheurExit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs primal heuristic that the branch and bound process is being started */
-extern
 SCIP_RETCODE SCIPheurInitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs primal heuristic that the branch and bound process data is being freed */
-extern
 SCIP_RETCODE SCIPheurExitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** should the heuristic be executed at the given depth, frequency, timing, ... */
-extern
 SCIP_Bool SCIPheurShouldBeExecuted(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    int                   depth,              /**< depth of current node */
@@ -190,7 +177,6 @@ SCIP_Bool SCIPheurShouldBeExecuted(
    );
 
 /** calls execution method of primal heuristic */
-extern
 SCIP_RETCODE SCIPheurExec(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -204,7 +190,6 @@ SCIP_RETCODE SCIPheurExec(
    );
 
 /** sets priority of primal heuristic */
-extern
 void SCIPheurSetPriority(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -212,49 +197,42 @@ void SCIPheurSetPriority(
    );
 
 /** sets copy callback of primal heuristic */
-extern
 void SCIPheurSetCopy(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURCOPY    ((*heurcopy))       /**< copy callback of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** sets destructor callback of primal heuristic */
-extern
 void SCIPheurSetFree(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURFREE    ((*heurfree))       /**< destructor of primal heuristic */
    );
 
 /** sets initialization callback of primal heuristic */
-extern
 void SCIPheurSetInit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit))       /**< initialize primal heuristic */
    );
 
 /** sets deinitialization callback of primal heuristic */
-extern
 void SCIPheurSetExit(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit))       /**< deinitialize primal heuristic */
    );
 
 /** sets solving process initialization callback of primal heuristic */
-extern
 void SCIPheurSetInitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEURINITSOL ((*heurinitsol))    /**< solving process initialization callback of primal heuristic */
    );
 
 /** sets solving process deinitialization callback of primal heuristic */
-extern
 void SCIPheurSetExitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization callback of primal heuristic */
    );
 
 /** enables or disables all clocks of \p heur, depending on the value of the flag */
-extern
 void SCIPheurEnableOrDisableClocks(
    SCIP_HEUR*            heur,               /**< the heuristic for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the heuristic be enabled? */

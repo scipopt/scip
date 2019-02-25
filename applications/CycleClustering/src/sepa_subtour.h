@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaSubtour(
    SCIP*                 scip                /**< SCIP data structure */
    );
