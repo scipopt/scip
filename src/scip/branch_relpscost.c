@@ -648,11 +648,13 @@ SCIP_RETCODE execRelpscost(
          assert(degeneracy <= 1.0);
          assert(varconsratio >= 1.0);
 
+         /* increase factor for a degeneracy >= 80% */
          if( degeneracy >= 0.8 )
          {
             degeneracy = 10.0 * (degeneracy - 0.7);
             degeneracyfactor = degeneracyfactor * pow(10,degeneracy);
          }
+         /* increase factor for a variable-constraint ratio >= 2.0 */
          if( varconsratio >= 2.0 )
          {
             degeneracyfactor *= 10.0 * varconsratio;
