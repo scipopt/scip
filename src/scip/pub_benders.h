@@ -107,16 +107,19 @@ int SCIPbendersGetNCutsFound(
    );
 
 /** gets the number of cuts found from the strengthening round */
+SCIP_EXPORT
 int SCIPbendersGetNStrengthenCutsFound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of calls to the strengthening round */
+SCIP_EXPORT
 int SCIPbendersGetNStrengthenCalls(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** gets the number of calls to the strengthening round that fail */
+SCIP_EXPORT
 int SCIPbendersGetNStrengthenFails(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
@@ -140,6 +143,7 @@ SCIP_Bool SCIPbendersIsInitialized(
    );
 
 /** returns whether the given Benders' decomposition is in use in the current problem */
+SCIP_EXPORT
 SCIP_Bool SCIPbendersIsActive(
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
@@ -149,6 +153,7 @@ SCIP_Bool SCIPbendersIsActive(
  *  i.e. no integer cuts are generated. In this case, then Benders' decomposition is performed under the assumption
  *  that all subproblems are convex relaxations.
  */
+SCIP_EXPORT
 SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
@@ -300,6 +305,7 @@ SCIP_Bool SCIPbendersSubproblemIsConvex(
    );
 
 /** returns the number of subproblems that are convex */
+SCIP_EXPORT
 int SCIPbendersGetNConvexSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
