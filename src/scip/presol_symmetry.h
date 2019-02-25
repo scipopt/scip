@@ -67,20 +67,20 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    );
 
 /* block component of symmetry group to be considered by symmetry handling routines */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to block */
    );
 
 /* get blocked status component of symmetry group */
-EXTERN
+SCIP_EXPORT
 SCIP_Shortbool SCIPgetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to check blocked status */
    );
 
-EXTERN
+SCIP_EXPORT
 /** return symmetry information on globally fixed variables */
 SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
    SCIP*                 scip,               /**< SCIP data structure */
