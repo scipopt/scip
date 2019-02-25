@@ -406,16 +406,6 @@ SCIP_RETCODE getSymmetries(
       SCIP_CALL( SCIPgetSyminfoGloballyFixedVars(scip, &(propdata->bg0), &(propdata->bg0list), &(propdata->nbg0),
             &(propdata->bg1), &(propdata->bg1list), &(propdata->nbg1), &(propdata->permvarmap)) );
 
-      /* prepare permutations for orbital fixing (ignore symmetry information on non-binary variables) */
-      for (i = 0; i < propdata->npermvars; ++i)
-      {
-         if ( SCIPvarIsBinary(propdata->permvars[i]) )
-            continue;
-
-         for (v = 0; v < propdata->nperms; ++v)
-            propdata->permstrans[i][v] = i;
-      }
-
       /* store restart level */
       propdata->lastrestart = SCIPgetNRuns(scip);
 
@@ -425,6 +415,16 @@ SCIP_RETCODE getSymmetries(
          return SCIP_OKAY;
       }
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
+
+      /* prepare permutations for orbital fixing (ignore symmetry information on non-binary variables) */
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         if ( SCIPvarIsBinary(propdata->permvars[i]) )
+            continue;
+
+         for (v = 0; v < propdata->nperms; ++v)
+            propdata->permstrans[i][v] = i;
+      }
 
       /* prepare array for active permutations */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inactiveperms, propdata->nperms) );
