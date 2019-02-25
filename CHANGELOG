@@ -108,6 +108,7 @@ Interface changes
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
+- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
 
 ### Command line interface
 
@@ -149,6 +150,8 @@ Interface changes
   parameters only have effect if the lnscheck parameter is set to TRUE.
 
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
+
+- new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
 
 ### Data structures
 
