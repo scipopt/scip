@@ -43,7 +43,6 @@ static SCIP_VAR* w;
 static SCIP_VAR* z;
 
 static SCIP_CONSHDLR* conshdlr;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
@@ -61,16 +60,6 @@ void setup(void)
    cr_assert_not_null(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
-
-   /* get nlhdlr */
-   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
-      {
-         nlhdlr = conshdlrdata->nlhdlrs[h];
-         break;
-      }
-   cr_assert_not_null(nlhdlr);
-
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -108,7 +97,7 @@ void teardown(void)
 TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
 
 /* detects ||x|| as quadratic expression */
-Test(nlhdlrsoc, detectandfree1, .init = setup, .fini = teardown)
+Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
