@@ -88,6 +88,7 @@
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
                                               *   infeasible and objective leaf counters? */
+#define DEFAULT_DEGENERACYAWARE  FALSE       /**< should degeneracy be taken into account to update weights and skip strong branching? */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -115,11 +116,14 @@ struct SCIP_BranchruleData
    SCIP_Real             higherrortol;       /**< highest tolerance beneath which relative errors are reliable */
    SCIP_Bool             usehyptestforreliability; /**< should the strong branching decision be based on a hypothesis test? */
    SCIP_Bool             usedynamicconfidence; /**< should the confidence level be adjusted dynamically? */
-   SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
+   SCIP_Bool             storesemiinitcosts; /**< should strong branching result be considered for pseudo costs if the
+                                              *   other direction was infeasible? */
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
                                                *  better than the best strong-branching or pseudo-candidate? */
-   SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters? */
+   SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during
+                                              *   solving based on objective and infeasible leaf counters? */
+   SCIP_Bool             degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
@@ -354,7 +358,8 @@ SCIP_Real calcScore(
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
    SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
-   SCIP_Real             frac                /**< fractional value of variable in current solution */
+   SCIP_Real             frac,               /**< fractional value of variable in current solution */
+   SCIP_Real             degeneracyfactor    /**< factor to apply because of degeneracy */
    )
 {
    SCIP_Real score;
@@ -369,6 +374,8 @@ SCIP_Real calcScore(
    }
    else
       dynamicfactor = 1.0;
+
+   dynamicfactor *= degeneracyfactor;
 
    score = dynamicfactor * (branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
             + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
@@ -626,6 +633,31 @@ SCIP_RETCODE execRelpscost(
       int i;
       int c;
       SCIP_CONFIDENCELEVEL clevel;
+      SCIP_Real degeneracyfactor = 1.0;
+
+      /* get LP degeneracy information and compute a factor to change weighting of pseudo cost score vs. other scores */
+      if( branchruledata->degeneracyaware )
+      {
+         SCIP_Real degeneracy;
+         SCIP_Real varconsratio;
+
+         /* get LP degeneracy information */
+         SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+
+         assert(degeneracy >= 0.0);
+         assert(degeneracy <= 1.0);
+         assert(varconsratio >= 1.0);
+
+         if( degeneracy >= 0.8 )
+         {
+            degeneracy = 10.0 * (degeneracy - 0.7);
+            degeneracyfactor = degeneracyfactor * pow(10,degeneracy);
+         }
+         if( varconsratio >= 2.0 )
+         {
+            degeneracyfactor *= 10.0 * varconsratio;
+         }
+      }
 
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
@@ -663,12 +695,12 @@ SCIP_RETCODE execRelpscost(
          maxninitcands = 0;
 
       /* calculate maximal number of strong branching LP iterations; if we used too many, don't apply strong branching
-       * any more
+       * any more; also, if degeneracy is too high, don't run strong branching at this node
        */
       nlpiterationsquot = (SCIP_Longint)(branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip));
       maxnsblpiterations = nlpiterationsquot + branchruledata->sbiterofs + SCIPgetNRootStrongbranchLPIterations(scip);
       nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
-      if( nsblpiterations > maxnsblpiterations )
+      if( nsblpiterations > maxnsblpiterations || degeneracyfactor >= 10.0 )
          maxninitcands = 0;
 
       /* get buffer for storing the unreliable candidates */
@@ -764,7 +796,8 @@ SCIP_RETCODE execRelpscost(
             }
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
+               degeneracyfactor);
 
             /* check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -876,7 +909,8 @@ SCIP_RETCODE execRelpscost(
 
          /* combine the five score values */
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
+            degeneracyfactor);
 
          if( usesb )
          {
@@ -1288,7 +1322,8 @@ SCIP_RETCODE execRelpscost(
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
+               degeneracyfactor);
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
@@ -1734,6 +1769,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamicweights",
          "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
          &branchruledata->dynamicweights, TRUE, DEFAULT_DYNAMICWEIGHTS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/degeneracyaware",
+         "should degeneracy be taken into account to update weights and skip strong branching?",
+         &branchruledata->degeneracyaware, TRUE, DEFAULT_DEGENERACYAWARE,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
