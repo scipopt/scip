@@ -777,7 +777,6 @@ int SCIPtreeGetNLeaves(
    );
 
 /** gets number of open nodes in the tree (children + siblings + leaves) */
-extern   
 int SCIPtreeGetNNodes(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
