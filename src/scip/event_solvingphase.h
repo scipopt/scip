@@ -36,7 +36,6 @@ extern "C" {
 #endif
 
 /** creates event handler for solving phase event */
-extern
 SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -23,7 +23,6 @@
 #include "scip/scip.h"
 
 /** includes event handler for writing primal- and dual bound for all open nodes */
-extern
 SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP*                 scip                /**< SCIP data structure */
    );

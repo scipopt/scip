@@ -60,7 +60,6 @@
 #define MAXNEDGES     10000
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 

@@ -48,7 +48,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -120,13 +120,13 @@ SCIP_RETCODE SCIPcreateConsBasicSuperindicator(
    );
 
 /** gets binary variable corresponding to the superindicator constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetBinaryVarSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    );
 
 /** gets the slack constraint corresponding to the superindicator constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS* SCIPgetSlackConsSuperindicator(
    SCIP_CONS*            cons                /**< superindicator constraint */
    );
@@ -140,7 +140,7 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
 /** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
  *  a CIP generalization of the MinULR (min. unsatisfied linear relations) problem
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< pointer to store whether all constraints could be transformed */
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPtransformMinUC(
  */
 
 /** dialog execution method for the SCIPtransformMinUC() command */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
 
 /* @} */

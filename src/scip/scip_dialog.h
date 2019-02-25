@@ -70,7 +70,7 @@ extern "C" {
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPincludeDialog(
  *
  *  @return TRUE is returned if the dialog exists, otherwise FALSE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPexistsDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog */
@@ -99,7 +99,7 @@ SCIP_Bool SCIPexistsDialog(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog */
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPcaptureDialog(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog              /**< pointer to the dialog */
@@ -121,7 +121,7 @@ SCIP_RETCODE SCIPreleaseDialog(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog              /**< dialog to be the root */
@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPsetRootDialog(
  *
  *  @return the root dialog of SCIP's interactive user shell is returned.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DIALOG* SCIPgetRootDialog(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -141,7 +141,7 @@ SCIP_DIALOG* SCIPgetRootDialog(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddDialogEntry(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG*          dialog,             /**< dialog to extend, or NULL for root dialog */
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPaddDialogEntry(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddDialogInputLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           inputline           /**< input line to add */
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPaddDialogInputLine(
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddDialogHistoryLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           inputline           /**< input line to add */
@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPaddDialogHistoryLine(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartInteraction(
    SCIP*                 scip                /**< SCIP data structure */
    );

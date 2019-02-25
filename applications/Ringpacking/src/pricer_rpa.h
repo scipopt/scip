@@ -30,13 +30,11 @@
 
 
 /** creates the ringpacking variable pricer and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludePricerRpa(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** added problem specific data to pricer and activates pricer */
-extern
 SCIP_RETCODE SCIPpricerRpaActivate(
    SCIP*                 scip                /**< SCIP data structure */
    );

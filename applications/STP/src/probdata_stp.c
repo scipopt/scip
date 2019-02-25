@@ -77,11 +77,9 @@
 
 
 #ifdef WITH_UG
-extern
 const char*
 getBranchLinearConsName(const char* names, int i);
 
-extern
 const char*
 getBranchSetppcConsName(const char* names, int i);
 #endif

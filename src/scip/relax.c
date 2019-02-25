@@ -737,6 +737,7 @@ SCIP_RETCODE SCIPrelaxationCreate(
    (*relaxation)->relaxsolvalid = FALSE;
    (*relaxation)->relaxsolincludeslp = FALSE;
    (*relaxation)->relaxsolzero = TRUE;
+   (*relaxation)->lastsolrelax = NULL;
 
    return SCIP_OKAY;
 }
@@ -857,4 +858,25 @@ void SCIPrelaxationUpdateVarObj(
 
    relaxsolval = SCIPvarGetRelaxSol(var, set);
    relaxation->relaxsolobjval += (newobj - oldobj) * relaxsolval;
+}
+
+/** store the most recent relaxation handler \p relax responsible for the solution */
+void SCIPrelaxationSetSolRelax(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_RELAX*           relax               /**< responsible relaxation handler, or NULL */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->lastsolrelax = relax;
+}
+
+/** returns the most recent relaxation handler responsible for the solution, or NULL if unspecified */
+SCIP_RELAX* SCIPrelaxationGetSolRelax(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->lastsolrelax;
 }

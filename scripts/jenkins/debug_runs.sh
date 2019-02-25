@@ -117,7 +117,7 @@ JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 ### process variables ###
 #########################
 
-# To improve accessibility move todays jobs into seperate array
+# To improve accessibility move todays jobs into separate array
 TODAYS_N_JOBS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
@@ -211,6 +211,9 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
+
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done

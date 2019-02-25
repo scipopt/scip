@@ -599,6 +599,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_subnlp.o \
 			scip/heur_trivial.o \
 			scip/heur_trivialnegation.o \
+			scip/heur_trustregion.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
 			scip/heur_undercover.o \

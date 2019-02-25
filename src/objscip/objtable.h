@@ -164,7 +164,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyTable is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjTable(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjTable*       objtable,           /**< statistics table object */
@@ -172,14 +172,14 @@ SCIP_RETCODE SCIPincludeObjTable(
    );
 
 /** returns the statistics table object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjTable* SCIPfindObjTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of statistics table */
    );
 
 /** returns the statistics table object for the given statistics table */
-EXTERN
+SCIP_EXPORT
 scip::ObjTable* SCIPgetObjTable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_TABLE*           table               /**< statistics table */

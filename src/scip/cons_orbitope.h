@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -85,7 +85,7 @@ typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

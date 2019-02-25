@@ -2459,7 +2459,7 @@ SCIP_Bool SCIPbendersOnlyCheckConvexRelax(
    SCIP_Bool             subscipsoff         /**< flag indicating whether plugins using sub-SCIPs are deactivated */
    )
 {
-   return benders->iscopy && benders->lnscheck && !subscipsoff;
+   return benders->iscopy && benders->lnscheck && subscipsoff;
 }
 
 /** returns the number of subproblems that will be checked in this iteration */

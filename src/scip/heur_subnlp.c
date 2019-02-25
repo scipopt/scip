@@ -62,7 +62,7 @@
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
-#define HEUR_DISPCHAR    'q'
+#define HEUR_DISPCHAR    SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY    -2000000
 #define HEUR_FREQ        1
 #define HEUR_FREQOFS     0

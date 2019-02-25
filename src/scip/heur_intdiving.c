@@ -44,7 +44,7 @@
 
 #define HEUR_NAME             "intdiving"
 #define HEUR_DESC             "LP diving heuristic that fixes binary variables with large LP value to one"
-#define HEUR_DISPCHAR         'n'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003500
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          9
