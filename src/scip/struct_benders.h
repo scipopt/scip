@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,6 +82,8 @@ struct SCIP_Benders
    SCIP_Bool             transfercuts;       /**< should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< should Benders' decomposition be used in LNS heuristics? */
    int                   lnsmaxdepth;        /**< maximum depth at which the LNS check is performed */
+   int                   lnsmaxcalls;        /**< maximum number of Benders' decomposition call in LNS heuristics */
+   int                   lnsmaxcallsroot;    /**< maximum number of root node Benders' decomposition call in LNS heuristics */
    SCIP_Bool             cutsasconss;        /**< should the transferred cuts be added as constraints? */
    SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
    SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */

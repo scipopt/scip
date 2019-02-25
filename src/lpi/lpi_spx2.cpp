@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1070,6 +1070,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;

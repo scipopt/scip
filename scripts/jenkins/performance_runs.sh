@@ -71,14 +71,14 @@ BRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
 fi
-if [ "${DAY_OF_WEEK}" == "6" ]; then
-  git checkout ${BRANCHNAME}
-  git pull
-  git checkout performance-${GITBRANCH}
-  git merge ${BRANCHNAME} --ff-only
-  git push
-  git checkout ${BRANCHNAME}
-fi
+#if [ "${DAY_OF_WEEK}" == "6" ]; then
+#  git checkout ${BRANCHNAME}
+#  git pull
+#  git checkout performance-${GITBRANCH}
+#  git merge ${BRANCHNAME} --ff-only
+#  git push
+#  git checkout ${BRANCHNAME}
+#fi
 
 ####################################
 ### jobs configuration variables ###
@@ -102,9 +102,9 @@ declare -A JOBS
 declare -A TRIGGER
 
 # for descriptions on the testsets see scip/check/testsets/README.md
-# jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=2"
-JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+# running on saturday
+JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
 TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
 # jobs running on sunday
@@ -115,7 +115,7 @@ if [ "${GITBRANCH}" != "master" ]; then
   SAPSETTINGS=sap-600-pure-diff
 fi
 
-JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx-${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 # symlink to SAP settings for the next release settings
 ln -fs ~/sap-next-release-pure-diff.set settings/.
@@ -126,7 +126,7 @@ ln -fs ~/sap-600-pure-diff.set settings/.
 ### process variables ###
 #########################
 
-# To improve accessibility move todays jobs into seperate array
+# To improve accessibility move todays jobs into separate array
 TODAYS_N_JOBS=0
 TODAYS_N_TRIGGERS=0
 
@@ -171,13 +171,16 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
 
   make solchecker
 
-  # build with soplex only if today we have some soplex runs scheduled
+  # build with soplex
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
   cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
   make -j4
   cd ..
+
+  # TODO tag this
+
 
   ######################
   ### Setup testruns ###
@@ -203,7 +206,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
 
   for i in `seq 1 ${TODAYS_N_JOBS}`; do
     FLAGS=${TODAYS_JOBS[$i]}
-    for j in "SEED EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+    for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
       unset $j
     done
     export ${FLAGS}

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,8 +74,8 @@ SCIP_DECL_HEURFREE(heurFreeSync)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->nsols == 0);
-   SCIPfreeMemoryArray(scip, &heurdata->sols);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemoryArray(scip, &heurdata->sols, heurdata->maxnsols);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -156,9 +156,9 @@ SCIP_RETCODE SCIPincludeHeurSync(
    SCIP_HEUR*     heur;
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &heurdata->maxnsols) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->sols, heurdata->maxnsols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sols, heurdata->maxnsols) );
    heurdata->nsols = 0;
 
    /* include primal heuristic */
