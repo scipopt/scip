@@ -137,6 +137,7 @@ set(settings_sparsify
 set(settings_Benders
     "usebenders"
     "usebenders-tr"
+    "usebenders-cutstrengthen"
    )
 
 #

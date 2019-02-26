@@ -459,7 +459,6 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubDefault)
 }
 
 
-
 /*
  * Benders' decomposition specific interface methods
  */
