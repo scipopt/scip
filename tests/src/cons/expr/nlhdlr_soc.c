@@ -74,7 +74,7 @@ void setup(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 1.49, 1.51, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 1.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -0.9, 0.7, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
@@ -151,23 +151,17 @@ void checkData(
       cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefidx[i]);
 }
 
-/* detects ||x|| as soc expression */
+/* detects ||x|| < 1 as soc expression */
 Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* simplified;
    SCIP_Bool infeasible;
-   SCIP_Bool changed = FALSE;
    int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "(<x>^2 + <y>^2 + <z>^2)^0.5", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
-   cr_expect(!changed);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = simplified;
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "norm", expr, -SCIPinfinity(scip), 1.0) );
@@ -198,6 +192,110 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* free expr and cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* detects ||x|| - y <= 0 as soc expression */
+Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_Bool infeasible;
+   int i;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "(<x>^2 + <y>^2 + <z>^2)^0.5 - <w>", NULL, &expr) );
+   normexpr = SCIPgetConsExprExprChildren(expr)[0];
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "norm", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* detect */
+   SCIP_CALL( SCIPinitlpCons(scip, cons, &infeasible) );
+   cr_assert(!infeasible);
+
+   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < normexpr->nenfos; ++i )
+   {
+      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* setup expected data */
+   SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(normexpr)};
+   SCIP_Real coefs[4] = {1.0, 1.0, 1.0, 1.0};
+   SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
+   SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
+   int transcoefsidx[4] = {0, 1, 2, 3};
+   int nnonzeroes[4] = {1, 1, 1, 1};
+
+   /* check nlhdlrexprdata*/
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
+
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* free expr and cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* detects sqrt( 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) as soc expression */
+Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_Bool infeasible;
+   int i;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr,
+         (char*) "(8 + 2*(<x> + 1)^2 + 3*(<y> + 4*sin(<x>))^2)^0.5 + 2*(<w> - 1)", NULL, &expr) );
+   normexpr = SCIPgetConsExprExprChildren(expr)[0];
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* detect */
+   SCIP_CALL( SCIPinitlpCons(scip, cons, &infeasible) );
+   cr_assert(!infeasible);
+
+   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < normexpr->nenfos; ++i )
+   {
+      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* setup expected data */
+   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[1]->children[0]->children[2]);
+   SCIP_VAR* vars[4] = {x, y, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
+   SCIP_Real coefs[3] = {2.0, 3.0, 1.0};
+   SCIP_Real offsets[3] = {1.0, 2.0, 0.0};
+   SCIP_Real transcoefs[4] = {1.0, 1.0, 4.0, 1.0};
+   int transcoefsidx[4] = {0, 1, 1, 2};
+   int nnonzeroes[3] = {1, 2, 1};
+
+   /* check nlhdlrexprdata*/
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 3, 4, 8.0);
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
