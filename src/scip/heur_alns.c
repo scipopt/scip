@@ -3464,7 +3464,7 @@ DECL_NHFREE(nhFreeTrustregion)
 /** add trust region neighborhood constraint and auxiliary objective variable */
 static
 DECL_CHANGESUBSCIP(changeSubscipTrustregion)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* violvar;
    SCIP_CONS* trustregioncons;
    SCIP_VAR** consvars;
