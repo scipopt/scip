@@ -63,6 +63,10 @@
 struct SCIP_ConshdlrData
 {
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
+   SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
+   SCIP_NODE*            currnode;           /**< the current node */
+   SCIP_Real             prevbound;          /**< the previous dual bound */
+   int                   iterlimit;          /**< the iteration limit for the two phase method in a node */
    SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
@@ -115,15 +119,33 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int limit;
 
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( !SCIPisLT(scip, conshdlrdata->prevbound, SCIPgetLowerbound(scip)))
+      conshdlrdata->iterlimit *= 0.6;
+
+   if( conshdlrdata->currnode != SCIPgetCurrentNode(scip) )
+   {
+      conshdlrdata->currnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->ncallsnode = 0;
+      if( SCIPgetDepth(scip) > 0 )
+         conshdlrdata->iterlimit = 100;
+   }
+
+   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth)
+      || (conshdlrdata->ncallsnode >= conshdlrdata->iterlimit) )
       (*result) = SCIP_FEASIBLE;
    else
+   {
       SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+   }
+
+   conshdlrdata->prevbound = SCIPgetLowerbound(scip);
+   conshdlrdata->ncallsnode++;
 
    return SCIP_OKAY;
 }
@@ -229,6 +251,11 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
+
+   conshdlrdata->ncallsnode = 0;
+   conshdlrdata->currnode = NULL;
+   conshdlrdata->iterlimit = 500000;
+   conshdlrdata->prevbound = -SCIPinfinity(scip);
 
    return SCIP_OKAY;
 }
