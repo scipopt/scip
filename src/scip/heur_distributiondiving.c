@@ -44,7 +44,7 @@
 
 #define HEUR_NAME             "distributiondiving"
 #define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
-#define HEUR_DISPCHAR         'e'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003300
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3

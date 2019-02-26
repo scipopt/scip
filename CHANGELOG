@@ -21,6 +21,12 @@ Features
 - additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
   instances, e.g., when used in UG
 
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
+- Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It build upon the successful trust region approaches
+  applied to Benders' decomposition.
+
 Performance improvements
 ------------------------
 
@@ -77,6 +83,13 @@ Interface changes
   parallel. Setting this argument to TRUE has a performance cost.
 
 - new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+- functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
+  receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
+
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
 
 ### New API functions
 
@@ -85,6 +98,13 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
+- new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
+  SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
+  about the origin of the solution, ie, whether it was created by a relaxation handler,
+  by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
+  The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+- new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
 
 ### Command line interface
 
@@ -96,6 +116,8 @@ Interface changes
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
+- all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
+- deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
 
 ### New parameters
 
@@ -126,6 +148,7 @@ Interface changes
 - Added parameter cons/linear/maxmultiaggrquot to limit the maximum coefficient dynamism of an equation on which
   multiaggregation is performed. This replaces a compiler define of the same name.
   Default value is 1000, smaller values make multiaggregations numerically more stable.
+- new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
 
 ### Data structures
 
@@ -164,6 +187,11 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
+  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+
 Known bugs
 ----------
 
@@ -194,6 +222,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
 ### Changed parameters
 
 ### New parameters
@@ -220,6 +250,9 @@ Fixed bugs
 ----------
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
+- fixed wrong behavior of concurrent solve ignoring initial solutions
+- fixed bug in concurrent solve when problem was already solved in presolving
 
 Miscellaneous
 -------------

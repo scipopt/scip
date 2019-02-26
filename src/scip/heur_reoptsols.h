@@ -38,7 +38,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurReoptsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,13 +49,13 @@ SCIP_RETCODE SCIPincludeHeurReoptsols(
  */
 
 /* returns the number of checked solutions */
-EXTERN
+SCIP_EXPORT
 int SCIPreoptsolsGetNCheckedsols(
    SCIP*                 scip
    );
 
 /* returns the number of found improving solutions */
-EXTERN
+SCIP_EXPORT
 int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
    );

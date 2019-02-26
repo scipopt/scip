@@ -55,7 +55,7 @@
 
 #define HEUR_NAME             "proximity"
 #define HEUR_DESC             "heuristic trying to improve the incumbent by an auxiliary proximity objective function"
-#define HEUR_DISPCHAR         'P'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -2000000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

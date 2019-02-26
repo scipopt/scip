@@ -70,7 +70,7 @@ extern "C" {
  */
 
 /** computes coefficients of linearization of a square term in a reference point */
-EXTERN
+SCIP_EXPORT
 void SCIPaddSquareLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
@@ -82,7 +82,7 @@ void SCIPaddSquareLinearization(
    );
 
 /** computes coefficients of secant of a square term */
-EXTERN
+SCIP_EXPORT
 void SCIPaddSquareSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
@@ -95,7 +95,7 @@ void SCIPaddSquareSecant(
    );
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
-EXTERN
+SCIP_EXPORT
 void SCIPaddBilinLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -108,7 +108,7 @@ void SCIPaddBilinLinearization(
    );
 
 /** computes coefficients of McCormick under- or overestimation of a bilinear term */
-EXTERN
+SCIP_EXPORT
 void SCIPaddBilinMcCormick(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -131,7 +131,7 @@ void SCIPaddBilinMcCormick(
  *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
  *        by Marco Locatelli
  */
-EXTERN
+SCIP_EXPORT
 void SCIPcomputeBilinEnvelope1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -158,7 +158,7 @@ void SCIPcomputeBilinEnvelope1(
  *        by Marco Locatelli
  *
  */
-EXTERN
+SCIP_EXPORT
 void SCIPcomputeBilinEnvelope2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -186,7 +186,7 @@ void SCIPcomputeBilinEnvelope2(
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -203,7 +203,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    );
 
 /** updates bounds of each variable and the cutoff row in the nlpiproblem */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -215,7 +215,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    );
 
 /** adds linear rows to the NLP relaxation */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */

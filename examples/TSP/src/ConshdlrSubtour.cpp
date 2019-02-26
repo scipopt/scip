@@ -167,7 +167,7 @@ SCIP_RETCODE sepaSubtour(
          for (int i = 0; i < ncuts && *result != SCIP_CUTOFF; ++i)
          {
             SCIP_ROW* row; 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "sepa_con", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) ); 
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "sepa_con", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 

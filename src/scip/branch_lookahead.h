@@ -54,7 +54,7 @@ extern "C" {
 #endif
 
 /** creates the lookahead branching rule and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP*                 scip                /**< SCIP data structure */
    );

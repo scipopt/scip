@@ -2,9 +2,10 @@
 |:--------------------------:|:-----------:|:-----------:|:----------------------------------------------------------------------------------:|:-------:|
 | mipdebug                   |        4656 | -           | debug: weekdays 60s soplex (different settings) and cplex;                         | -       |
 | MINLP                      |        1682 | -           | debug: weekdays 60s soplex (different settings) and cplex;                         | -       |
-| mipdev-solvable            |         425 | -           | debug: weekends 7200s soplex; performance: saturdays 7200s exclusive M620v3;       | -       |
+| mipdev-solvable            |         425 | -           | debug: weekends 7200s soplex; performance: saturdays 7200s 5 seeds exclusive M620v3; | -       |
 | minlpdev-solvable          |         113 | -           | debug: weekends 7200s soplex; performance: saturdays 3600s 5 perms exclusive M640; | -       |
 | sapdev-solvable            |         422 | -           | performance: sundays 3600s M630v2;                                                 | -       |
+| miplib2017_benchmark       |         241 | -           | debug: fiberscip: sundays                                                          | -       |
 | MMM                        |         168 | -           | debug: fiberscip: sundays                                                          | -       |
 | clusterbench               |          15 | -           | fridays                                                                            | -       |
 | allProblems                |        5182 | -           | -                                                                                  | -       |

@@ -36,7 +36,7 @@
 
 #define HEUR_NAME                    "conflictdiving"
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
-#define HEUR_DISPCHAR                '~'
+#define HEUR_DISPCHAR                SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY                -1000100
 #define HEUR_FREQ                    -1
 #define HEUR_FREQOFS                 0

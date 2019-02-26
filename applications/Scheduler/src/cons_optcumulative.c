@@ -876,7 +876,7 @@ SCIP_RETCODE createRow(
       int v;
 
       /* create empty row */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, FALSE) );
 
       /* w.r.t. performance we cache the row extension and flush them in the end */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );

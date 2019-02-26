@@ -63,7 +63,6 @@
 #define SLACK_MAXTOTNEDGES 5000
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 

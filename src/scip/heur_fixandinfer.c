@@ -40,7 +40,7 @@
 
 #define HEUR_NAME             "fixandinfer"
 #define HEUR_DESC             "iteratively fixes variables and propagates inferences"
-#define HEUR_DISPCHAR         'I'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         -500000
 #define HEUR_FREQ             -1        /* at the moment, the heuristic seems to be useless */
 #define HEUR_FREQOFS          0

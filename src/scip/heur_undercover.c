@@ -78,7 +78,7 @@
 
 #define HEUR_NAME               "undercover"
 #define HEUR_DESC               "solves a sub-CIP determined by a set covering approach"
-#define HEUR_DISPCHAR           'U'
+#define HEUR_DISPCHAR           SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY           -1110000
 #define HEUR_FREQ               0
 #define HEUR_FREQOFS            0

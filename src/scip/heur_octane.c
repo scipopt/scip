@@ -42,7 +42,7 @@
 
 #define HEUR_NAME             "octane"
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
-#define HEUR_DISPCHAR         'O'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -1008000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

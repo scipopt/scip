@@ -36,7 +36,7 @@
 
 #define HEUR_NAME             "trivialnegation"
 #define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
-#define HEUR_DISPCHAR         'j'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         40000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
