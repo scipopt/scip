@@ -652,7 +652,7 @@ SCIP_RETCODE execRelpscost(
          if( degeneracy >= 0.8 )
          {
             degeneracy = 10.0 * (degeneracy - 0.7);
-            degeneracyfactor = degeneracyfactor * pow(10,degeneracy);
+            degeneracyfactor = degeneracyfactor * pow(10.0,degeneracy);
          }
          /* increase factor for a variable-constraint ratio >= 2.0 */
          if( varconsratio >= 2.0 )

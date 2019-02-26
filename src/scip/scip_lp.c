@@ -2754,7 +2754,7 @@ SCIP_RETCODE SCIPgetLPDegeneracy(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetLPDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPlpGetDegeneracy(scip->lp, scip->set, scip->stat, scip->branchcand, degeneracy, varconsratio) );
+   SCIP_CALL( SCIPlpGetDegeneracy(scip->lp, scip->set, scip->stat, degeneracy, varconsratio) );
 
    return SCIP_OKAY;
 }
