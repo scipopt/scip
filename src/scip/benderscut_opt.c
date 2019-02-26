@@ -699,7 +699,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       {
          SCIP_Bool success;
 
-         SCIPinfoMessage(scip, NULL, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
+         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
             "polish the LP solution to find an alternative dual extreme point.\n", probnumber);
 
          SCIP_CALL( polishSolution(subproblem, &success) );

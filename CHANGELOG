@@ -27,6 +27,11 @@ Features
   heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
   applied to Benders' decomposition.
 
+- cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
+  method and Kelly's method. The cut strengthening is enabled by setting the paramemter
+  "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
+  "corepointperturb" control the behavior of the cut strengthening method.
+
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 

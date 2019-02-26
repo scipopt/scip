@@ -1041,7 +1041,6 @@ void SCIPlpSetRootLPIsRelax(
    );
 
 /** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
-extern 
 SCIP_Bool SCIPlpIsRootLPRelax(
    SCIP_LP*              lp                  /**< LP data */
    );
@@ -1377,14 +1376,12 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    );
 
 /** writes LP to a file */
-extern 
 SCIP_RETCODE SCIPlpWrite(
    SCIP_LP*              lp,                 /**< current LP data */
    const char*           fname               /**< file name */
    );
 
 /** writes MIP to a file */
-extern 
 SCIP_RETCODE SCIPlpWriteMip(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
