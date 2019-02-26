@@ -88,7 +88,7 @@
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
                                               *   infeasible and objective leaf counters? */
-#define DEFAULT_DEGENERACYAWARE  FALSE       /**< should degeneracy be taken into account to update weights and skip strong branching? */
+#define DEFAULT_DEGENERACYAWARE  TRUE        /**< should degeneracy be taken into account to update weights and skip strong branching? */
 
 /** branching rule data */
 struct SCIP_BranchruleData
