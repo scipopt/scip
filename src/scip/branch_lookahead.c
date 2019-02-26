@@ -108,7 +108,8 @@
 #define DEFAULT_MAXPROPROUNDS                -1    /**< maximum number of propagation rounds to perform at temporary
                                                     *   nodes (-1: unlimited) */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
-#define DEFAULT_MAXNCANDS                    4     /**< If abbreviated: The max number of candidates to consider per node */
+#define DEFAULT_MAXNCANDS                    4     /**< If abbreviated: The max number of candidates to consider at the base node */
+#define DEFAULT_MAXNDEEPERCANDS              4     /**< If abbreviated: The max number of candidates to consider per deeper node */
 #define DEFAULT_REUSEBASIS                   TRUE  /**< If abbreviated: Should the information gathered to obtain the best
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
@@ -1019,7 +1020,8 @@ typedef struct
    int                   maxnviolateddomreds;/**< The number of domain reductions we want to gather before restarting the
                                               *   run. Set to -1 for an undbounded number of domain reductions. */
    int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
-   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
+   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled at the base node? */
+   int                   maxndeepercands;    /**< If abbreviated == TRUE, at most how many candidates should be handled in deeper nodes? */
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
                                               *   used. */
    SCIP_Bool             onlyvioldomreds;    /**< Should only domain reductions that violate the LP solution be applied? */
@@ -1214,75 +1216,6 @@ void statisticsInit(
       statistics->chosenfsbcand[i] = 0;
    }
 }
-
-#if 0
-/** Allocates a static in the buffer and initiates it with the default values. */
-static
-SCIP_RETCODE statisticsAllocate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STATISTICS**          statistics,         /**< pointer to the statistics to be allocated */
-   int                   recursiondepth,     /**< the LAB recursion depth */
-   int                   maxncands           /**< the max number of candidates to be used in ALAB */
-   )
-{
-   assert(scip != NULL);
-   assert(statistics != NULL);
-   assert(recursiondepth > 0);
-   assert(maxncands > 0);
-
-   SCIP_CALL( SCIPallocBuffer(scip, statistics) );
-   /* RESULT enum is 1 based, so use MAXRESULT + 1 as array size with unused 0 element */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nresults, MAXRESULT+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecutoffs, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nfullcutoffs, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolved, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolvedfsb, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nduplicatelps, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterations, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterationsfsb, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchusedfsb, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->chosenfsbcand, maxncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->domredafterfsb, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->cutoffafterfsb, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->stopafterfsb, recursiondepth) );
-
-   (*statistics)->recursiondepth = recursiondepth;
-   (*statistics)->maxnbestcands = maxncands;
-
-   statisticsInit(*statistics);
-   return SCIP_OKAY;
-}
-
-/** Frees the allocated buffer memory of the statistics. */
-static
-void statisticsFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STATISTICS**          statistics          /**< pointer to the statistics to free */
-   )
-{
-   assert(scip != NULL);
-   assert(statistics != NULL);
-
-   SCIPfreeBufferArray(scip, &(*statistics)->stopafterfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->cutoffafterfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->domredafterfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->chosenfsbcand);
-   SCIPfreeBufferArray(scip, &(*statistics)->noldbranchusedfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
-   SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
-   SCIPfreeBufferArray(scip, &(*statistics)->nlpiterationsfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->nlpiterations);
-   SCIPfreeBufferArray(scip, &(*statistics)->nduplicatelps);
-   SCIPfreeBufferArray(scip, &(*statistics)->nlpssolvedfsb);
-   SCIPfreeBufferArray(scip, &(*statistics)->nlpssolved);
-   SCIPfreeBufferArray(scip, &(*statistics)->nfullcutoffs);
-   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecutoffs);
-   SCIPfreeBufferArray(scip, &(*statistics)->nresults);
-   SCIPfreeBuffer(scip, statistics);
-}
-#endif
 
 /** Prints the content of the statistics to stdout. */
 static
@@ -3997,7 +3930,12 @@ SCIP_RETCODE filterCandidates(
       /* if we didn't find any domreds or constraints during the FSB scoring, we branch on */
       if( isBranchFurther(status, SCIPgetProbingDepth(scip) == 0) )
       {
-         int nusedcands = MIN(config->maxncands, candidatelist->ncandidates);
+         int nusedcands;
+
+         if( SCIPgetProbingDepth(scip) == 0 )
+            nusedcands = MIN(config->maxncands, candidatelist->ncandidates);
+         else
+            nusedcands = MIN(config->maxndeepercandscands, candidatelist->ncandidates);
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%s", "Filter the candidates by their score.\n");
 
@@ -5847,8 +5785,11 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "toggles the abbreviated LAB.",
          &branchruledata->config->abbreviated, TRUE, DEFAULT_ABBREVIATED, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxncands",
-         "if abbreviated: The max number of candidates to consider per node.",
+         "if abbreviated: The max number of candidates to consider at the node.",
          &branchruledata->config->maxncands, TRUE, DEFAULT_MAXNCANDS, 2, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxndeepercands",
+         "if abbreviated: The max number of candidates to consider per deeper node.",
+         &branchruledata->config->maxndeepercands, TRUE, DEFAULT_MAXNDEEPERCANDS, 2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/reusebasis",
          "if abbreviated: Should the information gathered to obtain the best candidates be reused?",
