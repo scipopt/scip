@@ -152,7 +152,8 @@ SCIP_RETCODE varIsSemicontinuous(
       /* look for bvar in vubvars */
       if( vubvars != NULL )
          exists = SCIPsortedvecFindPtr((void**)vubvars, SCIPvarComp, bvar, nvubs, &pos);
-      else exists = FALSE;
+      else
+         exists = FALSE;
       if( exists )
       {/*lint --e{644}*/
          /* save the upper bounds */
@@ -171,7 +172,9 @@ SCIP_RETCODE varIsSemicontinuous(
       if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
          if( scvdata == NULL )
+         {
             SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
+         }
 
          if( scvdata->nbnds + 1 > scvdata->bndssize )
          {
@@ -189,46 +192,46 @@ SCIP_RETCODE varIsSemicontinuous(
    }
 
    /* look for vubvars that have not been processed yet */
-   if( vubvars != NULL )
+   assert(vubvars != NULL || nvubs == 0);
+   for( c = 0; c < nvubs; ++c )
    {
-      for( c = 0; c < nvubs; ++c )
+      SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
+         SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);  /*lint !e613*/
+
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)  /*lint !e613*/
+         continue;
+
+      bvar = vubvars[c];  /*lint !e613*/
+
+      /* skip vars that are in vlbvars */
+      if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
+         continue;
+
+      lb0 = glb;
+      lb1 = glb;
+      ub0 = MIN(vubconstants[c], gub);
+      ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
+
+      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
+      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
-         SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
-                      SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);
-
-         if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)
-            continue;
-
-         bvar = vubvars[c];
-
-         /* skip vars that are in vlbvars */
-         if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
-            continue;
-
-         lb0 = glb;
-         lb1 = glb;
-         ub0 = MIN(vubconstants[c], gub);
-         ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
-
-         /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-         if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
+         if( scvdata == NULL )
          {
-            if( scvdata == NULL )
-               SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
-
-            if( scvdata->nbnds + 1 > scvdata->bndssize )
-            {
-               newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars,  scvdata->bndssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
-               scvdata->bndssize = newsize;
-            }
-            assert(scvdata->nbnds + 1 <= scvdata->bndssize);
-
-            scvdata->bvars[scvdata->nbnds] = bvar;
-            scvdata->vals0[scvdata->nbnds] = lb0;
-            ++scvdata->nbnds;
+            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
          }
+
+         if( scvdata->nbnds + 1 > scvdata->bndssize )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize, newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
+            scvdata->bndssize = newsize;
+         }
+         assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+
+         scvdata->bvars[scvdata->nbnds] = bvar;
+         scvdata->vals0[scvdata->nbnds] = lb0;
+         ++scvdata->nbnds;
       }
    }
 
@@ -468,8 +471,9 @@ SCIP_RETCODE addPerspectiveLinearisation(
       vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)vars[v]);
 
       /* find bvar in vardata->bvars */
-      SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);  /*lint !e534*/
+      (void) SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
       assert(pos < vardata->nbnds);
+      assert(vardata->bvars[pos] == bvar);
 
       vals0[v] = vardata->vals0[pos];
    }
@@ -518,7 +522,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
    }
 
    scalar_prod = 0.0;
-   for(v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
       var = SCIPgetConsExprExprVarVar(varexprs[v]);
@@ -538,7 +542,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
  TERMINATE:
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &vals0);
-   for(v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[v]) );
    }
@@ -589,7 +593,7 @@ SCIP_RETCODE addTerm(
 
    /* find common binary variables for all variables of children[c] */
    scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(SCIPblkmem(scip), &expr_bvars, scvdata->bvars, scvdata->nbnds) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr_bvars, scvdata->bvars, scvdata->nbnds) );
    nbvars = scvdata->nbnds;
    nbvars0 = scvdata->nbnds;
 
@@ -789,58 +793,19 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_CONSHDLR* linconshdlr;
-   SCIP_CONSHDLR* varboundconshdlr;
-   int c;
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata != NULL);
-
-   /* look for important constraint handlers */
-   linconshdlr = SCIPfindConshdlr(scip, "linear");
-   varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
-
-   for( c = 0; c < SCIPgetNConss(scip); ++c )
-   {
-      SCIP_CONS* cons = SCIPgetConss(scip)[c];
-      assert(cons != NULL);
-
-      if( SCIPconsGetHdlr(cons) == linconshdlr )
-      {
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /* TODO extract information with interface functions from cons_linear.h */
-      }
-      else if( SCIPconsGetHdlr(cons) == varboundconshdlr )
-      {
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /* TODO extract information with interface functions from cons_varbound.h */
-      }
-      else
-      {
-         /* TODO check whether other constraint handlers are important */
-      }
-   }
-
-   /* TODO store data in nlhdlrdata */
-
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrInitPerspective NULL
 #endif
 
 
 /** callback to be called in deinitialization */
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
+#endif
 
 
 /** callback to detect structure in expression tree
@@ -1264,7 +1229,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitPerspective, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrSepaPerspective, NULL, NULL);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscorePerspective);
 
