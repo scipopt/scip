@@ -42,6 +42,7 @@ static SCIP_VAR* y;
 static SCIP_VAR* w;
 static SCIP_VAR* z;
 
+static SCIP_CONSEXPR_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
@@ -61,12 +62,15 @@ void setup(void)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
+   nlhdlr = SCIPfindConsExprNlhdlr(conshdlr, "soc");
+   cr_assert_not_null(nlhdlr);
+
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
    /* go to SOLVING stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -96,70 +100,108 @@ void teardown(void)
 /* test suite */
 TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
 
-/* detects ||x|| as quadratic expression */
+static
+void checkData(
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
+   SCIP_VAR**            vars,
+   SCIP_Real*            coefs,
+   SCIP_Real*            offsets,
+   SCIP_Real*            transcoefs,
+   int*                  transcoefidx,
+   int*                  nnonzeroes,
+   int                   nvars,
+   int                   nterms,
+   int                   ntranscoefs,
+   SCIP_Real             constant
+   )
+{
+   int i;
+
+   cr_assert_not_null(nlhdlrexprdata->vars);
+   cr_assert_not_null(nlhdlrexprdata->coefs);
+   cr_assert_not_null(nlhdlrexprdata->offsets);
+   cr_assert_not_null(nlhdlrexprdata->nnonzeroes);
+   cr_assert_not_null(nlhdlrexprdata->transcoefs);
+   cr_assert_not_null(nlhdlrexprdata->transcoefsidx);
+
+   cr_expect_eq(nlhdlrexprdata->nvars, nvars);
+   cr_expect_eq(nlhdlrexprdata->nterms, nterms);
+   cr_expect_eq(nlhdlrexprdata->ntranscoefs, ntranscoefs);
+   cr_expect_eq(nlhdlrexprdata->constant, constant);
+
+   for( i = 0; i < nvars; ++i )
+   {
+      cr_assert_not_null(nlhdlrexprdata->vars[i]);
+      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], );
+   }
+
+   for( i = 0; i < nterms; ++i )
+      cr_expect_eq(nlhdlrexprdata->coefs[i], coefs[i]);
+
+   for( i = 0; i < nterms; ++i )
+      cr_expect_eq(nlhdlrexprdata->offsets[i], offsets[i]);
+
+   for( i = 0; i < nterms; ++i )
+      cr_expect_eq(nlhdlrexprdata->nnonzeroes[i], nnonzeroes[i]);
+
+   for( i = 0; i < ntranscoefs; ++i )
+      cr_expect_eq(nlhdlrexprdata->transcoefs[i], transcoefs[i]);
+
+   for( i = 0; i < ntranscoefs; ++i )
+      cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefidx[i]);
+}
+
+/* detects ||x|| as soc expression */
 Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 {
+   SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_VAR* auxvar;
-   SCIP_Bool success;
+   SCIP_Bool infeasible;
    SCIP_Bool changed = FALSE;
+   int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"(<x>^2 + <y>^2 + <z>^2)^0.5", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "(<x>^2 + <y>^2 + <z>^2)^0.5", NULL, &expr) );
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
    cr_expect(!changed);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
-   /* create auxvar and add locks */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, &auxvar) );
-   cr_assert(auxvar != NULL);
-   SCIPchgVarLbGlobal(scip, auxvar, 0.0);
-   expr->nlockspos = 1;
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "norm", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* detect */
-   success = FALSE;
-   SCIP_CALL( detectSOC(scip, expr, auxvar, &nlhdlrexprdata, &success) );
-   cr_assert(success);
+   SCIP_CALL( SCIPinitlpCons(scip, cons, &infeasible) );
+   cr_assert(!infeasible);
+
+   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
    cr_assert_not_null(nlhdlrexprdata);
 
+   /* setup expected data */
+   SCIP_VAR* vars[4] = {x, y, z, SCIPgetConsExprExprAuxVar(expr)};
+   SCIP_Real coefs[4] = {1.0, 1.0, 1.0, 1.0};
+   SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
+   SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
+   int transcoefsidx[4] = {0, 1, 2, 3};
+   int nnonzeroes[4] = {1, 1, 1, 1};
+
    /* check nlhdlrexprdata*/
-   cr_expect_eq(nlhdlrexprdata->nvars, 4);
-   cr_expect_eq(nlhdlrexprdata->ntranscoefs, 4);
-   cr_expect_eq(nlhdlrexprdata->nterms, 4);
-   cr_expect_eq(nlhdlrexprdata->constant, 0.0);
-   cr_expect_eq(nlhdlrexprdata->nnonzeroes[0], 1);
-   cr_expect_eq(nlhdlrexprdata->nnonzeroes[1], 1);
-   cr_expect_eq(nlhdlrexprdata->nnonzeroes[2], 1);
-   cr_expect_eq(nlhdlrexprdata->nnonzeroes[3], 1);
-   cr_expect_eq(nlhdlrexprdata->transcoefsidx[0], 0);
-   cr_expect_eq(nlhdlrexprdata->transcoefsidx[1], 1);
-   cr_expect_eq(nlhdlrexprdata->transcoefsidx[2], 2);
-   cr_expect_eq(nlhdlrexprdata->transcoefsidx[3], 3);
-   cr_expect_eq(nlhdlrexprdata->transcoefs[0], 1.0);
-   cr_expect_eq(nlhdlrexprdata->transcoefs[1], 1.0);
-   cr_expect_eq(nlhdlrexprdata->transcoefs[1], 1.0);
-   cr_expect_eq(nlhdlrexprdata->transcoefs[2], 1.0);
-   cr_expect_eq(nlhdlrexprdata->transcoefs[3], 1.0);
-   cr_expect_eq(nlhdlrexprdata->offsets[0], 0.0);
-   cr_expect_eq(nlhdlrexprdata->offsets[1], 0.0);
-   cr_expect_eq(nlhdlrexprdata->offsets[2], 0.0);
-   cr_expect_eq(nlhdlrexprdata->offsets[3], 0.0);
-   cr_expect_eq(nlhdlrexprdata->coefs[0], 1.0);
-   cr_expect_eq(nlhdlrexprdata->coefs[1], 1.0);
-   cr_expect_eq(nlhdlrexprdata->coefs[2], 1.0);
-   cr_expect_eq(nlhdlrexprdata->coefs[3], 1.0);
-   cr_expect_eq(nlhdlrexprdata->vars[0], x);
-   cr_expect_eq(nlhdlrexprdata->vars[1], y);
-   cr_expect_eq(nlhdlrexprdata->vars[2], z);
-   cr_expect_eq(nlhdlrexprdata->vars[3], auxvar);
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4, 0.0);
 
-   expr->nlockspos = 0;
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
-   /* free expr and data */
-   SCIP_CALL( freeNlhdlrExprData(scip, &nlhdlrexprdata) );
-   SCIP_CALL( freeAuxVar(scip, expr) );
+   /* free expr and cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
