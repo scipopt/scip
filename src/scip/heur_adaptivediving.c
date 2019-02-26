@@ -31,7 +31,7 @@
 #define HEUR_DESC             "diving heuristic that selects adaptively between the existing, public divesets"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -70000
-#define HEUR_FREQ             2
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -44,23 +44,30 @@
  * Default parameter settings
  */
 #define DEFAULT_SELTYPE 'w'
-#define DEFAULT_SCORETYPE 'c'
+#define DEFAULT_SCORETYPE 'c'                /**< score parameter for selection: minimize either average 'n'odes, LP 'i'terations,
+                                               *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
+                                               *  1 / solutions'u'ccess */
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
-
+#define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
+#define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
+   /* data structures used internally */
    SCIP_SOL*             sol;                /**< working solution */
-
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator for selection */
    SCIP_DIVESET**        divesets;           /**< publicly available divesets from diving heuristics */
    int                   ndivesets;          /**< number of publicly available divesets from diving heuristics */
    int                   divesetssize;       /**< array size for divesets array */
    int                   lastselection;      /**< stores the last selected diveset when the heuristics was run */
-   char                  scoretype;          /**< score parameter to compare different divesets */
-   SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets */
+   /* user parameters */
+   SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
+   SCIP_Real             selconfidencecoeff; /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
    char                  seltype;            /**< selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving */
+   char                  scoretype;          /**< score parameter for selection: minimize either average 'n'odes, LP 'i'terations,
+                                               *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
+                                               *  1 / solutions'u'ccess */
    SCIP_Bool             useadaptivecontext; /**< should the heuristic use its own statistics, or shared statistics? */
 };
 
@@ -73,25 +80,35 @@ struct SCIP_HeurData
 static
 SCIP_Real divesetGetSelectionScore(
    SCIP_DIVESET*         diveset,            /**< diving settings data structure */
-   char                  scoretype,          /**< score parameter */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
-
    )
 {
-   switch (scoretype) {
+   SCIP_Real confidence;
+
+   /* compute confidence scalar (converges towards 1 with increasing number of calls) */
+   confidence = (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0) /
+            (SCIPdivesetGetNCalls(diveset, divecontext) + heurdata->selconfidencecoeff);
+
+   switch (heurdata->scoretype) {
       case 'n': /* min average nodes */
-         return SCIPdivesetGetNProbingNodes(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
+         return confidence * SCIPdivesetGetNProbingNodes(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
 
       case 'i': /* min avg LP iterations */
-         return SCIPdivesetGetNLPIterations(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
+         return confidence * SCIPdivesetGetNLPIterations(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
 
-      case 'c': /* min backtrack / conflict ratio */
-         return (SCIPdivesetGetNBacktracks(diveset, divecontext)) / (SCIPdivesetGetNConflicts(diveset, divecontext) + 10.0);
+      case 'c': /* min backtrack / conflict ratio (the current default) */
+         return confidence * (SCIPdivesetGetNBacktracks(diveset, divecontext)) / (SCIPdivesetGetNConflicts(diveset, divecontext) + 10.0);
 
-      case 'd': /* minimum average depth (the current default) */
-         return SCIPdivesetGetAvgDepth(diveset, divecontext) * SCIPdivesetGetNCalls(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 10.0);
+      case 'd': /* minimum average depth */
+         return SCIPdivesetGetAvgDepth(diveset, divecontext) * confidence;
 
+      case 's': /* maximum number of solutions */
+         return confidence / (SCIPdivesetGetNSols(diveset, divecontext) + 1.0);
+
+      case 'u': /* maximum solution success (which weighs best solutions higher) */
       default:
+         return confidence / (SCIPdivesetGetSolSuccess(diveset, divecontext) + 1.0);
          break;
    }
    return 0.0;
@@ -142,7 +159,7 @@ SCIP_DECL_HEURFREE(heurFreeAdaptivediving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** todo find publicly available divesets and store them */
+/** find publicly available divesets and store them */
 static
 SCIP_RETCODE findAndStoreDivesets(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -266,11 +283,7 @@ SCIP_Longint getLPIterlimit(
       nlpiterationsdive += SCIPdivesetGetNLPIterations(heurdata->divesets[i], SCIP_DIVECONTEXT_ADAPTIVE);
    }
 
-   /* author gregor
-    *
-    * TODO parameterize this sufficiently
-    */
-
+   /* todo parameterize this sufficiently */
    lpiterlimit = (SCIP_Longint)(0.1 * (nsolsfound+1.0)/(ncalls+1.0) * nlpiterations);
    lpiterlimit += 1500;
 
@@ -388,7 +401,7 @@ SCIP_RETCODE selectDiving(
       epsilon_t = MAX(epsilon_t, 0.05);
 
       /* select one of the available methods at random */
-      if( SCIPrandomGetReal(rng, 0.0, 1.0) < epsilon_t )
+      if( epsilon_t >= 1.0 || SCIPrandomGetReal(rng, 0.0, 1.0) < epsilon_t )
       {
          do
          {
@@ -406,7 +419,7 @@ SCIP_RETCODE selectDiving(
             if( methodunavailable[d] )
                continue;
 
-            score = divesetGetSelectionScore(divesets[d], heurdata->scoretype, divecontext);
+            score = divesetGetSelectionScore(divesets[d], heurdata, divecontext);
             if( !methodunavailable[d] && score < bestscore )
             {
                bestscore = score;
@@ -422,7 +435,7 @@ SCIP_RETCODE selectDiving(
       /* initialize weights as inverse of the score + a small positive epsilon */
       for( d = 0; d < ndivesets; ++d )
       {
-         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetSelectionScore(divesets[d], heurdata->scoretype, divecontext) + 1e-4);
+         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetSelectionScore(divesets[d], heurdata, divecontext) + 1e-4);
       }
 
       *selection = sampleWeighted(scip, rng, weights, ndivesets);
@@ -561,7 +574,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
 
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE) );
 
-   /* include primal heuristic */
+   /* include adaptive diving primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecAdaptivediving, heurdata) );
@@ -574,25 +587,27 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAdaptivediving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAdaptivediving) );
 
-   /* author gregor
-    *
-    * TODO put default values to the top of the file as preprocessor defines
-    */
+   /* add parameters */
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/epsilon",
+         "parameter that increases probability of exploration among divesets (only active if seltype is 'e')",
+         &heurdata->epsilon, FALSE, DEFAULT_EPSILON, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoretype",
+         "score parameter for selection: minimize either average 'n'odes, LP 'i'terations,"
+         "backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or 1 / solutions'u'ccess",
+         &heurdata->scoretype, FALSE, DEFAULT_SCORETYPE, "cdinsu", NULL, NULL) );
+
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/seltype",
          "selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving",
          &heurdata->seltype, FALSE, DEFAULT_SELTYPE, "enw", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoretype",
-         "score parameter", &heurdata->scoretype, FALSE, DEFAULT_SCORETYPE, "nicd", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/epsilon",
-         "parameter that increases probability of exploration among divesets",
-         &heurdata->epsilon, FALSE, 1.0, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useadaptivecontext",
-       "should the heuristic use its own statistics, or shared statistics?", &heurdata->useadaptivecontext, TRUE,
-       DEFAULT_USEADAPTIVECONTEXT, NULL, NULL) );
+         "should the heuristic use its own statistics, or shared statistics?", &heurdata->useadaptivecontext, TRUE,
+         DEFAULT_USEADAPTIVECONTEXT, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/selconfidencecoeff",
+         "coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores",
+         &heurdata->selconfidencecoeff, FALSE, DEFAULT_SELCONFIDENCECOEFF, 1.0, (SCIP_Real)INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
