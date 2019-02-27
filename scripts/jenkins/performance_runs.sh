@@ -124,6 +124,7 @@ if [ "${GITBRANCH}" == "master" ]; then
   JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
   JOBS[6,2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
   TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
+  TRIGGER[6,2]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_shootout_weekly/build?token=weeklysaptoken"
 
   # jobs running on sunday
   JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"

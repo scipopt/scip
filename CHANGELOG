@@ -24,8 +24,16 @@ Features
 - LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
 
 - Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
-  heuristic performance of the Benders' decomposition algorithm. It build upon the successful trust region approaches
+  heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
   applied to Benders' decomposition.
+
+- cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
+  method and Kelly's method. The cut strengthening is enabled by setting the paramemter
+  "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
+  "corepointperturb" control the behavior of the cut strengthening method.
+
+- added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
+  and skip strong branching for very high degeneracy rates
 
 Performance improvements
 ------------------------
@@ -105,6 +113,7 @@ Interface changes
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
+- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
 
 ### Command line interface
 
@@ -146,6 +155,8 @@ Interface changes
   parameters only have effect if the lnscheck parameter is set to TRUE.
 
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
+
+- new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
 
 ### Data structures
 
