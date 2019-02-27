@@ -51,7 +51,7 @@
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
 #define DEFAULT_MAXLPITERQUOT       0.1      /**< maximal fraction of diving LP iterations compared to node LP iterations */
-#define DEFAULT_MAXLPITEROFS       1500      /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXLPITEROFS      1500L      /**< additional number of allowed LP iterations */
 #define DEFAULT_BESTSOLWEIGHT      10.0      /**< weight of incumbent solutions compared to other solutions in computation of LP iteration limit */
 
 /* locally defined heuristic data */
@@ -632,7 +632,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiterofs",
          "additional number of allowed LP iterations",
-         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, (SCIP_Longint)INT_MAX, NULL, NULL) );
+         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0L, (SCIP_Longint)INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/bestsolweight",
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
