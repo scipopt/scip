@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_adaptivediving.c
- * @brief  diving heuristic that selects adaptively between the existing, public divesets
+ * @brief  diving heuristic that selects adaptively between the existing, public dive sets
  * @author Gregor Hendel
  */
 
@@ -78,12 +78,15 @@ struct SCIP_HeurData
 
 /** get the selection score for this dive set */
 static
-SCIP_Real divesetGetSelectionScore(
+SCIP_RETCODE divesetGetSelectionScore(
    SCIP_DIVESET*         diveset,            /**< diving settings data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
+   SCIP_DIVECONTEXT      divecontext,        /**< context for diving statistics */
+   SCIP_Real*            scoreptr            /**< pointer to store the score */
    )
 {
+   assert(scoreptr != NULL);
+
    SCIP_Real confidence;
 
    /* compute confidence scalar (converges towards 1 with increasing number of calls) */
@@ -92,26 +95,31 @@ SCIP_Real divesetGetSelectionScore(
 
    switch (heurdata->scoretype) {
       case 'n': /* min average nodes */
-         return confidence * SCIPdivesetGetNProbingNodes(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
-
-      case 'i': /* min avg LP iterations */
-         return confidence * SCIPdivesetGetNLPIterations(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
-
-      case 'c': /* min backtrack / conflict ratio (the current default) */
-         return confidence * (SCIPdivesetGetNBacktracks(diveset, divecontext)) / (SCIPdivesetGetNConflicts(diveset, divecontext) + 10.0);
-
-      case 'd': /* minimum average depth */
-         return SCIPdivesetGetAvgDepth(diveset, divecontext) * confidence;
-
-      case 's': /* maximum number of solutions */
-         return confidence / (SCIPdivesetGetNSols(diveset, divecontext) + 1.0);
-
-      case 'u': /* maximum solution success (which weighs best solutions higher) */
-      default:
-         return confidence / (SCIPdivesetGetSolSuccess(diveset, divecontext) + 1.0);
+         *scoreptr = confidence * SCIPdivesetGetNProbingNodes(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
          break;
+      case 'i': /* min avg LP iterations */
+         *scoreptr = confidence * SCIPdivesetGetNLPIterations(diveset, divecontext) / (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0);
+         break;
+      case 'c': /* min backtrack / conflict ratio (the current default) */
+         *scoreptr = confidence * (SCIPdivesetGetNBacktracks(diveset, divecontext)) / (SCIPdivesetGetNConflicts(diveset, divecontext) + 10.0);
+         break;
+      case 'd': /* minimum average depth */
+         *scoreptr = SCIPdivesetGetAvgDepth(diveset, divecontext) * confidence;
+         break;
+      case 's': /* maximum number of solutions */
+         *scoreptr = confidence / (SCIPdivesetGetNSols(diveset, divecontext) + 1.0);
+         break;
+      case 'u': /* maximum solution success (which weighs best solutions higher) */
+         *scoreptr = confidence / (SCIPdivesetGetSolSuccess(diveset, divecontext) + 1.0);
+         break;
+      default:
+         SCIPerrorMessage("Unsupported scoring parameter '%c'\n", heurdata->scoretype);
+         SCIPABORT();
+         *scoreptr = SCIP_INVALID;
+         return SCIP_PARAMETERWRONGVAL;
    }
-   return 0.0;
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -419,8 +427,9 @@ SCIP_RETCODE selectDiving(
             if( methodunavailable[d] )
                continue;
 
-            score = divesetGetSelectionScore(divesets[d], heurdata, divecontext);
-            if( !methodunavailable[d] && score < bestscore )
+            SCIP_CALL( divesetGetSelectionScore(divesets[d], heurdata, divecontext, &score) );
+
+            if( score < bestscore )
             {
                bestscore = score;
                *selection = d;
@@ -429,13 +438,16 @@ SCIP_RETCODE selectDiving(
       }
       break;
    case 'w':
-
       SCIP_CALL( SCIPallocBufferArray(scip, &weights, ndivesets) );
 
       /* initialize weights as inverse of the score + a small positive epsilon */
       for( d = 0; d < ndivesets; ++d )
       {
-         weights[d] = methodunavailable[d] ? 0.0 : 1 / (divesetGetSelectionScore(divesets[d], heurdata, divecontext) + 1e-4);
+         SCIP_Real score;
+
+         SCIP_CALL( divesetGetSelectionScore(divesets[d], heurdata, divecontext, &score) );
+
+         weights[d] = methodunavailable[d] ? 0.0 : 1 / (score + 1e-4);
       }
 
       *selection = sampleWeighted(scip, rng, weights, ndivesets);
@@ -443,7 +455,6 @@ SCIP_RETCODE selectDiving(
       SCIPfreeBufferArray(scip, &weights);
       break;
    case 'n':
-
          /* continue from last selection and stop at the next available method */
          *selection = heurdata->lastselection;
 
@@ -451,7 +462,7 @@ SCIP_RETCODE selectDiving(
          {
             *selection = (*selection + 1) % ndivesets;
          }
-         while (methodunavailable[*selection]);
+         while( methodunavailable[*selection] );
          heurdata->lastselection = *selection;
       break;
    default:
@@ -464,8 +475,6 @@ SCIP_RETCODE selectDiving(
    SCIPfreeBufferArray(scip, &methodunavailable);
 
    return SCIP_OKAY;
-
-
 }
 
 /** execution method of primal heuristic */

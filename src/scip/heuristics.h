@@ -43,7 +43,7 @@ extern "C" {
  * @{
  */
 
-/** performs a diving within the limits of the diveset parameters
+/** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation

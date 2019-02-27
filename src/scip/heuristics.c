@@ -177,7 +177,7 @@ SCIP_Longint getDivesetIterLimit(
    return iterlimit;
 }
 
-/** performs a diving within the limits of the diveset parameters
+/** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
@@ -201,7 +201,7 @@ SCIP_Longint getDivesetIterLimit(
  *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
  *
  *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
- *        call will be executed, @see SCIPgetLastDiveNode()
+ *        call will be executed, see SCIPgetLastDiveNode()
  *
  *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
  */
@@ -673,7 +673,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* add the number of bound changes we applied by ourselves after propagation, otherwise the counter would have been reset */
             localdomreds += nbdchanges;
 
-            SCIPdebugMsg(scip, "domain reductions: %" SCIP_LONGINT_FORMAT " (total:%" SCIP_LONGINT_FORMAT ")\n",
+            SCIPdebugMsg(scip, "domain reductions: %" SCIP_LONGINT_FORMAT " (total: %" SCIP_LONGINT_FORMAT ")\n",
                localdomreds, domreds + localdomreds);
 
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
