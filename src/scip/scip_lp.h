@@ -1747,7 +1747,7 @@ SCIP_Bool SCIPinDive(
  *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
  *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */

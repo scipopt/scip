@@ -18391,7 +18391,6 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
    SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
    )
