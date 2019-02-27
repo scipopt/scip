@@ -91,8 +91,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize            /**< the number of variables in the array */
    );
