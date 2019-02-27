@@ -3089,9 +3089,6 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
    return (lpi->spx->status() == SPxSolver::OPTIMAL);
 }
 
