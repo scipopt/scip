@@ -51,9 +51,9 @@ SCIP_RETCODE solveLP(
 
    nlpiterations = SCIPgetNLPIterations(scip);
 
-   /* allow at least 100 more iterations */
+   /* allow at least MINLPITER more iterations so as not to run out of LP iterations during this solve */
    lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset, divecontext));
-   lpiterationlimit = MAX(lpiterationlimit, 100);
+   lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
 
    retstat = SCIPsolveProbingLP(scip, lpiterationlimit, lperror, cutoff);
 
