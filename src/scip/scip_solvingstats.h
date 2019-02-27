@@ -269,7 +269,7 @@ SCIP_Longint SCIPgetNObjlimLeaves(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNRootboundChgs(
    SCIP*                 scip                /**< Scip data structure */
    );
@@ -292,7 +292,7 @@ int SCIPgetNRootboundChgs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNRootboundChgsRun(
    SCIP*                 scip                /**< Scip data structure */
    );
