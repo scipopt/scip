@@ -3370,6 +3370,8 @@ SCIP_RETCODE getFSBResult(
    /* use the default scoring function */
    if( config->scoringfunction == 's' || config->scoringfunction == 'w' )
       config->scoringfunction = 'f';
+   else if( config->scoringfunction == 'p' )
+      config->scoringfunction = 'd';
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
@@ -3542,7 +3544,8 @@ SCIP_Real calculateScoreFromDeeperscore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< variable to get the score for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
-   BRANCHINGRESULTDATA*  upbranchingresult   /**< branching result of the up branch */
+   BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
+   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
    )
 {
    SCIP_Real score;
@@ -3553,6 +3556,9 @@ SCIP_Real calculateScoreFromDeeperscore(
    assert(branchvar != NULL);
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
+
+   if( SCIPgetProbingDepth(scip) > 0 )
+      return calculateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
 
    downscore = sqrt(downbranchingresult->deeperscore);
    upscore = sqrt(upbranchingresult->deeperscore);
@@ -3694,7 +3700,7 @@ SCIP_Real calculateScore(
       score = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
       break;
    case 'p':
-      score = calculateScoreFromDeeperscore(scip, branchvar, downbranchingresult, upbranchingresult);
+      score = calculateScoreFromDeeperscore(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
       break;
    case 'l':
       score = calculateScoreFromResult2(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
