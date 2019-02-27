@@ -5897,7 +5897,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->maxncands, TRUE, DEFAULT_MAXNCANDS, 2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxndeepercands",
          "if abbreviated: The max number of candidates to consider per deeper node.",
-         &branchruledata->config->maxndeepercands, TRUE, DEFAULT_MAXNDEEPERCANDS, 2, INT_MAX, NULL, NULL) );
+         &branchruledata->config->maxndeepercands, TRUE, DEFAULT_MAXNDEEPERCANDS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/reusebasis",
          "if abbreviated: Should the information gathered to obtain the best candidates be reused?",
