@@ -875,7 +875,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       {
          SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip rapid learning\n",
             SCIPvarGetName(vars[i]), lb, ub, obj);
-         return retcode;
+         return SCIP_OKAY;
       }
    }
 
