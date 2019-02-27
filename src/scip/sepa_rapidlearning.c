@@ -28,6 +28,7 @@
 
 #include "scip/sepa_rapidlearning.h"
 #include "scip/scipdefplugins.h"
+#include "scip/heuristics.h"
 #include "scip/pub_var.h"
 
 #define SEPA_NAME              "rapidlearning"
@@ -48,13 +49,16 @@
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status be copied to the original SCIP? */
 
 #define DEFAULT_CHECKEXEC          TRUE /**< check whether rapid learning should be executed */
-#define DEFAULT_CHECKDEGANERAGY    TRUE /**< should local LP degeneracy be checked? */
+#define DEFAULT_CHECKDEGANERACY    TRUE /**< should local LP degeneracy be checked? */
 #define DEFAULT_CHECKDUALBOUND    FALSE /**< should the progress on the dual bound be checked? */
-#define DEFAULT_CHECKLEAVES       FALSE /**< should the ration of leaves proven to be infeasible and exceeding the
+#define DEFAULT_CHECKLEAVES       FALSE /**< should the ratio of leaves proven to be infeasible and exceeding the
                                          *   cutoff bound be checked? */
 #define DEFAULT_CHECKOBJ          FALSE /**< should the local objection function be checked? */
 #define DEFAULT_CHECKNSOLS         TRUE /**< should the number of solutions found so far be checked? */
+#define DEFAULT_MINDEGENERACY       0.8 /**< minimal degeneracy threshold to allow local rapid learning */
 #define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
+#define DEFAULT_MINVARCONSRATIO     2.0 /**< minimal ratio of unfixed variables in relation to basis size to
+                                         *   allow local rapid learning */
 #define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before rapid learning is
                                          *   executed locally based on the progress of the dualbound */
 
@@ -80,7 +84,10 @@
 struct SCIP_SepaData
 {
    SCIP_Real             lpiterquot;         /**< maximal fraction of LP iterations compared to node LP iterations */
+   SCIP_Real             mindegeneracy;      /**< minimal degeneracy threshold to allow local rapid learning */
    SCIP_Real             mininflpratio;      /**< minimal threshold of inf/obj leaves to allow local rapid learning */
+   SCIP_Real             minvarconsratio;    /**< minimal ratio of unfixed variables in relation to basis size to
+                                              *   allow local rapid learning */
    int                   maxnvars;           /**< maximum problem size (variables) for which rapid learning will be called */
    int                   maxnconss;          /**< maximum problem size (constraints) for which rapid learning will be called */
    int                   maxcalls;           /**< maximum number of overall calls */
@@ -95,7 +102,7 @@ struct SCIP_SepaData
    SCIP_Bool             applysolved;        /**< should a solved status ba copied to the original SCIP? */
    SCIP_Bool             checkdegeneracy;    /**< should local LP degeneracy be checked? */
    SCIP_Bool             checkdualbound;     /**< should the progress on the dual bound be checked? */
-   SCIP_Bool             checkleaves;        /**< should the ration of leaves proven to be infeasible and exceeding the
+   SCIP_Bool             checkleaves;        /**< should the ratio of leaves proven to be infeasible and exceeding the
                                               *   cutoff bound be checked? */
    SCIP_Bool             checkexec;          /**< check whether rapid learning should be executed */
    SCIP_Bool             checkobj;           /**< should the (local) objective function be checked? */
@@ -106,53 +113,6 @@ struct SCIP_SepaData
                                               *   subproblem? */
    SCIP_Bool             reducedinfer;       /**< should the inference values only be used when rapid learning found other reductions? */
 };
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< trysol heuristic structure */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables */
-   int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( heur != NULL );
-   assert( subsol != NULL );
-   assert( success != NULL );
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* check feasibility of new solution and pass it to trysol heuristic */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
 
 /*
  * Callback methods of separator
@@ -251,38 +211,17 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, global, NULL) );
    }
 
+   /* change implicit integer variables to integer type */
    for( i = 0; i < nvars; i++ )
    {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-      /* change implicit integer variables to integer type */
       if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
       {
          SCIP_Bool infeasible;
 
          SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
          assert(!infeasible);
-      }
-
-      /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
-       * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
-       */
-      if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
-      {
-         SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
-         SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
-         SCIP_Real obj = SCIPvarGetObj(subvars[i]);
-
-         if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
-            || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
-         {
-            /* free local hash map */
-            SCIPhashmapFree(&varmapfw);
-
-            SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip heuristic\n",
-               SCIPvarGetName(subvars[i]), lb, ub, obj);
-            goto TERMINATE;
-         }
       }
    }
 
@@ -412,7 +351,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    conshdlrs[3] = SCIPfindConshdlr(subscip, "bounddisjunction");
 
    /* redundant constraints might be eliminated in presolving */
-   SCIP_CALL( SCIPpresolve(subscip));
+   SCIP_CALL( SCIPpresolve(subscip) );
 
    for( i = 0; i < nconshdlrs; ++i)
    {
@@ -488,11 +427,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       /* sequentially add solutions to trysol heuristic */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIPdebugMsg(scip, "Try to create new solution by copying subscip solution.\n");
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
-
-         if( SCIPgetSubscipDepth(scip) == 0 )
-            SCIPdebugMsg(scip, ">> accepted rapid learning solution\n");
+         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
@@ -645,7 +580,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    /* install start values for inference branching */
    /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
-   if( sepadata->applyinfervals && global && (!sepadata->reducedinfer || soladded || nbdchgs+nconflicts > 0) )
+   if( sepadata->applyinfervals && global && (!sepadata->reducedinfer || soladded || nbdchgs + nconflicts > 0) )
    {
       for( i = 0; i < nvars; ++i )
       {
@@ -705,8 +640,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
    SCIPhashmapFree(&varmapbw);
-
-  TERMINATE:
 
    /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
    SCIP_CALL( SCIPfreeTransform(subscip) );
@@ -777,14 +710,14 @@ SCIP_Bool checkExec(
       }
    }
 
-   /* check leave nodes */
+   /* check leaf nodes */
    if( !run && sepadata->checkleaves )
    {
       SCIP_Real ratio = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
 
       if( SCIPisLE(scip, sepadata->mininflpratio, ratio) )
       {
-         SCIPdebugMsg(scip, "-> allow local rapid learning due to inf/obj LP ratio\n");
+         SCIPdebugMsg(scip, "-> allow local rapid learning due to inf/obj leaves ratio\n");
 
          run = TRUE;
       }
@@ -835,11 +768,7 @@ SCIP_Bool checkExec(
 
       SCIPdebugMsg(scip, "degeneracy: %.2f ratio: %.2f\n", degeneracy, varconsratio);
 
-      assert(degeneracy >= 0.0);
-      assert(degeneracy <= 1.0);
-      assert(varconsratio >= 1.0);
-
-      if( degeneracy >= 0.8 || varconsratio >= 2.0 )
+      if( degeneracy >= sepadata->mindegeneracy || varconsratio >= sepadata->minvarconsratio )
       {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to degeneracy\n");
 
@@ -854,12 +783,14 @@ SCIP_Bool checkExec(
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 {/*lint --e{715}*/
+   SCIP_VAR** vars;
    SCIP* subscip;
    SCIP_SEPADATA* sepadata;
    SCIP_Bool global;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
    int ndiscvars;
+   int i;
 
    assert(sepa != NULL);
    assert(scip != NULL);
@@ -877,7 +808,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   /* call separator at most @p maxcalls times */
+   /* call separator at most maxcalls times */
    if( SCIPsepaGetNCalls(sepa) >= sepadata->maxcalls )
       return SCIP_OKAY;
 
@@ -901,9 +832,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
-   global = (SCIPgetDepth(scip) == 0);
+   global = (SCIPgetDepth(scip) <= SCIPgetEffectiveRootDepth(scip));
 
-   /* check if rapid learning should applied locally */
+   /* check if rapid learning should be applied locally */
    /* @todo check whether we want to run at the root node again, e.g., inf/obj ratio is large enough */
    if( !checkExec(scip, sepadata) )
       return SCIP_OKAY;
@@ -920,6 +851,25 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    if( !success)
       return SCIP_OKAY;
+
+   /* skip rapid learning when the sub-SCIP would contain an integer variable with an infinite bound in direction of the
+    * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
+    */
+   vars = SCIPgetVars(scip);
+   for( i = 0; i < ndiscvars; i++ )
+   {
+      SCIP_Real lb = SCIPvarGetLbLocal(vars[i]);
+      SCIP_Real ub = SCIPvarGetUbLocal(vars[i]);
+      SCIP_Real obj = SCIPvarGetObj(vars[i]);
+
+      if( (SCIPisNegative(scip, obj) && SCIPisInfinity(scip, ub))
+         || (SCIPisPositive(scip, obj) && SCIPisInfinity(scip, -lb)) )
+      {
+         SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip rapid learning\n",
+            SCIPvarGetName(vars[i]), lb, ub, obj);
+         return retcode;
+      }
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -987,14 +937,14 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkdegeneracy",
          "should local LP degeneracy be checked?",
-         &sepadata->checkdegeneracy, TRUE, DEFAULT_CHECKDEGANERAGY, NULL, NULL) );
+         &sepadata->checkdegeneracy, TRUE, DEFAULT_CHECKDEGANERACY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkdualbound",
          "should the progress on the dual bound be checked?",
          &sepadata->checkdualbound, TRUE, DEFAULT_CHECKDUALBOUND, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkleaves",
-         "should the ration of leaves proven to be infeasible and exceeding the cutoff bound be checked?",
+         "should the ratio of leaves proven to be infeasible and exceeding the cutoff bound be checked?",
          &sepadata->checkleaves, TRUE, DEFAULT_CHECKLEAVES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/checkexec",
@@ -1021,9 +971,17 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
          "maximal fraction of LP iterations compared to node LP iterations",
          &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/mindegeneracy",
+         "minimal degeneracy threshold to allow local rapid learning",
+         &sepadata->mindegeneracy, TRUE, DEFAULT_MINDEGENERACY, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/mininflpratio",
          "minimal threshold of inf/obj leaves to allow local rapid learning",
          &sepadata->mininflpratio, TRUE, DEFAULT_MININFLPRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/minvarconsratio",
+         "minimal ratio of unfixed variables in relation to basis size to allow local rapid learning",
+         &sepadata->minvarconsratio, TRUE, DEFAULT_MINVARCONSRATIO, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
