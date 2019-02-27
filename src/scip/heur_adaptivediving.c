@@ -91,9 +91,9 @@ SCIP_RETCODE divesetGetSelectionScore(
    SCIP_Real*            scoreptr            /**< pointer to store the score */
    )
 {
-   assert(scoreptr != NULL);
-
    SCIP_Real confidence;
+
+   assert(scoreptr != NULL);
 
    /* compute confidence scalar (converges towards 1 with increasing number of calls) */
    confidence = (SCIPdivesetGetNCalls(diveset, divecontext) + 1.0) /
