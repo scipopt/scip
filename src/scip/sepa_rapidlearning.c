@@ -175,6 +175,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    int nconshdlrs;                           /* size of conshdlr and oldnconss array */
    int nvars;                                /* number of variables */
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int implstart;
+   int implend;
    int restartnum;                           /* maximal number of conflicts that should be created */
    int i;                                    /* counter */
 
@@ -195,7 +200,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    int seedshift;
    SCIP_Bool valid;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -211,21 +216,24 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, global, NULL) );
    }
 
-   /* change implicit integer variables to integer type */
+   /* fill subvars array in the order of the variables of the main SCIP */
    for( i = 0; i < nvars; i++ )
    {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-      if( SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT )
-      {
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
-         assert(!infeasible);
-      }
    }
-
    SCIPhashmapFree(&varmapfw);
+
+   /* change implicit integer variables to integer type */
+   implstart = nbinvars + nintvars;
+   implend = nbinvars + nintvars + nimplvars;
+   for( i = implstart; i < implend; i++ )
+   {
+      SCIP_Bool infeasible;
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
+
+      SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
+      assert(!infeasible);
+   }
 
    /* This avoids dual presolving.
     *
@@ -856,7 +864,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
     * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
     */
    vars = SCIPgetVars(scip);
-   for( i = 0; i < ndiscvars; i++ )
+   for( i = SCIPgetNBinVars(scip); i < ndiscvars; i++ )
    {
       SCIP_Real lb = SCIPvarGetLbLocal(vars[i]);
       SCIP_Real ub = SCIPvarGetUbLocal(vars[i]);
