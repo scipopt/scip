@@ -826,8 +826,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
          SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, SCIPgetNConflictConssFound(scip) - oldnconflictsfound, leafsol, divecontext);
 
-   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
-      SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset, divecontext), maxnlpiterations,
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s diveset (%s heur): %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
+      SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), SCIPheurGetName(heur), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset, divecontext), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL ? SCIPgetLPObjval(scip) : SCIPinfinity(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 
   TERMINATE:

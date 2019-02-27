@@ -50,6 +50,9 @@
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
+#define DEFAULT_MAXLPITERQUOT       0.1      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS       1500      /**< additional number of allowed LP iterations */
+#define DEFAULT_BESTSOLWEIGHT      10.0      /**< weight of incumbent solutions compared to other solutions in computation of LP iteration limit */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -64,6 +67,9 @@ struct SCIP_HeurData
    /* user parameters */
    SCIP_Real             epsilon;            /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
    SCIP_Real             selconfidencecoeff; /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
+   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   SCIP_Longint          maxlpiterofs;       /**< additional number of allowed LP iterations */
+   SCIP_Real             bestsolweight;      /**< weight of incumbent solutions compared to other solutions in computation of LP iteration limit */
    char                  seltype;            /**< selection strategy: (e)psilon-greedy, (w)eighted distribution, (n)ext diving */
    char                  scoretype;          /**< score parameter for selection: minimize either average 'n'odes, LP 'i'terations,
                                                *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
@@ -276,14 +282,17 @@ SCIP_Longint getLPIterlimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   SCIP_Longint nsolsfound = SCIPheurGetNSolsFound(heur) + SCIPheurGetNBestSolsFound(heur);
+   SCIP_Real nsolsfound = SCIPheurGetNSolsFound(heur) + heurdata->bestsolweight * SCIPheurGetNBestSolsFound(heur);
    SCIP_Longint nlpiterations = SCIPgetNNodeLPIterations(scip);
    SCIP_Longint ncalls = SCIPheurGetNCalls(heur);
 
    SCIP_Longint nlpiterationsdive = 0;
    SCIP_Longint lpiterlimit;
-
    int i;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
 
    /* loop over the divesets and collect their individual iterations */
    for( i = 0; i < heurdata->ndivesets; ++i )
@@ -291,10 +300,9 @@ SCIP_Longint getLPIterlimit(
       nlpiterationsdive += SCIPdivesetGetNLPIterations(heurdata->divesets[i], SCIP_DIVECONTEXT_ADAPTIVE);
    }
 
-   /* todo parameterize this sufficiently */
-   lpiterlimit = (SCIP_Longint)(0.1 * (nsolsfound+1.0)/(ncalls+1.0) * nlpiterations);
-   lpiterlimit += 1500;
-
+   /* compute the iteration limit */
+   lpiterlimit = (SCIP_Longint)(heurdata->maxlpiterquot * (nsolsfound+1.0)/(ncalls+1.0) * nlpiterations);
+   lpiterlimit += heurdata->maxlpiterofs;
    lpiterlimit -= nlpiterationsdive;
 
    return lpiterlimit;
@@ -617,6 +625,18 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/selconfidencecoeff",
          "coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores",
          &heurdata->selconfidencecoeff, FALSE, DEFAULT_SELCONFIDENCECOEFF, 1.0, (SCIP_Real)INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxlpiterquot",
+         "maximal fraction of diving LP iterations compared to node LP iterations",
+         &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiterofs",
+         "additional number of allowed LP iterations",
+         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, (SCIP_Longint)INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/bestsolweight",
+         "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
+         &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
