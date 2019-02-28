@@ -59,7 +59,7 @@
 #define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
 #define DEFAULT_MINVARCONSRATIO     2.0 /**< minimal ratio of unfixed variables in relation to basis size to
                                          *   allow local rapid learning */
-#define DEFAULT_NWAITINGNODES       100 /**< number of nodes that should be processed before rapid learning is
+#define DEFAULT_NWAITINGNODES      100L /**< number of nodes that should be processed before rapid learning is
                                          *   executed locally based on the progress of the dualbound */
 
 #define DEFAULT_MAXNVARS          10000 /**< maximum problem size (variables) for which rapid learning will be called */
@@ -671,7 +671,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
 /** returns whether rapid learning is allowed to run locally */
 static
-SCIP_Bool checkExec(
+SCIP_RETCODE checkExec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator's private data */
    SCIP_Bool*            run                 /**< pointer to store whether rapid learning is allowed to run */
@@ -887,7 +887,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, SCIPsepaGetNCalls(sepa)+1, global, result);
+   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, (int)SCIPsepaGetNCalls(sepa)+1, global, result);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
@@ -1017,7 +1017,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "separating/" SEPA_NAME "/nwaitingnodes",
          "number of nodes that should be processed before rapid learning is executed locally based on the progress of the dualbound",
-         &sepadata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, LONG_MAX, NULL, NULL) );
+         &sepadata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
