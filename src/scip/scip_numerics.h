@@ -625,6 +625,7 @@ SCIP_Bool SCIPisLbBetter(
    );
 
 /** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+SCIP_EXPORT
 SCIP_Bool SCIPisUbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newub,              /**< new upper bound */

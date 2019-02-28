@@ -39,6 +39,7 @@
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
+#include "scip/type_branch.h"
 #include "scip/pub_lp.h"
 
 #include "scip/struct_lp.h"
@@ -1040,7 +1041,6 @@ void SCIPlpSetRootLPIsRelax(
    );
 
 /** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
-extern 
 SCIP_Bool SCIPlpIsRootLPRelax(
    SCIP_LP*              lp                  /**< LP data */
    );
@@ -1376,14 +1376,12 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    );
 
 /** writes LP to a file */
-extern 
 SCIP_RETCODE SCIPlpWrite(
    SCIP_LP*              lp,                 /**< current LP data */
    const char*           fname               /**< file name */
    );
 
 /** writes MIP to a file */
-extern 
 SCIP_RETCODE SCIPlpWriteMip(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1416,6 +1414,19 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    int                   iterlimit,          /**< iteration limit for LP solver */
    SCIP_Real*            point,              /**< array to store relative interior point on exit */
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
+   );
+
+/** computes the changes to the problem when fixing to the optimal face
+ *
+ *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
+ *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ */
+SCIP_RETCODE SCIPlpGetDegeneracy(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
+   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
    );
 
 /** gets array with columns of the LP */
