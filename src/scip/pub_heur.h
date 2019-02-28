@@ -242,8 +242,8 @@ int SCIPdivesetGetNCalls(
 /** get the number of calls successfully terminated at a feasible leaf node */
 SCIP_EXPORT
 int SCIPdivesetGetNSolutionCalls(
-SCIP_DIVESET*         diveset,            /**< diving settings */
-SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get the minimum depth reached by this dive set */
