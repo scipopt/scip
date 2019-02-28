@@ -57,6 +57,7 @@ Performance improvements
   speed up orbit computations;
   change handling of restarts;
 
+- allow rapid learning at local nodes
 
 Examples and applications
 -------------------------
@@ -157,6 +158,13 @@ Interface changes
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
 
 - new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
+
+- new parameter separation/rapidlearning/checkexec to check whether rapid learning is allowed to run locally
+- new parameters separation/rapidlearning/check{degeneracy,dualbound,leaves,nsols,obj} to enable checking the respective feature for local rapid learning
+- new parameter separation/rapidlearning/maxcalls to limit the number of rapid learning executions
+- new parameter separation/rapidlearning/nwaitingnodes to set the number of waiting nodes before the dual bound is checked
+- new parameter separation/rapidlearning/mindegeneracy to set the minimal threshold of degenerate basic-variables
+- new paramters separation/rapidlearning/minvarconsratio to set the minimal ratio of unfixed variables in relation to basis size
 
 ### Data structures
 
