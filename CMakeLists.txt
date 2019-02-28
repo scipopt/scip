@@ -15,7 +15,7 @@ set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 1)
 set(SCIP_VERSION_SUB 3)
-set(SCIP_VERSION_API 44)
+set(SCIP_VERSION_API 45)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)

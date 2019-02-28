@@ -52,9 +52,13 @@
 #define SCIP_DEFAULT_LNSMAXCALLS             10  /** the maximum number of Benders' decomposition calls in LNS heuristics */
 #define SCIP_DEFAULT_LNSMAXCALLSROOT          0  /** the maximum number of root node Benders' decomposition calls in LNS heuristics */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0  /** fraction of subproblems that are solved in each iteration */
-#define SCIP_DEFAULT_UPDATEAUXVARBOUND     TRUE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
+#define SCIP_DEFAULT_UPDATEAUXVARBOUND    FALSE  /** should the auxiliary variable lower bound be updated by solving the subproblem */
 #define SCIP_DEFAULT_AUXVARSIMPLINT       FALSE  /** set the auxiliary variables as implint if the subproblem objective is integer */
 #define SCIP_DEFAULT_CUTCHECK              TRUE  /** should cuts be generated during the checking of solutions? */
+#define SCIP_DEFAULT_STRENGTHENMULT         0.5  /** the convex combination multiplier for the cut strengthening */
+#define SCIP_DEFAULT_NOIMPROVELIMIT           5  /** the maximum number of cut strengthening without improvement */
+#define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
+#define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1037,6 +1041,26 @@ SCIP_RETCODE doBendersCreate(
          "should Benders' cuts be generated while checking solutions?",
          &(*benders)->cutcheck, FALSE, SCIP_DEFAULT_CUTCHECK, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutstrengthenmult", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the convex combination multiplier for the cut strengthening", &(*benders)->convexmult, FALSE,
+         SCIP_DEFAULT_STRENGTHENMULT, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/noimprovelimit", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "the maximum number of cut strengthening without improvement", &(*benders)->noimprovelimit, TRUE,
+         SCIP_DEFAULT_NOIMPROVELIMIT, 0, INT_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/corepointperturb", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the constant use to perturb the cut strengthening core point", &(*benders)->perturbeps, FALSE,
+         SCIP_DEFAULT_STRENGTHENPERTURB, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutstrengthenenabled", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "should the core point cut strengthening be employed (only applied to fractional solutions or continuous subproblems)?",
+         &(*benders)->strengthenenabled, FALSE, SCIP_DEFAULT_STRENGTHENENABLED, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1868,6 +1892,12 @@ SCIP_RETCODE SCIPbendersExit(
       }
    }
 
+   /* if a corepoint has been used for cut strengthening, then this needs to be freed */
+   if( benders->corepoint != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(set->scip, &benders->corepoint) );
+   }
+
    /* calling the exit method for the Benders' cuts */
    SCIPbendersSortBenderscuts(benders);
    for( i = 0; i < benders->nbenderscuts; i++ )
@@ -2121,6 +2151,8 @@ SCIP_RETCODE SCIPbendersActivate(
 
       benders->nsubproblems = nsubproblems;
       benders->nactivesubprobs = nsubproblems;
+      benders->prevlowerbound = -SCIPsetInfinity(set);
+      benders->strengthenround = FALSE;
 
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
@@ -2266,6 +2298,156 @@ SCIP_RETCODE updateAuxiliaryVarLowerbound(
 
    return SCIP_OKAY;
 }
+
+/** performs cut strengthening by using an interior solution to generate cuts */
+static
+SCIP_RETCODE performInteriorSolCutStrengthening(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Bool             checkint,           /**< are the subproblems called during a check/enforce of integer sols? */
+   SCIP_Bool             perturbsol,         /**< should the solution be perturbed to escape infeasibility? */
+   SCIP_Bool*            auxviol,            /**< set to TRUE only if the solution is feasible but the aux vars are violated */
+   SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_Bool*            skipsolve,          /**< should the main solve be skipped as a result of this strengthening? */
+   SCIP_RESULT*          result              /**< result of the pricing process */
+   )
+{
+   SCIP_SOL* sepapoint;
+   SCIP_VAR** vars;
+   int prevcutsfound;
+   int nvars;
+   int i;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+
+   (*result) = SCIP_DIDNOTRUN;
+   (*skipsolve) = FALSE;
+
+   /* the cut stabilisation is only performed when enforcing LP solutions. The solution is not NULL if the stabilisation
+    * is currently being performed. It is important to avoid recursion
+    */
+   if( type != SCIP_BENDERSENFOTYPE_LP || sol != NULL )
+      return SCIP_OKAY;
+
+   /* checking if a change to the lower bound has occurred */
+   if( SCIPsetIsGT(set, SCIPgetLowerbound(set->scip), benders->prevlowerbound) )
+   {
+      benders->prevlowerbound = SCIPgetLowerbound(set->scip);
+      benders->noimprovecount = 0;
+   }
+   else
+      benders->noimprovecount++;
+
+   /* if the number of iterations without improvement exceeds 3*noimprovelimit, then the no stabilisation is performed
+    */
+   if( benders->noimprovecount > 3*benders->noimprovelimit )
+      return SCIP_OKAY;
+
+   /* if no LP iterations have been performed since the last call of the cut strenghtening, then the strengthening is
+    * aborted
+    */
+   if( benders->prevnlpiter == SCIPgetNLPIterations(set->scip) )
+      return SCIP_OKAY;
+
+   benders->prevnlpiter = SCIPgetNLPIterations(set->scip);
+
+   /* if the separation point solution is NULL, then we create the solution using the current LP relaxation. */
+   if( benders->corepoint == NULL )
+   {
+      SCIP_CALL( SCIPcreateLPSol(set->scip, &benders->corepoint, NULL) );
+      SCIP_CALL( SCIPunlinkSol(set->scip, benders->corepoint) );
+   }
+
+   /* creating the separation point
+    * TODO: This could be a little to memory heavy, it may be better just to create the separation point once and then
+    * update it each time.
+    */
+   SCIP_CALL( SCIPcreateLPSol(set->scip, &sepapoint, NULL) );
+   SCIP_CALL( SCIPunlinkSol(set->scip, sepapoint) );
+
+   SCIP_CALL( SCIPgetVarsData(set->scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   assert(vars != NULL);
+
+   /* creating a solution that is a convex combination of the LP solution and the separation point */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* subvar;
+      SCIP_Real corepointval;
+      SCIP_Real lpsolval;
+      SCIP_Real newsolval;
+      int j;
+
+      corepointval = SCIPgetSolVal(set->scip, benders->corepoint, vars[i]);
+      lpsolval = SCIPgetSolVal(set->scip, sol, vars[i]);
+      newsolval = lpsolval;
+
+      /* checking whether the master variable is mapped to any subproblem variables */
+      subvar = NULL;
+      j = 0;
+      while( subvar == NULL && j < SCIPgetBendersNSubproblems(set->scip, benders)  )
+      {
+         SCIP_CALL( SCIPgetBendersSubproblemVar(set->scip, benders, vars[i], &subvar, j) );
+         j++;
+      }
+
+
+      /* if the variable is a linking variable and it is not fixed, then a convex combination with the corepoint is
+       * computed.
+       */
+      if( subvar != NULL && SCIPvarGetStatus(vars[i]) != SCIP_VARSTATUS_FIXED )
+      {
+         /* if the number of iterations without improvement exceeds noimprovelimit, then no convex combination is
+          * created
+          */
+         if( !perturbsol && benders->noimprovecount <= benders->noimprovelimit )
+         {
+            newsolval = lpsolval*benders->convexmult + corepointval*(1 - benders->convexmult);
+
+            /* updating the core point */
+            SCIP_CALL( SCIPsetSolVal(set->scip, benders->corepoint, vars[i], newsolval) );
+         }
+
+         /* if the number of iterations without improvement is less than 2*noimprovelimit, then perturbation is
+          * performed
+          */
+         if( perturbsol || benders->noimprovecount <= 2*benders->noimprovelimit )
+            newsolval += benders->perturbeps;
+      }
+
+      /* updating the separation point */
+      SCIP_CALL( SCIPsetSolVal(set->scip, sepapoint, vars[i], newsolval) );
+   }
+
+   /* storing the number of cuts found */
+   prevcutsfound = SCIPbendersGetNCutsFound(benders);
+
+   /* calling the subproblem solving method to generate cuts from the separation solution */
+   SCIP_CALL( SCIPsolveBendersSubproblems(set->scip, benders, sepapoint, result, infeasible, auxviol, type, checkint) );
+
+   SCIPsetDebugMsg(set, "solved Benders' decomposition subproblems with stabilised point. noimprovecount %d result %d\n",
+      benders->noimprovecount, (*result));
+
+   /* if constraints were added, then the main Benders' solving loop is skipped. */
+   if( !infeasible && ((*result) == SCIP_CONSADDED || (*result) == SCIP_SEPARATED) )
+      (*skipsolve) = TRUE;
+
+   /* capturing cut strengthening statistics */
+   benders->nstrengthencalls++;
+   benders->nstrengthencuts += (SCIPbendersGetNCutsFound(benders) - prevcutsfound);
+
+   /* if no cuts were added, then the strengthening round is marked as failed */
+   if( SCIPbendersGetNCutsFound(benders) == prevcutsfound )
+      benders->nstrengthenfails++;
+
+   /* freeing the sepapoint solution */
+   SCIP_CALL( SCIPfreeSol(set->scip, &sepapoint) );
+
+   return SCIP_OKAY;
+}
+
 
 /** Returns whether only the convex relaxations will be checked in this solve loop
  *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
@@ -2883,12 +3065,13 @@ SCIP_RETCODE SCIPbendersExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( benders->benderspresubsolve != NULL )
+   if( benders->benderspresubsolve != NULL && !benders->strengthenround )
    {
       SCIP_Bool skipsolve;
 
       skipsolve = FALSE;
-      SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, &skipsolve, result) );
+      SCIP_CALL( benders->benderspresubsolve(set->scip, benders, sol, type, checkint, infeasible, auxviol, &skipsolve,
+            result) );
 
       /* evaluate result */
       if( (*result) != SCIP_DIDNOTRUN
@@ -2909,6 +3092,36 @@ SCIP_RETCODE SCIPbendersExec(
             "returning result <%d>\n", benders->name, *result);
          return SCIP_OKAY;
       }
+   }
+
+   /* the cut strengthening is performed before the regular subproblem solve is called. To avoid recursion, the flag
+    * strengthenround is set to TRUE when the cut strengthening is performed. The cut strengthening is not performed as
+    * part of the large neighbourhood Benders' search.
+    *
+    * NOTE: cut strengthening is only applied for fraction solutions and integer solutions if there are no CIP
+    * subproblems.
+    */
+   if( benders->strengthenenabled && !benders->strengthenround && !benders->iscopy
+      && (!checkint || SCIPbendersGetNConvexSubproblems(benders) == SCIPbendersGetNSubproblems(benders)) )
+   {
+      SCIP_Bool skipsolve;
+
+      benders->strengthenround = TRUE;
+      /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
+      SCIP_CALL( performInteriorSolCutStrengthening(benders, set, sol, type, checkint, FALSE, infeasible, auxviol,
+            &skipsolve, result) );
+      benders->strengthenround = FALSE;
+
+      /* if the solve must be skipped, then the solving loop is exited and the user defined result is returned */
+      if( skipsolve )
+      {
+         SCIPsetDebugMsg(set, "skipping the subproblem solving because cut strengthening found a cut "
+            "for Benders' decomposition <%s>. Returning result <%d>\n", benders->name, *result);
+         return SCIP_OKAY;
+      }
+
+      /* the result flag need to be reset to DIDNOTRUN for the main subproblem solve */
+      (*result) = SCIP_DIDNOTRUN;
    }
 
    /* allocating memory for the infeasible subproblem array */
@@ -3023,9 +3236,12 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* if the result is SCIP_DIDNOTFIND, then there was a error in generating cuts in all subproblems that are not
     * optimal. This result does not cutoff any solution, so the Benders' decomposition algorithm will fail.
+    *
+    * It could happen that the cut strengthening approach causes an error the cut generation. In this case, an error
+    * should not be thrown. So, this check will be skipped when in a strengthening round.
     * TODO: Work out a way to ensure Benders' decomposition does not terminate due to a SCIP_DIDNOTFIND result.
     */
-   if( (*result) == SCIP_DIDNOTFIND )
+   if( (*result) == SCIP_DIDNOTFIND && !benders->strengthenround )
    {
       if( type == SCIP_BENDERSENFOTYPE_PSEUDO )
          (*result) = SCIP_SOLVELP;
@@ -3143,6 +3359,28 @@ TERMINATE:
    SCIPfreeBlockMemoryArray(set->scip, &mergecands, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &substatus, nsubproblems);
    SCIPfreeBlockMemoryArray(set->scip, &subprobsolved, nsubproblems);
+
+   /* if there was an error in generating cuts and merging was not performed, then the solution is perturbed in an
+    * attempt to generate a cut and correct the infeasibility
+    */
+   if( !success )
+   {
+      SCIP_Bool skipsolve;
+      SCIP_RESULT perturbresult;
+
+      skipsolve = FALSE;
+
+      benders->strengthenround = TRUE;
+      /* if the user has not requested the solve to be skipped, then the cut strengthening is performed */
+      SCIP_CALL( performInteriorSolCutStrengthening(benders, set, sol, type, checkint, TRUE, infeasible, auxviol,
+            &skipsolve, &perturbresult) );
+      benders->strengthenround = FALSE;
+
+      if( perturbresult == SCIP_CONSADDED || perturbresult == SCIP_SEPARATED )
+         (*result) = perturbresult;
+
+      success = skipsolve;
+   }
 
    if( !success )
       return SCIP_ERROR;
@@ -3443,9 +3681,9 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
           * decomposition subproblems
           */
          solval = SCIPgetSolVal(set->scip, sol, mastervar);
-         if( solval > SCIPvarGetUbLocal(vars[i]) )
+         if( !SCIPisLT(set->scip, solval, SCIPvarGetUbLocal(vars[i])) )
             solval = SCIPvarGetUbLocal(vars[i]);
-         else if( solval < SCIPvarGetLbLocal(vars[i]) )
+         else if( !SCIPisGT(set->scip, solval, SCIPvarGetLbLocal(vars[i])) )
             solval = SCIPvarGetLbLocal(vars[i]);
 
          /* fixing the variable in the subproblem */
@@ -3680,6 +3918,11 @@ SCIP_RETCODE setSubproblemParams(
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", 0) );
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "constraints/linear/propfreq", -1) );
+
+   SCIP_CALL( SCIPsetIntParam(subproblem, "heuristics/alns/freq", -1) );
+
+   SCIP_CALL( SCIPsetIntParam(subproblem, "separating/aggregation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "separating/gomory/freq", -1) );
 
    return SCIP_OKAY;
 }
@@ -4623,6 +4866,36 @@ int SCIPbendersGetNCutsFound(
    assert(benders != NULL);
 
    return benders->ncutsfound;
+}
+
+/** gets the number of cuts found from the strengthening round */
+int SCIPbendersGetNStrengthenCutsFound(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthencuts;
+}
+
+/** gets the number of calls to the strengthening round */
+int SCIPbendersGetNStrengthenCalls(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthencalls;
+}
+
+/** gets the number of calls to the strengthening round that fail */
+int SCIPbendersGetNStrengthenFails(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nstrengthenfails;
 }
 
 /** gets time in seconds used in this Benders' decomposition for setting up for next stages */

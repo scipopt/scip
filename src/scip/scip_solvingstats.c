@@ -3611,7 +3611,7 @@ void SCIPprintBendersStatistics(
    nbenders = SCIPgetNBenders(scip);
    benders = SCIPgetBenders(scip);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer   StrCalls   StrFails    StrCuts\n");
    for( i = 0; i < nbenders; ++i )
    {
       if( SCIPbendersIsActive(benders[i]) )
@@ -3620,13 +3620,16 @@ void SCIPprintBendersStatistics(
          int nbenderscuts;
          int j;
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
             SCIPbendersGetName(scip->set->benders[i]),
             SCIPbendersGetTime(scip->set->benders[i]),
             SCIPbendersGetSetupTime(scip->set->benders[i]),
             SCIPbendersGetNCalls(scip->set->benders[i]),
             SCIPbendersGetNCutsFound(scip->set->benders[i]),
-            SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
+            SCIPbendersGetNTransferredCuts(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenCalls(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenFails(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenCutsFound(scip->set->benders[i]));
 
          nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
          benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);
