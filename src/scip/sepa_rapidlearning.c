@@ -680,14 +680,16 @@ SCIP_RETCODE checkExec(
    assert(scip != NULL);
    assert(sepadata != NULL);
 
-   /* return TRUE if local exec should not be checked */
-   if( !sepadata->checkexec )
-      return TRUE;
-
    *run = FALSE;
 
+   /* return TRUE if local exec should not be checked */
+   if( !sepadata->checkexec )
+   {
+      *run = TRUE;
+   }
+
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
-   if( sepadata->checkobj && SCIPgetNObjVars(scip) == 0 )
+   if( !(*run) && sepadata->checkobj && SCIPgetNObjVars(scip) == 0 )
    {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to global zero objective\n");
 
