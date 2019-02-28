@@ -120,7 +120,7 @@ extern "C" {
 
 #define SCIP_VERSION                601 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              45 /**< SCIP API version number */
+#define SCIP_APIVERSION              46 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
