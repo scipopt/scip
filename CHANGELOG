@@ -36,6 +36,11 @@ Features
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
 
+- new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
+  At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
+  During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
+  The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
 Performance improvements
 ------------------------
 
@@ -66,6 +71,9 @@ Interface changes
 -----------------
 
 ### New and changed callbacks
+
+  - new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
+    which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
 ### Deleted and changed API methods
 
@@ -100,6 +108,10 @@ Interface changes
   - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
     use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
 
+- new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
+  as single (standalone) heuristic or within Adaptive Diving.
+- new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -115,6 +127,8 @@ Interface changes
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
 - new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
+  by other primal heuristics.
 
 ### Command line interface
 

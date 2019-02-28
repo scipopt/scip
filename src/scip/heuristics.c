@@ -37,6 +37,7 @@ SCIP_RETCODE solveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_Longint          maxnlpiterations,   /**< maximum number of allowed LP iterations */
+   SCIP_DIVECONTEXT      divecontext,        /**< context for diving statistics */
    SCIP_Bool*            lperror,            /**< pointer to store if an internal LP error occurred */
    SCIP_Bool*            cutoff              /**< pointer to store whether the LP was infeasible */
    )
@@ -50,8 +51,8 @@ SCIP_RETCODE solveLP(
 
    nlpiterations = SCIPgetNLPIterations(scip);
 
-   /* allow at least MINLPITER more iterations */
-   lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset));
+   /* allow at least MINLPITER more iterations so as not to run out of LP iterations during this solve */
+   lpiterationlimit = (int)(maxnlpiterations - SCIPdivesetGetNLPIterations(diveset, divecontext));
    lpiterationlimit = MAX(lpiterationlimit, MINLPITER);
 
    retstat = SCIPsolveProbingLP(scip, lpiterationlimit, lperror, cutoff);
@@ -69,7 +70,7 @@ SCIP_RETCODE solveLP(
 #endif
 
    /* update iteration count */
-   SCIPupdateDivesetLPStats(scip, diveset, SCIPgetNLPIterations(scip) - nlpiterations);
+   SCIPupdateDivesetLPStats(scip, diveset, SCIPgetNLPIterations(scip) - nlpiterations, divecontext);
 
    return SCIP_OKAY;
 }
@@ -159,9 +160,24 @@ SCIP_RETCODE selectNextDiving(
    return SCIP_OKAY;
 }
 
+/** return the LP iteration budget suggestion for this dive set */
+static
+SCIP_Longint getDivesetIterLimit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< dive set data structure */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
+   )
+{
+   SCIP_Longint iterlimit;
+   /*todo another factor of 10, REALLY? */
+   iterlimit = (SCIP_Longint)((1.0 + 10*(SCIPdivesetGetNSols(diveset, divecontext)+1.0)/(SCIPdivesetGetNCalls(diveset, divecontext)+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * SCIPgetNNodeLPIterations(scip));
+   iterlimit += SCIPdivesetGetMaxLPIterOffset(diveset);
+   iterlimit -= SCIPdivesetGetNLPIterations(diveset, divecontext);
 
+   return iterlimit;
+}
 
-/** performs a diving within the limits of the diveset parameters
+/** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
@@ -185,7 +201,7 @@ SCIP_RETCODE selectNextDiving(
  *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
  *
  *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
- *        call will be executed, @see SCIPgetLastDiveNode()
+ *        call will be executed, see SCIPgetLastDiveNode()
  *
  *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
  */
@@ -195,7 +211,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_SOL*             worksol,            /**< non-NULL working solution */
    SCIP_HEUR*            heur,               /**< the calling primal heuristic */
    SCIP_RESULT*          result,             /**< SCIP result pointer */
-   SCIP_Bool             nodeinfeasible      /**< is the current node known to be infeasible? */
+   SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
+   SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
    SCIP_CONSHDLR* indconshdlr;               /* constraint handler for indicator constraints */
@@ -213,9 +231,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real searchbound;
    SCIP_Real ubquot;
    SCIP_Real avgquot;
-   SCIP_Longint ncalls;
-   SCIP_Longint oldsolsuccess;
-   SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
    SCIP_Longint domreds;
    int startndivecands;
@@ -280,22 +295,23 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( depth < SCIPdivesetGetMinRelDepth(diveset) * maxdepth || depth > SCIPdivesetGetMaxRelDepth(diveset) * maxdepth )
       return SCIP_OKAY;
 
-   /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNNodeLPIterations(scip);
-   ncalls = SCIPdivesetGetNCalls(diveset);
-   oldsolsuccess = SCIPdivesetGetSolSuccess(diveset);
-
-   /*todo another factor of 10, REALLY? */
-   maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
-   maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
+   /* calculate the maximal number of LP iterations */
+   if( iterlim < 0 )
+   {
+      maxnlpiterations = SCIPdivesetGetNLPIterations(diveset, divecontext) + getDivesetIterLimit(scip, diveset, divecontext);
+   }
+   else
+   {
+      maxnlpiterations = SCIPdivesetGetNLPIterations(diveset, divecontext) + iterlim;
+   }
 
    /* don't try to dive, if we took too many LP iterations during diving */
-   if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
+   if( SCIPdivesetGetNLPIterations(diveset, divecontext) >= maxnlpiterations )
       return SCIP_OKAY;
 
    /* allow at least a certain number of LP iterations in this dive */
-   if( SCIPdivesetGetNLPIterations(diveset) + MINLPITER > maxnlpiterations )
-      maxnlpiterations = SCIPdivesetGetNLPIterations(diveset) + MINLPITER;
+   if( SCIPdivesetGetNLPIterations(diveset, divecontext) + MINLPITER > maxnlpiterations )
+      maxnlpiterations = SCIPdivesetGetNLPIterations(diveset, divecontext) + MINLPITER;
 
    /* these constraint handlers are required for polishing an LP relaxation solution beyond rounding */
    indconshdlr = SCIPfindConshdlr(scip, "indicator");
@@ -399,7 +415,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    while( !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && enfosuccess
       && (SCIPgetProbingDepth(scip) < 10
          || nlpcands <= startndivecands - SCIPgetProbingDepth(scip) / 2
-         || (SCIPgetProbingDepth(scip) < maxdivedepth && SCIPdivesetGetNLPIterations(diveset) < maxnlpiterations && SCIPgetLPObjval(scip) < searchbound))
+         || (SCIPgetProbingDepth(scip) < maxdivedepth && SCIPdivesetGetNLPIterations(diveset, divecontext) < maxnlpiterations && SCIPgetLPObjval(scip) < searchbound))
          && !SCIPisStopped(scip) )
    {
       SCIP_Real lastlpobjval;
@@ -577,9 +593,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                lblocal = SCIPvarGetLbLocal(bdchgvar);
                ublocal = SCIPvarGetUbLocal(bdchgvar);
 
-               SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
-                     SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
+               SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                     SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset, divecontext), maxnlpiterations,
+                     SCIPvarGetName(bdchgvar),
+                     lblocal, ublocal,
+                     bdchgdir == SCIP_BRANCHDIR_DOWNWARDS ? lblocal : bdchgvalue,
+                     bdchgdir == SCIP_BRANCHDIR_UPWARDS ? ublocal : bdchgvalue);
 
                infeasbdchange = FALSE;
                /* tighten the lower and/or upper bound depending on the bound change type */
@@ -642,8 +661,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   cutoff = TRUE;
                   break;
                }
-
-               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n", SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
@@ -656,6 +673,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* add the number of bound changes we applied by ourselves after propagation, otherwise the counter would have been reset */
             localdomreds += nbdchanges;
 
+            SCIPdebugMsg(scip, "domain reductions: %" SCIP_LONGINT_FORMAT " (total: %" SCIP_LONGINT_FORMAT ")\n",
+               localdomreds, domreds + localdomreds);
+
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
              * was reached
              */
@@ -664,7 +684,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
                   || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * nlpcands))) )
             {
-               SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
+               SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
 
                /* lp errors lead to early termination */
                if( lperror )
@@ -731,7 +751,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
                {
-                  SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
+                  SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
 
                   /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
                   if( lperror )
@@ -804,10 +824,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    }
 
    SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
-         SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, SCIPgetNConflictConssFound(scip) - oldnconflictsfound, leafsol);
+         SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, SCIPgetNConflictConssFound(scip) - oldnconflictsfound, leafsol, divecontext);
 
-   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
-      SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") finished %s diveset (%s heur): %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
+      SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), SCIPheurGetName(heur), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset, divecontext), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL ? SCIPgetLPObjval(scip) : SCIPinfinity(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 
   TERMINATE:

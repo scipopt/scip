@@ -43,7 +43,7 @@ extern "C" {
  * @{
  */
 
-/** performs a diving within the limits of the diveset parameters
+/** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
@@ -76,7 +76,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_SOL*             worksol,            /**< non-NULL working solution */
    SCIP_HEUR*            heur,               /**< the calling primal heuristic */
    SCIP_RESULT*          result,             /**< SCIP result pointer */
-   SCIP_Bool             nodeinfeasible      /**< is the current node known to be infeasible? */
+   SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
+   SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get a sub-SCIP copy of the transformed problem */

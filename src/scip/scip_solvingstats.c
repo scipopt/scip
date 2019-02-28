@@ -3054,33 +3054,44 @@ void SCIPprintHeuristicStatistics(
          int s;
          for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
          {
+            int c;
+            SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};
             SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
-            if( SCIPdivesetGetNCalls(diveset) > 0 )
-            {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
-                  SCIPdivesetGetNProbingNodes(diveset),
-                  SCIPdivesetGetNLPIterations(diveset),
-                  SCIPdivesetGetNBacktracks(diveset),
-                  SCIPdivesetGetNConflicts(diveset),
-                  SCIPdivesetGetMinDepth(diveset),
-                  SCIPdivesetGetMaxDepth(diveset),
-                  SCIPdivesetGetAvgDepth(diveset),
-                  SCIPdivesetGetNSols(diveset) - SCIPdivesetGetNSolutionCalls(diveset));
 
-               if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
+            /* print statistics for both contexts */
+            for( c = 0; c < 2; ++c )
+            {
+               SCIP_DIVECONTEXT divecontext = divecontexts[c];
+
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %6s %-10.10s: %10d", divecontext == SCIP_DIVECONTEXT_SINGLE ? "single" : "adaptv",
+                     SCIPdivesetGetName(diveset),
+                     SCIPdivesetGetNCalls(diveset, divecontext));
+               if( SCIPdivesetGetNCalls(diveset, divecontext) > 0 )
                {
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
-                     SCIPdivesetGetNSolutionCalls(diveset),
-                     SCIPdivesetGetMinSolutionDepth(diveset),
-                     SCIPdivesetGetMaxSolutionDepth(diveset),
-                     SCIPdivesetGetAvgSolutionDepth(diveset));
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
+                        SCIPdivesetGetNProbingNodes(diveset, divecontext),
+                        SCIPdivesetGetNLPIterations(diveset, divecontext),
+                        SCIPdivesetGetNBacktracks(diveset, divecontext),
+                        SCIPdivesetGetNConflicts(diveset, divecontext),
+                        SCIPdivesetGetMinDepth(diveset, divecontext),
+                        SCIPdivesetGetMaxDepth(diveset, divecontext),
+                        SCIPdivesetGetAvgDepth(diveset, divecontext),
+                        SCIPdivesetGetNSols(diveset, divecontext) - SCIPdivesetGetNSolutionCalls(diveset, divecontext));
+
+                  if( SCIPdivesetGetNSolutionCalls(diveset, divecontext) > 0 )
+                  {
+                     SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
+                           SCIPdivesetGetNSolutionCalls(diveset, divecontext),
+                           SCIPdivesetGetMinSolutionDepth(diveset, divecontext),
+                           SCIPdivesetGetMaxSolutionDepth(diveset, divecontext),
+                           SCIPdivesetGetAvgSolutionDepth(diveset, divecontext));
+                  }
+                  else
+                     SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
                }
                else
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
             }
-            else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
          }
       }
    }
