@@ -162,7 +162,6 @@ SCIP_RETCODE addTrustRegionConstraints(
    int i;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Real cutoff;
    SCIP_Real* consvals;
    char name[SCIP_MAXSTRLEN];
 
@@ -220,11 +219,12 @@ SCIP_RETCODE addTrustRegionConstraints(
     * into account problem specific information that is available to the user, such as a minimum step in the objective
     * limit if the objective function is integer
     */
-   cutoff = SCIPgetSolTransObj(scip, bestsol) - heurdata->objminimprove;
+   lhs = -SCIPinfinity(subscip);
+   rhs = SCIPgetSolTransObj(scip, bestsol) - heurdata->objminimprove;
 
    /* if the objective function is integer, then the floor of the RHS is taken */
    if( SCIPisObjIntegral(scip) )
-      cutoff = SCIPfeasFloor(scip, cutoff);
+      rhs = SCIPfeasFloor(scip, rhs);
 
    /* adding the coefficients to the upper bounding constraint */
    for( i = 0; i < nvars; i++ )
@@ -237,7 +237,7 @@ SCIP_RETCODE addTrustRegionConstraints(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upperboundcons", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nvars, consvars, consvals,
-            -SCIPinfinity(subscip), cutoff, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
