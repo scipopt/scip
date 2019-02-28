@@ -23,7 +23,8 @@ Features
 
 - LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
 
-- Trust region heuristic, a new LNS heuristic, has been added to SCIP. This heuristic is designed to improve the
+- Trust region, a new LNS heuristic, has been added to SCIP as both a standalone primal heuristic heur_trustregion.c
+  and as a neighborhood inside of Adaptive Large Neighborhood Search (heur_alns.c). This heuristic is designed to improve the
   heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
   applied to Benders' decomposition.
 
