@@ -31,7 +31,7 @@
 #define HEUR_DESC             "diving heuristic that selects adaptively between the existing, public divesets"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -70000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             5
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
