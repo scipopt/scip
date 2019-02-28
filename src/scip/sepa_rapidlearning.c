@@ -188,8 +188,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_Bool cutoff;                         /* detected infeasibility */
    int nconflicts;                           /* statistic: number of conflicts applied */
    int nbdchgs;                              /* statistic: number of bound changes applied */
-   int n1startinfers;                        /* statistic: number of one side infer values */
-   int n2startinfers;                        /* statistic: number of both side infer values */
 
    SCIP_Bool soladded = FALSE;               /* statistic: was a new incumbent found? */
    SCIP_Bool dualboundchg;                   /* statistic: was a new dual bound found? */
@@ -199,6 +197,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    int initseed;
    int seedshift;
    SCIP_Bool valid;
+
+#ifdef SCIP_DEBUG
+   int n1startinfers = 0;                    /* statistic: number of one side infer values */
+   int n2startinfers = 0;                    /* statistic: number of both side infer values */
+#endif
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
 
@@ -583,9 +586,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       }
    }
 
-   n1startinfers = 0;
-   n2startinfers = 0;
-
    /* install start values for inference branching */
    /* @todo use different nbranching counters for pseudo cost and inference values and update inference values in the tree */
    if( sepadata->applyinfervals && global && (!sepadata->reducedinfer || soladded || nbdchgs + nconflicts > 0) )
@@ -609,12 +609,14 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          upconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
          upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
 
+#ifdef SCIP_DEBUG
          /* memorize statistics */
          if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )
             n1startinfers++;
 
          if( downinfer+downconflen+downvsids > 0.0 && upinfer+upconflen+upvsids != 0 )
             n2startinfers++;
+#endif
 
          SCIP_CALL( SCIPinitVarBranchStats(scip, vars[i], 0.0, 0.0, downvsids, upvsids, downconflen, upconflen, downinfer, upinfer, 0.0, 0.0) );
       }
