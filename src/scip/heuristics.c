@@ -1036,3 +1036,85 @@ SCIP_RETCODE SCIPtranslateSubSols(
 
    return SCIP_OKAY;
 }
+
+
+/** adds a trust region neighborhood constraint to the sub-scip */
+SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
+   SCIP*                 sourcescip,         /**< the data structure for the main SCIP instance */
+   SCIP*                 targetscip,         /**< SCIP data structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
+   )
+{
+   SCIP_VAR* violvar;
+   SCIP_CONS* trustregioncons;
+   SCIP_VAR** consvars;
+   SCIP_VAR** vars;
+   SCIP_SOL* bestsol;
+
+   int nvars;
+   int nbinvars;
+   int i;
+   SCIP_Real rhs;
+   SCIP_Real* consvals;
+   char name[SCIP_MAXSTRLEN];
+
+   /* get the data of the variables and the best solution */
+   SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   bestsol = SCIPgetBestSol(sourcescip);
+   assert(bestsol != NULL);
+   /* otherwise, this neighborhood would not be active in the first place */
+   assert(nbinvars > 0);
+
+   /* memory allocation */
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvars, nbinvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvals, nbinvars + 1) );
+
+   /* set initial left and right hand sides of trust region constraint */
+   rhs = 0.0;
+
+   /* create the distance (to incumbent) function of the binary variables */
+   for( i = 0; i < nbinvars; i++ )
+   {
+      SCIP_Real solval;
+
+      solval = SCIPgetSolVal(sourcescip, bestsol, vars[i]);
+      assert( SCIPisFeasIntegral(sourcescip,solval) );
+
+      /* is variable i  part of the binary support of bestsol? */
+      if( SCIPisFeasEQ(sourcescip, solval, 1.0) )
+      {
+         consvals[i] = -1.0;
+         rhs -= 1.0;
+      }
+      else
+         consvals[i] = 1.0;
+      consvars[i] = subvars[i];
+      assert(SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY);
+   }
+
+   /* adding the violation variable */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
+   SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(targetscip, violvar) );
+   consvars[nbinvars] = violvar;
+   consvals[nbinvars] = -1.0;
+
+   /* creates trustregion constraint and adds it to subscip */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregioncons", SCIPgetProbName(sourcescip));
+
+   SCIP_CALL( SCIPcreateConsLinear(targetscip, &trustregioncons, name, nbinvars + 1, consvars, consvals,
+            rhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPaddCons(targetscip, trustregioncons) );
+   SCIP_CALL( SCIPreleaseCons(targetscip, &trustregioncons) );
+
+   /* releasing the violation variable */
+   SCIP_CALL( SCIPreleaseVar(targetscip, &violvar) );
+
+   /* free local memory */
+   SCIPfreeBufferArray(sourcescip, &consvals);
+   SCIPfreeBufferArray(sourcescip, &consvars);
+
+
+   return SCIP_OKAY;
+}

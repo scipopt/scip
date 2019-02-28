@@ -106,6 +106,15 @@ SCIP_RETCODE SCIPtranslateSubSols(
    SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
    );
 
+/** adds a trust region neighborhood constraint to the sub-scip */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
