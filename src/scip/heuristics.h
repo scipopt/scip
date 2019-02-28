@@ -106,7 +106,20 @@ SCIP_RETCODE SCIPtranslateSubSols(
    SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
    );
 
-/** adds a trust region neighborhood constraint to the sub-scip */
+/** adds a trust region neighborhood constraint to the @p targetscip
+ *
+ *  a trust region constraint measures the deviation from the current incumbent solution \f$x^*\f$ by an auxiliary
+ *  continuous variable \f$v \geq 0\f$:
+ *  \f[
+ *    \sum\limits_{j\in B} |x_j^* - x_j| = v
+ *  \f]
+ *  Only binary variables are taken into account. The deviation is penalized in the objective function using
+ *  a positive \p violpenalty.
+ *
+ *  @note: the trust region constraint creates an auxiliary variable to penalize the deviation from
+ *  the current incumbent solution. This variable can afterwards be accessed using SCIPfindVar() by its name
+ *  'trustregion_violationvar'
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    SCIP*                 scip,               /**< the SCIP data structure */
