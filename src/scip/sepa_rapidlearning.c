@@ -673,11 +673,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 static
 SCIP_Bool checkExec(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata            /**< separator's private data */
+   SCIP_SEPADATA*        sepadata,           /**< separator's private data */
+   SCIP_Bool*            run                 /**< pointer to store whether rapid learning is allowed to run */
    )
 {
-   SCIP_Bool run;
-
    assert(scip != NULL);
    assert(sepadata != NULL);
 
@@ -685,26 +684,26 @@ SCIP_Bool checkExec(
    if( !sepadata->checkexec )
       return TRUE;
 
-   run = FALSE;
+   *run = FALSE;
 
    /* problem has zero objective function, i.e., it is a pure feasibility problem */
    if( sepadata->checkobj && SCIPgetNObjVars(scip) == 0 )
    {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to global zero objective\n");
 
-         run = TRUE;
+         *run = TRUE;
    }
 
    /* check whether a solution was found */
-   if( !run && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
+   if( !(*run) && sepadata->checknsols && SCIPgetNSolsFound(scip) == 0 )
    {
       SCIPdebugMsg(scip, "-> allow local rapid learning due to no solution found so far\n");
 
-      run = TRUE;
+      *run = TRUE;
    }
 
    /* check whether the dual bound has not changed since the root node */
-   if( !run && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
+   if( !(*run) && sepadata->checkdualbound && sepadata->nwaitingnodes < SCIPgetNNodes(scip) )
    {
       SCIP_Real rootdualbound;
       SCIP_Real locdualbound;
@@ -716,12 +715,12 @@ SCIP_Bool checkExec(
       {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to equal dualbound\n");
 
-         run = TRUE;
+         *run = TRUE;
       }
    }
 
    /* check leaf nodes */
-   if( !run && sepadata->checkleaves )
+   if( !(*run) && sepadata->checkleaves )
    {
       SCIP_Real ratio = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
 
@@ -729,12 +728,12 @@ SCIP_Bool checkExec(
       {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to inf/obj leaves ratio\n");
 
-         run = TRUE;
+         *run = TRUE;
       }
    }
 
    /* check whether all undecided integer variables have zero objective coefficient */
-   if( !run && sepadata->checkobj )
+   if( !(*run) && sepadata->checkobj )
    {
       SCIP_Bool allzero;
       SCIP_VAR** vars;
@@ -764,12 +763,12 @@ SCIP_Bool checkExec(
       {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to local zero objective\n");
 
-         run = TRUE;
+         *run = TRUE;
       }
    }
 
    /* check degeneracy */
-   if( !run && sepadata->checkdegeneracy )
+   if( !(*run) && sepadata->checkdegeneracy )
    {
       SCIP_Real degeneracy;
       SCIP_Real varconsratio;
@@ -782,11 +781,11 @@ SCIP_Bool checkExec(
       {
          SCIPdebugMsg(scip, "-> allow local rapid learning due to degeneracy\n");
 
-         run = TRUE;
+         *run = TRUE;
       }
    }
 
-   return run;
+   return SCIP_OKAY;
 }
 
 /** LP solution separation method of separator */
@@ -797,6 +796,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP* subscip;
    SCIP_SEPADATA* sepadata;
    SCIP_Bool global;
+   SCIP_Bool run;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
    int ndiscvars;
@@ -845,8 +845,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    global = (SCIPgetDepth(scip) <= SCIPgetEffectiveRootDepth(scip));
 
    /* check if rapid learning should be applied locally */
+   SCIP_CALL( checkExec(scip, sepadata, &run) );
+
    /* @todo check whether we want to run at the root node again, e.g., inf/obj ratio is large enough */
-   if( !checkExec(scip, sepadata) )
+   if( !run )
       return SCIP_OKAY;
 
    /* do not call rapid learning, if the problem is too big */
