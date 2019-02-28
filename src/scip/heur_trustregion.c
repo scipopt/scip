@@ -176,10 +176,6 @@ SCIP_RETCODE addTrustRegionConstraints(
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars + 1) );
 
-   /* set initial left and right hand sides of trust region constraint */
-   lhs = 0.0;
-   rhs = 0.0;
-
    /* create the upper bounding constraint. An absolute minimum improvement is used for this heuristic. This is
     * different to other LNS heuristics, where a relative improvement is used. The absolute improvement tries to take
     * into account problem specific information that is available to the user, such as a minimum step in the objective
