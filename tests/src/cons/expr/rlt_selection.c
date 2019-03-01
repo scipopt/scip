@@ -183,12 +183,68 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    printProjLP(scip, projlp, 1, NULL);
 
    /* check results */
-   cr_assert_eq(projlp->nProjNonz[0], 1, "\nExpected 1 non-zero in the projected row, got %d", projlp->nProjNonz[0]);
+   cr_assert_eq(projlp->nNonz[0], 1, "\nExpected 1 non-zero in the projected row, got %d", projlp->nNonz[0]);
    cr_assert_eq(projlp->coefs[0][0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projlp->coefs[0][0]);
    cr_assert_eq(projlp->vars[0][0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projlp->vars[0][0]));
 
    /* free memory */
    freeProjLP(scip, &projlp, 1);
+   SCIPfreeSol(scip, &sol);
+   SCIPreleaseRow(scip, &rows[0]);
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &rows);
+}
+
+Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
+{
+   SCIP_ROW** rows;
+   SCIP_SOL* sol;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   PROJLP* projlp;
+   SCIP_SEPADATA* sepadata;
+   SCIP_ROW* cut;
+   SCIP_Bool success;
+
+   SCIPallocBufferArray(scip, &rows, 1);
+   SCIPallocBufferArray(scip, &vars, 3);
+   SCIPallocBufferArray(scip, &vals, 3);
+
+   /* create test row1: -10 <= 4x1 - 7x2 + x3 <= 5 */
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &rows[0], "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x1, 4.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x2, -7.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
+
+   /* specify solution (only x3 is not at bound) */
+   SCIPcreateSol(scip, &sol, NULL);
+   vars[0] = x1; vals[0] = 5.0;
+   vars[1] = x2; vals[1] = -6.0;
+   vars[2] = x3; vals[2] = 2.0;
+   SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
+   cr_assert(SCIProwGetNNonz(rows[0]) == 3);
+
+   /* fill in sepadata */
+   SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
+   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   cr_assert(sepadata->conshdlr != NULL);
+   SCIP_CALL( createSepaData(scip, sepadata) );
+   sepadata->maxusedvars = 4;
+
+   createProjLP(scip, rows, 1, sol, &projlp);
+   printProjLP(scip, projlp, 1, NULL);
+
+   computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, x1, &success, TRUE, TRUE, TRUE, FALSE);
+
+   /* TODO check results */
+
+
+   /* free memory */
+   SCIPreleaseRow(scip, &cut);
+   freeProjLP(scip, &projlp, 1);
+   SCIP_CALL( freeSepaData(scip, sepadata) );
+   SCIPfreeBuffer(scip, &sepadata);
    SCIPfreeSol(scip, &sol);
    SCIPreleaseRow(scip, &rows[0]);
    SCIPfreeBufferArray(scip, &vals);
@@ -261,7 +317,7 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
    createProjLP(scip, rows, 1, sol, &projlp);
 
    /* generate cuts */
-   separateRltCuts(scip, sepa, sepadata, sol, rows, 1, TRUE, &ncuts, &result);
+   separateRltCuts(scip, sepa, sepadata, sol, projlp, rows, 1, TRUE, &ncuts, &result);
 
    /* TODO check results */
    SCIPinfoMessage(scip, NULL, "\n");

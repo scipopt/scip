@@ -102,9 +102,10 @@ struct ProjLP
 {
    SCIP_Real** coefs;       /* arrays of coefficients for each row */
    SCIP_VAR*** vars;        /* arrays of variables for each row */
-   SCIP_Real*  projLhss;    /* row left hand sides */
-   SCIP_Real*  projRhss;    /* row right hand sides */
-   int*        nProjNonz;   /* number of nonzeros in each row */
+   SCIP_Real*  lhss;        /* row left hand sides */
+   SCIP_Real*  rhss;        /* row right hand sides */
+   SCIP_Real*  consts;      /* row constants */
+   int*        nNonz;       /* number of nonzeros in each row */
 };
 typedef struct ProjLP PROJLP;
 
@@ -422,7 +423,7 @@ SCIP_VAR* getBilinVar(
 
    if( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) idx) )
    {
-      img = (int) SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx); /*lint !e571*/ /* TODO unnecessary cast? */
+      img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx); /*lint !e571*/
       return sepadata->bilinauxvars[img];
    }
 
@@ -538,6 +539,102 @@ SCIP_RETCODE getInitialRows(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE computeRltTerm(
+   SCIP*          scip,
+   SCIP_SEPADATA* sepadata,
+   SCIP_SOL*      sol,
+   SCIP_ROW*      cut,
+   SCIP_VAR*      var,
+   SCIP_VAR*      colvar,
+   SCIP_Real      coef,
+   SCIP_Bool      uselb,
+   SCIP_Bool      uselhs,
+   SCIP_Bool      local,
+   SCIP_Real*     coefvar,
+   SCIP_Real*     finalside,
+   SCIP_Bool*     success
+   )
+{
+   SCIP_VAR* auxvar;
+   SCIP_Real lbvar, ubvar;
+   SCIP_Real refpointvar;
+   SCIP_Real signfactor, boundfactor;
+   SCIP_Real coefauxvar, coefcolvar;
+
+   auxvar = getBilinVar(scip, sepadata, var, colvar);
+
+   lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+   ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+
+   refpointvar = MAX(lbvar, MIN(ubvar, SCIPgetSolVal(scip, sol, var))); /*lint !e666*/
+
+   signfactor = (uselb ? 1.0 : -1.0);
+   boundfactor = (uselb ? -lbvar : ubvar);
+
+   coefauxvar = coef * signfactor;
+   coefcolvar = coef * boundfactor;
+
+   /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
+   if( auxvar != NULL )
+   {
+      SCIPdebugMsg(scip, "auxvar for %s found, will be added to cut\n", SCIPvarGetName(colvar));
+      assert(!SCIPisInfinity(scip, coefauxvar));
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
+   }
+
+      /* otherwise, use the McCormick estimator in place of the bilinear term */
+   else if( colvar != var )
+   {
+      /* TODO this is valid only locally! */
+      SCIP_Real lbcolvar = SCIPvarGetLbLocal(colvar);
+      SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
+      SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
+
+//      assert(!computeEqCut); /* TODO why? */
+
+      if( REALABS(lbcolvar) > MAXVARBOUND || REALABS(ubcolvar) > MAXVARBOUND )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      SCIPdebugMsg(scip, "auxvar for %s not found, will use McCormick estimators\n", SCIPvarGetName(colvar));
+
+      SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
+                            ubcolvar, refpointcolvar, uselhs, coefvar, &coefcolvar, finalside, success);
+
+      if( !*success )
+         return SCIP_OKAY;
+   }
+
+      /* or, if it's a quadratic term, use a secant for overestimation and a gradient for underestimation */
+   else
+   {
+      SCIPdebugMsg(scip, "auxvar for %s not found, will use gradient and secant estimators\n", SCIPvarGetName(colvar));
+
+//      assert(!computeEqCut); /* TODO again why? */
+
+      /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
+      if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
+         SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, refpointvar, coefvar, finalside, success);
+      else
+         SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), coefvar, finalside, success);
+
+      if( !*success )
+         return SCIP_OKAY;
+   }
+
+   /* add the linear term for this column */
+   if( colvar != var )
+   {
+      assert(!SCIPisInfinity(scip, coefcolvar));
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, colvar, coefcolvar) );
+   }
+   else
+      *coefvar += coefcolvar;
+}
+
 /** creates the RLT-cuts formed by multiplying a given row with (x - lb) or (ub - x)
  *
  * in detail:
@@ -565,7 +662,6 @@ SCIP_RETCODE computeRltCuts(
    SCIP_Real boundfactor;
    SCIP_Real lbvar;
    SCIP_Real ubvar;
-   SCIP_Real refpointvar;
    SCIP_Real coefvar;
    SCIP_Real constside;
    SCIP_Real finalside;
@@ -584,7 +680,6 @@ SCIP_RETCODE computeRltCuts(
    lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
    ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
    constside = uselhs ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
-   refpointvar = MAX(lbvar, MIN(ubvar, SCIPgetSolVal(scip, sol, var))); /*lint !e666*/
 
    /* if the bounds are too large or the respective side is infinity, skip this cut */
    if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
@@ -612,75 +707,10 @@ SCIP_RETCODE computeRltCuts(
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < SCIProwGetNNonz(row); ++i )
    {
-      SCIP_VAR* auxvar;
       SCIP_VAR* colvar;
-      SCIP_Real coefauxvar;
-      SCIP_Real coefcolvar;
-
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-      coefauxvar = SCIProwGetVals(row)[i] * signfactor;
-      coefcolvar = SCIProwGetVals(row)[i] * boundfactor;
-
-      auxvar = getBilinVar(scip, sepadata, var, colvar);
-
-      /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
-      if( auxvar != NULL )
-      {
-         SCIPdebugMsg(scip, "auxvar for %s found, will be added to cut\n", SCIPvarGetName(colvar));
-         assert(!SCIPisInfinity(scip, coefauxvar));
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, coefauxvar) );
-      }
-
-      /* otherwise, use the McCormick estimator in place of the bilinear term */
-      else if( colvar != var )
-      {
-         /* TODO this is valid only locally! */
-         SCIP_Real lbcolvar = SCIPvarGetLbLocal(colvar);
-         SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
-         SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
-
-         assert(!computeEqCut);
-
-         if( REALABS(lbcolvar) > MAXVARBOUND || REALABS(ubcolvar) > MAXVARBOUND )
-         {
-            *success = FALSE;
-            return SCIP_OKAY;
-         }
-
-         SCIPdebugMsg(scip, "auxvar for %s not found, will use McCormick estimators\n", SCIPvarGetName(colvar));
-
-         SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
-            ubcolvar, refpointcolvar, uselhs, &coefvar, &coefcolvar, &finalside, success);
-
-         if( !*success )
-            return SCIP_OKAY;
-      }
-
-      /* or, if it's a quadratic term, use a secant for overestimation and a gradient for underestimation */
-      else
-      {
-         SCIPdebugMsg(scip, "auxvar for %s not found, will use gradient and secant estimators\n", SCIPvarGetName(colvar));
-
-         assert(!computeEqCut);
-
-         /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
-         if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
-            SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, refpointvar, &coefvar, &finalside, success);
-         else
-            SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), &coefvar, &finalside, success);
-
-         if( !*success )
-            return SCIP_OKAY;
-      }
-
-      /* add the linear term for this column */
-      if( colvar != var )
-      {
-         assert(!SCIPisInfinity(scip, coefcolvar));
-         SCIP_CALL( SCIPaddVarToRow(scip, *cut, colvar, coefcolvar) );
-      }
-      else
-         coefvar += coefcolvar;
+      computeRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
+         &coefvar, &finalside, success);
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -708,6 +738,115 @@ SCIP_RETCODE computeRltCuts(
    }
 
    SCIPdebugMsg(scip, "cut was generated successfully:\n");
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPprintRow(scip, *cut, NULL) );
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** creates the RLT cuts formed by multiplying a given projected row with (x - lb) or (ub - x)
+ *
+ * in detail:
+ * -The row is multiplied either with (x - lb(x)) or with (ub(x) - x), depending on parameter uselb.
+ * -The cut is computed either for lhs or rhs, depending on parameter uselhs.
+ * -Terms for which no auxiliary variable exists are replaced by either McCormick, secants, or linearization cuts
+ */
+static
+SCIP_RETCODE computeProjRltCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata,           /**< separation data */
+   SCIP_ROW**            cut,                /**< buffer to store the cut */
+   PROJLP*               projlp,             /**< projected lp */
+   int                   idx,                /**< index of the row that is used for the rlt cut */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   SCIP_VAR*             var,                /**< the variable that is used for the rlt cuts */
+   SCIP_Bool*            success,            /**< buffer to store whether cut was created successfully */
+   SCIP_Bool             uselb,              /**< whether we multiply with (var - lb) or (ub - var) */
+   SCIP_Bool             uselhs,             /**< whether to create a cut for the lhs or rhs */
+   SCIP_Bool             local,              /**< whether local or global cuts should be computed */
+   SCIP_Bool             computeEqCut        /**< whether conditions are fulfilled to compute equality cuts */
+)
+{
+   SCIP_Real signfactor;
+   SCIP_Real boundfactor;
+   SCIP_Real lbvar;
+   SCIP_Real ubvar;
+   SCIP_Real coefvar;
+   SCIP_Real constside;
+   SCIP_Real finalside;
+   int i;
+
+   assert(sepadata != NULL);
+   assert(cut != NULL);
+   assert(projlp != NULL);
+   assert(var != NULL);
+   assert(success != NULL);
+   assert(!computeEqCut || SCIPisEQ(scip, projlp->lhss[idx], projlp->rhss[idx]));
+
+   *cut = NULL;
+
+   /* get data for given variable */
+   lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+   ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   constside = uselhs ? projlp->lhss[idx] : projlp->rhss[idx];
+
+   /* if the bounds are too large or the respective side is infinity, skip this cut */
+   if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
+   {
+      SCIPdebugMsg(scip, "cut generation for projected row %d, %s and variable %s with its %s %f not possible\n",
+                   idx, uselhs ? "lhs" : "rhs", SCIPvarGetName(var),
+                   uselb ? "lower bound" : "upper bound", uselb ? lbvar : ubvar);
+
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* initialize some factors needed for computation */
+   coefvar = 0.0;
+   finalside = 0.0;
+   signfactor = (uselb ? 1.0 : -1.0);
+   boundfactor = (uselb ? -lbvar : ubvar);
+
+   *success = TRUE;
+
+   /* create an empty row which we then fill with variables step by step */
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, "rlt_cut", -SCIPinfinity(scip), SCIPinfinity(scip),
+                                     TRUE, FALSE, FALSE) );
+
+   /* iterate over all variables in the row and add the corresponding terms to the cuts */
+   for( i = 0; i < projlp->nNonz[idx]; ++i )
+   {
+      computeRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i], uselb, uselhs,
+         local, &coefvar, &finalside, success);
+   }
+
+   if( REALABS(finalside) > MAXVARBOUND )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* multiply (x-lb) or (ub -x) with the lhs and rhs of the row */
+   coefvar += signfactor * (projlp->consts[idx] - constside);
+   finalside = boundfactor * (constside - projlp->consts[idx]) - finalside;
+
+   /* set the coefficient of var and the constant side */
+   assert(!SCIPisInfinity(scip, coefvar));
+   SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, coefvar) );
+
+   assert(!SCIPisInfinity(scip, finalside));
+   if( uselhs || computeEqCut )
+   {
+      SCIP_CALL( SCIPchgRowLhs(scip, *cut, finalside) );
+   }
+   if( !uselhs || computeEqCut )
+   {
+      SCIP_CALL( SCIPchgRowRhs(scip, *cut, finalside) );
+   }
+
+   SCIPdebugMsg(scip, "projected cut was generated successfully:\n");
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPprintRow(scip, *cut, NULL) );
 #endif
@@ -743,17 +882,19 @@ SCIP_RETCODE createProjLP(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->coefs, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->vars, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->nProjNonz, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->projLhss, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->projRhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->nNonz, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->lhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->rhss, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->consts, nrows) );
 
    for( i = 0; i < nrows; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->coefs[i], SCIProwGetNNonz(rows[i])) );
       SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->vars[i], SCIProwGetNNonz(rows[i])) );
-      (*projlp)->nProjNonz[i] = 0;
-      (*projlp)->projLhss[i] = SCIProwGetLhs(rows[i]);
-      (*projlp)->projRhss[i] = SCIProwGetRhs(rows[i]);
+      (*projlp)->nNonz[i] = 0;
+      (*projlp)->lhss[i] = SCIProwGetLhs(rows[i]);
+      (*projlp)->rhss[i] = SCIProwGetRhs(rows[i]);
+      (*projlp)->consts[i] = SCIProwGetConstant(rows[i]);
 
       lhs = SCIProwGetLhs(rows[i]);
       rhs = SCIProwGetRhs(rows[i]);
@@ -771,15 +912,15 @@ SCIP_RETCODE createProjLP(
             lhs -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
             rhs -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
 
-            (*projlp)->projLhss[i] -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
-            (*projlp)->projRhss[i] -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
+            (*projlp)->lhss[i] -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
+            (*projlp)->rhss[i] -= SCIProwGetVals(rows[i])[v]*SCIPcolGetPrimsol(cols[v]);
          }
          else
          {
             /* add the entry to row of projlp */
-            (*projlp)->coefs[i][(*projlp)->nProjNonz[i]] = SCIProwGetVals(rows[i])[v];
-            (*projlp)->vars[i][(*projlp)->nProjNonz[i]] = var;
-            ++(*projlp)->nProjNonz[i];
+            (*projlp)->coefs[i][(*projlp)->nNonz[i]] = SCIProwGetVals(rows[i])[v];
+            (*projlp)->vars[i][(*projlp)->nNonz[i]] = var;
+            ++(*projlp)->nNonz[i];
          }
       }
    }
@@ -802,9 +943,9 @@ void printProjLP(
    for( i = 0; i < nrows; ++i )
    {
       SCIPinfoMessage(scip, file, "\nproj_row[%d]: ", i);
-      if( projlp->projLhss[i] != -SCIPinfinity(scip) )
-         SCIPinfoMessage(scip, file, "%f <= ", projlp->projLhss[i]);
-      for( j = 0; j < projlp->nProjNonz[i]; ++j )
+      if( projlp->lhss[i] != -SCIPinfinity(scip) )
+         SCIPinfoMessage(scip, file, "%f <= ", projlp->lhss[i]);
+      for( j = 0; j < projlp->nNonz[i]; ++j )
       {
          if( j == 0 )
          {
@@ -823,8 +964,13 @@ void printProjLP(
             SCIPinfoMessage(scip, file, "%f*", REALABS(projlp->coefs[i][j]));
          SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(projlp->vars[i][j]));
       }
-      if( projlp->projRhss[i] != SCIPinfinity(scip) )
-         SCIPinfoMessage(scip, file, " <= %f", projlp->projRhss[i]);
+      if( projlp->consts[i] > 0 )
+         SCIPinfoMessage(scip, file, " + %f", projlp->consts[i]);
+      else if( projlp->consts[i] < 0 )
+         SCIPinfoMessage(scip, file, " - %f", REALABS(projlp->consts[i]));
+
+      if( projlp->rhss[i] != SCIPinfinity(scip) )
+         SCIPinfoMessage(scip, file, " <= %f", projlp->rhss[i]);
    }
    SCIPinfoMessage(scip, file, "\n");
 }
@@ -846,9 +992,10 @@ void freeProjLP(
       SCIPfreeBufferArray(scip, &(*projlp)->coefs[i]);
    }
 
-   SCIPfreeBufferArray(scip, &(*projlp)->projRhss);
-   SCIPfreeBufferArray(scip, &(*projlp)->projLhss);
-   SCIPfreeBufferArray(scip, &(*projlp)->nProjNonz);
+   SCIPfreeBufferArray(scip, &(*projlp)->consts);
+   SCIPfreeBufferArray(scip, &(*projlp)->rhss);
+   SCIPfreeBufferArray(scip, &(*projlp)->lhss);
+   SCIPfreeBufferArray(scip, &(*projlp)->nNonz);
    SCIPfreeBufferArray(scip, &(*projlp)->vars);
    SCIPfreeBufferArray(scip, &(*projlp)->coefs);
    SCIPfreeBuffer(scip, projlp);
@@ -892,6 +1039,7 @@ SCIP_RETCODE separateRltCuts(
    SCIP_SEPA*     sepa,
    SCIP_SEPADATA* sepadata,
    SCIP_SOL*      sol,
+   PROJLP*        projlp,
    SCIP_ROW**     rows,
    int            nrows,
    SCIP_Bool      allowlocal,
@@ -899,7 +1047,7 @@ SCIP_RETCODE separateRltCuts(
    SCIP_RESULT*   result
 )
 {
-   int j, i, r, k, idx, img, ncolrows;
+   int j, i, r, k, idx, img, ncolrows, rowmark;
    SCIP_VAR* xj;
    SCIP_VAR* xi;
    SCIP_Real a, prod_viol;
@@ -912,6 +1060,8 @@ SCIP_RETCODE separateRltCuts(
    SCIP_Bool infeasible;
    SCIP_Real* colvals;
    SCIP_ROW** colrows;
+
+   assert(projlp != NULL);
 
    SCIP_CALL( SCIPhashmapCreate(&row_marks, SCIPblkmem(scip), nrows) );
 
@@ -1007,7 +1157,31 @@ SCIP_RETCODE separateRltCuts(
          if( !SCIPhashmapExists(row_marks, (void*)(size_t)SCIProwGetIndex(rows[r])) )
             continue;
 
-         /* TODO... */
+         rowmark = SCIPhashmapGetImageInt(row_marks, (void*)(size_t)SCIProwGetIndex(rows[r]));
+
+         /* go over all combinations of sides and bounds and compute the respective cuts */
+         for( k = 0; k < 4; ++k )
+         {
+            success = TRUE;
+
+            if( rowmark == 1 && uselb[k] == uselhs[k] )
+               continue;
+
+            if( rowmark == 2 && uselb[k] != uselhs[k] )
+               continue;
+
+            /* compute the rlt cut for a projected row first */
+            SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, r, sol, xj, &success, uselb[k], uselhs[k],
+                                      allowlocal, FALSE) );
+
+            if( !SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
+               success = FALSE;
+
+            /* release the projected cut */
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+            /* TODO... */
+         }
       }
 
       SCIPhashmapRemoveAll(row_marks);
@@ -1169,7 +1343,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    createProjLP(scip, rows, nrows, NULL, &projlp);
 
    /* separate the cuts */
-   separateRltCuts(scip, sepa, sepadata, NULL, rows, nrows, allowlocal, &ncuts, result);
+   separateRltCuts(scip, sepa, sepadata, NULL, projlp, rows, nrows, allowlocal, &ncuts, result);
 
 #if 0
    for( i = 0; i < nrows && !SCIPisStopped(scip); ++i )
