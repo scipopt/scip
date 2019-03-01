@@ -293,8 +293,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       SCIP_CALL( SCIPsetRealParam(subscip, "conflict/maxvarsfac", 0.05) );
    }
 
-   /* set limits for the subproblem; scale by number of LPs + 1
-    * because the counter the is increased after solving the LP
+   /* set node limit for the subproblem based on the number of LP iterations per node,
+    * which are a determistic measure for the node processing time.
+    *
+    * Note: We scale by number of LPs + 1 because the counter is increased after solving the LP.
     */
    nodelimit = SCIPgetNLPIterations(scip) / (SCIPgetNLPs(scip) + 1);
    nodelimit = MAX(sepadata->minnodes, nodelimit);
