@@ -178,7 +178,7 @@ separating/oddcycle/maxroundsroot = 15
 
 # frequency for calling separator <rapidlearning> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
-separating/rapidlearning/freq = 0
+separating/rapidlearning/freq = 5
 
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
