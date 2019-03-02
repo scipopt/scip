@@ -3483,6 +3483,8 @@ SCIP_Real calculateScoreFromResult2(
    SCIP_Real             dbfactor            /**< dual bound vs. LP value factor */
    )
 {
+   SCIP_Real lpscore;
+   SCIP_Real dbscore;
    SCIP_Real score;
    SCIP_Real downgain = SCIPsumepsilon(scip);
    SCIP_Real upgain = SCIPsumepsilon(scip);
@@ -3512,7 +3514,7 @@ SCIP_Real calculateScoreFromResult2(
    if( upbranchingresult->cutoff )
       upgain = 2 * downgain;
 
-   score = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
+   lpscore = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
       /* the gain is the difference of the dualbound of a child and the reference objective value;
     * by bounding it by zero we are safe from numerical troubles
@@ -3534,7 +3536,9 @@ SCIP_Real calculateScoreFromResult2(
    if( upbranchingresult->cutoff )
       upgain = 2 * downgain;
 
-   score += (dbfactor * SCIPgetBranchScore(scip, branchvar, downgain, upgain));
+   dbscore = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
+
+   score = SCIPgetBranchScore(scip, branchvar, lpscore, dbscore);
 
    return score;
 }
@@ -4607,7 +4611,6 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_Real bestscorelowerbound;
    SCIP_Real bestscoreupperbound;
    SCIP_Real localbaselpsolval = lpobjval;
-   int bestndeepestcutoffs = -1;
    int start = 0;
    int i;
    int c;
@@ -4958,7 +4961,7 @@ SCIP_RETCODE selectVarRecursive(
 
 
          /* the current candidate variable has a better score than the best candidate investigated so far */
-         if( score > bestscore || (SCIPisEQ(scip, score, bestscore) && *ndeepestcutoffs > bestndeepestcutoffs) )
+         if( score > bestscore )
          {
             int nvars = SCIPgetNVars(scip);
 
@@ -4966,7 +4969,6 @@ SCIP_RETCODE selectVarRecursive(
                SCIPvarGetName(decision->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
 
             bestscore = score;
-            bestndeepestcutoffs = *ndeepestcutoffs;
 
             if( bestscoreptr != NULL )
                *bestscoreptr = score;
