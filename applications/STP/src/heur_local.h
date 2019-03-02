@@ -60,8 +60,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
-   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
-   SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
+   STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
 );
 
 #ifdef __cplusplus

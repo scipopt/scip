@@ -171,6 +171,45 @@ SCIP_RETCODE lca(
    return SCIP_OKAY;
 }
 
+/** submethod for local extend */
+static
+SCIP_RETCODE addToCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const PATH*           path,               /**< shortest data structure array */
+   int                   i,                  /**< node */
+   int                   greedyextensions,   /**< greedyextensions */
+   int*                  nextensions,        /**< nextensions */
+   GNODE*                candidates,         /**< candidates */
+   SCIP_PQUEUE*          pqueue              /**< pqueue */
+   )
+{
+
+   assert(!graph_pc_knotIsFixedTerm(graph, i));
+
+   if( *nextensions < greedyextensions )
+   {
+      candidates[*nextensions].dist = graph->prize[i] - path[i].dist;
+      candidates[*nextensions].number = i;
+
+      SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[(*nextensions)++])) );
+   }
+   else
+   {
+      /* get candidate vertex of minimum value */
+      GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
+      if( SCIPisLT(scip, min->dist, graph->prize[i] - path[i].dist) )
+      {
+         min = (GNODE*) SCIPpqueueRemove(pqueue);
+         min->dist = graph->prize[i] - path[i].dist;
+         min->number = i;
+         SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether node is crucial, i.e. a terminal or a vertex with degree at least 3 (w.r.t. the steinertree) */
 static
 STP_Bool nodeIsCrucial(
@@ -265,10 +304,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
 
    if( mwpc )
-   {
-      SCIP_Bool dummy;
-      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, steinertree, &dummy) );
-   }
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, steinertree) );
 
    for( i = 0; i < nnodes; i++ )
    {
@@ -1693,17 +1729,16 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    return SCIP_OKAY;
 }
-//#define NEW
+#define NEW
 
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge cost array*/
+   const SCIP_Real*      cost,               /**< edge cost array */
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
-   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
-   SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
+   STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
    )
 {
    GNODE candidates[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
@@ -1712,13 +1747,18 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    PATH* orgpath;
    SCIP_PQUEUE* pqueue;
    SCIP_Real bestsolval;
-   int i;
-   int root;
-   int nedges;
-   int nnodes;
+
    int nextensions;
-   int greedyextensions;
+   const int greedyextensions = (graph->stp_type == STP_MWCSP) ? GREEDY_EXTENSIONS_MW : GREEDY_EXTENSIONS;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+   const int root = graph->source;
    STP_Bool* stvertextmp;
+   SCIP_Bool extensions = FALSE;
+
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
+#endif
 
 #ifdef NEW
    SCIP_Real* costbiased;
@@ -1733,10 +1773,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    assert(stedge != NULL);
    assert(cost != NULL);
    assert(stvertex != NULL);
-
-   root = graph->source;
-   nnodes = graph->knots;
-   nedges = graph->edges;
+   assert(graph->extended);
 
    graph_pc_2transcheck(graph);
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
@@ -1745,120 +1782,89 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
 
-   stvertex[graph->source] = TRUE;
-   path[graph->source].edge = UNKNOWN;
+   stvertex[root] = TRUE;
+
+   for( int j = 0; j < nnodes; j++ )
+      path[j].edge = UNKNOWN;
 
    for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
       {
-         i = graph->head[e];
-         path[i].edge = e;
-         stvertex[i] = TRUE;
+         path[graph->head[e]].edge = e;
+         stvertex[graph->head[e]] = TRUE;
       }
+
+   for( int e = 0; e < nedges; e++ )
+      if( stedge[e] == CONNECT )
+         assert(stvertex[graph->tail[e]]);
 
 #ifdef NEW
    {
-
-
       graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
 
-      graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, extensions);
-
-
+      graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, &extensions);
    }
 
 #else
-   graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
+   graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, &extensions);
 #endif
 
    BMScopyMemoryArray(orgpath, path, nnodes);
-
-   if( graph->stp_type == STP_MWCSP )
-      greedyextensions = GREEDY_EXTENSIONS_MW;
-   else
-      greedyextensions = GREEDY_EXTENSIONS;
 
    /*** compute solution value and save greedyextensions many best unconnected nodes  ***/
 
    SCIP_CALL( SCIPpqueueCreate(&pqueue, greedyextensions, 2.0, GNODECmpByDist) );
 
+   assert(orgpath[root].edge == UNKNOWN);
+
    bestsolval = 0.0;
    nextensions = 0;
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
-      if( graph->grad[i] == 0 )
+      if( graph->grad[i] == 0 || root == i )
          continue;
 
-      if( Is_term(graph->term[i]) )
-      {
-         if( i != root )
-         {
-            SCIP_Bool connect = FALSE;
-            SCIP_Real ecost = -1.0;
-            for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
-            {
-               if( root == graph->tail[e] )
-                  ecost = graph->cost[e];
-               else if( stvertex[graph->tail[e]] )
-                  connect = TRUE;
-            }
+      if( Is_term(graph->term[i]) && !graph_pc_knotIsFixedTerm(graph, i) )
+         continue;
 
-            if( !connect )
-               bestsolval += ecost;
-         }
-      }
-      else if( stvertex[i] )
+      if( stvertex[i] )
       {
+         assert(orgpath[i].edge >= 0);
+
          bestsolval += graph->cost[orgpath[i].edge];
+
+         if( Is_pterm(graph->term[i]) )
+            bestsolval -= graph->prize[i];
       }
       else if( orgpath[i].edge != UNKNOWN && Is_pterm(graph->term[i]) )
       {
-         if( nextensions < greedyextensions )
-         {
-            candidates[nextensions].dist = graph->prize[i] - path[i].dist;
-            candidates[nextensions].number = i;
-
-            SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
-         }
-         else
-         {
-            /* get candidate vertex of minimum value */
-            GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
-            if( SCIPisLT(scip, min->dist, graph->prize[i] - path[i].dist) )
-            {
-               min = (GNODE*) SCIPpqueueRemove(pqueue);
-               min->dist = graph->prize[i] - path[i].dist;
-               min->number = i;
-               SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
-            }
-         }
+         SCIP_CALL( addToCandidates(scip, graph, path, i, greedyextensions, &nextensions, candidates, pqueue) );
       }
    }
 
-   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS && !graph_pc_isRootedPcMw(graph);  restartcount++ )
+   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS && !graph_pc_isRootedPcMw(graph); restartcount++ )
    {
       int l = 0;
       SCIP_Bool extensionstmp = FALSE;
-
-      i = nextensions;
+      int extcount = nextensions;
 
       /* write extension candidates into array, from max to min */
       while( SCIPpqueueNElems(pqueue) > 0 )
       {
          GNODE* min = (GNODE*) SCIPpqueueRemove(pqueue);
-         assert(i > 0);
-         candidatesup[--i] = min->number;
+         assert(extcount > 0);
+         candidatesup[--extcount] = min->number;
       }
-      assert(i == 0);
+      assert(extcount == 0);
 
       /* iteratively insert new subpaths and try to improve solution */
       for( ; l < nextensions; l++ )
       {
-         i = candidatesup[l];
-         if( !stvertex[i] )
+         const int extensioncand = candidatesup[l];
+         if( !stvertex[extensioncand] )
          {
             SCIP_Real newsolval = 0.0;
-            int k = i;
+            int k = extensioncand;
 
             BMScopyMemoryArray(stvertextmp, stvertex, nnodes);
             BMScopyMemoryArray(path, orgpath, nnodes);
@@ -1869,8 +1875,11 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
                stvertextmp[k] = TRUE;
                assert(orgpath[k].edge != UNKNOWN);
                k = graph->tail[orgpath[k].edge];
+               assert(k != extensioncand);
             }
 #ifdef NEW
+            assert(graph_sol_valid(scip, graph, stedge));
+
             graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertextmp, &extensionstmp);
 
 #else
@@ -1879,88 +1888,54 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
             for( int j = 0; j < nnodes; j++ )
             {
-               if( graph->grad[j] == 0 )
+               if( graph->grad[j] == 0 || root == j )
                   continue;
 
-               if( Is_term(graph->term[j]) )
-               {
-                  if( j != root )
-                  {
-                     int e;
-                     SCIP_Bool connect = FALSE;
-                     SCIP_Real ecost = -1.0;
-                     for( e = graph->inpbeg[j]; e != EAT_LAST; e = graph->ieat[e] )
-                     {
-                        if( root == graph->tail[e] )
-                           ecost = graph->cost[e];
-                        else if( stvertextmp[graph->tail[e]] )
-                           connect = TRUE;
-                     }
+               if( Is_term(graph->term[j]) && !graph_pc_knotIsFixedTerm(graph, j) )
+                  continue;
 
-                     if( !connect )
-                        newsolval += ecost;
-                  }
-               }
-               else if( stvertextmp[j] )
+               if( stvertextmp[j] )
                {
+                  assert(path[j].edge >= 0);
+
                   newsolval += graph->cost[path[j].edge];
+
+                  if( Is_pterm(graph->term[j]) )
+                     newsolval -= graph->prize[j];
                }
             }
 
             /* new solution value better than old one? */
             if( SCIPisLT(scip, newsolval, bestsolval) )
             {
-               *extensions = TRUE;
-
+               extensions = TRUE;
                bestsolval = newsolval;
                BMScopyMemoryArray(stvertex, stvertextmp, nnodes);
+               BMScopyMemoryArray(orgpath, path, nnodes);
 
                /* save greedyextensions many best unconnected nodes  */
                nextensions = 0;
 
                for( int j = 0; j < nnodes; j++ )
-               {
-                  orgpath[j].edge = path[j].edge;
-                  orgpath[j].dist = path[j].dist;
                   if( !stvertex[j] && Is_pterm(graph->term[j]) && path[j].edge != UNKNOWN )
-                  {
-                     if( nextensions < greedyextensions )
-                     {
-                        candidates[nextensions].dist = graph->prize[j] - path[j].dist;
-                        candidates[nextensions].number = j;
-
-                        SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
-                     }
-                     else
-                     {
-                        /* get candidate vertex of minimum value */
-                        GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
-                        if( SCIPisLT(scip, min->dist, graph->prize[j] - path[j].dist) )
-                        {
-                           min = (GNODE*) SCIPpqueueRemove(pqueue);
-                           min->dist = graph->prize[j] - path[j].dist;
-                           min->number = j;
-                           SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
-                        }
-                     }
-                  }
-               }
+                     SCIP_CALL( addToCandidates(scip, graph, path, j, greedyextensions, &nextensions, candidates, pqueue) );
 
                break;
             } /* if new solution value better than old one? */
          } /* if !stvertex[i] */
       } /* for l < nextension */
+
       /* no more extensions performed? */
       if( l == nextensions )
          break;
    } /* main loop */
 
    /* have vertices been added? */
-   if( *extensions )
+   if( extensions )
    {
       for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, cost, stedge, stvertex) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
    }
 
    SCIPpqueueFree(&pqueue);
@@ -1970,6 +1945,10 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 #ifdef NEW
    SCIPfreeBufferArray(scip, &prizebiased);
    SCIPfreeBufferArray(scip, &costbiased);
+#endif
+
+#ifndef NDEBUG
+   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, stedge, 0.0, nedges), initialobj));
 #endif
 
    return SCIP_OKAY;

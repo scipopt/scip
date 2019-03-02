@@ -1077,12 +1077,16 @@ void graph_pc_markOrgGraph(
    {
       const int head = g->head[e];
 
-      if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+      if( Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
       {
          g->mark[head] = FALSE;
          assert(g->grad[head] == 2);
+         assert(SCIPisGT(scip, g->cost[e], 0.0));
       }
    }
+
+   if( !graph_pc_isRootedPcMw(g) )
+      g->mark[root] = FALSE;
 }
 
 /** mark terminals and switch terminal property to original terminals */

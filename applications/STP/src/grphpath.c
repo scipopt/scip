@@ -1994,13 +1994,13 @@ void graph_path_st_pcmw_extend(
 }
 
 
-/** greedy extension of a given tree for PC or MW problems */
+/** greedy extension of a given tree for PC or MW problems; path[i].edge needs to be initialized */
 void graph_path_st_pcmw_extendBiased(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
-   PATH*                 path,               /**< shortest paths data structure */
+   PATH*                 path,               /**< shortest paths data structure with .edge initialized */
    STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
    SCIP_Bool*            extensions          /**< extensions performed? */
    )
@@ -2026,11 +2026,20 @@ void graph_path_st_pcmw_extendBiased(
 
    *extensions = FALSE;
 
+   /* unmark dummy terminals */
+   graph_pc_markOrgGraph(scip, g);
+   assert(graph_pc_knotIsFixedTerm(g, g->source));
+
    /* initialize */
    for( int k = 0; k < nnodes; k++ )
    {
-      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
-      if( connected[k] && g->mark[k] )
+      state[k]     = UNKNOWN;
+      path[k].dist = FARAWAY;
+
+      if( !g->mark[k] )
+         continue;
+
+      if( connected[k] )
       {
          /* add node to heap */
          nstnodes++;
@@ -2041,34 +2050,20 @@ void graph_path_st_pcmw_extendBiased(
          path[k].dist = 0.0;
          assert(path[k].edge != UNKNOWN || k == g->source);
       }
-      else
+      else if( Is_pterm(g->term[k]) )
       {
-         state[k]     = UNKNOWN;
-         path[k].dist = FARAWAY;
+         assert(g->mark[k]);
+         outtermscount++;
 
-         if( Is_pterm(g->term[k]) && SCIPisGT(scip, prize[k], maxprize) && g->mark[k] )
+         if( prize[k] > maxprize )
             maxprize = prize[k];
-      }
 
-      if( !connected[k] )
-      {
-         path[k].edge = UNKNOWN;
-
-         if( Is_pterm(g->term[k]) )
-         {
-            assert(g->mark[k]);
-            outtermscount++;
-         }
       }
    }
 
-   /* nothing to extend? */
-   if( nstnodes == 0 )
-      return;
-
-   if( nnodes > 1 )
+   /* with at least two nodes and at least one in the solution? */
+   if( nnodes > 1 && nstnodes > 0 )
    {
-      int node;
       int nterms = 0;
 
       /* repeat until heap is empty */
@@ -2078,20 +2073,24 @@ void graph_path_st_pcmw_extendBiased(
          const int k = nearest(heap, state, &count, path);
          state[k] = UNKNOWN;
 
+         assert(g->mark[k]);
+
          /* if k is positive vertex and close enough (or fixnode), connect its path to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) &&
-                SCIPisGE(scip, prize[k], path[k].dist) )
+         if( !connected[k] && Is_pterm(g->term[k]) && SCIPisGE(scip, prize[k], path[k].dist) )
          {
+            int node = k;
+
             connected[k] = TRUE;
             *extensions = TRUE;
             path[k].dist = 0.0;
-            node = k;
 
-            assert(path[k].edge != UNKNOWN);
+            assert(path[k].edge >= 0);
+            assert(g->mark[g->tail[path[node].edge]]);
 
             while( !connected[node = g->tail[path[node].edge]] )
             {
-               assert(path[node].edge != UNKNOWN);
+               assert(g->mark[node]);
+               assert(path[node].edge >= 0);
                connected[node] = TRUE;
                reset(scip, path, heap, state, &count, node);
                assert(state[node]);
@@ -2112,11 +2111,13 @@ void graph_path_st_pcmw_extendBiased(
          for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
          {
             const int m = g->head[e];
-
             assert(state[m]);
 
-            /* is m not connected, allowed and closer */
-            if( !connected[m] && path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )
+            if( connected[m] )
+               continue;
+
+            /* is m allowed and closer? */
+            if( path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )
                correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
       }
@@ -2225,6 +2226,7 @@ void graph_path_st_rpcmw(
             {
                assert(pathedge[node] != -1);
                assert(!Is_term(g->term[node]));
+               assert(g->mark[node]);
 
                connected[node] = TRUE;
                resetX(scip, pathdist, heap, state, &count, node, 0.0);
