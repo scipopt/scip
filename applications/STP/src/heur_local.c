@@ -1729,7 +1729,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    return SCIP_OKAY;
 }
-#define NEW
 
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
@@ -1799,12 +1798,8 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
          assert(stvertex[graph->tail[e]]);
 
 #ifdef NEW
-   {
-      graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
-
-      graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, &extensions);
-   }
-
+   graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
+   graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, &extensions);
 #else
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, &extensions);
 #endif
@@ -1879,7 +1874,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
             }
 #ifdef NEW
             assert(graph_sol_valid(scip, graph, stedge));
-
             graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertextmp, &extensionstmp);
 
 #else
