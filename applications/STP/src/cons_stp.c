@@ -257,7 +257,7 @@ SCIP_RETCODE init_pcmwimplications(
    }
    assert(termscount == npterms);
 
-   printf("nimplications %d \n", nimplications);
+   printf("number of implications %d \n", nimplications);
 
    SCIPfreeBufferArray(scip, &visitlist);
    SCIPfreeBufferArray(scip, &visited);
@@ -628,10 +628,10 @@ SCIP_RETCODE sep_implicationsPcMw(
    }
    assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nPotentialTerms(g));
 
-   SCIPfreeBufferArray(scip, &nodeinflow);
-
-   printf("PcImplication Separator: %d Inequalities added\n", cutscount);
    *ncuts += cutscount;
+   SCIPdebugMessage("PcImplication Separator: %d Inequalities added\n", cutscount);
+
+   SCIPfreeBufferArray(scip, &nodeinflow);
 
    return SCIP_OKAY;
 }

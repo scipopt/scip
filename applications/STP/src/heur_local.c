@@ -1489,8 +1489,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                assert( newedge != UNKNOWN );
                edgecost = vnoi[graph->tail[newedge]].dist + graph->cost[newedge] + vnoi[graph->head[newedge]].dist;
+
                if( SCIPisLT(scip, edgecost, kpathcost) )
                {
+                  int todo;
                   node = SCIPStpunionfindFind(&uf, vbase[graph->head[newedge]]);
 
                   SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );

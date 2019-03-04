@@ -2069,7 +2069,6 @@ void initCostsAndPrioLP(
             const int term = graph_pc_getTwinTerm(graph, k);
             const int rootedge = graph_pc_getRoot2PtermEdge(graph, term);
 
-            printf("%f %f \n", prize[k], graph->cost[rootedge]);
             prize[k] = graph->cost[rootedge];
          }
       }
@@ -2285,7 +2284,6 @@ SCIP_RETCODE runPcMW(
 
    initTerminalPrioPcMw(scip, heurdata, nodepriority, graph, terminalperm, terminalprio);
 
-
    if( maxruns > 0 && bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
    {
       int r;
@@ -2295,7 +2293,10 @@ SCIP_RETCODE runPcMW(
             break;
 
       if( r == maxruns )
+      {
+         assert(maxruns > 1);
          terminalperm[1] = bestincstart;
+      }
    }
 
    /* main loop */
@@ -2846,8 +2847,10 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIP_CALL(SCIPfreeSol(scip, &sol));
    }
 
-   if( graph_pc_isPcMw(graph) && 0 )
+#if 0
+   if( graph_pc_isPcMw(graph) )
       SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
+#endif
 
 
    if( xval == NULL )
@@ -2912,7 +2915,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    heurdata->pcmwbias = 0;
 
    /* build a Steiner tree */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, NULL, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, success, FALSE));
+   SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, success, FALSE));
 
    heurdata->pcmwbias = save;
 
