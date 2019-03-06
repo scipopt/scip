@@ -1217,7 +1217,6 @@ SCIP_RETCODE createVariables(
                   const int twinrootedge = graph_pc_getRoot2PtermEdge(graph, twin);
                   const int prootedge = graph_pc_getRoot2PtermEdge(graph, pterm);
 
-                  printf("create cons with prize %f \n", graph->prize[pterm]);
                   assert(graph->prize[pterm] == graph->cost[twinrootedge]);
                   assert(graph->cost[prootedge] == 0.0);
 

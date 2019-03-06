@@ -108,6 +108,56 @@ void dfsorder(
 }
 
 
+static
+SCIP_Real getNewPrizeNode(
+   const GRAPH*          graph,
+   const STP_Bool*       steinertree,
+   const int*            graphmark,
+   int                   node,
+   STP_Bool*             prizemark,
+   int*                  prizemarklist,
+   int*                  prizemarkcount
+   )
+{
+   SCIP_Real prizesum = 0.0;
+   assert(graph_pc_isPcMw(graph));
+
+   if( graphmark[node] && !steinertree[node] && Is_pterm(graph->term[node]) && !prizemark[node] )
+   {
+      prizesum += graph->prize[node];
+      prizemark[node] = TRUE;
+      prizemarklist[(*prizemarkcount)++] = node;
+   }
+
+   return prizesum;
+}
+
+static
+SCIP_Real getNewPrize(
+   const GRAPH*          graph,
+   const STP_Bool*       steinertree,
+   const int*            graphmark,
+   int                   edge,
+   STP_Bool*             prizemark,
+   int*                  prizemarklist,
+   int*                  prizemarkcount
+   )
+{
+   SCIP_Real prizesum = 0.0;
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      const int mhead = graph->head[edge];
+      const int mtail = graph->tail[edge];
+
+      prizesum += getNewPrizeNode(graph, steinertree, graphmark, mhead, prizemark, prizemarklist, prizemarkcount);
+      prizesum += getNewPrizeNode(graph, steinertree, graphmark, mtail, prizemark, prizemarklist, prizemarkcount);
+   }
+
+   return prizesum;
+}
+
+
 /** computes lowest common ancestors for all pairs {vbase(v), vbase(u)} such that {u,w} is a boundary edge,
  * first call should be with u := root */
 static
@@ -636,6 +686,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       STP_Bool* pinned;
       STP_Bool* scanned;
       STP_Bool* nodesmark;
+      STP_Bool* prizemark = NULL;
+      int* prizemarklist = NULL;
+      int prizemarkcount;
+      SCIP_Bool solimproved = FALSE;
 
 #ifdef SCIP_DEBUG
       SCIP_Real obj = 0.0;
@@ -660,6 +714,11 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       /* only needed for Key-Path Exchange */
 
       /* memory needed for both Key-Path Elimination and Exchange */
+      if( mwpc )
+      {
+         SCIP_CALL(SCIPallocBufferArray(scip, &prizemark, nnodes));
+         SCIP_CALL(SCIPallocBufferArray(scip, &prizemarklist, nnodes));
+      }
       SCIP_CALL( SCIPallocBufferArray(scip, &scanned, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &heapsize, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &blists_start, nnodes) );
@@ -670,6 +729,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       SCIP_CALL( SCIPallocBufferArray(scip, &pinned, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &dfstree, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
+
+      if( mwpc )
+         for( k = 0; k < nnodes; k++ )
+            prizemark[k] = FALSE;
 
       /* initialize data structures */
       SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
@@ -721,6 +784,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
          if( mwpc )
          {
+            assert(graph->extended);
+
             for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
             {
                k = graph->head[e];
@@ -1051,6 +1116,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                /* compute the cost of the MST */
                mstcost = 0.0;
+               prizemarkcount = 0;
 
                /* compute the cost of the MST */
                for( l = 0; l < nsupernodes - 1; l++ )
@@ -1062,6 +1128,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      edge = flipedge(boundedges[mst[l].edge / 2 ]);
 
                   mstcost += graph->cost[edge];
+                  mstcost -= getNewPrize(graph, steinertree, graphmark, edge, prizemark, prizemarklist, &prizemarkcount);
+
                   assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
 
                   /* mark the edge (in the original graph) as visited */
@@ -1077,6 +1145,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      {
                         newedges[e] = crucnode;
                         mstcost += graph->cost[e];
+                        mstcost -= getNewPrize(graph, steinertree, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
                      }
                   }
                   for( node = graph->head[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
@@ -1088,13 +1157,19 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      {
                         newedges[e] = crucnode;
                         mstcost += graph->cost[e];
+                        mstcost -= getNewPrize(graph, steinertree, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
                      }
                   }
                }
 
+               for( int pi = 0; pi < prizemarkcount; pi++ )
+                  prizemark[prizemarklist[pi]] = FALSE;
+
                if( SCIPisLT(scip, mstcost, kpcost) )
                {
                   localmoves++;
+                  solimproved = TRUE;
+
                   SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
                   /* unmark the original edges spanning the supergraph */
@@ -1225,7 +1300,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                               best_result[vnoi[node].edge] = -1;
 
                            best_result[flipedge(vnoi[node].edge)] = CONNECT;
-
                         }
                      }
                      else
@@ -1237,7 +1311,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                         {
                            graphmark[node] = FALSE;
                            if( best_result[vnoi[node].edge] != CONNECT && best_result[flipedge(vnoi[node].edge)] != CONNECT )
+                           {
                               best_result[vnoi[node].edge] = CONNECT;
+                           }
 
                         }
 
@@ -1258,7 +1334,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   }
                   assert(!graphmark[crucnode]);
                }
-               else
+               else /* improving solution found */
                {
                   /* no improving solution has been found during the move */
 
@@ -1484,15 +1560,32 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                if( oldedge != UNKNOWN && newedge != UNKNOWN && SCIPisLT(scip, edgecost,
                      vnoi[graph->tail[newedge]].dist + graph->cost[newedge] + vnoi[graph->head[newedge]].dist) )
                   newedge = oldedge;
+
                if( oldedge != UNKNOWN && newedge == UNKNOWN )
                   newedge = oldedge;
 
                assert( newedge != UNKNOWN );
+
                edgecost = vnoi[graph->tail[newedge]].dist + graph->cost[newedge] + vnoi[graph->head[newedge]].dist;
+
+               if( mwpc )
+               {
+                  prizemarkcount = 0;
+                  edgecost -= getNewPrize(graph, steinertree, graphmark, newedge, prizemark, prizemarklist, &prizemarkcount);
+
+                  for( node = graph->tail[newedge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
+                     edgecost -= getNewPrize(graph, steinertree, graphmark, vnoi[node].edge, prizemark, prizemarklist, &prizemarkcount);
+
+                  for( node = graph->head[newedge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
+                     edgecost -= getNewPrize(graph, steinertree, graphmark, vnoi[node].edge, prizemark, prizemarklist, &prizemarkcount);
+
+                  for( int pi = 0; pi < prizemarkcount; pi++ )
+                     prizemark[prizemarklist[pi]] = FALSE;
+               }
 
                if( SCIPisLT(scip, edgecost, kpathcost) )
                {
-                  int todo;
+                  solimproved = TRUE;
                   node = SCIPStpunionfindFind(&uf, vbase[graph->head[newedge]]);
 
                   SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
@@ -1703,25 +1796,27 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       SCIPfreeBufferArray(scip, &blists_start);
       SCIPfreeBufferArray(scip, &heapsize);
       SCIPfreeBufferArray(scip, &scanned);
+      SCIPfreeBufferArrayNull(scip, &prizemarklist);
+      SCIPfreeBufferArrayNull(scip, &prizemark);
       SCIPfreeBufferArray(scip, &supernodesid);
       SCIPfreeBufferArray(scip, &boundedges);
       SCIPfreeBufferArray(scip, &lvledges_start);
       SCIPfreeBufferArray(scip, &newedges);
       /******/
-   }
 
-#ifdef SCIP_DEBUG
-   {
-      SCIP_Real obj = 0.0;
-      for( e = 0; e < nedges; e++ )
-         obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-
-      printf(" ObjAfterHeurLocal=%.12e\n", obj);
+      if( solimproved )
+      {
+         SCIP_CALL( SCIPStpHeurTMpruneEdgeSol(scip, graph, best_result) );
+      }
    }
-#endif
 
 #ifndef NDEBUG
-   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, best_result, 0.0, nedges), initialobj));
+   {
+      const SCIP_Real newobj = graph_sol_getObj(graph->cost, best_result, 0.0, nedges);
+
+      assert(SCIPisLE(scip, newobj, initialobj));
+      assert(graph_sol_valid(scip, graph, best_result));
+   }
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);

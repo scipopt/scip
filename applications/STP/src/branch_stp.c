@@ -52,6 +52,7 @@
 #define BRANCH_STP_ON_LP   0
 #define BRANCH_STP_ON_LP2  1
 #define BRANCH_STP_ON_SOL  2
+#define BRANCH_STP_ON_DEGREE  3
 
 
 /*
@@ -589,6 +590,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    SCIP_PROBDATA* probdata;
    SCIP_BRANCHRULEDATA* branchruledata;
    GRAPH* g;
+   int branchruletype;
    int branchvertex;
 
    assert(branchrule != NULL);
@@ -617,18 +619,20 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    if( !isProbCompatible(g->stp_type) )
       return SCIP_OKAY;
 
+   branchruletype = branchruledata->branchtype;
+
    /* get vertex to branch on */
-   if( graph_pc_isPcMw(g) )
-      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
-   else if( branchruledata->branchtype == BRANCH_STP_ON_LP )
-      SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
-   else if( branchruledata->branchtype == BRANCH_STP_ON_LP2 )
-      SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
-   else
+   if( graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2) )
    {
-      assert(branchruledata->branchtype == BRANCH_STP_ON_SOL);
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
    }
+
+   if( branchruletype == BRANCH_STP_ON_LP )
+      SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
+   else if( branchruletype == BRANCH_STP_ON_LP2 )
+      SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
+   else if( branchruletype == BRANCH_STP_ON_SOL )
+      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
 
    /* fall-back strategy */
    if( branchvertex == UNKNOWN )
@@ -659,6 +663,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    SCIP_BRANCHRULEDATA* branchruledata;
    GRAPH* g;
    int branchvertex;
+   int branchruletype;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -684,11 +689,12 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
       return SCIP_OKAY;
 
    branchvertex = UNKNOWN;
+   branchruletype = branchruledata->branchtype;
 
    /* get vertex to branch on */
-   if( graph_pc_isPcMw(g) || branchruledata->branchtype == BRANCH_STP_ON_SOL )
+   if( branchruletype == BRANCH_STP_ON_SOL
+  || (graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2)) )
    {
-      int todo; // check what is better degree or sol and for sol use extended local heuristic!
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
    }
 
@@ -896,8 +902,9 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsStp) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "branching/stp/type",
-         "Branching: 0 based on LP, 1 based on LP and with indegree > 1, 2 based on best solution",
-         &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_LP, 0, 2, NULL, NULL) );
+         "Branching: 0 based on LP, 1 based on LP and with indegree > 1, 2 based on best solution,"
+         "3 based on degree",
+         &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_LP, 0, 3, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/stp/vertexbranching",
          "use branching on vertices?",

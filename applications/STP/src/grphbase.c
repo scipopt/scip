@@ -3856,8 +3856,6 @@ SCIP_RETCODE graph_sol_getOrg(
    for( int e = 0; e < orggraph->edges; e++ )
       orgsoledge[e] = UNKNOWN;
 
-
-
    /* prune solution (in original graph) */
    if( pcmw )
       SCIP_CALL( SCIPStpHeurTMPrunePc(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );

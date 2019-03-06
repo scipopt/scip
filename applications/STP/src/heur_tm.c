@@ -178,11 +178,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    )
 {
    PATH* mst;
-   int i;
-   int e1;
-   int e2;
-   int k1;
-   int k2;
    int count;
    int root = g->source;
    const int nnodes = g->knots;
@@ -193,7 +188,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
    if( rpcmw )
    {
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
          if( connected[i] && (!Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i)) )
             g->mark[i] = TRUE;
@@ -211,7 +206,8 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    }
    else
    {
-      for( i = 0; i < nnodes; i++ )
+      int proot;
+      for( int i = 0; i < nnodes; i++ )
       {
          if( connected[i] && !Is_term(g->term[i]) )
             g->mark[i] = TRUE;
@@ -219,7 +215,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
             g->mark[i] = FALSE;
       }
 
-      i = -1;
+      proot = -1;
       if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
       {
          int min = nnodes;
@@ -231,10 +227,10 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
                assert(Is_pterm(g->term[k]));
 
                min = termsorder[k];
-               i = k;
+               proot = k;
             }
          assert(min >= 0);
-         assert(i == -1 || min < nnodes);
+         assert(proot == -1 || min < nnodes);
       }
       else
       {
@@ -243,30 +239,30 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
             const int head = g->head[a];
             if( !Is_term(g->term[head]) && connected[head] )
             {
-               i = head;
+               proot = head;
                break;
             }
          }
       }
 
       /* trivial solution? */
-      if( i == -1 )
+      if( proot == -1 )
       {
          printf("trivial solution in pruning \n");
          for( int a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
          {
-            i = g->head[a];
-            if( Is_term(g->term[i]) )
+            const int head = g->head[a];
+            if( Is_term(g->term[head]) )
             {
-               assert(connected[i]);
+               assert(connected[head]);
                result[a] = CONNECT;
             }
          }
          return SCIP_OKAY;
       }
 
-      assert(g->mark[i]);
-      root = i;
+      assert(g->mark[proot]);
+      root = proot;
    }
    assert(root >= 0);
    assert(root < nnodes);
@@ -274,27 +270,31 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
    graph_path_exec(scip, g, MST_MODE, root, cost, mst);
 
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( g->mark[i] && (mst[i].edge != UNKNOWN) )
       {
-         assert(g->path_state[i] == CONNECT);
-         assert(g->head[mst[i].edge] == i);
-         assert(result[mst[i].edge] == -1);
+         assert(g->path_state[i] == CONNECT);  assert(g->head[mst[i].edge] == i);  assert(result[mst[i].edge] == -1);
          result[mst[i].edge] = CONNECT;
       }
    }
 
    /* connect all terminals */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) && i != g->source )
       {
+         int e1;
+         int e2;
+
          if( rpcmw && g->mark[i] )
          {
-            assert(g->prize[i] == FARAWAY);
+            assert(g->prize[i] == FARAWAY && connected[i]);
             continue;
          }
+
+         assert(!graph_pc_knotIsFixedTerm(g, i));
+         connected[i] = TRUE;
 
          e1 = g->inpbeg[i];
          assert(e1 >= 0);
@@ -306,32 +306,26 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
          }
          else
          {
-            assert(e2 >= 0);
+            const int k1 = g->tail[e1];
+            const int k2 = g->tail[e2];
 
+            assert(e2 >= 0);
             assert(g->ieat[e2] == EAT_LAST);
-            k1 = g->tail[e1];
-            k2 = g->tail[e2];
             assert(k1 == g->source || k2 == g->source);
+
             if( k1 != g->source && g->path_state[k1] == CONNECT )
-            {
                result[e1] = CONNECT;
-            }
             else if( k2 != g->source && g->path_state[k2] == CONNECT )
-            {
                result[e2] = CONNECT;
-            }
             else if( k1 == g->source )
-            {
                result[e1] = CONNECT;
-            }
             else if( k2 == g->source )
-            {
                result[e2] = CONNECT;
-            }
          }
       }
       else if( i == root && !rpcmw )
       {
+         int e1;
          for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
             if( g->tail[e1] == g->source )
                break;
@@ -345,7 +339,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    {
       count = 0;
 
-      for( i = nnodes - 1; i >= 0; --i )
+      for( int i = nnodes - 1; i >= 0; --i )
       {
          int j;
          if( !g->mark[i] || g->path_state[i] != CONNECT || Is_term(g->term[i]) )
@@ -380,7 +374,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
 
 #ifndef NDEBUG
    /* make sure there is no unconnected vertex */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( connected[i] && i != g->source )
       {
@@ -390,7 +384,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
                break;
 
          assert(j != EAT_LAST);
-
       }
    }
 #endif
@@ -872,6 +865,64 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
 
    return SCIP_OKAY;
 }
+
+
+/** prune solution given by included nodes */
+SCIP_RETCODE SCIPStpHeurTMpruneNodeSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result,             /**< ST edges */
+   STP_Bool*             connected           /**< ST nodes */
+   )
+{
+   const int nedges = g->edges;
+
+   assert(scip && g && result && connected);
+   assert(g->stp_type != STP_DHCSTP);
+
+   for( int e = 0; e < nedges; e++ )
+      result[e] = UNKNOWN;
+
+   if( graph_pc_isPcMw(g) )
+      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, result, connected));
+   else
+      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, result, connected));
+
+   return SCIP_OKAY;
+}
+
+/** prune solution given by included edges */
+SCIP_RETCODE SCIPStpHeurTMpruneEdgeSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result              /**< ST edges */
+   )
+{
+   STP_Bool* connected;
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+
+   assert(scip && g && result);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      connected[k] = FALSE;
+
+   for( int e = 0; e < nedges; e++ )
+     if( result[e] == CONNECT )
+     {
+        connected[g->tail[e]] = TRUE;
+        connected[g->head[e]] = TRUE;
+     }
+
+   SCIP_CALL( SCIPStpHeurTMpruneNodeSol(scip, g, result, connected) );
+
+   SCIPfreeBufferArray(scip, &connected);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  *  local functions

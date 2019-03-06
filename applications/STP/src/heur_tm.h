@@ -108,6 +108,23 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    STP_Bool*             connected           /**< ST nodes */
    );
 
+/** prune solution given by included nodes */
+EXTERN
+SCIP_RETCODE SCIPStpHeurTMpruneNodeSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result,             /**< ST edges */
+   STP_Bool*             connected           /**< ST nodes */
+   );
+
+/** prune solution given by included edges */
+EXTERN
+SCIP_RETCODE SCIPStpHeurTMpruneEdgeSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result              /**< ST edges */
+   );
+
 /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
 EXTERN
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(

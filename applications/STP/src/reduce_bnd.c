@@ -3333,7 +3333,7 @@ SCIP_RETCODE reduce_da(
 
          if( rpc )
          {
-            int todo; // check for more terminals to be added
+          // int todo; // check for more terminals to be added
          }
 
          if( usesol )
