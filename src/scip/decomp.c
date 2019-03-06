@@ -389,9 +389,6 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       /* skip linking constraints */
       conslabel = conslabels[c];
 
-      if( conslabel == SCIP_DECOMP_LINKCONS )
-         continue;
-
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( ensureCondition(success) );
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuffer, twicenvars, &success) );
@@ -918,6 +915,18 @@ int SCIPdecompstoreGetNDecomps(
    return decompstore->ndecomps;
 }
 
+/** returns the selected decomposition from the storage */
+SCIP_DECOMP* SCIPdecompstoreGetDecomp(
+   SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
+   int                   decompindex         /**< the index of the requested decomposition */
+   )
+{
+   assert(decompstore != NULL);
+   assert(decompindex >= 0 && decompindex < decompstore->ndecomps);
+
+   return decompstore->decomps[decompindex];
+}
+
 /** get decompositions from this storage */
 SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
@@ -935,6 +944,18 @@ int SCIPdecompstoreGetNOrigDecomps(
 {
    assert(decompstore != NULL);
    return decompstore->norigdecomps;
+}
+
+/** returns the selected decomposition from the storage */
+SCIP_DECOMP* SCIPdecompstoreGetOrigDecomp(
+   SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
+   int                   decompindex         /**< the index of the requested decomposition */
+   )
+{
+   assert(decompstore != NULL);
+   assert(decompindex >= 0 && decompindex < decompstore->norigdecomps);
+
+   return decompstore->origdecomps[decompindex];
 }
 
 /** get decomposition store from SCIP */

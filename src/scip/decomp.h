@@ -181,6 +181,13 @@ int SCIPdecompstoreGetNDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
+/** returns the selected decomposition from the storage */
+EXTERN
+SCIP_DECOMP* SCIPdecompstoreGetDecomp(
+   SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
+   int                   decompindex         /**< the index of the requested decomposition */
+   );
+
 /** get decompositions in original space from this storage */
 EXTERN
 SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
@@ -191,6 +198,12 @@ SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
 EXTERN
 int SCIPdecompstoreGetNOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
+   );
+
+/** returns the selected decomposition from the storage */
+SCIP_DECOMP* SCIPdecompstoreGetOrigDecomp(
+   SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
+   int                   decompindex         /**< the index of the requested decomposition */
    );
 
 /** get decomposition store from SCIP */
