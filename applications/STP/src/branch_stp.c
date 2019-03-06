@@ -663,7 +663,6 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    SCIP_BRANCHRULEDATA* branchruledata;
    GRAPH* g;
    int branchvertex;
-   int branchruletype;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -689,14 +688,9 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
       return SCIP_OKAY;
 
    branchvertex = UNKNOWN;
-   branchruletype = branchruledata->branchtype;
 
-   /* get vertex to branch on */
-   if( branchruletype == BRANCH_STP_ON_SOL
-  || (graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2)) )
-   {
+   if( branchruledata->branchtype != BRANCH_STP_ON_DEGREE )
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
-   }
 
    /* fall-back strategy */
    if( branchvertex == UNKNOWN )
