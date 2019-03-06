@@ -655,6 +655,25 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
+/** applies a Benders' decomposition to the selected decomposition from the decomposition store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPapplyBendersDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   int                   decompindex         /**< the index of the decomposition that will be applied */
+   );
+
 /* @} */
 
 /**@addtogroup PublicBenderscutsMethods

@@ -116,6 +116,7 @@ struct SCIP_Benders
    int                   nactivesubprobs;    /**< the number of active subproblems */
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
+   SCIP_Bool             freesubprobs;       /**< do the subproblems need to be freed by the Benders' decomposition core? */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */

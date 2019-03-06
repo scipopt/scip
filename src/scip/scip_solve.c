@@ -2574,6 +2574,16 @@ SCIP_RETCODE SCIPsolve(
    /* initialize presolving flag (may be modified in SCIPpresolve()) */
    scip->stat->performpresol = FALSE;
 
+   /* if a decomposition exists and Benders' decomposition has been enabled, then a decomposition is performed */
+   if( scip->set->stage == SCIP_STAGE_PROBLEM && SCIPdecompstoreGetNOrigDecomps(scip->decompstore) > 0
+      && scip->set->decomp_applybenders && SCIPgetNActiveBenders(scip) == 0 )
+   {
+      int decompindex = 0;
+
+      /* applying the Benders' decomposition */
+      SCIP_CALL( SCIPapplyBendersDecomposition(scip, decompindex) );
+   }
+
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
    SCIPclockStart(scip->stat->solvingtimeoverall, scip->set);

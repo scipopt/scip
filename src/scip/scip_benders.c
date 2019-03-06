@@ -37,6 +37,7 @@
 #include "scip/benders.h"
 #include "scip/cons_linear.h"
 #include "scip/debug.h"
+#include "scip/decomp.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -548,7 +549,7 @@ SCIP_RETCODE SCIPdeactivateBenders(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPdeactivateBenders", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIPbendersDeactivate(benders, scip->set);
+   SCIP_CALL( SCIPbendersDeactivate(benders, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -973,6 +974,48 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmergeBendersSubproblemIntoMaster", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersMergeSubproblemIntoMaster(benders, scip->set, varmap, consmap, probnumber) );
+
+   return SCIP_OKAY;
+}
+
+/** applies a Benders' decomposition to the selected decomposition from the decomposition store
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPapplyBendersDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   int                   decompindex         /**< the index of the decomposition that will be applied */
+   )
+{
+   SCIP_BENDERS* benders;
+
+   assert(scip != NULL);
+   assert(scip->decompstore != NULL);
+   assert(SCIPdecompstoreGetNOrigDecomps(scip->decompstore) > 0);
+   assert(decompindex >= 0 && decompindex < SCIPdecompstoreGetNOrigDecomps(scip->decompstore));
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPapplyBendersDecomposition", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* if there already exists an active Benders' decomposition, then default decomposition is not applied. */
+   if( SCIPgetNActiveBenders(scip) > 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "A Benders' decomposition already exists. The default Benders' decomposition will not be applied to the stored decomposition.\n");
+      return SCIP_OKAY;
+   }
+
+   /* retrieving the default Benders' decomposition plugin */
+   benders = SCIPfindBenders(scip, "default");
+   assert(benders != NULL);
+
+   /* applying the Benders' decomposition. If SCIP is in the PROBLEM stage, then the auxiliary variables don't need to
+    * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
+    */
+   SCIP_CALL( SCIPbendersApplyDecomposition(benders, scip->set, scip->stat,
+         SCIPdecompstoreGetOrigDecomp(scip->decompstore, decompindex)) );
 
    return SCIP_OKAY;
 }

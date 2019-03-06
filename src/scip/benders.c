@@ -27,11 +27,13 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/clock.h"
+#include "scip/decomp.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
 #include "scip/prob.h"
 #include "scip/pricestore.h"
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -2220,11 +2222,13 @@ SCIP_RETCODE SCIPbendersActivate(
 }
 
 /** deactivates Benders' decomposition such that it is no longer called in LP solving loop */
-void SCIPbendersDeactivate(
+SCIP_RETCODE SCIPbendersDeactivate(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(set != NULL);
    assert(set->stage == SCIP_STAGE_INIT || set->stage == SCIP_STAGE_PROBLEM);
@@ -2242,6 +2246,16 @@ void SCIPbendersDeactivate(
          assert(benders->auxiliaryvars[i] == NULL);
 #endif
 
+      /* if the subproblems were created by the Benders' decomposition core, then they need to be freed */
+      if( benders->freesubprobs )
+      {
+         for( i = SCIPbendersGetNSubproblems(benders) - 1; i >= 0; i-- )
+         {
+            SCIP* subproblem = SCIPbendersSubproblem(benders, i);
+            SCIP_CALL( SCIPfree(&subproblem) );
+         }
+      }
+
       benders->active = FALSE;
       set->nactivebenders--;
       set->benderssorted = FALSE;
@@ -2258,6 +2272,8 @@ void SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->auxiliaryvars);
       BMSfreeMemoryArray(&benders->subproblems);
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns whether the given Benders' decomposition is in use in the current problem */
@@ -4751,6 +4767,243 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
     * subproblem still exists, but it is not solved in the solving loop.
     */
    SCIPbendersSetSubproblemEnabled(benders, probnumber, FALSE);
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE addConstraintToBendersSubproblem(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP*                 subproblem,         /**< the SCIP instance for the subproblem */
+   SCIP_HASHMAP*         varmap,             /**< the variable hash map mapping the source variables to the target variables */
+   SCIP_CONS*            sourcecons          /**< the constraint that being added to the subproblem */
+   )
+{
+   SCIP* scip;
+   SCIP_CONS* cons;
+   SCIP_VAR** consvars;
+   int nconsvars;
+   int i;
+   SCIP_Bool success;
+
+   assert(set != NULL);
+   assert(subproblem != NULL);
+   assert(varmap != NULL);
+   assert(sourcecons != NULL);
+
+   SCIPdebugMessage("Adding constraint <%s> to Benders' decomposition subproblem\n", SCIPconsGetName(sourcecons));
+
+   scip = set->scip;
+
+   /* getting the variables that are in the constraint */
+   SCIP_CALL( SCIPgetConsNVars(scip, sourcecons, &nconsvars, &success) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+
+   SCIP_CALL( SCIPgetConsVars(scip, sourcecons, consvars, nconsvars, &success) );
+   assert(success);
+
+   /* checking all variables to see whether they already exist in the subproblem. If they don't exist, then the variable
+    * is created
+    */
+   for( i = 0; i < nconsvars; i++ )
+   {
+      /* if the variable is not in the hashmap, then it doesn't exist in the subproblem */
+      if( !SCIPhashmapExists(varmap, consvars[i]) )
+      {
+         SCIP_VAR* var;
+
+         /* creating a variable as a copy of the original variable.
+          * TODO: check whether this should be GLOBAL or LOCAL bounds
+          */
+         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbLocal(consvars[i]),
+               SCIPvarGetUbLocal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
+               SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]), NULL, NULL, NULL, NULL, NULL) );
+
+         /* adding the variable to the subproblem */
+         SCIP_CALL( SCIPaddVar(subproblem, var) );
+
+         /* adding the variable to the hash map so that it is copied correctly in the constraint */
+         SCIP_CALL( SCIPhashmapInsert(varmap, consvars[i], var) );
+
+         /* releasing the variable */
+         SCIP_CALL( SCIPreleaseVar(subproblem, &var) );
+      }
+   }
+
+   /* freeing the buffer memory for the consvars */
+   SCIPfreeBufferArray(scip, &consvars);
+
+   /* copying the constraint from the master scip to the subproblem */
+   SCIP_CALL( SCIPgetConsCopy(scip, subproblem, sourcecons, &cons, SCIPconsGetHdlr(sourcecons), varmap, NULL,
+         SCIPconsGetName(sourcecons), SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsMarkedPropagate(sourcecons),
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
+         SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons), TRUE, &success) );
+
+   /* if the copy failed, then the subproblem for the decomposition could not be performed. */
+   if( !success )
+   {
+      SCIPerrorMessage("It is not possible to copy constraint <%s>. Benders' decomposition could not be applied.\n",
+         SCIPconsGetName(sourcecons));
+      return SCIP_ERROR;
+   }
+
+   SCIP_CALL( SCIPaddCons(subproblem, cons) );
+   SCIP_CALL( SCIPreleaseCons(subproblem, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** removes the variables and constraints from the master problem that have been transferred to a subproblem when the
+ *  decomposition was applied.
+ */
+SCIP_RETCODE removeVariablesAndConstraintsFromMaster(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_CONS**           conss,              /**< the master problem constraints */
+   SCIP_VAR**            vars,               /**< the master problem variables, can be NULL */
+   int*                  conslabels,         /**< the labels indicating the block for each constraint */
+   int*                  varslabels,         /**< the labels indicating the block for each variable, can be NULL */
+   int                   nconss,             /**< the number of constraints */
+   int                   nvars               /**< the number of variables */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(conslabels != NULL);
+   assert((vars != NULL && varslabels != NULL) || (vars == NULL && varslabels == NULL));
+
+   /* removing constraints */
+   for( i = nconss - 1; i >= 0; i-- )
+   {
+      if( conslabels[i] >= 0 && !SCIPconsIsDeleted(conss[i]) )
+         SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+   }
+
+   /* removing variables */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM && vars != NULL )
+   {
+      for( i = nvars - 1; i >= 0; i-- )
+      {
+         if( varslabels[i] >= 0 && !SCIPvarIsDeleted(vars[i]) )
+         {
+            SCIP_Bool deleted;
+
+            SCIP_CALL( SCIPdelVar(scip, vars[i], &deleted) );
+            assert(deleted);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Applies a Benders' decomposition to the problem based upon the decomposition selected from the storage */
+SCIP_RETCODE SCIPbendersApplyDecomposition(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
+   )
+{
+   SCIP** subproblems;
+   SCIP_VAR** vars;
+   SCIP_CONS** conss;
+   SCIP_HASHMAP** varmaps;
+   int* varslabels;
+   int* conslabels;
+   int nvars;
+   int nconss;
+   int nblocks;
+   int i;
+   char subprobname[SCIP_MAXSTRLEN];
+   SCIP_Bool success;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(decomp != NULL);
+
+   SCIPdebugMessage("Applying a Benders' decomposition to <%s>\n", SCIPgetProbName(set->scip));
+
+   /* retrieving the number of blocks for this decomposition
+    * TODO: need to check whether the number of blocks is just the subproblems or also the master problem.
+    */
+   nblocks = SCIPdecompGetNBlocks(decomp);
+   assert(nblocks > 0);
+
+   /* initialising the subproblems for the Benders' decomposition */
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &subproblems, nblocks) );
+
+   /* creating the subproblems before adding the constraints */
+   for( i = 0; i < nblocks; i++ )
+   {
+      SCIP_CALL( SCIPcreate(&subproblems[i]) );
+
+      /* include default SCIP plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins(subproblems[i]) );
+
+      (void) SCIPsnprintf(subprobname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(set->scip), i);
+      SCIP_CALL( SCIPcreateProbBasic(subproblems[i], subprobname) );
+   }
+
+   /* TODO: Need to work out whether a check for original and transformed problem is necessary */
+
+   /* getting the variables and constraints from the problem */
+   SCIP_CALL( SCIPgetVarsData(set->scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   conss = SCIPgetConss(set->scip);
+   nconss = SCIPgetNConss(set->scip);
+
+   /* allocating buffer memory for the labels arrays */
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &varslabels, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &conslabels, nconss) );
+
+   /* getting the labels for the variables and constraints from the decomposition */
+   SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+   SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+
+   /* creating the variable maps for adding the constraints to the subproblems */
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &varmaps, nblocks) );
+
+   for( i = 0; i < nblocks; i++ )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&varmaps[i], SCIPblkmem(subproblems[i]), nvars) );
+   }
+
+   /* copying the constraints to the appropriate subproblems */
+   for( i = 0; i < nconss; i++ )
+   {
+      /* we are only interested in the constraints that are in the blocks. These are identified by a label >= 0 */
+      if( conslabels[i] >= 0 )
+      {
+         SCIP_CALL( addConstraintToBendersSubproblem(set, subproblems[conslabels[i]], varmaps[conslabels[i]],
+               conss[i]) );
+      }
+   }
+
+   /* removing the variables and constraints from the master problem that have been added to the subproblem */
+   SCIP_CALL( removeVariablesAndConstraintsFromMaster(set->scip, conss, vars, conslabels, varslabels, nconss, nvars) );
+
+   /* creating the Benders' decomposition my calling the default plugin */
+   SCIP_CALL( SCIPcreateBendersDefault(set->scip, subproblems, nblocks) );
+
+   /* flag to the Benders' decomposition core that the subproblems need to be freed */
+   benders->freesubprobs = TRUE;
+
+   /* activating the Benders' constraint handler for the scenario stages.
+    * TODO: consider whether the two-phase method should be activated by default in the scenario stages.
+    */
+   SCIP_CALL( SCIPsetBoolParam(set->scip, "constraints/benders/active", TRUE) );
+
+   /* freeing the allocated memory */
+   for( i = nblocks - 1; i >= 0; i-- )
+   {
+      SCIPhashmapFree(&varmaps[i]);
+   }
+
+   SCIPfreeBufferArray(set->scip, &varmaps);
+   SCIPfreeBufferArray(set->scip, &conslabels);
+   SCIPfreeBufferArray(set->scip, &varslabels);
+   SCIPfreeBufferArray(set->scip, &subproblems);
 
    return SCIP_OKAY;
 }
