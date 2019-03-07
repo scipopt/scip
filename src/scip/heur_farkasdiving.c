@@ -59,7 +59,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
-#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
+#define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
@@ -568,4 +568,3 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
 
    return SCIP_OKAY;
 }
-
