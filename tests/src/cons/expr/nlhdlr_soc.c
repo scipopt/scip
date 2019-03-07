@@ -295,7 +295,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 3, 3, 8.0);
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 8.0);
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
