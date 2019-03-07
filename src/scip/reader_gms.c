@@ -1046,7 +1046,7 @@ SCIP_RETCODE printIndicatorCons(
  *
  * write as
  * Set name_sosset /1*nvars/;
- * SOS1/2 Variable name_sosvar(name_sosset);
+ * SOS1/2 Variable name_sosvar(name_sosset); name_sosvar.lo(name_sosset) = -inf;
  * Equation name_sosequ(e1_sosset);
  * name_sosequ(name_sosset).. name_sosvar(e1_sosset) =e=
  * vars[0]$sameas(name_sosset, '1') + vars[1]$sameas(name_sosset, '2') + ... + vars[nvars-1]$sameas(name_sosset, nvars);

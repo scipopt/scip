@@ -43,7 +43,7 @@ extern "C" {
  *
  *  @ingroup ConshdlrIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
  */
 
 /** separate orbisack solutions */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIP*                 scip,               /**< pointer to scip */
    SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
 
 
 /** checks whether a given binary solution is feasible for the orbisack */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckSolutionOrbisack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to check for feasibility */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPcheckSolutionOrbisack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

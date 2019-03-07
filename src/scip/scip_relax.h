@@ -73,7 +73,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeRelaxBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of relaxation handler */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPincludeRelax(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeRelax() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeRelaxBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX**          relaxptr,           /**< reference to relaxation pointer, or NULL */
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    );
 
 /** sets copy method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -118,7 +118,7 @@ SCIP_RETCODE SCIPsetRelaxCopy(
    );
 
 /** sets destructor method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPsetRelaxFree(
    );
 
 /** sets initialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -134,7 +134,7 @@ SCIP_RETCODE SCIPsetRelaxInit(
    );
 
 /** sets deinitialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPsetRelaxExit(
    );
 
 /** sets solving process initialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -150,7 +150,7 @@ SCIP_RETCODE SCIPsetRelaxInitsol(
    );
 
 /** sets solving process deinitialization method of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */
@@ -158,26 +158,26 @@ SCIP_RETCODE SCIPsetRelaxExitsol(
    );
 
 /** returns the relaxation handler of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_RELAX* SCIPfindRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of relaxation handler */
    );
 
 /** returns the array of currently available relaxation handlers  */
-EXTERN
+SCIP_EXPORT
 SCIP_RELAX** SCIPgetRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available relaxation handlers  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNRelaxs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a relaxation handler*/
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RELAX*           relax,              /**< relaxation handler */

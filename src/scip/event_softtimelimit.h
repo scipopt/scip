@@ -25,7 +25,7 @@
 #include "scip/type_scip.h"
 
 /** includes event handler for soft time limit */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    SCIP*                 scip                /**< SCIP data structure */
    );

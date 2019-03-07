@@ -32,7 +32,6 @@
 
 
 /** includes the linear ordering file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderLOP(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -1,6 +1,70 @@
 
 @page RN60 Release notes for SCIP 6.0
 
+@section RN602 SCIP 6.0.2
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+- added parsing functionality for optcumulative constraints in CIP format
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+- fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
+  skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
+- fixed wrong behavior of concurrent solve ignoring initial solutions
+- fixed bug in concurrent solve when problem was already solved in presolving
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
 @section RN601 SCIP 6.0.1
 *************************
 
@@ -15,13 +79,8 @@ Performance improvements
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
 
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
-
-### New and changed callbacks
 
 ### Deleted and changed API methods and macros
 
@@ -45,26 +104,14 @@ Interface changes
 
 - warn about coefficients in MPS files with absolute value larger than SCIP's value for infinity
 
-### Interfaces to external software
-
 ### Changed parameters
 
 - default clock type for timing is now wallclock
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
 
 Unit tests
 ----------
 
 - added unit tests for exact knapsack solving and (weighted) median selection algorithms
-
-Testing
--------
 
 Build system
 ------------
@@ -74,8 +121,6 @@ Build system
 - add missing GMP dependency when compiling with SYM=bliss
 - add DL library when linking to CPLEX to avoid linker errors
 - new config.h header defining the current build configuration, e.g. SCIP_WITH_GMP
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -100,9 +145,12 @@ Fixed bugs
 - fixed bug with aggregated variables that are aggregated in propagation of cons_sos1
 - fixed some special cases in SCIPselect/SCIPselectWeighted methods
 - relaxed too strict assertion in Zirounding heuristic
+- fixed the upgrade routine to XOR constraints: aggregate integer variable if its coefficient has the wrong sign
 - fixed handling of nonartificial parity variables when deleting redundant XOR constraints
 - earlier deletion of trivial XOR constraints (at most 1 operator left)
--
+- fixed wrong hashmap accesses and added sanity check for the correct hashmap type
+- avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
+- corrected the output of the first LP value in case of branch-and-price
 
 Miscellaneous
 -------------

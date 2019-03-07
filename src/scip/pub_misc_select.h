@@ -76,7 +76,7 @@ extern "C" {
 /** partial sort an index array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -89,7 +89,7 @@ void SCIPselectInd(
 /** partial sort an index array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -104,7 +104,7 @@ void SCIPselectWeightedInd(
 /** partial sort of an array of pointers in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
@@ -116,7 +116,7 @@ void SCIPselectPtr(
 /** partial sort of an array of pointers in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
@@ -130,7 +130,7 @@ void SCIPselectWeightedPtr(
 /** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -143,7 +143,7 @@ void SCIPselectPtrPtr(
 /** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -158,7 +158,7 @@ void SCIPselectWeightedPtrPtr(
 /** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -171,7 +171,7 @@ void SCIPselectPtrReal(
 /** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -186,7 +186,7 @@ void SCIPselectWeightedPtrReal(
 /** partial sort of two joint arrays of pointers/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -199,7 +199,7 @@ void SCIPselectPtrInt(
 /** partial sort of two joint arrays of pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -214,7 +214,7 @@ void SCIPselectWeightedPtrInt(
 /** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -227,7 +227,7 @@ void SCIPselectPtrBool(
 /** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -242,7 +242,7 @@ void SCIPselectWeightedPtrBool(
 /** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -256,7 +256,7 @@ void SCIPselectPtrIntInt(
 /** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -272,7 +272,7 @@ void SCIPselectWeightedPtrIntInt(
 /** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -286,7 +286,7 @@ void SCIPselectPtrRealInt(
 /** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -302,7 +302,7 @@ void SCIPselectWeightedPtrRealInt(
 /** partial sort of four joint arrays of pointers/Reals/Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrRealRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be permuted in the same way */
@@ -317,7 +317,7 @@ void SCIPselectPtrRealRealInt(
 /** partial sort of four joint arrays of pointers/Reals/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrRealRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be permuted in the same way */
@@ -334,7 +334,7 @@ void SCIPselectWeightedPtrRealRealInt(
 /** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrRealBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -348,7 +348,7 @@ void SCIPselectPtrRealBool(
 /** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrRealBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -364,7 +364,7 @@ void SCIPselectWeightedPtrRealBool(
 /** partial sort of three joint arrays of pointers/Reals/Reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrRealReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be permuted in the same way */
@@ -378,7 +378,7 @@ void SCIPselectPtrRealReal(
 /** partial sort of three joint arrays of pointers/Reals/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrRealReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be permuted in the same way */
@@ -394,7 +394,7 @@ void SCIPselectWeightedPtrRealReal(
 /** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -408,7 +408,7 @@ void SCIPselectPtrPtrInt(
 /** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -424,7 +424,7 @@ void SCIPselectWeightedPtrPtrInt(
 /** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -438,7 +438,7 @@ void SCIPselectPtrPtrReal(
 /** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -454,7 +454,7 @@ void SCIPselectWeightedPtrPtrReal(
 /** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -469,7 +469,7 @@ void SCIPselectPtrPtrIntInt(
 /** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -486,7 +486,7 @@ void SCIPselectWeightedPtrPtrIntInt(
 /** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrRealIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -501,7 +501,7 @@ void SCIPselectPtrRealIntInt(
 /** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrRealIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -518,7 +518,7 @@ void SCIPselectWeightedPtrRealIntInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrRealInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -533,7 +533,7 @@ void SCIPselectPtrPtrRealInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrRealInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -550,7 +550,7 @@ void SCIPselectWeightedPtrPtrRealInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/Bools, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrRealBool(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -565,7 +565,7 @@ void SCIPselectPtrPtrRealBool(
 /** partial sort of four joint arrays of pointer/pointer/Reals/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrRealBool(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -582,7 +582,7 @@ void SCIPselectWeightedPtrPtrRealBool(
 /** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrLongInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -597,7 +597,7 @@ void SCIPselectPtrPtrLongInt(
 /** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrLongInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -614,7 +614,7 @@ void SCIPselectWeightedPtrPtrLongInt(
 /** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrPtrLongIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -630,7 +630,7 @@ void SCIPselectPtrPtrLongIntInt(
 /** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrPtrLongIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -648,7 +648,7 @@ void SCIPselectWeightedPtrPtrLongIntInt(
 /** partial sort an array of Reals in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectReal(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -659,7 +659,7 @@ void SCIPselectReal(
 /** partial sort an array of Reals in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedReal(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -672,7 +672,7 @@ void SCIPselectWeightedReal(
 /** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -684,7 +684,7 @@ void SCIPselectRealPtr(
 /** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -698,7 +698,7 @@ void SCIPselectWeightedRealPtr(
 /** partial sort of two joint arrays of Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -710,7 +710,7 @@ void SCIPselectRealInt(
 /** partial sort of two joint arrays of Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -724,7 +724,7 @@ void SCIPselectWeightedRealInt(
 /** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray1,          /**< int array to be permuted in the same way */
@@ -737,7 +737,7 @@ void SCIPselectRealIntInt(
 /** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray1,          /**< int array to be permuted in the same way */
@@ -752,7 +752,7 @@ void SCIPselectWeightedRealIntInt(
 /** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -765,7 +765,7 @@ void SCIPselectRealBoolPtr(
 /** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -780,7 +780,7 @@ void SCIPselectWeightedRealBoolPtr(
 /** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -793,7 +793,7 @@ void SCIPselectRealIntLong(
 /** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -808,7 +808,7 @@ void SCIPselectWeightedRealIntLong(
 /** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -821,7 +821,7 @@ void SCIPselectRealIntPtr(
 /** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -836,7 +836,7 @@ void SCIPselectWeightedRealIntPtr(
 /** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second  SCIP_Real array to be permuted in the same way */
@@ -849,7 +849,7 @@ void SCIPselectRealRealPtr(
 /** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second  SCIP_Real array to be permuted in the same way */
@@ -864,7 +864,7 @@ void SCIPselectWeightedRealRealPtr(
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealPtrPtrInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -878,7 +878,7 @@ void SCIPselectRealPtrPtrInt(
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealPtrPtrInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -894,7 +894,7 @@ void SCIPselectWeightedRealPtrPtrInt(
 /** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealPtrPtrIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -909,7 +909,7 @@ void SCIPselectRealPtrPtrIntInt(
 /** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealPtrPtrIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -926,7 +926,7 @@ void SCIPselectWeightedRealPtrPtrIntInt(
 /** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealLongRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
@@ -940,7 +940,7 @@ void SCIPselectRealLongRealInt(
 /** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealLongRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
@@ -956,7 +956,7 @@ void SCIPselectWeightedRealLongRealInt(
 /** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealIntInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -970,7 +970,7 @@ void SCIPselectRealRealIntInt(
 /** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealIntInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -986,7 +986,7 @@ void SCIPselectWeightedRealRealIntInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1000,7 +1000,7 @@ void SCIPselectRealRealRealInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1016,7 +1016,7 @@ void SCIPselectWeightedRealRealRealInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealRealPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1030,7 +1030,7 @@ void SCIPselectRealRealRealPtr(
 /** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealRealPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1046,7 +1046,7 @@ void SCIPselectWeightedRealRealRealPtr(
 /** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealRealBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1061,7 +1061,7 @@ void SCIPselectRealRealRealBoolPtr(
 /** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealRealBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1078,7 +1078,7 @@ void SCIPselectWeightedRealRealRealBoolPtr(
 /** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectRealRealRealBoolBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1094,7 +1094,7 @@ void SCIPselectRealRealRealBoolBoolPtr(
 /** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedRealRealRealBoolBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -1112,7 +1112,7 @@ void SCIPselectWeightedRealRealRealBoolBoolPtr(
 /** partial sort array of ints in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectInt(
    int*                  intarray,           /**< int array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -1123,7 +1123,7 @@ void SCIPselectInt(
 /** partial sort array of ints in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedInt(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -1136,7 +1136,7 @@ void SCIPselectWeightedInt(
 /** partial sort of two joint arrays of ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1148,7 +1148,7 @@ void SCIPselectIntInt(
 /** partial sort of two joint arrays of ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1162,7 +1162,7 @@ void SCIPselectWeightedIntInt(
 /** partial sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1174,7 +1174,7 @@ void SCIPselectIntPtr(
 /** partial sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1188,7 +1188,7 @@ void SCIPselectWeightedIntPtr(
 /** partial sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -1200,7 +1200,7 @@ void SCIPselectIntReal(
 /** partial sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -1214,7 +1214,7 @@ void SCIPselectWeightedIntReal(
 /** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1227,7 +1227,7 @@ void SCIPselectIntIntInt(
 /** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1242,7 +1242,7 @@ void SCIPselectWeightedIntIntInt(
 /** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1255,7 +1255,7 @@ void SCIPselectIntIntLong(
 /** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1270,7 +1270,7 @@ void SCIPselectWeightedIntIntLong(
 /** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntRealLong(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -1283,7 +1283,7 @@ void SCIPselectIntRealLong(
 /** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntRealLong(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -1298,7 +1298,7 @@ void SCIPselectWeightedIntRealLong(
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1311,7 +1311,7 @@ void SCIPselectIntIntPtr(
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1326,7 +1326,7 @@ void SCIPselectWeightedIntIntPtr(
 /** partial sort of three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1339,7 +1339,7 @@ void SCIPselectIntIntReal(
 /** partial sort of three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -1354,7 +1354,7 @@ void SCIPselectWeightedIntIntReal(
 /** partial sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntPtrReal(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1367,7 +1367,7 @@ void SCIPselectIntPtrReal(
 /** partial sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntPtrReal(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1382,7 +1382,7 @@ void SCIPselectWeightedIntPtrReal(
 /** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -1396,7 +1396,7 @@ void SCIPselectIntIntIntPtr(
 /** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -1412,7 +1412,7 @@ void SCIPselectWeightedIntIntIntPtr(
 /** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -1426,7 +1426,7 @@ void SCIPselectIntIntIntReal(
 /** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -1442,7 +1442,7 @@ void SCIPselectWeightedIntIntIntReal(
 /** partial sort of four joint arrays of ints/pointers/ints/reals, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntPtrIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1456,7 +1456,7 @@ void SCIPselectIntPtrIntReal(
 /** partial sort of four joint arrays of ints/pointers/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntPtrIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1472,7 +1472,7 @@ void SCIPselectWeightedIntPtrIntReal(
 /** partial sort an array of Longints in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -1483,7 +1483,7 @@ void SCIPselectLong(
 /** partial sort an array of Longints in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -1496,7 +1496,7 @@ void SCIPselectWeightedLong(
 /** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1508,7 +1508,7 @@ void SCIPselectLongPtr(
 /** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1522,7 +1522,7 @@ void SCIPselectWeightedLongPtr(
 /** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1535,7 +1535,7 @@ void SCIPselectLongPtrInt(
 /** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1550,7 +1550,7 @@ void SCIPselectWeightedLongPtrInt(
 /** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1564,7 +1564,7 @@ void SCIPselectLongPtrRealBool(
 /** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1580,7 +1580,7 @@ void SCIPselectWeightedLongPtrRealBool(
 /** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrRealRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1595,7 +1595,7 @@ void SCIPselectLongPtrRealRealBool(
 /** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrRealRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1612,7 +1612,7 @@ void SCIPselectWeightedLongPtrRealRealBool(
 /** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrRealRealIntBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1628,7 +1628,7 @@ void SCIPselectLongPtrRealRealIntBool(
 /** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrRealRealIntBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1646,7 +1646,7 @@ void SCIPselectWeightedLongPtrRealRealIntBool(
 /** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1660,7 +1660,7 @@ void SCIPselectLongPtrPtrInt(
 /** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1676,7 +1676,7 @@ void SCIPselectWeightedLongPtrPtrInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrPtrIntInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1691,7 +1691,7 @@ void SCIPselectLongPtrPtrIntInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrPtrIntInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1708,7 +1708,7 @@ void SCIPselectWeightedLongPtrPtrIntInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectLongPtrPtrBoolInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1723,7 +1723,7 @@ void SCIPselectLongPtrPtrBoolInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedLongPtrPtrBoolInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -1740,7 +1740,7 @@ void SCIPselectWeightedLongPtrPtrBoolInt(
 /** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectPtrIntIntBoolBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -1756,7 +1756,7 @@ void SCIPselectPtrIntIntBoolBool(
 /** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedPtrIntIntBoolBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -1774,7 +1774,7 @@ void SCIPselectWeightedPtrIntIntBoolBool(
 /** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectIntPtrIntIntBoolBool(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1790,7 +1790,7 @@ void SCIPselectIntPtrIntIntBoolBool(
 /** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedIntPtrIntIntBoolBool(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -1808,7 +1808,7 @@ void SCIPselectWeightedIntPtrIntIntBoolBool(
 /** partial sort an index array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -1821,7 +1821,7 @@ void SCIPselectDownInd(
 /** partial sort an index array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
@@ -1836,7 +1836,7 @@ void SCIPselectWeightedDownInd(
 /** partial sort of an array of pointers in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
@@ -1848,7 +1848,7 @@ void SCIPselectDownPtr(
 /** partial sort of an array of pointers in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
@@ -1862,7 +1862,7 @@ void SCIPselectWeightedDownPtr(
 /** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -1875,7 +1875,7 @@ void SCIPselectDownPtrPtr(
 /** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -1890,7 +1890,7 @@ void SCIPselectWeightedDownPtrPtr(
 /** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -1903,7 +1903,7 @@ void SCIPselectDownPtrReal(
 /** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -1918,7 +1918,7 @@ void SCIPselectWeightedDownPtrReal(
 /** partial sort of two joint arrays of pointers/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -1931,7 +1931,7 @@ void SCIPselectDownPtrInt(
 /** partial sort of two joint arrays of pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -1946,7 +1946,7 @@ void SCIPselectWeightedDownPtrInt(
 /** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -1959,7 +1959,7 @@ void SCIPselectDownPtrBool(
 /** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -1974,7 +1974,7 @@ void SCIPselectWeightedDownPtrBool(
 /** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -1988,7 +1988,7 @@ void SCIPselectDownPtrIntInt(
 /** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -2004,7 +2004,7 @@ void SCIPselectWeightedDownPtrIntInt(
 /** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2018,7 +2018,7 @@ void SCIPselectDownPtrRealInt(
 /** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2034,7 +2034,7 @@ void SCIPselectWeightedDownPtrRealInt(
 /** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrRealBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2048,7 +2048,7 @@ void SCIPselectDownPtrRealBool(
 /** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrRealBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2064,7 +2064,7 @@ void SCIPselectWeightedDownPtrRealBool(
 /** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2078,7 +2078,7 @@ void SCIPselectDownPtrPtrInt(
 /** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2094,7 +2094,7 @@ void SCIPselectWeightedDownPtrPtrInt(
 /** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2108,7 +2108,7 @@ void SCIPselectDownPtrPtrReal(
 /** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrReal(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2124,7 +2124,7 @@ void SCIPselectWeightedDownPtrPtrReal(
 /** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2139,7 +2139,7 @@ void SCIPselectDownPtrPtrIntInt(
 /** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2156,7 +2156,7 @@ void SCIPselectWeightedDownPtrPtrIntInt(
 /** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrRealIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2171,7 +2171,7 @@ void SCIPselectDownPtrRealIntInt(
 /** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrRealIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
@@ -2188,7 +2188,7 @@ void SCIPselectWeightedDownPtrRealIntInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrRealInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2203,7 +2203,7 @@ void SCIPselectDownPtrPtrRealInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrRealInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2220,7 +2220,7 @@ void SCIPselectWeightedDownPtrPtrRealInt(
 /** partial sort of four joint arrays of pointer/pointer/Reals/bools, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrRealBool(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2235,7 +2235,7 @@ void SCIPselectDownPtrPtrRealBool(
 /** partial sort of four joint arrays of pointer/pointer/Reals/bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrRealBool(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2252,7 +2252,7 @@ void SCIPselectWeightedDownPtrPtrRealBool(
 /** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrLongInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2267,7 +2267,7 @@ void SCIPselectDownPtrPtrLongInt(
 /** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrLongInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2284,7 +2284,7 @@ void SCIPselectWeightedDownPtrPtrLongInt(
 /** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrPtrLongIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2300,7 +2300,7 @@ void SCIPselectDownPtrPtrLongIntInt(
 /** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrPtrLongIntInt(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
@@ -2318,7 +2318,7 @@ void SCIPselectWeightedDownPtrPtrLongIntInt(
 /** partial sort an array of Reals in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownReal(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -2329,7 +2329,7 @@ void SCIPselectDownReal(
 /** partial sort an array of Reals in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownReal(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -2342,7 +2342,7 @@ void SCIPselectWeightedDownReal(
 /** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -2354,7 +2354,7 @@ void SCIPselectDownRealPtr(
 /** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -2368,7 +2368,7 @@ void SCIPselectWeightedDownRealPtr(
 /** partial sort of two joint arrays of Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray,           /**< pointer array to be permuted in the same way */
@@ -2380,7 +2380,7 @@ void SCIPselectDownRealInt(
 /** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -2393,7 +2393,7 @@ void SCIPselectDownRealIntInt(
 /** partial sort of two joint arrays of Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray,           /**< pointer array to be permuted in the same way */
@@ -2407,7 +2407,7 @@ void SCIPselectWeightedDownRealInt(
 /** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -2422,7 +2422,7 @@ void SCIPselectWeightedDownRealIntInt(
 /** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -2435,7 +2435,7 @@ void SCIPselectDownRealBoolPtr(
 /** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
@@ -2450,7 +2450,7 @@ void SCIPselectWeightedDownRealBoolPtr(
 /** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -2463,7 +2463,7 @@ void SCIPselectDownRealIntLong(
 /** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -2478,7 +2478,7 @@ void SCIPselectWeightedDownRealIntLong(
 /** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -2491,7 +2491,7 @@ void SCIPselectDownRealIntPtr(
 /** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
@@ -2506,7 +2506,7 @@ void SCIPselectWeightedDownRealIntPtr(
 /** partial sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealInt(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2519,7 +2519,7 @@ void SCIPselectDownRealRealInt(
 /** partial sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealInt(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2534,7 +2534,7 @@ void SCIPselectWeightedDownRealRealInt(
 /** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2547,7 +2547,7 @@ void SCIPselectDownRealRealPtr(
 /** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2559,7 +2559,7 @@ void SCIPselectWeightedDownRealRealPtr(
    );
 
 /** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the \p k-th element */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealPtrPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2570,7 +2570,7 @@ void SCIPselectDownRealRealPtrPtr(
    );
 
 /** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealPtrPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
@@ -2585,7 +2585,7 @@ void SCIPselectWeightedDownRealRealPtrPtr(
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealPtrPtrInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2599,7 +2599,7 @@ void SCIPselectDownRealPtrPtrInt(
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealPtrPtrInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2615,7 +2615,7 @@ void SCIPselectWeightedDownRealPtrPtrInt(
 /** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealPtrPtrIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2630,7 +2630,7 @@ void SCIPselectDownRealPtrPtrIntInt(
 /** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealPtrPtrIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2647,7 +2647,7 @@ void SCIPselectWeightedDownRealPtrPtrIntInt(
 /** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealLongRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
@@ -2661,7 +2661,7 @@ void SCIPselectDownRealLongRealInt(
 /** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealLongRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
@@ -2677,7 +2677,7 @@ void SCIPselectWeightedDownRealLongRealInt(
 /** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealIntInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2691,7 +2691,7 @@ void SCIPselectDownRealRealIntInt(
 /** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealIntInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2707,7 +2707,7 @@ void SCIPselectWeightedDownRealRealIntInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2721,7 +2721,7 @@ void SCIPselectDownRealRealRealInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2737,7 +2737,7 @@ void SCIPselectWeightedDownRealRealRealInt(
 /** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealRealPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2751,7 +2751,7 @@ void SCIPselectDownRealRealRealPtr(
 /** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealRealPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2767,7 +2767,7 @@ void SCIPselectWeightedDownRealRealRealPtr(
 /** partial sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealPtrPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2780,7 +2780,7 @@ void SCIPselectDownRealPtrPtr(
 /** partial sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealPtrPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
@@ -2795,7 +2795,7 @@ void SCIPselectWeightedDownRealPtrPtr(
 /** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealRealBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2810,7 +2810,7 @@ void SCIPselectDownRealRealRealBoolPtr(
 /** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealRealBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2827,7 +2827,7 @@ void SCIPselectWeightedDownRealRealRealBoolPtr(
 /** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownRealRealRealBoolBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2843,7 +2843,7 @@ void SCIPselectDownRealRealRealBoolBoolPtr(
 /** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownRealRealRealBoolBoolPtr(
    SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
@@ -2861,7 +2861,7 @@ void SCIPselectWeightedDownRealRealRealBoolBoolPtr(
 /** partial sort array of ints in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownInt(
    int*                  intarray,           /**< int array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -2872,7 +2872,7 @@ void SCIPselectDownInt(
 /** partial sort array of ints in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownInt(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -2885,7 +2885,7 @@ void SCIPselectWeightedDownInt(
 /** partial sort of two joint arrays of ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -2897,7 +2897,7 @@ void SCIPselectDownIntInt(
 /** partial sort of two joint arrays of ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -2911,7 +2911,7 @@ void SCIPselectWeightedDownIntInt(
 /** partial sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -2923,7 +2923,7 @@ void SCIPselectDownIntPtr(
 /** partial sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -2937,7 +2937,7 @@ void SCIPselectWeightedDownIntPtr(
 /** partial sort of two joint arrays of ints/reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -2949,7 +2949,7 @@ void SCIPselectDownIntReal(
 /** partial sort of two joint arrays of ints/reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
@@ -2963,7 +2963,7 @@ void SCIPselectWeightedDownIntReal(
 /** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -2976,7 +2976,7 @@ void SCIPselectDownIntIntInt(
 /** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -2991,7 +2991,7 @@ void SCIPselectWeightedDownIntIntInt(
 /** partial sort of three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3004,7 +3004,7 @@ void SCIPselectDownIntIntLong(
 /** partial sort of three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3019,7 +3019,7 @@ void SCIPselectWeightedDownIntIntLong(
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3032,7 +3032,7 @@ void SCIPselectDownIntIntPtr(
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3047,7 +3047,7 @@ void SCIPselectWeightedDownIntIntPtr(
 /** partial sort of three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3060,7 +3060,7 @@ void SCIPselectDownIntIntReal(
 /** partial sort of three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
@@ -3075,7 +3075,7 @@ void SCIPselectWeightedDownIntIntReal(
 /** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -3089,7 +3089,7 @@ void SCIPselectDownIntIntIntPtr(
 /** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -3105,7 +3105,7 @@ void SCIPselectWeightedDownIntIntIntPtr(
 /** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -3119,7 +3119,7 @@ void SCIPselectDownIntIntIntReal(
 /** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -3135,7 +3135,7 @@ void SCIPselectWeightedDownIntIntIntReal(
 /** partial sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntPtrIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3149,7 +3149,7 @@ void SCIPselectDownIntPtrIntReal(
 /** partial sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntPtrIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3165,7 +3165,7 @@ void SCIPselectWeightedDownIntPtrIntReal(
 /** partial sort an array of Longints in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
@@ -3176,7 +3176,7 @@ void SCIPselectDownLong(
 /** partial sort an array of Longints in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
@@ -3189,7 +3189,7 @@ void SCIPselectWeightedDownLong(
 /** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3201,7 +3201,7 @@ void SCIPselectDownLongPtr(
 /** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3215,7 +3215,7 @@ void SCIPselectWeightedDownLongPtr(
 /** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3228,7 +3228,7 @@ void SCIPselectDownLongPtrInt(
 /** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3243,7 +3243,7 @@ void SCIPselectWeightedDownLongPtrInt(
 /** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3257,7 +3257,7 @@ void SCIPselectDownLongPtrRealBool(
 /** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3273,7 +3273,7 @@ void SCIPselectWeightedDownLongPtrRealBool(
 /** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrRealRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3288,7 +3288,7 @@ void SCIPselectDownLongPtrRealRealBool(
 /** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrRealRealBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3305,7 +3305,7 @@ void SCIPselectWeightedDownLongPtrRealRealBool(
 /** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrRealRealIntBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3321,7 +3321,7 @@ void SCIPselectDownLongPtrRealRealIntBool(
 /** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrRealRealIntBool(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3339,7 +3339,7 @@ void SCIPselectWeightedDownLongPtrRealRealIntBool(
 /** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3353,7 +3353,7 @@ void SCIPselectDownLongPtrPtrInt(
 /** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3369,7 +3369,7 @@ void SCIPselectWeightedDownLongPtrPtrInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrPtrIntInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3384,7 +3384,7 @@ void SCIPselectDownLongPtrPtrIntInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrPtrIntInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3401,7 +3401,7 @@ void SCIPselectWeightedDownLongPtrPtrIntInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownLongPtrPtrBoolInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3416,7 +3416,7 @@ void SCIPselectDownLongPtrPtrBoolInt(
 /** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownLongPtrPtrBoolInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
@@ -3433,7 +3433,7 @@ void SCIPselectWeightedDownLongPtrPtrBoolInt(
 /** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownPtrIntIntBoolBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -3449,7 +3449,7 @@ void SCIPselectDownPtrIntIntBoolBool(
 /** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownPtrIntIntBoolBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
@@ -3467,7 +3467,7 @@ void SCIPselectWeightedDownPtrIntIntBoolBool(
 /** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntPtrIntIntBoolBool(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
@@ -3483,7 +3483,7 @@ void SCIPselectDownIntPtrIntIntBoolBool(
 /** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectWeightedDownIntPtrIntIntBoolBool(
    int*                  intarray1,          /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */

@@ -43,7 +43,7 @@ enum SCIP_Confidencelevel
 };
 typedef enum SCIP_Confidencelevel SCIP_CONFIDENCELEVEL;
 
-/** tpye of hashmap: are pointers, reals or ints stored, or unknown */
+/** type of hashmap: are pointers, reals or ints stored, or unknown */
 enum SCIP_Hashmaptype
 {
    SCIP_HASHMAPTYPE_UNKNOWN = 0,    /**< the hashmap did not store a single element yet, type unknown */

@@ -6141,7 +6141,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    }
    if( tightened )
    {
-      SCIPdebugMsg(scip, "%stightened lower bound of variable <%s> in constraint <%s> to %.20g\n", SCIPinProbing(scip) ? "in probing " : "", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "??", bnd);  /*lint !e585*/
+      SCIPdebugMsg(scip, "%stightened lower bound of variable <%s> in constraint <%s> to %.15g\n", SCIPinProbing(scip) ? "in probing " : "", SCIPvarGetName(var), cons != NULL ? SCIPconsGetName(cons) : "??", bnd);  /*lint !e585*/
       ++*nchgbds;
       *result = SCIP_REDUCEDDOM;
       if( cons != NULL )
@@ -6241,14 +6241,14 @@ SCIP_RETCODE propagateBoundsCons(
    assert(result != NULL);
    assert(nchgbds != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    *result = SCIP_DIDNOTRUN;
    *redundant = FALSE;
 
    if( !SCIPconsIsMarkedPropagate(cons) )
       return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -6284,7 +6284,7 @@ SCIP_RETCODE propagateBoundsCons(
    if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
        (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
-      SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
+      SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.15g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
       *result = SCIP_CUTOFF;
@@ -6530,14 +6530,14 @@ SCIP_RETCODE propagateConstraintSides(
     * also add a [-feastol,feastol] range around constraint sides to cope with numerics */
    for( c = 0; c < nconss; ++c )
    {
+      /* skip (just) deleted or disabled constraints */
+      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       if( consdata->exprgraphnode == NULL )
-         continue;
-
-      /* skip (just) deleted or disabled constraints */
-      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsEnabled(conss[c]) )
          continue;
 
       roundmode = SCIPintervalGetRoundingMode();
@@ -8195,9 +8195,8 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
    tryupgrades = havegraphchange;
 
-   /* remove fix vars, do some algebraic manipulation, etc; this loop need to finish, even if a cutoff is found because data
-    * might be unconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc)
-    */
+   /* remove fixed vars, do some algebraic manipulation, etc; this loop needs to finish, even if a cutoff is found, because data
+    * might be inconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc) */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -8629,7 +8628,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
          for( j = 0; j < consdata->nexprtrees; ++j )
          {
             if( j > 0 || consdata->nonlincoefs[j] != 1.0 )
-               SCIPinfoMessage(scip, file, " %+.20g ", consdata->nonlincoefs[j]);
+               SCIPinfoMessage(scip, file, " %+.15g ", consdata->nonlincoefs[j]);
             SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[j], SCIPgetMessagehdlr(scip), file) );
          }
       }
@@ -8649,7 +8648,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
       for( j = 0; j < consdata->nlinvars; ++j )
       {
-         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->lincoefs[j], SCIPvarGetName(consdata->linvars[j]),
+         SCIPinfoMessage(scip, file, " %+.15g <%s>[%c] ", consdata->lincoefs[j], SCIPvarGetName(consdata->linvars[j]),
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_BINARY ? 'B' :
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_INTEGER ? 'I' :
             SCIPvarGetType(consdata->linvars[j]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
