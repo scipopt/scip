@@ -430,17 +430,18 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CONSEXPR_EXPR** children;
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR** vars;
-   SCIP_HASHMAP* vars2idx;
+   SCIP_HASHMAP* expr2idx;
+   SCIP_HASHSET* linexprs;
    SCIP_Real* childcoefs;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
    int* nnonzeroes;
-   int ntranscoefs;
+   SCIP_Real constant;
    int nchildren;
    int nvars;
-   int nexttranscoef;
+   int nextentry;
    int i;
 
    assert(conshdlr != NULL);
@@ -470,167 +471,113 @@ SCIP_RETCODE detectSocNorm(
    nchildren = SCIPgetConsExprExprNChildren(child);
    childcoefs = SCIPgetConsExprExprSumCoefs(child);
 
-   /* check if all children are squares */
-   for( i = 0; i < nchildren; ++i )
-   {
-      if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPow(conshdlr) || SCIPgetConsExprExprPowExponent(children[i]) != 2.0 )
-         return SCIP_OKAY;
-   }
-
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
-   SCIP_CALL( SCIPhashmapCreate(&vars2idx, SCIPblkmem(scip), nchildren) );
+   SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), nchildren) );
+   SCIP_CALL( SCIPhashsetCreate(&linexprs, SCIPblkmem(scip), nchildren) );
 
-   ntranscoefs = 0;
    nvars = 0;
 
-   /* iterate over children and count number of appearing variables and summands (1 for non-sum-expressions) */
+   /* check if all children are squares or linear terms with matching square term */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CONSEXPR_EXPR* squarearg;
-      assert(SCIPgetConsExprExprNChildren(children[i]) == 1);
-
-      squarearg = SCIPgetConsExprExprChildren(children[i])[0];
-
-      if( SCIPgetConsExprExprHdlr(squarearg) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPow(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
-         SCIP_VAR* argauxvar;
+         SCIP_CONSEXPR_EXPR* squarearg = SCIPgetConsExprExprChildren(children[i])[0];
 
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, squarearg, &argauxvar) );
-         assert(argauxvar != NULL);
-
-         if( !SCIPhashmapExists(vars2idx, (void*) argauxvar) )
+         if( !SCIPhashmapExists(expr2idx, (void*) squarearg) )
          {
-            SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) argauxvar, nvars) );
-            ++nvars;
+            SCIP_CALL(SCIPhashmapInsertInt(expr2idx, (void *) squarearg, nvars) );
          }
-         ++ntranscoefs;
+
+         SCIPhashsetRemove(linexprs, (void*) squarearg);
+         ++nvars;
       }
       else
       {
-         SCIP_CONSEXPR_EXPR** argchildren;
-         int nargchildren;
-         int j;
-
-         /* get data of children of square argument (sum expr) */
-         argchildren = SCIPgetConsExprExprChildren(squarearg);
-         nargchildren = SCIPgetConsExprExprNChildren(squarearg);
-
-         for( j = 0; j < nargchildren; ++j )
+         if( !SCIPhashmapExists(expr2idx, (void*) children[i]) )
          {
-            SCIP_VAR* childauxvar;
-
-            /* if the summand is not a variable, create/get the childauxvar, otherwise this just gives the resp. variable */
-            SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, argchildren[j], &childauxvar) );
-            assert(childauxvar != NULL);
-
-            if( !SCIPhashmapExists(vars2idx, (void*) childauxvar) )
-            {
-               SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) childauxvar, nvars) );
-               ++nvars;
-            }
+            SCIP_CALL( SCIPhashsetInsert(linexprs, SCIPblkmem(scip), (void*) children[i]) );
          }
-
-         ntranscoefs += SCIPgetConsExprExprNChildren(squarearg);
       }
    }
 
-   /* add the auxvar to hashmap */
-   SCIP_CALL( SCIPhashmapInsertInt(vars2idx, (void*) auxvar, nvars) );
-   ++ntranscoefs;
+   if( SCIPhashsetGetNElements(linexprs) > 0 )
+   {
+      SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
+      SCIPhashmapFree(&expr2idx);
+      return SCIP_OKAY;
+   }
+
    ++nvars;
 
    /* allocate temporary memory for data to collect */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nchildren+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nchildren+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nvars) );
 
+   for( i = 0; i < nvars-1; ++i )
+   {
+      transcoefs[i] = 1.0;
+      transcoefsidx[i] = i;
+      coefs[i] = childcoefs[i];
+      offsets[i] = 0.0;
+      nnonzeroes[i] = 1;
+   }
 
    /* add data for the auxiliary variable (RHS) */
-   assert(SCIPhashmapExists(vars2idx, (void*) auxvar));
    vars[nvars-1] = auxvar;
-   transcoefs[ntranscoefs-1] = 1.0;
-   transcoefsidx[ntranscoefs-1] = nvars-1;
-   nnonzeroes[nchildren] = 1;
-   coefs[nchildren] = 1.0;
-   offsets[nchildren] = 0.0;
-   nexttranscoef = 0;
+   transcoefs[nvars-1] = 1.0;
+   transcoefsidx[nvars-1] = nvars-1;
+   nnonzeroes[nvars-1] = 1;
+   coefs[nvars-1] = 1.0;
+   offsets[nvars-1] = 0.0;
+
+   nextentry = 0;
+   constant = 0.0;
 
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CONSEXPR_EXPR* squarearg;
+      SCIP_VAR* argauxvar;
 
-      assert(SCIPgetConsExprExprNChildren(children[i]) == 1);
-
-      squarearg = SCIPgetConsExprExprChildren(children[i])[0];
-      coefs[i] = childcoefs[i];
-
-      /* for all but some expression, just make sure the auxiliary variable exists */
-      if( SCIPgetConsExprExprHdlr(squarearg) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPow(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
-         SCIP_VAR* argauxvar;
-         int auxvarpos;
+         SCIP_CONSEXPR_EXPR* squarearg;
 
-         argauxvar = SCIPgetConsExprExprAuxVar(squarearg);
+         squarearg = SCIPgetConsExprExprChildren(children[i])[0];
+         assert(SCIPhashmapGetImageInt(expr2idx, (void*) squarearg) == nextentry);
+
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, squarearg, &argauxvar) );
          assert(argauxvar != NULL);
-         assert(SCIPhashmapExists(vars2idx, (void*) argauxvar));
 
-         /* get position of argauxvar from hashmap */
-         auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) argauxvar);
-         vars[auxvarpos] = argauxvar;
-
-         transcoefs[nexttranscoef] = 1.0;
-         transcoefsidx[nexttranscoef] = auxvarpos;
-         offsets[i] = 0.0;
-         nnonzeroes[i] = 1;
-         ++nexttranscoef;
+         vars[nextentry] = argauxvar;
+         ++nextentry;
       }
-      /* for sum expressions, do the same for all children of the sum */
       else
       {
-         SCIP_CONSEXPR_EXPR** argchildren;
-         SCIP_Real* argcoefs;
-         int nargchildren;
-         int j;
+         int auxvarpos;
 
-         /* get data of children of square argument (sum expr) */
-         argchildren = SCIPgetConsExprExprChildren(squarearg);
-         nargchildren = SCIPgetConsExprExprNChildren(squarearg);
-         argcoefs = SCIPgetConsExprExprSumCoefs(squarearg);
+         assert(SCIPhashmapExists(expr2idx, (void*) children[i]) );
+         auxvarpos = SCIPhashmapGetImageInt(expr2idx, (void*) children[i]);
 
-         for( j = 0; j < nargchildren; ++j )
-         {
-            SCIP_VAR* childauxvar;
-            int auxvarpos;
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, children[i], &argauxvar) );
+         assert(argauxvar != NULL);
 
-            childauxvar = SCIPgetConsExprExprAuxVar(argchildren[j]);
-            assert(childauxvar != NULL);
-            assert(SCIPhashmapExists(vars2idx, (void*) childauxvar));
-
-            /* get position of childauxvar from hashmap */
-            auxvarpos = SCIPhashmapGetImageInt(vars2idx, (void*) childauxvar);
-            vars[auxvarpos] = childauxvar;
-
-            transcoefs[nexttranscoef] = argcoefs[j];
-            transcoefsidx[nexttranscoef] = auxvarpos;
-            ++nexttranscoef;
-         }
-
-         nnonzeroes[i] = nargchildren;
-         offsets[i] = SCIPgetConsExprExprSumConstant(squarearg);
+         offsets[auxvarpos] = 0.5 * childcoefs[i] / coefs[auxvarpos];
+         constant -= SQR(offsets[auxvarpos]);
       }
    }
 
-   assert(nexttranscoef == ntranscoefs-1);
+   assert(nextentry == nvars-1);
 
    *success = TRUE;
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
-         nnonzeroes, SCIPgetConsExprExprSumConstant(child), nvars, nchildren+1, ntranscoefs, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, constant,
+         nvars, nvars, nvars, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
@@ -640,7 +587,8 @@ SCIP_RETCODE detectSocNorm(
 #endif
 
    /* free memory */
-   SCIPhashmapFree(&vars2idx);
+   SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
+   SCIPhashmapFree(&expr2idx);
    SCIPfreeBufferArray(scip, &nnonzeroes);
    SCIPfreeBufferArray(scip, &transcoefsidx);
    SCIPfreeBufferArray(scip, &transcoefs);
