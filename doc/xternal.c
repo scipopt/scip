@@ -1401,25 +1401,23 @@
 
 /**@page DOC How to search the documentation for interface methods
  *
- * If you are looking for a method in order to perform a specific task, there are usually two places to look at:
- * - The file "scip.h" in the file list.
- *   In this main header file, you find all methods that perform "complex" operations that affect or need data from
- *   different components of \SCIP.
- *   For these methods, you always have to provide the \SCIP pointer that is created by SCIPcreate().
- *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
- *   object.
- *   For example, all methods operating on variables are grouped together.
-
- * - The files \ref PUBLICCOREAPI "pub_<...>.h" contain methods that perform "easy" operations that only
- *   affect the corresponding objects.
- *   Usually, with these methods you can access the data of the object.
- *   For example, in "pub_var.h" you find methods to get information about a variable.
+ * If you are looking for a method in order to perform a specific task, the public SCIP API is the place to look:
+ * - The public SCIP API contains interface methods that affect the corresponding objects, either in the core solver or in one of the plugins.
+ * - Plugins are mostly independent from each other, so to use them it is usually enough to browse the Core API.
+ * - If you want to add your own plugins, see the \ref HOWTOADD page for additional information.
+ * - If you are new to SCIP and have a concrete project in mind, looking at the \ref EXAMPLES page may help you
+ *   learn about some basic functions.
+ * - Including scip/scip.h and scip/scipdefplugins.h is usually sufficient for having all
+ *   needed functionality available in a project.
+ * - Note that the private SCIP API contains more complex functions and data structures that fill specialized roles and
+ *   is only for developers. It is not exported to the library and therefore not available in user projects that use the SCIP API.
  *
- * The file "pub_misc.h" contains methods for data structures like priority queues, hash tables, and hash maps,
- * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
- *
- * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding \ref TYPEDEFINITIONS "type_<...>.h".
+ * If, for example, you are looking for information on how to create a problem instance, here are some steps you can take:
+ * - Browse the SCIP Core API and follow the path `Core API > Problem Creation > Global Problem > SCIPcreateProb()`
+ * - Here you can find information on the function's returns, preconditions, postconditions and parameters, as well as related functions.
+ * - If you are unsure of how to use some of the parameters, it is worth looking for a basic version of the function.
+ *   This and other related functions may be found by either browsing neighboring functions and groups in the navigation tree to the left, or in the
+ *   'References' and 'Referenced by' section of the function documentation. In this case, you can find `SCIPcreateProbBasic()`.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
