@@ -258,13 +258,21 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_CONSEXPR_EXPR* simplified;
    SCIP_Bool infeasible;
+   SCIP_Bool changed;
    int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr,
-         (char*) "(8 + 2*(<x> + 1)^2 + 3*(<y> + 4*sin(<x>))^2)^0.5 + 2*(<w> - 1)", NULL, &expr) );
-   normexpr = SCIPgetConsExprExprChildren(expr)[0];
+         (char*) "(8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1)", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   cr_expect(changed);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+   normexpr = SCIPgetConsExprExprChildren(expr)[1];
+
+   SCIPdismantleConsExprExpr(scip, normexpr);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
