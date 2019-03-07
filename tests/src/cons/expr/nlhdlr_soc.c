@@ -287,15 +287,15 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
 
    /* setup expected data */
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[1]->children[0]->children[2]);
-   SCIP_VAR* vars[4] = {x, y, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
+   SCIP_VAR* vars[3] = {x, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
    SCIP_Real coefs[3] = {2.0, 3.0, 1.0};
-   SCIP_Real offsets[3] = {1.0, 2.0, 0.0};
-   SCIP_Real transcoefs[4] = {1.0, 1.0, 4.0, 1.0};
-   int transcoefsidx[4] = {0, 1, 1, 2};
-   int nnonzeroes[3] = {1, 2, 1};
+   SCIP_Real offsets[3] = {1.0, -2.0, 0.0};
+   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   int transcoefsidx[3] = {0, 1, 2};
+   int nnonzeroes[3] = {1, 1, 1};
 
    /* check nlhdlrexprdata*/
-   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 3, 4, 8.0);
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 3, 3, 8.0);
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
