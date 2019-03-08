@@ -74,7 +74,7 @@ void setup(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.01, 1.01, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.07, 0.09, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 1.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -0.9, 0.7, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
@@ -271,8 +271,6 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
    normexpr = SCIPgetConsExprExprChildren(expr)[1];
-
-   SCIPdismantleConsExprExpr(scip, normexpr);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
