@@ -292,7 +292,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[1]->children[0]->children[2]);
+   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(normexpr->children[0]->children[2]);
    SCIP_VAR* vars[3] = {x, sinauxvar, SCIPgetConsExprExprAuxVar(normexpr)};
    SCIP_Real coefs[3] = {2.0, 3.0, 1.0};
    SCIP_Real offsets[3] = {1.0, -2.0, 0.0};

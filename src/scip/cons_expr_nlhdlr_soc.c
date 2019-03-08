@@ -475,6 +475,10 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), nchildren) );
    SCIP_CALL( SCIPhashsetCreate(&linexprs, SCIPblkmem(scip), nchildren) );
 
+   /* we create coefs array here already, since we have to fill it in first loop in case of success */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren) );
+
+
    nvars = 0;
 
    /* check if all children are squares or linear terms with matching square term */
@@ -488,6 +492,8 @@ SCIP_RETCODE detectSocNorm(
          {
             SCIP_CALL(SCIPhashmapInsertInt(expr2idx, (void *) squarearg, nvars) );
          }
+
+         coefs[nvars] = childcoefs[i];
 
          SCIPhashsetRemove(linexprs, (void*) squarearg);
          ++nvars;
@@ -503,6 +509,7 @@ SCIP_RETCODE detectSocNorm(
 
    if( SCIPhashsetGetNElements(linexprs) > 0 )
    {
+      SCIPfreeBufferArray(scip, &coefs);
       SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
       SCIPhashmapFree(&expr2idx);
       return SCIP_OKAY;
@@ -512,31 +519,25 @@ SCIP_RETCODE detectSocNorm(
 
    /* allocate temporary memory for data to collect */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nvars) );
 
-   for( i = 0; i < nvars-1; ++i )
+   for( i = 0; i < nvars; ++i )
    {
       transcoefs[i] = 1.0;
       transcoefsidx[i] = i;
-      coefs[i] = childcoefs[i];
       offsets[i] = 0.0;
       nnonzeroes[i] = 1;
    }
 
    /* add data for the auxiliary variable (RHS) */
    vars[nvars-1] = auxvar;
-   transcoefs[nvars-1] = 1.0;
-   transcoefsidx[nvars-1] = nvars-1;
-   nnonzeroes[nvars-1] = 1;
    coefs[nvars-1] = 1.0;
-   offsets[nvars-1] = 0.0;
 
    nextentry = 0;
-   constant = 0.0;
+   constant = SCIPgetConsExprExprSumConstant(child);
 
    /* found SOC structure -> create required auxiliary variables */
    for( i = 0; i < nchildren; ++i )
@@ -567,7 +568,7 @@ SCIP_RETCODE detectSocNorm(
          assert(argauxvar != NULL);
 
          offsets[auxvarpos] = 0.5 * childcoefs[i] / coefs[auxvarpos];
-         constant -= SQR(offsets[auxvarpos]);
+         constant -= coefs[auxvarpos] * SQR(offsets[auxvarpos]);
       }
    }
 
