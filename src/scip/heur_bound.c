@@ -15,7 +15,6 @@
 
 /**@file   heur_bound.c
  * @ingroup DEFPLUGINS_HEUR
- * @ingroup DEFPLUGINS_HEUR
  * @brief  heuristic which fixes all integer variables to a bound (lower/upper) and solves the remaining LP
  * @author Gerald Gamrath
  *
