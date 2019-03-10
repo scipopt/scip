@@ -1027,7 +1027,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimationmethod", "select estimation method",
                &eventhdlrdata->estimationparam, FALSE, 't', "t", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/progressmeasure", "select progress measure",
-               &eventhdlrdata->progressparam, FALSE, 'f', "fgru", NULL, NULL) );
+               &eventhdlrdata->progressparam, FALSE, 'u', "fgru", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
       &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
