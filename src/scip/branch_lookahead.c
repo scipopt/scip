@@ -5417,11 +5417,13 @@ SCIP_RETCODE selectVarStart(
                //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
                //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                //    bestscore, firstscore);
-               printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
-                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
-                  bestscore, firstscore, SCIPgetCutoffbound(scip) - lpobjval);
+
+               if( candidatelist->ncandidates > 1 )
+                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
+                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
+                     bestscore, firstscore, SCIPgetCutoffbound(scip) - lpobjval);
             }
             else
                assert(!performedlab);
