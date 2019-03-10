@@ -77,6 +77,12 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define FORECAST_LINEAR                   'l' /**< use linear trends based on double exponential smoothing for forecasting */
 #define FORECAST_WINDOW                   'w' /**< use either linear or quadratic trends within window for forecasting */
 
+#define TABLE_NAME              "restart"
+#define TABLE_DESC              "restart statistics table"
+#define TABLE_POSITION          22000           /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT /**< output of the statistics table is only printed from this stage onwards */
+
+
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
 {
@@ -956,6 +962,22 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    return SCIP_OKAY;
 }
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputRestart)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLR* eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlr != NULL);
+
+   SCIPinfoMessage(scip, file, "Tree Estimation    :\n");
+   SCIPinfoMessage(scip, file, "  progress         : %.5f\n", getCurrentProgress(eventhdlrdata->ratioprogress));
+   SCIPinfoMessage(scip, file, "  estim. nodes     : %.0f\n", SCIPgetNNodes(scip) + forecastRemainingNodes(scip, eventhdlrdata));
+   SCIPinfoMessage(scip, file, "  estim. nodes (bt): %.0f\n", estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim));
+
+   return SCIP_OKAY;
+}
+
 /** creates event handler for restart event */
 SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1030,6 +1052,12 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
 
+
+   /* include statistics table */
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
+         NULL, NULL, NULL, NULL,
+         NULL, NULL, tableOutputRestart,
+         NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    return SCIP_OKAY;
 }
