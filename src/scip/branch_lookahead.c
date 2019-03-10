@@ -121,6 +121,7 @@
 #define DEFAULT_MINWEIGHT                    0.8   /**< default value for the weight of the minimum in the convex combination of two
                                                     *   child gains (taken from the paper) */
 #define DEFAULT_DBFACTOR                     1.0   /**< factor to weight proven dual bound from 2nd level vs. LP dual bound in 'l' scoring */
+#define DEFAULT_WORSEFACTOR                 -1.0   /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
 
 #ifdef SCIP_DEBUG
 /* Adjusted debug message that also prints the current probing depth. */
@@ -1062,6 +1063,7 @@ typedef struct
    char                  scoringscoringfunction;/**< scoring function for FSB scoring */
    SCIP_Real             minweight;          /**< weight of the min gain of two child problems */
    SCIP_Real             dbfactor;           /**< factor to weight proven dual bound from 2nd level vs. LP dual bound in 'l' scoring */
+   SCIP_Real             worsefactor;        /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
 } CONFIGURATION;
 
 
@@ -4186,6 +4188,7 @@ SCIP_RETCODE filterCandidates(
       if( isBranchFurther(status, SCIPgetProbingDepth(scip) == 0) )
       {
          int nusedcands;
+         int i;
 
          if( SCIPgetProbingDepth(scip) == 0 || config->maxndeepercands == 0 )
             nusedcands = MIN(config->maxncands, candidatelist->ncandidates);
@@ -4195,6 +4198,17 @@ SCIP_RETCODE filterCandidates(
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%s", "Filter the candidates by their score.\n");
 
          sortFirstCandidatesByScore(scip, candidatelist, scorecontainer, nusedcands);
+
+         if( config->worsefactor >= 0 )
+         {
+            for( i = 1; i < nusedcands; ++i )
+            {
+               if( scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)] >
+                  config->worsefactor * scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)] )
+                  break;
+            }
+            nusedcands = i;
+         }
 
          SCIP_CALL( candidateListKeep(scip, candidatelist, nusedcands) );
 
@@ -4467,7 +4481,7 @@ SCIP_RETCODE executeBranchingRecursive(
             }
 
             /* the status may have changed because of FSB to get the best candidates */
-            if( isBranchFurther(deeperstatus, FALSE) )
+            if( isBranchFurther(deeperstatus, FALSE) && candidatelist->ncandidates > 1 )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Now the objval is <%g>\n", branchingresult->objval);
 
@@ -6122,6 +6136,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/dbfactor",
          "factor to weight proven dual bound from 2nd level vs. LP dual bound in 'l' scoring",
          &branchruledata->config->dbfactor, TRUE, DEFAULT_DBFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/lookahead/worsefactor",
+         "if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable)",
+         &branchruledata->config->worsefactor, TRUE, DEFAULT_WORSEFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
