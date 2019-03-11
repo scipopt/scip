@@ -53,7 +53,7 @@ localhooks/
 src/scip/githash.c
 src/scip/buildflags.c
 settings/
-!coverage/settings
+!check/coverage/settings
 unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
