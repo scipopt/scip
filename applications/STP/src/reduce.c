@@ -152,6 +152,56 @@ SCIP_RETCODE nvreduce_sl(
    return SCIP_OKAY;
 }
 
+
+/* removes parallel edges */
+SCIP_RETCODE deleteMultiedges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nnodes = g->knots;
+   int* count;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &count, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      count[k] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int enext;
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         count[head]++;
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = enext )
+      {
+         const int head = g->head[e];
+         enext = g->oeat[e];
+
+         if( count[head] > 1 )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+            return SCIP_ERROR;
+         }
+         count[head]--;
+
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         assert(count[g->head[e]] == 0);
+   }
+
+   SCIPfreeBufferArray(scip, &count);
+
+   return SCIP_OKAY;
+}
+
 /* remove unconnected vertices, overwrites g->mark */
 SCIP_RETCODE level0(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -182,6 +232,10 @@ SCIP_RETCODE level0(
    }
    return SCIP_OKAY;
 }
+
+
+
+
 
 /* remove unconnected vertices, keep g->mark */
 SCIP_RETCODE level0save(
@@ -1906,6 +1960,11 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( level0(scip, graph) );
+
+#if 0
+   if( level == 2 )
+      SCIP_CALL( deleteMultiedges(scip, graph) );
+#endif
 
    /* if no reduction methods available, return */
    if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG )

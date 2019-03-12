@@ -329,6 +329,7 @@ extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
 
 /* reduce.c
  */
+extern SCIP_RETCODE deleteMultiedges(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0infeas(SCIP*, GRAPH*, SCIP_Bool*);
