@@ -5376,10 +5376,6 @@ SCIP_RETCODE assignFixedProbabilitiesBranching(
    SCIP_NODE*            parent              /**< parent node */
    )
 {
-   SCIP_Real gains[2];
-   SCIP_COL* varcol;
-   SCIP_Bool leftbetterthanright;
-   SCIP_BRANCHRATIO branchratio;
    SCIP_Real fractionleft;
    SCIP_Real fractionright;
 
@@ -5387,60 +5383,78 @@ SCIP_RETCODE assignFixedProbabilitiesBranching(
    assert(leftchild != NULL);
    assert(rightchild != NULL);
 
-   /* check if strong branching result is available, otherwise use pseudo cost estimation */
-   varcol = SCIPvarGetCol(var);
-   if( SCIPcolGetStrongbranchNode(varcol) == stat->nnodes )
-   {
-      SCIP_Real up;
-      SCIP_Real down;
-      SCIP_Real lpsolval;
-      SCIP_Real solval;
-      SCIPcolGetStrongbranchLast(varcol, &down, &up, NULL, NULL, &solval, &lpsolval);
+   /* use 1/2 as fraction if no valid branch ratio could be computed */
+   fractionleft = 0.5;
+   fractionright = 0.5;
 
-      gains[0] = MAX(down - lpsolval, 0.0);
-      gains[1] = MAX(up - lpsolval, 0.0);
+   /* use inferences as a substitution for pseudo costs */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      SCIP_Real infdown;
+      SCIP_Real infup;
+
+      infdown = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS) + 1.0;
+      infup = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS) + 1.0;
+
+      fractionleft = infdown/(infdown + infup);
+      fractionright = 1.0 - fractionleft;
    }
-   else
+   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
-      SCIP_Real solvaldeltadown;
-      SCIP_Real solvaldeltaup;
+      SCIP_Real gains[2];
+      SCIP_BRANCHRATIO branchratio;
+      SCIP_COL* varcol;
+      SCIP_Bool leftbetterthanright;
 
-      solvaldeltadown = SCIPsetFloor(set, val) - val;
-      solvaldeltaup = SCIPsetCeil(set, val) - val;
-
-      gains[0] = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
-      gains[1] = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
-   }
-
-   if( gains[0] > gains[1] )
-      leftbetterthanright = TRUE;
-   else
-      leftbetterthanright = FALSE;
-
-   /* compute a branch ratio with the smaller gain passed as first argument, and the larger gain second */
-   SCIPbranchComputeVarRatio(set, NULL, gains[leftbetterthanright], gains[1 - leftbetterthanright], 100, &branchratio);
-
-   /* compute fractions for valid branch ratios */
-   if( branchratio.valid )
-   {
-      if( ! leftbetterthanright )
+      /* check if strong branching result is available, otherwise use pseudo cost estimation */
+      varcol = SCIPvarGetCol(var);
+      if( SCIPcolGetStrongbranchNode(varcol) == stat->nnodes )
       {
-         fractionleft = 1.0/branchratio.upratio;
-         fractionright = 1 - fractionleft;
-         assert(fractionleft >= fractionright);
+         SCIP_Real up;
+         SCIP_Real down;
+         SCIP_Real lpsolval;
+         SCIP_Real solval;
+         SCIPcolGetStrongbranchLast(varcol, &down, &up, NULL, NULL, &solval, &lpsolval);
+
+         gains[0] = MAX(down - lpsolval, 0.0);
+         gains[1] = MAX(up - lpsolval, 0.0);
       }
       else
       {
-         fractionright = 1.0/branchratio.upratio;
-         fractionleft = 1 - fractionright;
-         assert(fractionleft <= fractionright);
+         SCIP_Real solvaldeltadown;
+         SCIP_Real solvaldeltaup;
+
+         solvaldeltadown = SCIPsetFloor(set, val) - val;
+         solvaldeltaup = SCIPsetCeil(set, val) - val;
+
+         gains[0] = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
+         gains[1] = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
       }
-   }
-   else
-   {
-      /* use 1/2 as fraction if no valid branch ratio could be computed */
-      fractionleft = 0.5;
-      fractionright = 0.5;
+
+      if( gains[0] > gains[1] )
+         leftbetterthanright = TRUE;
+      else
+         leftbetterthanright = FALSE;
+
+      /* compute a branch ratio with the smaller gain passed as first argument, and the larger gain second */
+      SCIPbranchComputeVarRatio(set, NULL, gains[leftbetterthanright], gains[1 - leftbetterthanright], 100, &branchratio);
+
+      /* compute fractions for valid branch ratios */
+      if( branchratio.valid )
+      {
+         if( ! leftbetterthanright )
+         {
+            fractionleft = 1.0/branchratio.upratio;
+            fractionright = 1 - fractionleft;
+            assert(fractionleft >= fractionright);
+         }
+         else
+         {
+            fractionright = 1.0/branchratio.upratio;
+            fractionleft = 1 - fractionright;
+            assert(fractionleft <= fractionright);
+         }
+      }
    }
 
    nodeAssignFixedProbability(leftchild, parent->probability * fractionleft);

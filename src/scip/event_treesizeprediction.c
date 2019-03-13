@@ -962,6 +962,12 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    assert(event != NULL);
    assert(scip != NULL);
 
+   /* do not react on node events when SCIP is restarting because children may be deleted before
+    * a SCIP_NODEEVENT_SOLVED has been caught on the parent node
+    */
+   if( SCIPisInRestart(scip) )
+      return SCIP_OKAY;
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    //assert(eventhdlrdata->opennodes != NULL);
@@ -1001,7 +1007,7 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    {
       eventhdlrdata->nodesfound += 1;
 
-      /* We initialise data for this node */
+      /* We initialize data for this node */
       SCIPdebugMessage("Allocating memory for node %"SCIP_LONGINT_FORMAT"\n", scipnodenumber);
       SCIP_CALL( SCIPallocMemory(scip, &eventnode) );
       eventnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
