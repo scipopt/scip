@@ -5504,6 +5504,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real estimate;
    SCIP_NODE* upchildlocal;
    SCIP_NODE* downchildlocal;
+   SCIP_NODE* eqchildlocal;
 
    SCIP_Real downub;
    SCIP_Real fixval;
@@ -5517,12 +5518,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(var != NULL);
 
    /* initialize children pointer */
-   if( downchild != NULL )
-      *downchild = NULL;
-   if( eqchild != NULL )
-      *eqchild = NULL;
-   if( upchild != NULL )
-      *upchild = NULL;
+   downchildlocal = NULL;
+   eqchildlocal = NULL;
+   upchildlocal = NULL;
 
    /* store whether a valid value was given for branching */
    validval = (val != SCIP_INVALID);  /*lint !e777 */
@@ -5760,8 +5758,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-      if( downchild != NULL )
-         *downchild = node;
       downchildlocal = node;
    }
 
@@ -5786,8 +5782,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-      if( eqchild != NULL )
-         *eqchild = node;
+      eqchildlocal = node;
    }
 
    if( uplb != SCIP_INVALID )    /*lint !e777*/
@@ -5806,14 +5801,23 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-      if( upchild != NULL )
-         *upchild = node;
 
       upchildlocal = node;
    }
 
-   SCIP_CALL( assignFixedProbabilitiesBranching(set, stat, var, val, downchildlocal, upchildlocal, tree->focusnode) );
+   /* ensure that at least two-way branching is performed */
+   assert(downub != SCIP_INVALID || uplb != SCIP_INVALID);
+   assert(downchildlocal != NULL || (eqchildlocal != NULL && upchildlocal != NULL));
+   assert(upchildlocal != NULL || (eqchildlocal != NULL && downchildlocal != NULL));
 
+   SCIP_CALL( assignFixedProbabilitiesBranching(set, stat, var, val, downchildlocal != NULL ? downchildlocal : eqchildlocal, upchildlocal != NULL ? upchildlocal : eqchildlocal, tree->focusnode) );
+
+   if( upchild != NULL )
+      *upchild = upchildlocal;
+   if( eqchild != NULL )
+      *eqchild = eqchildlocal;
+   if( downchild != NULL )
+      *downchild = downchildlocal;
 
    return SCIP_OKAY;
 }
