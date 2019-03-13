@@ -302,8 +302,8 @@ extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);
 extern SCIP_RETCODE   graph_voronoiWithRadius(SCIP* scip, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
-extern SCIP_Real graph_sdWalks(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*);
-extern SCIP_Real graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
+extern SCIP_Bool graph_sdWalks(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*);
+extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 
 
 /* grphmcut.c
@@ -349,7 +349,7 @@ extern void    reduce_ansAdv(SCIP*, GRAPH*, int*, int*, SCIP_Bool);
 extern void    reduce_ansAdv2(SCIP*, GRAPH*, int*, int*);
 extern void    reduce_nnp(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
-extern SCIP_RETCODE    reduce_sdWalk(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
+extern SCIP_RETCODE    reduce_sdWalk(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalk2(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdspSap(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_sd(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);

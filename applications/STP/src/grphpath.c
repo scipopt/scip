@@ -344,7 +344,6 @@ inline static void correctXwalk(
    int* state,
    int* count,    /* pointer to store the number of elements on the heap */
    SCIP_Real*  pathdist,
-   int*   pathedge,
    int    l,
    int    e,
    SCIP_Real newcost
@@ -355,9 +354,6 @@ inline static void correctXwalk(
    int    j;
 
    pathdist[l] = newcost;
-
-   if( pathedge != NULL )
-      pathedge[l] = e;
 
    if (state[l] == UNKNOWN)
    {
@@ -845,10 +841,11 @@ void graph_sdPaths(
 
 
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
-SCIP_Real graph_sdWalks(
+SCIP_Bool graph_sdWalks(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
+   const int*            termmark,           /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise)*/
    SCIP_Real             distlimit,          /**< distance limit of the search */
    int                   start,              /**< start */
    int                   end,                /**< end */
@@ -863,6 +860,8 @@ SCIP_Real graph_sdWalks(
 {
    int count;
    int nchecks;
+   SCIP_Bool success = FALSE;
+   const int edgelimit1 = edgelimit / 2;
 
    assert(g != NULL);
    assert(heap != NULL);
@@ -877,7 +876,7 @@ SCIP_Real graph_sdWalks(
    *nvisits = 0;
 
    if( g->grad[start] == 0 || g->grad[end] == 0 )
-      return FARAWAY;
+      return FALSE;
 
    assert(g->mark[start] && g->mark[end]);
 
@@ -894,24 +893,24 @@ SCIP_Real graph_sdWalks(
    {
       const int m = g->head[e];
 
-      if( g->mark[m] && (distlimit >= cost[e]) )
+      if( g->mark[m] && SCIPisLE(scip, cost[e], distlimit) )
       {
          assert(!visited[m]);
 
          visitlist[(*nvisits)++] = m;
          visited[m] = TRUE;
 
-         if( Is_term(g->term[m]) )
+         if( termmark[m] != 0 )
          {
             const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
-            correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
+            correctXwalk(scip, heap, state, &count, dist, m, e, newcost);
          }
          else
          {
             correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
          }
 
-         if( ++nchecks > edgelimit )
+         if( ++nchecks > edgelimit1 )
             break;
       }
    }
@@ -924,7 +923,7 @@ SCIP_Real graph_sdWalks(
       assert(k != end && k != start);
       assert(SCIPisLE(scip, dist[k], distlimit));
 
-      if( Is_term(g->term[k]) )
+      if( termmark[k] == 2 )
          state[k] = CONNECT;
       else
          state[k] = UNKNOWN;
@@ -936,9 +935,15 @@ SCIP_Real graph_sdWalks(
 
          if( (state[m] != CONNECT) && g->mark[m] )
          {
-            const SCIP_Real distnew = dist[k] + cost[e];
+            SCIP_Real distnew = dist[k] + cost[e];
 
-            if( (distnew <= distlimit) && (distnew < dist[m]) )
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( termmark[m] != 0 )
+               distnew = MAX(distnew - g->prize[m], 0.0);
+
+            if( distnew < dist[m] )
             {
                if( !visited[m] )
                {
@@ -949,20 +954,12 @@ SCIP_Real graph_sdWalks(
                /* finished already? */
                if( m == end )
                {
-                  nchecks = edgelimit;
-                  dist[end] = distnew;
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
                   break;
                }
 
-               if( Is_term(g->term[m]) )
-               {
-                  const SCIP_Real newcost = MAX(distnew - g->prize[m], 0.0);
-                  correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
-               }
-               else
-               {
-                  correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
-               }
+               correctXwalk(scip, heap, state, &count, dist, m, e, distnew);
             }
          }
          nchecks++;
@@ -970,12 +967,12 @@ SCIP_Real graph_sdWalks(
    }
 
    g->mark[start] = TRUE;
-   return dist[end];
+   return success;
 }
 
 
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
-SCIP_Real graph_sdWalksExt(
+SCIP_Bool graph_sdWalksExt(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -996,6 +993,8 @@ SCIP_Real graph_sdWalksExt(
 {
    int count;
    int nchecks;
+   SCIP_Bool success = FALSE;
+   const int edgelimit1 = edgelimit / 2;
 
    assert(g != NULL);
    assert(heap != NULL);
@@ -1010,7 +1009,7 @@ SCIP_Real graph_sdWalksExt(
    *nvisits = 0;
 
    if( g->grad[start] == 0 || g->grad[end] == 0 )
-      return FARAWAY;
+      return FALSE;
 
    assert(g->mark[start] && g->mark[end]);
 
@@ -1027,7 +1026,7 @@ SCIP_Real graph_sdWalksExt(
    {
       const int m = g->head[e];
 
-      if( g->mark[m] && (distlimit >= cost[e]) )
+      if( g->mark[m] && SCIPisLE(scip, cost[e], distlimit) )
       {
          assert(!visited[m]);
 
@@ -1036,7 +1035,7 @@ SCIP_Real graph_sdWalksExt(
          sdwalk_update(g, m, start, maxnprevs, prevterms, nprevterms);
          correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
 
-         if( ++nchecks > edgelimit )
+         if( ++nchecks > edgelimit1 )
             break;
       }
    }
@@ -1060,11 +1059,17 @@ SCIP_Real graph_sdWalksExt(
 
          if( g->mark[m] )
          {
-            const SCIP_Real distnew = dist[k] + cost[e];
+            SCIP_Real distnew = dist[k] + cost[e];
 
             assert(state[m] != CONNECT);
 
-            if( (distnew <= distlimit) && (distnew < dist[m]) )
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( Is_term(g->term[m]) )
+               distnew = MAX(distnew - g->prize[m], 0.0);
+
+            if( distnew < dist[m] )
             {
                const SCIP_Bool mvisited = visited[m];
                if( !mvisited )
@@ -1076,26 +1081,16 @@ SCIP_Real graph_sdWalksExt(
                /* finished already? */
                if( m == end )
                {
-                  nchecks = edgelimit;
-                  dist[end] = distnew;
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
                   break;
                }
 
-               if( Is_term(g->term[m]) )
-               {
-                  const SCIP_Real newcost = MAX(distnew - g->prize[m], 0.0);
+               if( Is_term(g->term[m]) && sdwalk_conflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
+                  continue;
 
-                  if( sdwalk_conflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
-                     continue;
-
-                  sdwalk_update(g, m, k, maxnprevs, prevterms, nprevterms);
-                  correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
-               }
-               else
-               {
-                  sdwalk_update(g, m, k, maxnprevs, prevterms, nprevterms);
-                  correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
-               }
+               sdwalk_update(g, m, k, maxnprevs, prevterms, nprevterms);
+               correctXwalk(scip, heap, state, &count, dist, m, e, distnew);
             }
          }
          nchecks++;
@@ -1103,7 +1098,7 @@ SCIP_Real graph_sdWalksExt(
    }
 
    g->mark[start] = TRUE;
-   return dist[end];
+   return success;
 }
 
 
@@ -1200,7 +1195,7 @@ SCIP_Bool graph_sdWalksConnected(
                if( Is_term(g->term[m]) )
                {
                   const SCIP_Real newcost = distnew - g->prize[m];
-                  correctXwalk(scip, heap, state, &count, dist, NULL, m, e, newcost);
+                  correctXwalk(scip, heap, state, &count, dist, m, e, newcost);
                }
                else
                {

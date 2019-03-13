@@ -52,6 +52,44 @@
 
 SCIP_Bool show;
 
+enum PC_REDTYPE {pc_sdc, pc_sdw1, pc_sdw2, pc_bd3};
+
+static
+int getWorkLimits_pc(
+   const GRAPH* g,
+   int round,
+   enum PC_REDTYPE redtype
+)
+{
+   const int nedges = g->edges;
+   int limit = 0;
+
+   assert(round >= 0);
+
+   switch (redtype)
+   {
+   case pc_sdc:
+      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
+      break;
+   case pc_sdw1:
+      limit = STP_RED_SDSPBOUND2;
+      break;
+   case pc_sdw2:
+      limit = STP_RED_SDSPBOUND2;
+      break;
+   case pc_bd3:
+      limit = STP_RED_BD3BOUND;
+      break;
+   default:
+      assert(0);
+      limit = 0;
+   }
+   //limit = (int) limit * log(nedges);
+
+   return limit;
+}
+
+
 /** print reduction information */
 static
 void reduceStatsPrint(
@@ -1461,7 +1499,7 @@ SCIP_RETCODE redLoopPc(
       if( sdc || extensive )
       {
          SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
-               ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL) );
+               getWorkLimits_pc(g, rounds, pc_sdc), NULL) );
 
          if( sdcnelims <= reductbound )
             sdc = FALSE;
@@ -1475,11 +1513,13 @@ SCIP_RETCODE redLoopPc(
       {
          int sdwnelims2 = 0;
 
-         SCIP_CALL( reduce_sdWalk(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
-         if( show && dualascent ) printf("SDw: %d \n", sdwnelims);
+         SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+         if( show && dualascent )
+            printf("SDw: %d \n", sdwnelims);
 
-         SCIP_CALL(reduce_sdWalk2(scip, STP_RED_SDSPBOUND2, NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
-         if( show && dualascent ) printf("SDw2: %d \n", sdwnelims2);
+         SCIP_CALL(reduce_sdWalk2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+         if( show && dualascent )
+            printf("SDw2: %d \n", sdwnelims2);
          sdwnelims += sdwnelims2;
 
          if( sdwnelims <= reductbound )
@@ -1495,7 +1535,7 @@ SCIP_RETCODE redLoopPc(
 
       if( bd3 && dualascent )
       {
-         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND, &fix) );
+         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, getWorkLimits_pc(g, rounds, pc_bd3), &fix) );
          if( bd3nelims <= reductbound )
          {
             bd3 = FALSE;
@@ -1503,7 +1543,7 @@ SCIP_RETCODE redLoopPc(
          else
          {
             SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-            SCIP_CALL( reduce_sdWalk(scip, ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+            SCIP_CALL( reduce_sdWalk(scip, ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
          }
 
          if( show && dualascent ) printf("bd3: %d \n", bd3nelims);
