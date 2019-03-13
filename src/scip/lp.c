@@ -11370,6 +11370,30 @@ void lpNumericalTroubleMessage(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
+static
+SCIP_RETCODE ignoreInstability(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
+   SCIP_Bool*            success             /**< was instability successfully ignored */
+   )
+{
+   SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, success) );
+
+   if( *success )
+   {
+      lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
+      if( !set->lp_checkdualfeas )
+         lp->dualfeasible = TRUE;
+      if( !set->lp_checkprimfeas )
+         lp->primalchecked = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 #define FEASTOLTIGHTFAC 0.001
 /** solves the LP with the given LP algorithm, and tries to resolve numerical problems */
 static
@@ -11479,12 +11503,10 @@ SCIP_RETCODE lpSolveStable(
 
    if( !set->lp_checkstability )
    {
-      SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+      SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
       if( success )
-      {
-         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
          return SCIP_OKAY;
-      }
    }
 
    /* In the following, whenever the LP iteration limit is exceeded in an LP solving call, we leave out the
@@ -11508,12 +11530,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
       }
    }
@@ -11537,12 +11557,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
 
          /* reset scaling */
@@ -11569,12 +11587,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
 
          /* reset presolving */
@@ -11619,12 +11635,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
 
          /* reset feasibility tolerance */
@@ -11662,12 +11676,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
       }
    }
@@ -11685,12 +11697,10 @@ SCIP_RETCODE lpSolveStable(
 
       if( !set->lp_checkstability )
       {
-         SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+         SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
          if( success )
-         {
-            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
             return SCIP_OKAY;
-         }
       }
 
       /* solve again with opposite scaling and other simplex */
@@ -11707,12 +11717,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
 
          /* reset scaling */
@@ -11734,12 +11742,10 @@ SCIP_RETCODE lpSolveStable(
 
          if( !set->lp_checkstability )
          {
-            SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+            SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
             if( success )
-            {
-               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
-            }
          }
 
          /* reset presolving */
@@ -11774,12 +11780,10 @@ SCIP_RETCODE lpSolveStable(
 
             if( !set->lp_checkstability )
             {
-               SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
+               SCIP_CALL( ignoreInstability(lp, set, messagehdlr, stat, lpalgo, &success) );
+
                if( success )
-               {
-                  lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                   return SCIP_OKAY;
-               }
             }
 
             /* reset feasibility tolerance */
