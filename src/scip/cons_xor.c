@@ -36,7 +36,7 @@
  * @todo add offset for activity which might allow to handle intvar in a more unified way
  *       (right now, we do not remove fixed variables from the constraint, because we must ensure that the intvar gets
  *       the correct value in the end)
- * @todo check if preprocessConstraintPairs can also be executed for non-aritficial intvars (after the previous changes)
+ * @todo check if preprocessConstraintPairs can also be executed for non-artificial intvars (after the previous changes)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4030,7 +4030,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          if( redundant )
          {
             /* fix or aggregate the intvar, if it exists */
-            if( consdata1->intvar != NULL )
+            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
             {
                /* we have var0 + var1 - 2 * intvar = 1, and aggregated var1 = 1 - var0,
                 * thus, intvar is always 0 */
