@@ -242,7 +242,11 @@ mpq_t* RgetGMP(
    SCIP_Rational*  r                   /**< the rational */
    )
 {
+#ifndef NDEBUG
+   return &(r->r->backend().value().data());
+#else
    return &(r->r->backend().data());
+#endif
 }
 
 void RsetGMP(
@@ -317,6 +321,7 @@ void Rset(
    )
 {
    assert(res != NULL);
+   assert(res->r != NULL);
 
    *(res->r) = *(src->r);
    res->isinf = src->isinf;
@@ -448,7 +453,7 @@ void Rdiff(
    else if( op1->isinf )
       Rset(res, op1);
    else if( op2->isinf )
-      Rset(res, op2);
+      Rneg(res, op2);
    else
    {
       res->isinf = FALSE;
@@ -863,7 +868,11 @@ SCIP_Bool RisIntegral(
 {
    assert(r != NULL);
 
+#ifndef NDEBUG
+   return !(r->isinf) && (mpz_cmp_ui(&r->r->backend().value().data()->_mp_den, 1) == 0);
+#else
    return !(r->isinf) && (denominator(*r->r) == 1);
+#endif
 }
 
 SCIP_Bool RisFpRepresentable(
@@ -928,7 +937,11 @@ SCIP_Real RgetRealRelax(
    if( r->isinf )
       return (r->r->sign() * SCIP_DEFAULT_INFINITY);
 
-   current = SCIPintervalGetRoundingMode();
+   SCIPerrorMessage("real relaxation not implemented yet, returning approximation instead \n");
+
+   return RgetRealApprox(r);
+
+   /* current = SCIPintervalGetRoundingMode();
    if( current != roundmode )
    {
       switch(roundmode)
@@ -947,19 +960,19 @@ SCIP_Real RgetRealRelax(
       }
    }
    nom = mpz_get_d(numerator(*r->r).backend().data());
-   denom = mpz_get_d(denominator(*r->r).backend().data());
+   denom = mpz_get_d(denominator(*r->r).backend().data()); */
    //printf("computing %f/%f \n", nom, denom);
 
    //printf("compare with mpq value: %.*e \n", __DBL_DECIMAL_DIG__, mpq_get_d(r->r.backend().data()));
 
-   realapprox = nom/denom;
+   /* realapprox = nom/denom;
 
    if( current != roundmode )
       SCIPintervalSetRoundingMode(current);
 
    // printf("%.*e , Roundmode %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode );
 
-   return realapprox;
+   return realapprox; */
 }
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */

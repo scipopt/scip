@@ -124,7 +124,7 @@ SCIP_Rational* Rcreate(
    BMS_BLKMEM*           buf
    );
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
 /** create a rational from an mpq_t */
 EXTERN
 SCIP_Rational* RcreateGMP(

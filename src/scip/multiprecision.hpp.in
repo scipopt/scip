@@ -11,7 +11,14 @@
 
 #if @SCIP_HAVE_GMP@
 #include <boost/multiprecision/gmp.hpp>
-using Rational = boost::multiprecision::mpq_rational;
+#include <boost/multiprecision/debug_adaptor.hpp>
+using namespace boost::multiprecision;
+
+#if @USE_DEBUG_ADAPTOR@
+using Rational = boost::multiprecision::number<debug_adaptor<gmp_rational>>;
+#else
+using Rational = mpq_rational;
+#endif
 using Float100 = boost::multiprecision::mpf_float_100;
 using Float500 = boost::multiprecision::mpf_float_500;
 using Float1000 = boost::multiprecision::mpf_float_1000;
