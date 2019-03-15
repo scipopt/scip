@@ -170,6 +170,9 @@ Interface changes
   branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
   parameters only have effect if the lnscheck parameter is set to TRUE.
 
+- Added parameter cons/linear/maxmultiaggrquot to limit the maximum coefficient dynamism of an equation on which
+  multiaggregation is performed. This replaces a compiler define of the same name.
+  Default value is 1000, smaller values make multiaggregations numerically more stable.
 - new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
 
 - new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
