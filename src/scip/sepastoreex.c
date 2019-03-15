@@ -74,6 +74,9 @@ SCIP_RETCODE SCIPsepastoreexCreate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+   
    assert(sepastoreex != NULL);
 
    SCIP_ALLOC( BMSallocMemory(sepastoreex) );
@@ -166,7 +169,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    }
 
    /* check cut for redundancy or infeasibility */
-   // todo exip: we will need that probably :redundant = sepastoreIsCutRedundantOrInfeasible(sepastore, set, stat, cut, infeasible);
+   /* @todo exip: we will need that probably :redundant = sepastoreIsCutRedundantOrInfeasible(sepastore, set, stat, cut, infeasible); */
    /* Note that we add infeasible rows in any case, since we cannot be sure whether the return values are handled
     * correctly. In this way, the LP becomes infeasible. */
 
@@ -188,7 +191,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    sepastoreex->ncuts++;
 
    /* check, if the row addition to separation storage events are tracked if so, issue ROWADDEDSEPA event */
-   /* if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDSEPA) != 0 )
+   /* @todo exip if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDSEPA) != 0 )
    {
       SCIP_EVENT* event;
 
@@ -213,7 +216,7 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LPEX*            lp,                 /**< LP data */
+   SCIP_LPEX*            lpex,               /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -225,13 +228,17 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    SCIP_LP* fplp;
    SCIP_ROW** fprows;
    SCIP_ROWEX* rowex;
+   SCIP_CONS* origcons;
    int nrowsfp;
    int nrowsex;
    int nreleases;
    int nadded;
    int i;
 
-   fplp = lp->fplp;
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   fplp = lpex->fplp;
    nreleases = 0;
    nadded = 0;
 
@@ -239,7 +246,7 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
 
    fprows = SCIPlpGetRows(fplp);
    nrowsfp = SCIPlpGetNRows(fplp);
-   nrowsex = SCIPlexGetNRows(lp);
+   nrowsex = SCIPlexGetNRows(lpex);
 
    assert(fprows != NULL);
 
@@ -248,34 +255,37 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    /** remove all rows from exact lp that are not in the floating point lp */
    for( i = 0; i < nrowsex; ++i )
    {
-      SCIP_ROW* fprow =lp->rows[i]->fprow;
+      SCIP_ROW* fprow =lpex->rows[i]->fprow;
+      assert(fprow != NULL);
+
       if( !SCIProwIsInLP(fprow) )
       {
-         SCIPlpexReleaseRow(lp->rows[i]);
+         SCIProwexRelease(&lpex->rows[i], blkmem, set, lpex);
          nreleases++;
       }
    }
 
    for( i = 0; i < nrowsfp; ++i )
    {
-      rowex = SCIProwGetExRow(lp, lp->rows[i]);
+      rowex = SCIProwGetExRow(lpex, fplp->rows[i]);
       if( rowex != NULL )
       {
-         /* corresponding exact row has already been created, add it to lp */
-         assert(...);         
+         /** if the row is already in lp, do nothing */
+         if( !SCIProwexIsInLP(rowex) )
+         {
+            /** add the exact row to the exact lp */
+            SCIP_CALL( SCIPlpexAddRow(lpex, blkmem, set, eventqueue,
+                eventfilter, rowex, 0) );
+         }
       }
       else
       {
-         /* corresponding excact row still needs to be created */
-         if( fprows[i]->origintype != SCIP_ROWORIGINTYPE_CONS )
-         {
-            SCIPerrorMessage("under construction \n");
-            SCIPABORT();
-         }
-         
-         SCIProwGetOriginCons(fprow[i]);
+         SCIPerrorMessage("exact cut has not been created \n");
+         return SCIP_OKAY;
       }
    }
+
+   assert(SCIPlpexIsSynced(lpex, SCIPgetMessagehdlr(set->scip)));
 
 
    return SCIP_OKAY;
@@ -302,7 +312,7 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    for( c = 0; c < sepastoreex->ncuts; ++c )
    {
       /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
-      /* if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
+      /* @todo exip if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
       {
          SCIP_EVENT* event;
 
@@ -338,7 +348,7 @@ SCIP_Bool SCIPsepastoreexIsCutApplicable(
    SCIP_ROW*             cut                 /**< cut to check */
    )
 {
-   return TRUE; // todo: exip still do this SCIProwexIsModifiable(cut) || SCIProwexGetNNonz(cut) != 1 || sepastoreIsBdchgApplicable(set, cut);
+   return TRUE; /* @todo exip still do this SCIProwexIsModifiable(cut) || SCIProwexGetNNonz(cut) != 1 || sepastoreIsBdchgApplicable(set, cut); */
 }
 
 /** get cuts in the separation storage */
