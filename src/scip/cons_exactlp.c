@@ -20,9 +20,11 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 #include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_exactlp.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/debug.h"
@@ -7067,14 +7069,15 @@ SCIP_RETCODE checkCons(
    assert(cons != NULL);
    assert(violated != NULL);
 
-   activity = RcreateInt(SCIPblkmem(scip), 0, 1);
-   absviol = RcreateInt(SCIPblkmem(scip), 0, 1);
-   relviol = RcreateInt(SCIPblkmem(scip), 0, 1);
-   lhsviol = RcreateInt(SCIPblkmem(scip), 0, 1);
-   rhsviol = RcreateInt(SCIPblkmem(scip), 0, 1);
+   activity = RcreateTemp(SCIPbuffer(scip));
+   absviol = RcreateTemp(SCIPbuffer(scip));
+   relviol = RcreateTemp(SCIPbuffer(scip));
+   lhsviol = RcreateTemp(SCIPbuffer(scip));
+   rhsviol = RcreateTemp(SCIPbuffer(scip));
 
    SCIPdebugMsg(scip, "checking linear constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
+   SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7084,7 +7087,7 @@ SCIP_RETCODE checkCons(
    if( consdata->row != NULL )
    {
       if( !checklprows && SCIProwIsInLP(consdata->row) )
-         return SCIP_OKAY;
+         goto cleanup;
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
@@ -7153,11 +7156,12 @@ SCIP_RETCODE checkCons(
    if( sol != NULL )
       SCIPupdateSolLPConsViolation(scip, sol, RgetRealApprox(absviol), RgetRealApprox(relviol));
 
-   Rdelete(SCIPblkmem(scip), &activity);
-   Rdelete(SCIPblkmem(scip), &absviol);
-   Rdelete(SCIPblkmem(scip), &relviol);
-   Rdelete(SCIPblkmem(scip), &lhsviol);
-   Rdelete(SCIPblkmem(scip), &rhsviol);
+cleanup:
+   RdeleteTemp(SCIPbuffer(scip), &activity);
+   RdeleteTemp(SCIPbuffer(scip), &absviol);
+   RdeleteTemp(SCIPbuffer(scip), &relviol);
+   RdeleteTemp(SCIPbuffer(scip), &lhsviol);
+   RdeleteTemp(SCIPbuffer(scip), &rhsviol);
 
    return SCIP_OKAY;
 }
@@ -7183,11 +7187,12 @@ SCIP_RETCODE createRows(
       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
+      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->valsreal) );
+
       /** create exact row */
       SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->exrow, consdata->row, consdata->lhs, consdata->rhs) );
 
       SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->exrow, consdata->nvars, consdata->vars, consdata->vals) );
-
    }
    else
    {
@@ -16436,7 +16441,7 @@ static
 SCIP_DECL_CONSCOPY(consCopyExactLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
-   SCIP_Rational** sourcecoefs;
+   SCIP_Real* sourcecoefs;
    const char* consname;
    int nvars;
 
@@ -16445,8 +16450,9 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
    assert(sourcecons != NULL);
 
    /* get variables and coefficients of the source constraint */
+   /* @todo exip: put proper wrapper here */
    sourcevars = SCIPgetVarsExactLinear(sourcescip, sourcecons);
-   sourcecoefs = SCIPgetValsExactLinear(sourcescip, sourcecons);
+   sourcecoefs = SCIPgetValsRealExactLinear(sourcescip, sourcecons);
    nvars = SCIPgetNVarsExactLinear(sourcescip, sourcecons);
 
    if( name != NULL )
@@ -16455,7 +16461,7 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
       consname = SCIPconsGetName(sourcecons);
 
    SCIP_CALL( SCIPcopyConsExactLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
-         SCIPgetLhsExactLinear(sourcescip, sourcecons), SCIPgetRhsExactLinear(sourcescip, sourcecons), varmap, consmap,
+         RgetRealApprox(SCIPgetLhsExactLinear(sourcescip, sourcecons)), RgetRealApprox(SCIPgetRhsExactLinear(sourcescip, sourcecons)), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL || *valid == FALSE);
 
@@ -17455,9 +17461,9 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in source variable array */
    SCIP_VAR**            sourcevars,         /**< source variables of the linear constraints */
-   SCIP_Rational**       sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
-   SCIP_Rational*        lhs,                /**< left hand side of the linear constraint */
-   SCIP_Rational*        rhs,                /**< right hand side of the linear constraint */
+   SCIP_Real*            sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
+   SCIP_Real             lhs,                /**< left hand side of the linear constraint */
+   SCIP_Real             rhs,                /**< right hand side of the linear constraint */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
                                               *   variables of the target SCIP */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
@@ -17478,14 +17484,14 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_Real* coefs;
 
-   SCIP_Rational* constant;
+   SCIP_Real constant;
    int requiredsize;
    int v;
    SCIP_Bool success;
 
-   if( RisGT(lhs, rhs) )
+   if( SCIPisGT(scip, lhs, rhs) )
    {
       *valid = FALSE;
       return SCIP_OKAY;
@@ -17495,7 +17501,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
 
    if( nvars == 0 )
    {
-      SCIP_CALL( SCIPcreateConsExactLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, 0, NULL, NULL, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       return SCIP_OKAY;
    }
@@ -17512,19 +17518,17 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
       for( v = 0; v < nvars; ++v )
-         coefs[v] = RcreateInt(SCIPblkmem(scip), 1, 1);
+         coefs[v] = 1.0;
    }
 
-   constant = RcreateInt(SCIPblkmem(scip), 0, 1);
+   constant = 0.0;
 
    /* transform source variable to active variables of the source SCIP since only these can be mapped to variables of
     * the target SCIP
     */
    if( !SCIPvarIsOriginal(vars[0]) )
    {
-      SCIPerrorMessage("method not implemented in exact cons handler \n");
-      SCIPABORT();
-      //SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
 
       if( requiredsize > nvars )
       {
@@ -17540,7 +17544,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
       for( v = 0; v < nvars; ++v )
       {
          assert(SCIPvarIsOriginal(vars[v]));
-         SCIP_CALL( SCIPvarGetOrigvarSumExact(&vars[v], coefs[v], constant) );
+         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &coefs[v], &constant) );
          assert(vars[v] != NULL);
       }
    }
@@ -17559,13 +17563,13 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    /* only create the target constraint, if all variables could be copied */
    if( success )
    {
-      if( !RisNegInfinity(lhs) )
-         Rdiff(lhs, lhs, constant);
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs -= constant;
 
-      if( !RisInfinity(rhs) )
-         Rdiff(rhs, rhs, constant);
+      if( !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
 
-      SCIP_CALL( SCIPcreateConsExactLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
    else
@@ -17951,6 +17955,29 @@ SCIP_VAR** SCIPgetVarsExactLinear(
    assert(consdata != NULL);
 
    return consdata->vars;
+}
+
+/** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
+SCIP_Real* SCIPgetValsRealExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+      return NULL;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->valsreal;
 }
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
