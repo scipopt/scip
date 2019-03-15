@@ -71,6 +71,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
+#include "scip/type_lpex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -386,6 +387,7 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
+   SCIP_LPEX*            lpex;                /**< pointer to exact rational lp, or null if in normal fp soliving mode */
 };
 
 #ifdef __cplusplus
