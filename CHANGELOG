@@ -58,6 +58,7 @@ Fixed bugs
 - fixed wrong enforcement of constraints in the disjunction constraint handler
 - fixed wrong behavior of concurrent solve ignoring initial solutions
 - fixed bug in concurrent solve when problem was already solved in presolving
+- aggregate non-artificial integer variable for XOR constraints with two binary variables and delete constraint
 
 Miscellaneous
 -------------
