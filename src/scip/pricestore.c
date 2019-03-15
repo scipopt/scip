@@ -509,16 +509,11 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         if( set->misc_exactsolve )
-         {
-            SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, set->scip->lpex) );
-         }
-         else
-         {
-            /* transform loose variable into column variable */
-            SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
-         }
+         /* transform loose variable into column variable */
+         SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lp->lpex) );
       }
+
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
       col = SCIPvarGetCol(var);
@@ -527,6 +522,9 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       SCIPsetDebugMsg(set, "adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var),
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
+
+      if( set->misc_exactsolve )
+         SCIP_CALL( SCIPlpexAddCol(lp->lpex, set, var->exactdata->excol, SCIPtreeGetCurrentDepth(tree)) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -544,15 +542,9 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       /* transform variable into column variable, if needed */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         if( set->misc_exactsolve )
-         {
-            SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, set->scip->lpex) );
-         }
-         else
-         {
-            /* transform loose variable into column variable */
-            SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
-         }
+         /* transform loose variable into column variable */
+         SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lp->lpex) );
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -561,6 +553,9 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       assert(col->lppos == -1);
       SCIPsetDebugMsg(set, "adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
+      
+      if( set->misc_exactsolve )
+         SCIP_CALL( SCIPlpexAddCol(lp->lpex, set, var->exactdata->excol, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
       SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, eventqueue, lp) );
