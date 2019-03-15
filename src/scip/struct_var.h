@@ -209,6 +209,7 @@ struct SCIP_ExVarData
    SCIP_DOMEX            glbdom;
    SCIP_DOMEX            origdom;
    SCIP_COLEX*           excol;
+   SCIP_VARSTATUS        exvarstatus;
 };
 
 /** variable of the problem */
