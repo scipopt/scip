@@ -41,6 +41,7 @@
 #include "scip/pub_nlp.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
+#include "scip/pub_varex.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
@@ -1535,8 +1536,9 @@ void xlp_addtocost(
    if( SCIPisExactSolve(scip) )
    {
       char str[SCIP_MAXSTRLEN];
+
       scipvalrat = RcreateNumb(SCIPblkmem(scip), cost);
-      // todo: (exip) scipchgvarobjexact implement this
+      Radd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
 
       SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
          RgetRealRelax(scipvalrat, SCIP_ROUND_NEAREST) );
@@ -1544,6 +1546,7 @@ void xlp_addtocost(
       SCIPdebugMessage(" (<%s> as exact) \n", str);
 
       readerdata->retcode = SCIPchgVarObjExact(scip, scipvar, scipvalrat);
+      SCIPchgVarObj(scip, scipvar, RgetRealApprox(scipvalrat));
 
       Rdelete(SCIPblkmem(scip), &scipvalrat);
    }
