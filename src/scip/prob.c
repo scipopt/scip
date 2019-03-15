@@ -558,8 +558,11 @@ SCIP_RETCODE SCIPprobTransform(
       /* todo exip: wrap this */
       if( set->misc_exactsolve && source->vars[v]->exactdata != NULL )
       {
-          SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v]) );
+         SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v]) );
+         if( source->objsense == SCIP_OBJSEN_MAXIMIZE )
+            Rneg(targetvar->exactdata->obj, targetvar->exactdata->obj);
       }
+
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
