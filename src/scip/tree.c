@@ -1970,7 +1970,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       /* update the child's lower bound */
-      if( set->misc_exactsolve )
+      if( set->misc_exactsolve_old )
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
@@ -2360,7 +2360,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old )
    {
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }

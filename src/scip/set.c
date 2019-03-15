@@ -268,7 +268,7 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< should the fp approximation of the exact problem be a relaxation? */
 #define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift,
@@ -314,7 +314,7 @@
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      8e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
-#define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
+#define SCIP_DEFAULT_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC    0.025 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
@@ -1869,11 +1869,15 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-#if 1 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
          &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/exactsolve_old",
+         "should the problem be solved exactly (with proven dual bounds)?",
+         &(*set)->misc_exactsolve_old, FALSE, FALSE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/usefprelax",
@@ -1885,16 +1889,11 @@ SCIP_RETCODE SCIPsetCreate(
          "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
          &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
          NULL, NULL) );
-#else
-   (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
-#endif
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
          "should the statistics be reset if the transformed problem is freed (in case of a Benders' decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/improvingsols",
          "should only solutions be checked which improve the primal bound",

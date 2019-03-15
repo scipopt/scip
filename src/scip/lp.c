@@ -2652,7 +2652,7 @@ SCIP_RETCODE lpSetObjlim(
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
     * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( lpCutoffDisabled(set) || set->misc_exactsolve )
+   if( lpCutoffDisabled(set) || set->misc_exactsolve_old )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -9176,6 +9176,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->lpirandomseed = set->random_randomseed;
    (*lp)->storedsolvals = NULL;
+   (*lp)->lpex = NULL;
 
    /* allocate arrays for diving */
    SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
@@ -12324,7 +12325,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve_old
       || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
@@ -12491,7 +12492,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve_old || set->lp_alwaysgetduals )
          {
             if( SCIPlpiHasDualRay(lp->lpi) )
             {
@@ -12644,7 +12645,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve_old )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12806,7 +12807,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
+                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve_old )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
@@ -13709,7 +13710,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old )
    {
       if( oldobj != newobj ) /*lint !e777*/
       {
@@ -13792,7 +13793,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
@@ -13860,7 +13861,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
@@ -14055,7 +14056,7 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old && FALSE )
    {
       SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
    }
@@ -14179,7 +14180,7 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->misc_exactsolve_old )
    {
       SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
    }

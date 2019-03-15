@@ -62,6 +62,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/sepa.h"
 #include "scip/sepastore.h"
+#include "scip/sepastoreex.h"
+#include "scip/struct_scip.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
@@ -1148,6 +1150,9 @@ SCIP_RETCODE SCIPinitConssLP(
       /* apply cuts */
       SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
             eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+      if( root )
+         SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, transprob, origprob, tree, lp->lpex, branchcand,
+            eventqueue, eventfilter, cliquetable, root, cutoff) );
    }
    else
    {
@@ -2378,7 +2383,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-      while( mustprice && !(*lperror) && !set->misc_exactsolve ) // exactip-note: disabled this for now
+      while( mustprice && !(*lperror) ) // @todo exactip-note: do we disable smth here?
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
                pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, root, root, -1, &npricedcolvars,
@@ -2816,7 +2821,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* if the LP is a relaxation and we are not solving exactly, then we may analyze an infeasible or bound exceeding
        * LP (not necessary in the root node) and cut off the current node
        */
-      if( !set->misc_exactsolve && !root && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
+      if( !set->misc_exactsolve_old && !root && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -2883,8 +2888,8 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
+      if( (set->misc_exactsolve_old && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
+         || (!set->misc_exactsolve_old && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
       {
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -3074,7 +3079,7 @@ SCIP_RETCODE solveNodeLP(
    }
 #endif
 
-   if( !(*cutoff) && !(*lperror) && !set->misc_exactsolve )
+   if( !(*cutoff) && !(*lperror) && !set->misc_exactsolve_old )
    {
       SCIP_Longint oldninitconssadded;
       SCIP_Longint oldnboundchgs;
@@ -3942,13 +3947,13 @@ SCIP_RETCODE propAndSolve(
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
        * we have to forget about the LP and use the pseudo solution instead
        */
-      if( !(*cutoff) && !(*lperror) && (set->misc_exactsolve || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+      if( !(*cutoff) && !(*lperror) && (set->misc_exactsolve_old || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
-               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, transprob->ncontvars);
+               stat->nnodes, stat->nlps, set->misc_exactsolve_old, *pricingaborted, transprob->ncontvars);
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
             /**@todo call PerPlex */
             return SCIP_LPERROR;
@@ -3960,7 +3965,7 @@ SCIP_RETCODE propAndSolve(
 
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
-               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
+               stat->nnodes, stat->nlps, set->misc_exactsolve_old, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
 
@@ -4707,7 +4712,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found relaxation solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve )
+      if( checksol || set->misc_exactsolve_old )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -4745,7 +4750,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve )
+      if( checksol || set->misc_exactsolve_old )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -4781,7 +4786,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found pseudo solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve )
+      if( checksol || set->misc_exactsolve_old )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -5127,7 +5132,7 @@ SCIP_RETCODE SCIPsolveCIP(
          {
             SCIP_RESULT result;
 
-            assert(set->misc_exactsolve);
+            assert(set->misc_exactsolve_old);
 
             do
             {

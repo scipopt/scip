@@ -38,6 +38,7 @@
 #include "scip/clock.h"
 #include "scip/conflict.h"
 #include "scip/debug.h"
+#include "scip/scip_exact.h"
 #include "scip/history.h"
 #include "scip/implics.h"
 #include "scip/lp.h"
@@ -2979,7 +2980,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
    {
       SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
    }
@@ -3693,7 +3694,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
-   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
    {
       SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
    }
@@ -3797,7 +3798,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
        * declare the sub nodes infeasible
        */
-      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
       {
          for( j = 0; j < nvars; ++j )
          {
@@ -3909,7 +3910,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
       /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
        * declare the sub nodes infeasible
        */
-      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
+      if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !SCIPisExactSolve(scip) )
       {
          for( j = 0; j < nvars; ++j )
          {
