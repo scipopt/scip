@@ -2751,17 +2751,8 @@ SCIP_RETCODE varFree(
    SCIPhistoryFree(&(*var)->historycrun, blkmem);
    SCIPvaluehistoryFree(&(*var)->valuehistory, blkmem);
 
-   /* free exact variable data if it was created */
-   if( (*var)->exactdata != NULL )
-   {
-      if( (*var)->exactdata->glbdom.lb != NULL )
-      Rdelete(blkmem, &(*var)->exactdata->glbdom.lb);
-      Rdelete(blkmem, &(*var)->exactdata->glbdom.ub);
-      Rdelete(blkmem, &(*var)->exactdata->obj );
-
-      BMSfreeBlockMemory(blkmem, &(*var)->exactdata);
-      assert((*var)->exactdata == NULL);
-   }
+   /* free exact data if it exists */
+   SCIPvarFreeExactData(*var, blkmem, set);
 
    /* free variable data structure */
    BMSfreeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);
@@ -7406,6 +7397,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    oldbound = var->locdom.lb;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
+   /* todo: exip this is temporary */
+   if( set->misc_exactsolve )
+      RsetReal(var->exactdata->locdom.lb, newbound);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -7573,6 +7567,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    oldbound = var->locdom.ub;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
+   /* todo: exip this is temporary */
+   if( set->misc_exactsolve )
+      RsetReal(var->exactdata->locdom.ub, newbound);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic

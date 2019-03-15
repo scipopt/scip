@@ -77,30 +77,27 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_LPEX*            lp                /**< current LP data */
    )
 {
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
    assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(var->exactdata->excol == NULL);
    assert(var->scip == set->scip);
    assert(var->exactdata != NULL);
 
-   SCIPsetDebugMsg(set, "creating column for variable <%s>\n", var->name);
+   SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
 
    /* switch variable status */
-   var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
+   var->exactdata->exvarstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    /* create column of variable */
-   SCIP_CALL( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
-   SCIP_CALL( SCIPcolexCreate(&var->exactdata->excol, var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+   SCIP_CALL( SCIPcolexCreate(&(var->exactdata->excol), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
 
 
    if( var->probindex != -1 )
    {
-      /* inform problem about the variable's status change */
-      SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, NULL, NULL, var) );
-
       /* inform LP, that problem variable is now a column variable and no longer loose */
       SCIP_CALL( SCIPlpexUpdateVarColumn(lp, set, var) );
-      /* todo exip: implement this */
-      /* SCIP_CALL( SCIPlpUpdateVarColumn(lp, set, var) ); */
    }
 
    return SCIP_OKAY;
@@ -136,7 +133,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    if ( RisZero(val) )
       return SCIP_OKAY;
 
-   switch( SCIPvarGetStatus(var) )
+   switch( SCIPvarGetStatusExact(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -159,7 +156,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       }
       /* convert loose variable into column */
       SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lpex) );
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       /*lint -fallthrough*/
 
    case SCIP_VARSTATUS_COLUMN:
@@ -193,7 +190,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
       tmp = RcreateTemp(set->buffer);
@@ -212,7 +209,6 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-   //SCIP_CALL( SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, prob, lpex->fplp, rowex->fprow, RgetRealApprox(val)) );
 
    return SCIP_OKAY;
 }
@@ -231,13 +227,13 @@ SCIP_Rational* SCIPvarGetLbOriginalExact(
    assert(SCIPvarIsOriginal(var));
    assert(var->exactdata != NULL);
 
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_ORIGINAL )
       return var->exactdata->origdom.lb;
    else
    {
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarGetStatusExact(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
@@ -253,13 +249,13 @@ SCIP_Rational* SCIPvarGetUbOriginalExact(
    assert(SCIPvarIsOriginal(var));
    assert(var->exactdata != NULL);
 
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_ORIGINAL )
       return var->exactdata->origdom.ub;
    else
    {
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar != NULL);
-      assert(SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarGetStatusExact(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
@@ -430,7 +426,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    assert(scalar != NULL);
    assert(constant != NULL);
 
-   while( !SCIPvarIsOriginal(*var) )
+   while( !SCIPvarIsOriginal(*var) && FALSE )
    {
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original
        * var
@@ -440,7 +436,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
           * space
           */
-         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED &&
+         if( SCIPvarGetStatusExact(*var) == SCIP_VARSTATUS_NEGATED &&
             ((*var)->negatedvar->nparentvars == 0 || (*var)->negatedvar->parentvars[0] != *var) )
          {
             Rneg(scalar, scalar);
@@ -465,7 +461,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
       parentvar = (*var)->parentvars[0];
       assert(parentvar != NULL);
 
-      switch( SCIPvarGetStatus(parentvar) )
+      switch( SCIPvarGetStatusExact(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
          break;
@@ -487,7 +483,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
 
       case SCIP_VARSTATUS_NEGATED: /* x = b - y  ->  y = b - x,  s*y + c = -s*x + c+b*s */
          assert(parentvar->negatedvar != NULL);
-         assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(SCIPvarGetStatusExact(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
          Rneg(scalar, scalar);
          tmp = RgetRealApprox(scalar) * parentvar->data.negate.constant;
@@ -504,6 +500,18 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    }
 
    return SCIP_OKAY;
+}
+
+/** gets column of COLUMN variable */
+SCIP_COLEX* SCIPvarGetColExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
+
+   return var->exactdata->excol;
 }
 
 /** create and set the exact variable bounds and objective value */
@@ -528,6 +536,9 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    var->exactdata->locdom.lb = Rcopy(blkmem, lb);
    var->exactdata->locdom.ub = Rcopy(blkmem, ub);
+
+   var->exactdata->excol = NULL;
+   var->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
 
    if( obj != NULL )
       var->exactdata->obj = Rcopy(blkmem, obj);
@@ -561,10 +572,40 @@ SCIP_RETCODE SCIPvarCopyExactData(
    targetvar->exactdata->locdom.ub = Rcopy(blkmem, sourcevar->exactdata->locdom.ub);
    targetvar->exactdata->obj = Rcopy(blkmem, sourcevar->exactdata->obj);
    targetvar->exactdata->excol = NULL;
+   targetvar->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
 
    return SCIP_OKAY;
 }
 
+/** free exact variable data, if it exists */
+void SCIPvarFreeExactData(
+   SCIP_VAR*             var,                /**< variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   if( set->misc_exactsolve )
+   {
+      /* free exact variable data if it was created */
+      if( var->exactdata != NULL )
+      {
+         Rdelete(blkmem, &(var)->exactdata->glbdom.lb);
+         Rdelete(blkmem, &(var)->exactdata->glbdom.ub);
+         Rdelete(blkmem, &(var)->exactdata->locdom.lb);
+         Rdelete(blkmem, &(var)->exactdata->locdom.ub);
+         Rdelete(blkmem, &(var)->exactdata->obj );
+
+         BMSfreeBlockMemory(blkmem, &(var)->exactdata);
+         assert((var)->exactdata == NULL);
+      }
+   }
+   else
+   {
+      assert(var->exactdata == NULL);
+   }
+}
+
+/* @todo exip: this is currently a blank */
 /** appends OBJCHANGED event to the event queue */
 static
 SCIP_RETCODE varEventObjChanged(
@@ -583,12 +624,12 @@ SCIP_RETCODE varEventObjChanged(
    assert(var != NULL);
    assert(var->scip == set->scip);
    assert(var->eventfilter != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldobj, newobj));
 
-   SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
-   SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+   //SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
+   //SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
 
    return SCIP_OKAY;
 }
@@ -620,7 +661,7 @@ SCIP_RETCODE SCIPvarChgExactObj(
 
    if( !RisEqual(var->exactdata->obj, newobj) )
    {
-      switch( SCIPvarGetStatus(var) )
+      switch( SCIPvarGetStatusExact(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
@@ -636,8 +677,6 @@ SCIP_RETCODE SCIPvarChgExactObj(
             assert(set->stage == SCIP_STAGE_PROBLEM);
 
          Rset(var->exactdata->obj, newobj);
-         var->unchangedobj = newobjreal;
-         var->obj = newobjreal;
 
          break;
 
@@ -645,20 +684,8 @@ SCIP_RETCODE SCIPvarChgExactObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          Rset(var->exactdata->obj, newobj);
-         var->obj = newobjreal;
 
-         /* update unchanged objective value of variable */
-         if( !lp->fplp->divingobjchg )
-            var->unchangedobj = newobjreal;
-
-         /* update the number of variables with non-zero objective coefficient;
-          * we only want to do the update, if the variable is added to the problem;
-          * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
-          */
-         if( SCIPvarIsActive(var) )
-            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
-
-         SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) );
+         /* @todo exip SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) ); */
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -677,4 +704,15 @@ SCIP_RETCODE SCIPvarChgExactObj(
    Rdelete(blkmem, &tmp);
 
    return SCIP_OKAY;
+}
+
+/** return the status of the exact variable data */
+SCIP_VARSTATUS SCIPvarGetStatusExact(
+   SCIP_VAR*             var                /**< scip variabel */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+
+   return var->exactdata->exvarstatus;
 }

@@ -272,6 +272,13 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_VAR*             sourcevar           /**< variable the data gets copied from */
    );
 
+/** free exact variable data, if it exists */
+void SCIPvarFreeExactData(
+   SCIP_VAR*             var,                /**< variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
  *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all

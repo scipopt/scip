@@ -1,4 +1,5 @@
 
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -100,6 +101,18 @@ SCIP_RETCODE SCIPvarChgExactObj(
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Rational*        newobj              /**< new objective value for variable */
+   );
+
+/** return the status of the exact variable data */
+extern
+SCIP_VARSTATUS SCIPvarGetStatusExact(
+   SCIP_VAR*             var                /**< scip variabel */
+   );
+
+/** gets column of COLUMN variable */
+extern
+SCIP_COLEX* SCIPvarGetColExact(
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 #ifdef __cplusplus
