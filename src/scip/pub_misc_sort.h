@@ -520,15 +520,13 @@ void SCIPsortIntPtrIntReal(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of six joint arrays of ints/pointers/ints/reals/pointers/pointers, sorted by first array in non-decreasing order */
+/** sort of four joint arrays of ints/ints/pointers/pointers/ sorted by first array in non-decreasing order */
 EXTERN
-void SCIPsortIntPtrIntRealPtrPtr(
+void SCIPsortIntIntPtrPtr(
    int*                  intarray1,          /**< int array to be sorted */
-   void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
    void**                ptrarray2,           /**< pointer array to be permuted in the same way */
-   void**                ptrarray3,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
