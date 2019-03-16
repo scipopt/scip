@@ -553,6 +553,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_globalbnd.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_adaptivediving.o \
 			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
