@@ -14220,7 +14220,6 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* dualsol;
-   SCIP_Real* activity;
    SCIP_Real* redcost;
    SCIP_Real primalbound;
    SCIP_Real dualbound;
@@ -14276,12 +14275,11 @@ SCIP_RETCODE SCIPlpGetSol(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, nlpirows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activity, nlpirows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcost, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
+   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, NULL, redcost) );
    if( lp->solisbasic )
    {
       SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
@@ -14387,7 +14385,9 @@ SCIP_RETCODE SCIPlpGetSol(
    {
       assert( 0 <= rstat[r] && rstat[r] < 4 );
       lpirows[r]->dualsol = dualsol[r];
-      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      /* do not rely on LP solvers computation of activity, but recalculate, see also #2594 */
+      if( lpirows[r]->validactivitylp != stat->lpcount )
+         SCIProwRecalcLPActivity(lpirows[r], stat);
       lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
       if( stillprimalfeasible )
@@ -14494,7 +14494,6 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
    SCIPsetFreeBufferArray(set, &redcost);
-   SCIPsetFreeBufferArray(set, &activity);
    SCIPsetFreeBufferArray(set, &dualsol);
    SCIPsetFreeBufferArray(set, &primsol);
 
