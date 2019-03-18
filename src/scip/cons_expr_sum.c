@@ -958,7 +958,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "initSepaSum %d children: ", SCIPgetConsExprExprNChildren(expr));
-   SCIPprintConsExprExpr(scip, expr, NULL);
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
