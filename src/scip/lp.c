@@ -59,6 +59,11 @@
 #include <string.h>
 
 
+/* activate this to use the row activities as given by the LPI instead of recalculating
+ * using the LP solver activity is potentially faster, but may not be consistent with the SCIP_ROW calculations
+ * see also #2594 for more details on possible trouble
+ */
+/* #define SCIP_USE_LPSOLVER_ACTIVITY */
 
 /*
  * debug messages
@@ -14301,7 +14306,7 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* dualsol;
-   SCIP_Real* activity;
+   SCIP_Real* activity = NULL;
    SCIP_Real* redcost;
    SCIP_Real primalbound;
    SCIP_Real dualbound;
@@ -14357,7 +14362,9 @@ SCIP_RETCODE SCIPlpGetSol(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, nlpirows) );
+#ifdef SCIP_USE_LPSOLVER_ACTIVITY
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activity, nlpirows) );
+#endif
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcost, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
@@ -14468,7 +14475,13 @@ SCIP_RETCODE SCIPlpGetSol(
    {
       assert( 0 <= rstat[r] && rstat[r] < 4 );
       lpirows[r]->dualsol = dualsol[r];
+#ifdef SCIP_USE_LPSOLVER_ACTIVITY
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+#else
+      /* calculate row activity if invalid */
+      if( lpirows[r]->validactivitylp != stat->lpcount )
+         SCIProwRecalcLPActivity(lpirows[r], stat);
+#endif
       lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
       if( stillprimalfeasible )
@@ -14575,7 +14588,9 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
    SCIPsetFreeBufferArray(set, &redcost);
+#ifdef SCIP_USE_LPSOLVER_ACTIVITY
    SCIPsetFreeBufferArray(set, &activity);
+#endif
    SCIPsetFreeBufferArray(set, &dualsol);
    SCIPsetFreeBufferArray(set, &primsol);
 
