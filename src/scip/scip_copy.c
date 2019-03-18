@@ -630,7 +630,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
    SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
 
    /* set the objective offset */
-   SCIP_CALL( SCIPaddObjoffset(targetscip, SCIPgetOrigObjoffset(sourcescip)) );
+   SCIP_CALL( SCIPaddOrigObjoffset(targetscip, SCIPgetOrigObjoffset(sourcescip)) );
 
    return SCIP_OKAY;
 }
