@@ -109,6 +109,43 @@ void sdwalk_resetExt(
 #endif
 }
 
+static
+void sdwalk_resetExt2(
+   int                   nnodes,
+   int                   nvisits,
+   const  int*           visitlist,
+   SCIP_Real*            dist,
+   int*                  nprevterms,
+   int*                  nprevNPterms,
+   int*                  nprevedges,
+   int*                  state,
+   STP_Bool*             visited
+)
+{
+   for( int k = 0; k < nvisits; k++ )
+   {
+      const int node = visitlist[k];
+      visited[node] = FALSE;
+      dist[node] = FARAWAY;
+      state[node] = UNKNOWN;
+      nprevterms[node] = 0;
+      nprevNPterms[node] = 0;
+      nprevedges[node] = 0;
+   }
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+   {
+      assert(visited[k] == FALSE);
+      assert(state[k] == UNKNOWN);
+      assert(dist[k] == FARAWAY);
+      assert(nprevterms[k] == 0);
+      assert(nprevNPterms[k] == 0);
+      assert(nprevedges[k] == 0);
+   }
+#endif
+}
+
 
 /* can edge be deleted in SD test in case of equality? If so, 'forbidden' array is adapted */
 static
@@ -2619,7 +2656,7 @@ SCIP_RETCODE reduce_sdWalk(
 
 #define MAXNPREVS 8
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
-SCIP_RETCODE reduce_sdWalk2(
+SCIP_RETCODE reduce_sdWalkExt(
    SCIP*                 scip,
    int                   edgelimit,
    const int*            edgestate,
@@ -2708,6 +2745,132 @@ SCIP_RETCODE reduce_sdWalk2(
       }
    }
 
+   SCIPfreeBufferArray(scip, &nprevterms);
+   SCIPfreeBufferArray(scip, &prevterms);
+
+   return SCIP_OKAY;
+}
+
+/** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
+SCIP_RETCODE reduce_sdWalkExt2(
+   SCIP*                 scip,
+   int                   edgelimit,
+   const int*            edgestate,
+   GRAPH*                g,
+   int*                  termmark,
+   SCIP_Real*            dist,
+   int*                  heap,
+   int*                  state,
+   int*                  visitlist,
+   STP_Bool*             visited,
+   int*                  nelims
+   )
+{
+   int* prevterms;
+   int* nprevterms;
+   int* prevNPterms;
+   int* nprevNPterms;
+   int* prevedges;
+   int* nprevedges;
+   const int nnodes = g->knots;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(heap != NULL);
+   assert(nelims != NULL);
+   assert(visited != NULL);
+   assert(visitlist != NULL);
+   assert(!g->extended);
+   assert(graph_pc_isPcMw(g));
+
+   if( edgelimit <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &prevterms, nnodes * MAXNPREVS) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nprevterms, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prevNPterms, nnodes * MAXNPREVS) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nprevNPterms, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prevedges, nnodes * MAXNPREVS) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nprevedges, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
+      nprevterms[i] = 0;
+      nprevNPterms[i] = 0;
+      nprevedges[i] = 0;
+      termmark[i] = 0;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         if( graph_pc_termIsNonLeaf(g, i) )
+            termmark[i] = 1;
+         else
+            termmark[i] = 2;
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int e;
+      if( !g->mark[i] )
+         continue;
+
+      /* traverse neighbours */
+      e = g->outbeg[i];
+      while( e != EAT_LAST )
+      {
+         SCIP_Bool success;
+         const SCIP_Real ecost = g->cost[e];
+         int nvisits;
+         const int i2 = g->head[e];
+         const int enext = g->oeat[e];
+
+         /* avoid double checking */
+         if( i2 < i || !g->mark[i2] )
+         {
+            e = enext;
+            continue;
+         }
+
+         if( checkstate && edgestate[e] == EDGE_BLOCKED )
+         {
+            e = enext;
+            continue;
+         }
+
+         success = graph_sdWalksExt2(scip, g, g->cost, termmark, ecost, i2, i, edgelimit, MAXNPREVS, dist, prevterms, nprevterms,
+               prevNPterms, nprevNPterms, prevedges, nprevedges, heap, state, visitlist, &nvisits, visited);
+         sdwalk_resetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
+
+
+         if( !success )
+         {
+            success = graph_sdWalksExt2(scip, g, g->cost, termmark, ecost, i, i2, edgelimit, MAXNPREVS, dist, prevterms, nprevterms,
+               prevNPterms, nprevNPterms, prevedges, nprevedges, heap, state, visitlist, &nvisits, visited);
+            sdwalk_resetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
+         }
+
+         if( success )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+         }
+
+         e = enext;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nprevedges);
+   SCIPfreeBufferArray(scip, &prevedges);
+   SCIPfreeBufferArray(scip, &nprevNPterms);
+   SCIPfreeBufferArray(scip, &prevNPterms);
    SCIPfreeBufferArray(scip, &nprevterms);
    SCIPfreeBufferArray(scip, &prevterms);
 

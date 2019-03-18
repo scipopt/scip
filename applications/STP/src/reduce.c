@@ -1443,9 +1443,12 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
    int ntotalelims;
+   int sdext;
 
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/sdext", &sdext) );
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
@@ -1512,15 +1515,20 @@ SCIP_RETCODE redLoopPc(
       if( sdw || extensive )
       {
          int sdwnelims2 = 0;
+         int sdwnelims3 = 0;
 
          SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
-         if( show && dualascent )
-            printf("SDw: %d \n", sdwnelims);
 
-         SCIP_CALL(reduce_sdWalk2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+         if( sdext == 1 || sdext == 3 )
+            SCIP_CALL(reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+
+         if( sdext == 2 || sdext == 3 )
+            SCIP_CALL(reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
+
          if( show && dualascent )
-            printf("SDw2: %d \n", sdwnelims2);
-         sdwnelims += sdwnelims2;
+            printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
+
+         sdwnelims += sdwnelims2 + sdwnelims3;
 
          if( sdwnelims <= reductbound )
             sdw = FALSE;

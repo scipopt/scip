@@ -48,6 +48,7 @@
 #define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
 #define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
 #define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
+#define   DEFAULT_SDEXT        3                 /**< sd extended */
 #define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
@@ -166,6 +167,11 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          "stp/minelims",
          "minimal number of eliminations per reduction method",
          NULL, FALSE, DEFAULT_MINELIMS, 0, 10000, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/sdext",
+         "mode of extended sd walk test 0 none, 1 fist, 2 second, 3 both",
+         NULL, FALSE, DEFAULT_SDEXT, 0, 3, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "stp/pretimelimit",

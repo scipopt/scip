@@ -33,6 +33,105 @@
 #include "portab.h"
 #include "grph.h"
 
+
+
+inline static SCIP_Real sdwalk_getdistnewEdge(
+   const int*            prevedges,          /**< previous edges per node */
+   const int*            nprevedges,         /**< number of previous edges per node */
+   const SCIP_Real*      cost,               /**< cost */
+   const SCIP_Real*      dist,               /**< distance */
+   int                   k,                  /**< previous node  */
+   int                   e,                  /**< current outgoing edge  */
+   int                   maxnprevs           /**< maximum number of previous  */
+)
+{
+   const int nprevs = nprevedges[k];
+   SCIP_Real dist_e;
+
+   /* ancestor list not full? */
+   if( nprevs != maxnprevs + 1 )
+   {
+      int i;
+      const int e2 = e / 2;
+      assert(nprevs <= maxnprevs);
+
+      /* check whether m is contained in ancestor list */
+      for( i = 0; i < nprevs; i++ )
+      {
+         const int prevedge = prevedges[maxnprevs * k + i];
+
+         if( e2 == prevedge )
+            break;
+      }
+
+      /* e2 in list? */
+      if( i != nprevs )
+      {
+         assert(e2 == prevedges[maxnprevs * k + i]);
+         dist_e = dist[k];
+      }
+      else
+         dist_e = dist[k] + cost[e];
+   }
+   else
+   {
+      dist_e = dist[k] + cost[e];
+   }
+
+   return dist_e;
+}
+
+
+inline static SCIP_Real sdwalk_getdistnewPrize(
+   const int*            prevNPterms,        /**< previous np terminals per node */
+   const int*            nprevNPterms,       /**< number of previous np terminals per node */
+   const int*            termmark,           /**< terminal mark */
+   const STP_Bool*       visited,            /**< visited */
+   const SCIP_Real*      prize,              /**< prize */
+   int                   k,                  /**< current node  */
+   int                   m,                  /**< next node  */
+   SCIP_Real             distnew,            /**< distance of m */
+   int                   maxnprevs           /**< maximum number of previous  */
+)
+{
+   SCIP_Real distnewP = distnew;
+
+   assert(termmark[m] == 1 || termmark[m] == 2 );
+
+   if( termmark[m] == 2 || !visited[m] )
+   {
+      distnewP = MAX(0.0, distnewP - prize[m]);
+   }
+   else
+   {
+      const int nprevs = nprevNPterms[k];
+
+      /* ancestor list not full? */
+      if( nprevs != maxnprevs + 1 )
+      {
+         int i;
+         assert(nprevs <= maxnprevs);
+
+         /* check whether m is contained in ancestor list */
+         for( i = 0; i < nprevs; i++ )
+         {
+            const int prevterm = prevNPterms[maxnprevs * k + i];
+
+            if( m == prevterm )
+               break;
+         }
+
+         /* m not in list? */
+         if( i == nprevs )
+            distnewP = MAX(0.0, distnewP - prize[m]);
+      }
+   }
+
+   return distnewP;
+}
+
+
+
 inline static SCIP_Bool sdwalk_conflict(
    const GRAPH*          g,                  /**< graph data structure */
    int                   node,               /**< the node to be updated */
@@ -48,10 +147,13 @@ inline static SCIP_Bool sdwalk_conflict(
 
    assert(Is_term(g->term[node]));
 
+   if( !nodevisited )
+      return FALSE;
+
    if( nprevs > maxnprevs )
    {
       assert(nprevs == maxnprevs + 1);
-      return nodevisited;
+      return TRUE;
    }
 
    for( int i = 0; i < nprevs; i++ )
@@ -107,6 +209,122 @@ inline static void sdwalk_update(
       }
 
       assert(nprevterms[node] <= maxnprevs);
+   }
+}
+
+inline
+static void sdwalk_updateCopy(
+   int                   node,               /**< the node to be updated */
+   int                   prednode,           /**< the predecessor node */
+   int                   maxnprevs,          /**< maximum number of previous terminals to save */
+   int*                  prev,               /**< previous data elements */
+   int*                  nprev               /**< number of previous data elements */
+   )
+{
+   const int predsize = nprev[prednode];
+
+   assert(predsize <= maxnprevs);
+
+   /* copy data from predecesseor */
+   for( int i = 0; i < predsize; i++ )
+      prev[maxnprevs * node + i] = prev[maxnprevs * prednode + i];
+
+   nprev[node] = predsize;
+}
+
+static void sdwalk_update2(
+   const int*            termmark,           /**< terminal mark */
+   int                   node,               /**< the node to be updated */
+   int                   prednode,           /**< the predecessor node */
+   int                   edge,               /**< the edge to be updated */
+   int                   maxnprevs,          /**< maximum number of previous terminals to save */
+   SCIP_Bool             clear,              /**< clear arrays */
+   int*                  prevterms,          /**< previous terminals */
+   int*                  nprevterms,         /**< number of previous terminals */
+   int*                  prevNPterms,        /**< previous non-proper terminals */
+   int*                  nprevNPterms,       /**< number of previous non-proper terminals */
+   int*                  prevedges,          /**< previous edges */
+   int*                  nprevedges          /**< number of previous edges */
+   )
+{
+   int predsize = nprevterms[prednode];
+
+   /*** 1. proper terminals ***/
+
+   /* not enough space? */
+   if( predsize == maxnprevs + 1 || (termmark[node] == 2 && predsize == maxnprevs) )
+   {
+      nprevterms[node] = maxnprevs + 1;
+   }
+   else
+   {
+#ifndef NDEBUG
+      for( int j = 0; j < predsize; j++ )
+         assert(prevterms[maxnprevs * prednode + j] != node);
+#endif
+
+      sdwalk_updateCopy(node, prednode, maxnprevs, prevterms, nprevterms);
+
+      if( termmark[node] == 2 )
+      {
+         assert(predsize < maxnprevs);
+         prevterms[maxnprevs * node + predsize] = node;
+         nprevterms[node]++;
+      }
+
+      assert(nprevterms[node] <= maxnprevs);
+   }
+
+
+   /*** 2. edges ***/
+
+   if( clear )
+   {
+      nprevNPterms[node] = 0;
+      nprevedges[node] = 0;
+      return;
+   }
+
+   predsize = nprevedges[prednode];
+
+   if( predsize >= maxnprevs )
+   {
+      assert(predsize == maxnprevs || predsize == maxnprevs + 1);
+
+      nprevedges[node] = maxnprevs + 1;
+      nprevNPterms[node] = maxnprevs + 1;
+      return;
+   }
+   assert(predsize < maxnprevs);
+
+   sdwalk_updateCopy(node, prednode, maxnprevs, prevedges, nprevedges);
+
+   prevedges[maxnprevs * node + predsize] = edge / 2;
+   nprevedges[node]++;
+
+   assert(nprevedges[node] <= maxnprevs);
+
+
+   /*** 3. non-proper terminals ***/
+
+   predsize = nprevNPterms[prednode];
+
+   if( predsize == maxnprevs + 1 || (termmark[node] == 1 && predsize == maxnprevs) )
+   {
+      nprevNPterms[node] = maxnprevs + 1;
+   }
+   else
+   {
+      sdwalk_updateCopy(node, prednode, maxnprevs, prevNPterms, nprevNPterms);
+
+      if( termmark[node] == 1 )
+      {
+         assert(predsize < maxnprevs);
+         prevNPterms[maxnprevs * node + predsize] = node;
+         nprevNPterms[node]++;
+      }
+
+      assert(nprevNPterms[node] <= maxnprevs);
    }
 }
 
@@ -345,7 +563,6 @@ inline static void correctXwalk(
    int* count,    /* pointer to store the number of elements on the heap */
    SCIP_Real*  pathdist,
    int    l,
-   int    e,
    SCIP_Real newcost
    )
 {
@@ -903,11 +1120,11 @@ SCIP_Bool graph_sdWalks(
          if( termmark[m] != 0 )
          {
             const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
-            correctXwalk(scip, heap, state, &count, dist, m, e, newcost);
+            correctXwalk(scip, heap, state, &count, dist, m, newcost);
          }
          else
          {
-            correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
+            correctXwalk(scip, heap, state, &count, dist, m, cost[e]);
          }
 
          if( ++nchecks > edgelimit1 )
@@ -959,7 +1176,7 @@ SCIP_Bool graph_sdWalks(
                   break;
                }
 
-               correctXwalk(scip, heap, state, &count, dist, m, e, distnew);
+               correctXwalk(scip, heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1033,7 +1250,16 @@ SCIP_Bool graph_sdWalksExt(
          visitlist[(*nvisits)++] = m;
          visited[m] = TRUE;
          sdwalk_update(g, m, start, maxnprevs, prevterms, nprevterms);
-         correctX(scip, heap, state, &count, dist, NULL, m, start, e, cost[e]);
+
+         if( Is_term(g->term[m]) )
+         {
+            const SCIP_Real newcost = MAX(cost[e] - g->prize[m], 0.0);
+            correctXwalk(scip, heap, state, &count, dist, m, newcost);
+         }
+         else
+         {
+            correctXwalk(scip, heap, state, &count, dist, m, cost[e]);
+         }
 
          if( ++nchecks > edgelimit1 )
             break;
@@ -1090,7 +1316,153 @@ SCIP_Bool graph_sdWalksExt(
                   continue;
 
                sdwalk_update(g, m, k, maxnprevs, prevterms, nprevterms);
-               correctXwalk(scip, heap, state, &count, dist, m, e, distnew);
+               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+            }
+         }
+         nchecks++;
+      }
+   }
+
+   g->mark[start] = TRUE;
+   return success;
+}
+
+
+
+/** modified Dijkstra along walks for PcMw, returns special distance between start and end */
+SCIP_Bool graph_sdWalksExt2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const int*            termmark,           /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise) */
+   SCIP_Real             distlimit,          /**< distance limit of the search */
+   int                   start,              /**< start */
+   int                   end,                /**< end */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   int                   maxnprevs,          /**< maximum number of previous terminals to save */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  prevterms,          /**< previous terminals */
+   int*                  nprevterms,         /**< number of previous terminals */
+   int*                  prevNPterms,        /**< previous non-proper terminals */
+   int*                  nprevNPterms,       /**< number of previous non-proper terminals */
+   int*                  prevedges,          /**< previous edges */
+   int*                  nprevedges,         /**< number of previous edges */
+   int*                  heap,               /**< array representing a heap */
+   int*                  state,              /**< array to indicate whether a node has been scanned */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+   )
+{
+   int count;
+   int nchecks;
+   SCIP_Bool success = FALSE;
+   const int edgelimit1 = edgelimit / 2;
+
+   assert(g != NULL);
+   assert(heap != NULL);
+   assert(dist != NULL);
+   assert(cost != NULL);
+   assert(visitlist != NULL);
+   assert(nvisits != NULL);
+   assert(visited != NULL);
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+
+   *nvisits = 0;
+
+   if( g->grad[start] == 0 || g->grad[end] == 0 )
+      return FALSE;
+
+   assert(g->mark[start] && g->mark[end]);
+
+   count = 0;
+   nchecks = 0;
+   dist[start] = 0.0;
+   state[start] = CONNECT;
+   visitlist[(*nvisits)++] = start;
+
+   g->mark[start] = FALSE;
+   g->mark[end] = FALSE;
+
+   for( int e = g->outbeg[start]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int m = g->head[e];
+
+      if( g->mark[m] && SCIPisLE(scip, cost[e], distlimit) )
+      {
+         SCIP_Real distnew = cost[e];
+
+         assert(!visited[m]);
+
+         visitlist[(*nvisits)++] = m;
+         visited[m] = TRUE;
+
+         if( termmark[m] != 0 )
+            distnew = MAX(distnew - g->prize[m], 0.0);
+
+         sdwalk_update2(termmark, m, start, e, maxnprevs, SCIPisZero(scip, distnew),
+               prevterms, nprevterms, prevNPterms, nprevNPterms, prevedges, nprevedges);
+         correctXwalk(scip, heap, state, &count, dist, m, distnew);
+
+         if( ++nchecks > edgelimit1 )
+            break;
+      }
+   }
+   assert(nprevterms[start] == 0);
+
+   g->mark[end] = TRUE;
+
+   while( count > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labelled node */
+      const int k = nearestX(heap, state, &count, dist);
+      assert(k != end && k != start);
+      assert(SCIPisLE(scip, dist[k], distlimit));
+
+      state[k] = UNKNOWN;
+
+      /* correct incident nodes */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( g->mark[m] )
+         {
+            SCIP_Real distnew = sdwalk_getdistnewEdge(prevedges, nprevedges, cost, dist, k, e, maxnprevs);
+
+            assert(state[m] != CONNECT);
+
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( termmark[m] != 0 )
+               distnew = sdwalk_getdistnewPrize(prevNPterms, nprevNPterms, termmark, visited, g->prize, k, m, distnew, maxnprevs);
+
+            if( SCIPisLT(scip, distnew, dist[m]) )
+            {
+               const SCIP_Bool mvisited = visited[m];
+               if( !mvisited )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( m == end )
+               {
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
+                  break;
+               }
+
+               /* continue if m is proper terminals and is on the walk to k */
+               if( termmark[m] == 2 && sdwalk_conflict(g, m, k, maxnprevs, prevterms, nprevterms, mvisited) )
+                  continue;
+
+               sdwalk_update2(termmark, m, k, e, maxnprevs, SCIPisZero(scip, distnew),
+                     prevterms, nprevterms, prevNPterms, nprevNPterms, prevedges, nprevedges);
+               correctXwalk(scip, heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
@@ -1195,11 +1567,11 @@ SCIP_Bool graph_sdWalksConnected(
                if( Is_term(g->term[m]) )
                {
                   const SCIP_Real newcost = distnew - g->prize[m];
-                  correctXwalk(scip, heap, state, &count, dist, m, e, newcost);
+                  correctXwalk(scip, heap, state, &count, dist, m, newcost);
                }
                else
                {
-                  correctX(scip, heap, state, &count, dist, NULL, m, k, e, cost[e]);
+                  correctXwalk(scip, heap, state, &count, dist, m, distnew);
                }
             }
          }
