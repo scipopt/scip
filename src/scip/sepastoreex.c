@@ -184,6 +184,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
 
    /* capture the cut */
    // todo exip: might need this SCIProwCapture(cut);
+   SCIProwexCapture(cut);
 
    pos = sepastoreex->ncuts;
 
@@ -287,6 +288,7 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
 
    assert(SCIPlpexIsSynced(lpex, SCIPgetMessagehdlr(set->scip)));
 
+   SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpex) );
 
    return SCIP_OKAY;
 }
