@@ -1802,6 +1802,8 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
+   SCIP_CALL( SCIPlpexReset(scip->lpex, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+
    /* resets the debug environment */
    SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
 
