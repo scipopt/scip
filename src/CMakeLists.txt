@@ -158,6 +158,7 @@ set(scipsources
     scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
+    scip/presol_tworowcomb.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
@@ -601,6 +602,7 @@ set(scipheaders
     scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
+    scip/presol_tworowcomb.h
     scip/presolve.h
     scip/pricer.h
     scip/pricestore.h
