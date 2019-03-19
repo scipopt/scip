@@ -254,6 +254,15 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
+/** adds correct bound-data to negated variable */
+extern
+SCIP_RETCODE SCIPvarNegateExactData(
+   SCIP_VAR*             negvar,             /**< the negated variable */
+   SCIP_VAR*             origvar,            /**< the original variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** create and set the exact variable bounds and objective value */
 extern
 SCIP_RETCODE SCIPvarAddExactData(
@@ -273,10 +282,12 @@ SCIP_RETCODE SCIPvarCopyExactData(
    );
 
 /** free exact variable data, if it exists */
-void SCIPvarFreeExactData(
+SCIP_RETCODE SCIPvarFreeExactData(
    SCIP_VAR*             var,                /**< variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
+   SCIP_LPEX*            lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    );
 
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is

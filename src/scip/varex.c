@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPvarColumnExact(
 
    SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
 
+
    /* switch variable status */
    var->exactdata->exvarstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
@@ -514,6 +515,58 @@ SCIP_COLEX* SCIPvarGetColExact(
    return var->exactdata->excol;
 }
 
+/** adds correct bound-data to negated variable */
+SCIP_RETCODE SCIPvarNegateExactData(
+   SCIP_VAR*             negvar,             /**< the negated variable */
+   SCIP_VAR*             origvar,            /**< the original variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real constant;
+
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   assert(negvar != NULL);
+   assert(origvar != NULL);
+   assert(origvar->exactdata != NULL);
+   assert(negvar->exactdata == NULL);
+
+   constant = negvar->data.negate.constant;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(negvar->exactdata)) );
+
+   negvar->exactdata->glbdom.ub = Rcreate(blkmem);
+   negvar->exactdata->glbdom.lb = Rcreate(blkmem);
+
+   negvar->exactdata->locdom.lb = Rcreate(blkmem);
+   negvar->exactdata->locdom.ub = Rcreate(blkmem);
+
+   negvar->exactdata->obj = Rcreate(blkmem);
+
+   RdiffReal(negvar->exactdata->glbdom.ub, origvar->exactdata->glbdom.lb, constant);
+   Rneg(negvar->exactdata->glbdom.ub, negvar->exactdata->glbdom.ub);
+
+   RdiffReal(negvar->exactdata->glbdom.lb, origvar->exactdata->glbdom.ub, constant);
+   Rneg(negvar->exactdata->glbdom.lb, negvar->exactdata->glbdom.lb);
+
+   RdiffReal(negvar->exactdata->locdom.ub, origvar->exactdata->locdom.lb, constant);
+   Rneg(negvar->exactdata->locdom.ub, negvar->exactdata->locdom.ub);
+
+   RdiffReal(negvar->exactdata->locdom.lb, origvar->exactdata->locdom.ub, constant);
+   Rneg(negvar->exactdata->locdom.lb, negvar->exactdata->locdom.lb);
+
+   negvar->exactdata->exvarstatus = SCIP_VARSTATUS_NEGATED;
+
+   assert(RisEqualReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
+   assert(RisEqualReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
+   assert(RisEqualReal(negvar->exactdata->glbdom.lb, negvar->glbdom.lb));
+   assert(RisEqualReal(negvar->exactdata->locdom.lb, negvar->locdom.lb));
+
+   return SCIP_OKAY;
+}
+
 /** create and set the exact variable bounds and objective value */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
@@ -578,14 +631,20 @@ SCIP_RETCODE SCIPvarCopyExactData(
 }
 
 /** free exact variable data, if it exists */
-void SCIPvarFreeExactData(
+SCIP_RETCODE SCIPvarFreeExactData(
    SCIP_VAR*             var,                /**< variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue (may be NULL, if it's not a column variable) */
+   SCIP_LPEX*            lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
    if( set->misc_exactsolve )
    {
+      if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPcolexFree(&(var->exactdata->excol), blkmem, set, eventqueue, lp) );
+      }
       /* free exact variable data if it was created */
       if( var->exactdata != NULL )
       {
@@ -603,6 +662,8 @@ void SCIPvarFreeExactData(
    {
       assert(var->exactdata == NULL);
    }
+   
+   return SCIP_OKAY;
 }
 
 /* @todo exip: this is currently a blank */

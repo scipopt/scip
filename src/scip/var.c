@@ -2752,7 +2752,10 @@ SCIP_RETCODE varFree(
    SCIPvaluehistoryFree(&(*var)->valuehistory, blkmem);
 
    /* free exact data if it exists */
-   SCIPvarFreeExactData(*var, blkmem, set);
+   if( set->misc_exactsolve )
+   {
+      SCIP_CALL( SCIPvarFreeExactData(*var, blkmem, set, eventqueue, NULL) );
+   }
 
    /* free variable data structure */
    BMSfreeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);
@@ -5752,6 +5755,8 @@ SCIP_RETCODE SCIPvarNegate(
       (*negvar)->glbdom.ub = (*negvar)->data.negate.constant - var->glbdom.lb;
       (*negvar)->locdom.lb = (*negvar)->data.negate.constant - var->locdom.ub;
       (*negvar)->locdom.ub = (*negvar)->data.negate.constant - var->locdom.lb;
+
+      SCIP_CALL( SCIPvarNegateExactData(*negvar, var, blkmem, set) );
       /**@todo create holes in the negated variable corresponding to the holes of the negation variable */
 
       /* link the variables together */
@@ -7569,8 +7574,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    var->locdom.ub = newbound;
    /* todo: exip this is temporary */
    if( set->misc_exactsolve )
+   {
+      assert(var->exactdata != NULL);
       RsetReal(var->exactdata->locdom.ub, newbound);
-
+   }
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
     */
