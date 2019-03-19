@@ -1003,7 +1003,7 @@ SCIP_RETCODE addVar(
       {
       case BOUND_VALUE:
          lbrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(lower));
-         lb = RgetRealRelax(lbrat, SCIP_ROUND_DOWNWARDS);
+         lb = RgetRealApprox(lbrat);
          break;
       case BOUND_INFTY:
          lbrat = RcreateString(SCIPblkmem(scip), "inf");
@@ -1016,7 +1016,7 @@ SCIP_RETCODE addVar(
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
-         lbrat = RcreateInt(SCIPblkmem(scip), 0, 1);
+         lbrat = Rcreate(SCIPblkmem(scip));
          lb = 0.0;
          break;
       }
@@ -1026,7 +1026,7 @@ SCIP_RETCODE addVar(
       {
       case BOUND_VALUE:
          ubrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(upper));
-         ub = RgetRealRelax(ubrat, SCIP_ROUND_UPWARDS);
+         ub = RgetRealApprox(ubrat);
          break;
       case BOUND_INFTY:
          ubrat = RcreateString(SCIPblkmem(scip), "inf");
@@ -1039,7 +1039,7 @@ SCIP_RETCODE addVar(
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
-         ubrat = RcreateInt(SCIPblkmem(scip), 0, 1);
+         ubrat = Rcreate(SCIPblkmem(scip));
          ub = 0.0;
          break;
       }
@@ -1541,7 +1541,7 @@ void xlp_addtocost(
       Radd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
 
       SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
-         RgetRealRelax(scipvalrat, SCIP_ROUND_NEAREST) );
+         RgetRealApprox(scipvalrat) );
       SCIPdebug(RtoString(scipvalrat, str));
       SCIPdebugMessage(" (<%s> as exact) \n", str);
 
