@@ -815,14 +815,19 @@ SCIP_RETCODE setupSubscipLpface(
       SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
       SCIPsetSubscipDepth(subscip, SCIPgetSubscipDepth(scip) + 1);
 
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/exactsolve", FALSE) );
+
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/exactsolve", FALSE) );
    }
    else
    {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/exactsolve", FALSE) );
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
