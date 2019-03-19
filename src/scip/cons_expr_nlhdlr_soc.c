@@ -45,6 +45,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real*            offsets;            /**< offsets of bot sides (beta_i) */
    SCIP_Real*            transcoefs;         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
+   int*                  termbegins;         /**< starting indices of transcoefs for each term */
    int*                  nnonzeroes;         /**< number of non-zeroes in each v_i */
    SCIP_Real             constant;           /**< constant on left hand side (gamma) */
    int                   nvars;              /**< total number of variables appearing */
@@ -74,6 +75,7 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_Real*            offsets,            /**< offsets of bot sides (beta_i) */
    SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int*                  termbegins,         /**< starting indices of transcoefs for each term */
    int*                  nnonzeroes,         /**< number of non-zeroes in each v_i */
    SCIP_Real             constant,           /**< constant on left hand side (gamma) */
    int                   nvars,              /**< total number of variables appearing */
@@ -89,6 +91,7 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(offsets != NULL);
    assert(transcoefs != NULL);
    assert(transcoefsidx != NULL);
+   assert(termbegins != NULL);
    assert(nnonzeroes != NULL);
    assert(coefs[nterms-1] != 0.0);
    assert(nlhdlrexprdata != NULL);
@@ -99,6 +102,7 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->offsets, offsets, nterms) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, transcoefs, ntranscoefs) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, transcoefsidx, ntranscoefs) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, termbegins, nterms) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlhdlrexprdata)->nnonzeroes, nnonzeroes, nterms) );
    (*nlhdlrexprdata)->constant = constant;
    (*nlhdlrexprdata)->nvars = nvars;
@@ -134,6 +138,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    }
 
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->nnonzeroes, (*nlhdlrexprdata)->nterms);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->termbegins, (*nlhdlrexprdata)->nterms);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefsidx, (*nlhdlrexprdata)->ntranscoefs);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->transcoefs, (*nlhdlrexprdata)->ntranscoefs);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->offsets, (*nlhdlrexprdata)->nterms);
@@ -144,13 +149,44 @@ SCIP_RETCODE freeNlhdlrExprData(
    return SCIP_OKAY;
 }
 
+/** evaluate a single term of the form v_i^T x + \beta_i */
+static
+SCIP_Real evalSingleTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_SOL*             sol,                /**< solution */
+   int                   k                   /**< term to be evaluated */
+   )
+{
+   SCIP_Real result;
+   int termstart;
+   int i;
+
+   assert(scip != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(sol != NULL);
+   assert(k > 0);
+   assert(k < nlhdlrexprdata->nterms + 1);
+
+   termstart = nlhdlrexprdata->termbegins[k];
+   result = nlhdlrexprdata->offsets[k];
+
+   for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+   {
+      SCIP_Real varval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstart + i]]);
+      result += nlhdlrexprdata->transcoefs[termstart + i] * varval;
+   }
+
+   return result;
+}
+
 /** helper method to create variables for the cone disaggregation */
-/*static
+static
 SCIP_RETCODE createDisaggr(
-   SCIP*                 scip,               *//**< SCIP data structure *//*
-   SCIP_CONSHDLR*        conshdlr,           *//**< expression constraint handler *//*
-   SCIP_CONSEXPR_EXPR*   expr,               *//**< expression *//*
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  *//**< nonlinear handler expression data *//*
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
    SCIP_VAR** vars;
@@ -160,21 +196,26 @@ SCIP_RETCODE createDisaggr(
    SCIP_Bool infeas;
    int nvars;
    int size;
+   int nrhsvars;
+   int nterms;
    int i;
 
    assert(nlhdlrexprdata != NULL);
 
-   *//* check whether constant has a separate entry *//*
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+   nrhsvars = nlhdlrexprdata->nnonzeroes[nlhdlrexprdata->nterms-1];
+   nterms = nlhdlrexprdata->nterms;
+
+   /* check whether constant has a separate entry */
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms : nterms + 1;
    nvars = 0;
 
-   *//* allocate memory *//*
+   /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->disvars, size) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size + nrhsvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + nrhsvars) );
 
-   *//* create disaggregation variables *//*
-   for( i = 0; i < nlhdlrexprdata->nexprs; ++i )
+   /* create disaggregation variables */
+   for( i = 0; i < nterms; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*)expr, i);
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
@@ -186,7 +227,7 @@ SCIP_RETCODE createDisaggr(
       ++nvars;
    }
 
-   *//* add constant <= rhscoef * rhvar * z_i *//*
+   /* add constant <= rhscoef * rhvar * z_i */
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*)expr);
@@ -199,28 +240,33 @@ SCIP_RETCODE createDisaggr(
       ++nvars;
    }
 
-   *//* consider RHS variable *//*
-   vars[nvars] = nlhdlrexprdata->rhsvar;
-   coefs[nvars] = -nlhdlrexprdata->rhscoef;
-   ++nvars;
+   /* consider RHS variables */
+   for( i = 0; i < nrhsvars; ++i)
+   {
+      int idx = nlhdlrexprdata->ntranscoefs - i - 1;
+      vars[nvars] = nlhdlrexprdata->vars[idx];
+      coefs[nvars] = -nlhdlrexprdata->transcoefs[idx] * nlhdlrexprdata->coefs[nterms-1];
+      ++nvars;
+   }
 
-   *//* create row *//*
+   /* create row */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%p", (void*)expr);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
+         nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
 
-   *//* free memory *//*
+   /* free memory */
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
-}*/
+}
 
 /** helper method to free variables for the cone disaggregation */
-/*static
+static
 SCIP_RETCODE freeDisaggr(
-   SCIP*                 scip,               *//**< SCIP data structure *//*
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  *//**< nonlinear handler expression data *//*
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
    )
 {
    int i;
@@ -228,100 +274,53 @@ SCIP_RETCODE freeDisaggr(
 
    assert(nlhdlrexprdata != NULL);
 
-   *//* check whether constant has a separate entry *//*
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+   /* check whether constant has a separate entry */
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms : nlhdlrexprdata->nterms + 1;
 
    if( nlhdlrexprdata->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->row) );
    }
 
-   *//* release variables *//*
+   /* release variables */
    for( i = 0; i < size; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
    }
 
-   *//* free memory *//*
+   /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &nlhdlrexprdata->disvars, size);
 
    return SCIP_OKAY;
-}*/
+}
 
 /** helper method to evaluate a cone disaggregation term */
-/*
 static
-SCIP_RETCODE evalDisaggr(
-   SCIP*                 scip,               */
-/**< SCIP data structure *//*
-
-   SCIP_SOL*             sol,                */
-/**< solution to evaluate (might be NULL) *//*
-
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, */
-/**< nonlinear handler expression data *//*
-
-   int                   k,                  */
-/**< k-th disaggregation term *//*
-
-   SCIP_Real*            value,              */
-/**< pointer to store the result *//*
-
-   SCIP_Real*            gradient            */
-/**< array to store the gradient *//*
-
+SCIP_Real evalDisaggr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to evaluate (might be NULL) */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   int                   k                   /**< k-th disaggregation term */
    )
 {
    SCIP_Real disvarval;
    SCIP_Real rhsval;
+   SCIP_Real lhsval;
    SCIP_Real tmp;
+   int nterms;
+   int i;
 
    assert(nlhdlrexprdata != NULL);
-   assert(k >= 0 && k < nlhdlrexprdata->nexprs + 1);
-   assert(value != NULL);
-   assert(gradient != NULL);
+   assert(k >= 0 && k < nlhdlrexprdata->nterms + 1);
+
+   nterms = nlhdlrexprdata->nterms;
 
    disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
-   rhsval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->rhsvar);
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+   lhsval = (k < nterms ? evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1) : nlhdlrexprdata->constant);
 
-   if( k < nlhdlrexprdata->nexprs )
-   {
-      SCIP_Real exprauxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k]));
-
-      tmp = SQRT(4.0 * nlhdlrexprdata->coefs[k] * SQR(exprauxval) + SQR(nlhdlrexprdata->rhscoef * rhsval - disvarval));
-      *value = tmp - disvarval - nlhdlrexprdata->rhscoef * rhsval;
-
-      */
-/* gradient w.r.t. auxiliary variable for the expression *//*
-
-      gradient[0] = (4.0 * nlhdlrexprdata->coefs[k] * exprauxval) / tmp;
-   }
-   else
-   {
-      assert(!SCIPisZero(scip, nlhdlrexprdata->constant));
-
-      tmp = SQRT(4.0 * nlhdlrexprdata->constant + SQR(nlhdlrexprdata->rhscoef * rhsval - disvarval));
-      *value = tmp - disvarval - nlhdlrexprdata->rhscoef * rhsval;
-
-      */
-/* gradient w.r.t. auxiliary variable for the expression *//*
-
-      gradient[0] = 0.0;
-   }
-
-   */
-/* gradient w.r.t. the disaggregation variable *//*
-
-   gradient[1] = -nlhdlrexprdata->rhscoef - (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
-
-   */
-/* gradient w.r.t. the RHS variable *//*
-
-   gradient[2] = -1.0 - nlhdlrexprdata->rhscoef * (nlhdlrexprdata->rhscoef * rhsval - disvarval) / tmp;
-
-   return SCIP_OKAY;
+   return SQR(lhsval) - rhsval * disvarval;
 }
-*/
 
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation */
 /*
