@@ -436,6 +436,7 @@ SCIP_RETCODE detectSocNorm(
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
+   int* termbegins;
    int* nnonzeroes;
    SCIP_Real constant;
    int nchildren;
@@ -521,12 +522,14 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nvars) );
 
    for( i = 0; i < nvars; ++i )
    {
       transcoefs[i] = 1.0;
       transcoefsidx[i] = i;
+      termbegins[i] = i;
       offsets[i] = 0.0;
       nnonzeroes[i] = 1;
    }
@@ -576,8 +579,8 @@ SCIP_RETCODE detectSocNorm(
    *success = TRUE;
 
    /* create and store nonlinear handler expression data */
-   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, constant,
-         nvars, nvars, nvars, nlhdlrexprdata) );
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,
+         constant, nvars, nvars, nvars, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
@@ -590,6 +593,7 @@ SCIP_RETCODE detectSocNorm(
    SCIPhashsetFree(&linexprs, SCIPblkmem(scip) );
    SCIPhashmapFree(&expr2idx);
    SCIPfreeBufferArray(scip, &nnonzeroes);
+   SCIPfreeBufferArray(scip, &termbegins);
    SCIPfreeBufferArray(scip, &transcoefsidx);
    SCIPfreeBufferArray(scip, &transcoefs);
    SCIPfreeBufferArray(scip, &offsets);
