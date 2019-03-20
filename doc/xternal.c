@@ -7470,7 +7470,7 @@
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP
-  * @brief methods and headers of the public C-API of \SCIP
+  * @brief methods and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
   *
   * \PUBLICAPIDESCRIPTION
   *
