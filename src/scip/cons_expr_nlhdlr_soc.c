@@ -166,7 +166,7 @@ SCIP_Real evalSingleTerm(
    assert(nlhdlrexprdata != NULL);
    assert(sol != NULL);
    assert(k > 0);
-   assert(k < nlhdlrexprdata->nterms + 1);
+   assert(k < nlhdlrexprdata->nterms);
 
    termstart = nlhdlrexprdata->termbegins[k];
    result = nlhdlrexprdata->offsets[k];
@@ -323,97 +323,118 @@ SCIP_Real evalDisaggr(
 }
 
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation */
-/*
 static
 SCIP_RETCODE generateCutSol(
-   SCIP*                 scip,               */
-/**< SCIP data structure *//*
-
-   SCIP_CONSEXPR_EXPR*   expr,               */
-/**< expression *//*
-
-   SCIP_CONSHDLR*        conshdlr,           */
-/**< expression constraint handler *//*
-
-   SCIP_SOL*             sol,                */
-/**< solution to separate (might be NULL) *//*
-
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, */
-/**< nonlinear handler expression data *//*
-
-   int                   k,                  */
-/**< k-th disaggregation *//*
-
-   SCIP_Real             mincutviolation,    */
-/**< minimal required cut violation *//*
-
-   SCIP_ROW**            row                 */
-/**< pointer to store a cut *//*
-
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   int                   k,                  /**< k-th disaggregation */
+   SCIP_Real             mincutviolation,    /**< minimal required cut violation */
+   SCIP_ROW**            row                 /**< pointer to store a cut */
    )
 {
-   SCIP_Real gradient[3];
+   SCIP_VAR* cutvar;
+   SCIP_Real cutcoef;
    SCIP_Real value;
+   SCIP_Real disvarval;
+   SCIP_Real rhsval;
+   SCIP_Real lhsval;
+   int nterms;
+   int i;
 
    assert(expr != NULL);
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(k < nlhdlrexprdata->nexprs + 1);
+   assert(k < nlhdlrexprdata->nterms + 1);
    assert(mincutviolation >= 0.0);
    assert(row != NULL);
 
+   nterms = nlhdlrexprdata->nterms;
+
    *row = NULL;
 
-   SCIP_CALL( evalDisaggr(scip, sol, nlhdlrexprdata, k, &value, gradient) );
-   SCIPdebugMsg(scip, "evaluate disaggregation: value=%g gradient=(%g,%g,%g)\n", value, gradient[0], gradient[1], gradient[2]);
+   disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
+   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+   if( k < nterms )
+   {
+      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+      value = SQR(lhsval);
+   }
+   else
+   {
+      lhsval = nlhdlrexprdata->constant;
+      value = lhsval;
+   }
+
+   value -= rhsval * disvarval;
+   SCIPdebugMsg(scip, "evaluate disaggregation: value=%g\n", value);
 
    if( value > mincutviolation )
    {
       SCIP_ROWPREP* rowprep;
-      SCIP_Real disvarval;
-      SCIP_Real exprauxval;
-      SCIP_Real rhsval;
+      SCIP_Real sideval;
+      int termstartidx;
 
-      disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
-      rhsval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->rhsvar);
-      exprauxval = k < nlhdlrexprdata->nexprs ? SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k])) : 0.0;
-
-      */
-/* create cut *//*
-
+      /* create cut */
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 3) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, k < nterms? nterms+1 : 2) );
 
-      */
-/* add terms *//*
+      sideval = 0;
+      termstartidx = nlhdlrexprdata->termbegins[k];
 
-      if( exprauxval != 0.0 )
+      /* add terms for lhs */
+      if( k < nterms )
       {
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprs[k]), gradient[0]) );
+         for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
+         {
+            cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
+            cutcoef = 2.0 * nlhdlrexprdata->coefs[k] * nlhdlrexprdata->transcoefs[termstartidx + i] * lhsval;
+
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+            sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+         }
       }
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->disvars[k], gradient[1]) );
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->rhsvar, gradient[2]) );
 
-      */
-/* add side *//*
+      termstartidx = nlhdlrexprdata->termbegins[nterms-1];
 
-      SCIPaddRowprepSide(rowprep, exprauxval * gradient[0] + disvarval * gradient[1] + rhsval * gradient[2] - value);
+      /* add terms for rhs */
+      for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+      {
+         cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
+         cutcoef = nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
+
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+         sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+      }
+
+      /* add term for disvar */
+      cutvar = nlhdlrexprdata->disvars[k];
+      cutcoef = rhsval * nlhdlrexprdata->coefs[nterms-1];
+
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+      sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+
+      /* add side */
+      SCIPaddRowprepSide(rowprep, sideval - value);
 
       if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
       {
-         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*)expr, k);
+         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
          SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, conshdlr) );
       }
 
-      */
-/* free memory *//*
-
+      /* free memory */
       SCIPfreeRowprep(scip, &rowprep);
    }
 
    return SCIP_OKAY;
 }
-*/
+
 
 /** helper method to detect SQRT(sum_i coef_i (expr_i)^2 + const) <= auxvar */
 static
