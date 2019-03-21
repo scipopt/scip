@@ -216,6 +216,7 @@ extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern void   graph_pc_deleteTermExtension(SCIP*, GRAPH*, int);
 extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Bool, SCIP_Real*, SCIP_Real*);
+extern void   graph_pc_termMarkProper(const GRAPH*, int*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
@@ -296,7 +297,7 @@ extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_B
 extern void   graph_sdPaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_voronoiWithRadiusMw(SCIP* scip, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
-extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Bool);
+extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Bool);
 extern SCIP_RETCODE   graph_voronoiExtend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);

@@ -184,6 +184,7 @@ SCIP_RETCODE init_pcmwimplications(
    const int npterms = graph_pc_nPotentialTerms(g);
    int* start;
    int* verts;
+   int* termmark;
    int* visitlist;
    SCIP_Real* dist;
    STP_Bool* visited;
@@ -202,6 +203,7 @@ SCIP_RETCODE init_pcmwimplications(
    SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &visitlist, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &termmark, nnodes));
    SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), npterms + 1));
    SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), maxnimplications));
 
@@ -214,6 +216,8 @@ SCIP_RETCODE init_pcmwimplications(
       g->path_state[i] = UNKNOWN;
       dist[i] = FARAWAY;
    }
+
+   graph_pc_termMarkProper(g, termmark);
 
    start[0] = 0;
    nspares = 0;
@@ -231,7 +235,7 @@ SCIP_RETCODE init_pcmwimplications(
       assert(i != g->source);
       assert(g->path_heap != NULL);
       assert(g->path_state != NULL);
-      (void) graph_sdWalksConnected(scip, g, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
+      (void) graph_sdWalksConnected(scip, g, termmark, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
 
       assert(nvisits >= 1 && visitlist[0] == i);
       assert(nspares >= 0);
@@ -259,6 +263,7 @@ SCIP_RETCODE init_pcmwimplications(
 
    printf("number of implications %d \n", nimplications);
 
+   SCIPfreeBufferArray(scip, &termmark);
    SCIPfreeBufferArray(scip, &visitlist);
    SCIPfreeBufferArray(scip, &visited);
    SCIPfreeBufferArray(scip, &dist);

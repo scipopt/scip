@@ -2588,19 +2588,9 @@ SCIP_RETCODE reduce_sdWalk(
       visited[i] = FALSE;
       state[i] = UNKNOWN;
       dist[i] = FARAWAY;
-      termmark[i] = 0;
    }
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) )
-      {
-         if( graph_pc_termIsNonLeaf(g, i) )
-            termmark[i] = 1;
-         else
-            termmark[i] = 2;
-      }
-   }
+   graph_pc_termMarkProper(g, termmark);
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -2802,19 +2792,9 @@ SCIP_RETCODE reduce_sdWalkExt2(
       nprevterms[i] = 0;
       nprevNPterms[i] = 0;
       nprevedges[i] = 0;
-      termmark[i] = 0;
    }
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) )
-      {
-         if( graph_pc_termIsNonLeaf(g, i) )
-            termmark[i] = 1;
-         else
-            termmark[i] = 2;
-      }
-   }
+   graph_pc_termMarkProper(g, termmark);
 
    for( int i = 0; i < nnodes; i++ )
    {

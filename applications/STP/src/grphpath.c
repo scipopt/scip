@@ -1478,6 +1478,7 @@ SCIP_Bool graph_sdWalksExt2(
 SCIP_Bool graph_sdWalksConnected(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   const int*            termmark,           /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise) */
    const SCIP_Real*      cost,               /**< edge costs */
    const STP_Bool*       endpoint,           /**< stores whether search should be ended at vertex */
    int                   start,              /**< start vertex */
@@ -1526,13 +1527,13 @@ SCIP_Bool graph_sdWalksConnected(
    visitlist[(*nvisits)++] = start;
    g->mark[start] = FALSE;
 
-   while( count > 0 && nchecks <= edgelimit ) // todo try extended version?
+   while( count > 0 && nchecks <= edgelimit )
    {
       /* get nearest labelled node */
       const int k = nearestX(heap, state, &count, dist);
       assert(SCIPisLE(scip, dist[k], prize));
 
-      if( Is_term(g->term[k]) )
+      if( termmark[k] == 2 )
          state[k] = CONNECT;
       else
          state[k] = UNKNOWN;
@@ -1544,9 +1545,15 @@ SCIP_Bool graph_sdWalksConnected(
 
          if( (state[m] != CONNECT) && g->mark[m] )
          {
-            const SCIP_Real distnew = dist[k] + cost[e];
+            SCIP_Real distnew = dist[k] + cost[e];
 
-            if( (distnew <= prize) && (distnew < dist[m]) )
+            if( SCIPisGT(scip, distnew, prize) )
+               continue;
+
+            if( termmark[m] != 0 )
+               distnew -= g->prize[m];
+
+            if( distnew < dist[m] )
             {
                if( !visited[m] )
                {
@@ -1564,15 +1571,7 @@ SCIP_Bool graph_sdWalksConnected(
                   return TRUE;
                }
 
-               if( Is_term(g->term[m]) )
-               {
-                  const SCIP_Real newcost = distnew - g->prize[m];
-                  correctXwalk(scip, heap, state, &count, dist, m, newcost);
-               }
-               else
-               {
-                  correctXwalk(scip, heap, state, &count, dist, m, distnew);
-               }
+               correctXwalk(scip, heap, state, &count, dist, m, distnew);
             }
          }
          nchecks++;
