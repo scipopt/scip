@@ -25,6 +25,7 @@
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
 #include "scip/pub_cons.h"
@@ -42,6 +43,7 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/var.h"
+#include "scip/varex.h"
 #include <string.h>
 
 
@@ -971,6 +973,7 @@ SCIP_RETCODE SCIPprobAddVar(
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
+      SCIP_CALL( SCIPlpexUpdateAddVar(lp->lpex, set, var) );
    }
 
    SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
@@ -1704,6 +1707,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   {
                      SCIPsetDebugMsg(set, " -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                      SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
+                     SCIP_CALL( SCIPvarScaleObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpex, eventqueue, intscalar) );
                   }
                   transprob->objoffset *= intscalar;
                   transprob->objscale /= intscalar;
