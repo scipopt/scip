@@ -4986,7 +4986,7 @@ SCIP_RETCODE enforceConstraints(
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
-   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %d\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
