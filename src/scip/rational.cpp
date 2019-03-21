@@ -739,9 +739,11 @@ SCIP_Bool RisEqualReal(
    assert(r1 != NULL);
 
    if( r1->isinf )
+   {
       return FALSE;
+   }
    else
-      return r1->r == r2;
+      return REALABS(RgetRealApprox(r1) - r2) < 1e-15;
 }
 
 /** check if the first rational is greater than the second*/
