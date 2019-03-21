@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
       }
    }
 
-   assert(SCIPlpexIsSynced(lpex, SCIPgetMessagehdlr(set->scip)));
+   assert(SCIPlpexIsSynced(lpex, set, SCIPgetMessagehdlr(set->scip)));
 
    SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpex) );
 

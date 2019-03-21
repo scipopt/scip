@@ -696,7 +696,40 @@ SCIP_RETCODE varEventObjChanged(
 }
 
 /** changes objective value of variable */
-SCIP_RETCODE SCIPvarChgExactObj(
+SCIP_RETCODE SCIPvarScaleObjExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             scale               /**< new objective value for variable */
+   )
+{
+   SCIP_Rational* tmp;
+
+   assert(var != NULL);
+   assert(set != NULL);
+
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
+   assert(var->exactdata != NULL);
+   assert(var->scip == set->scip);
+
+   tmp = RcreateTemp(set->buffer);
+
+   RmultReal(tmp, SCIPvarGetObjExact(var), scale);
+
+   SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, prob, primal, lp, eventqueue, tmp) );
+   RdeleteTemp(set->buffer, &tmp);
+
+   return SCIP_OKAY;
+}
+
+/** changes objective value of variable */
+SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -709,13 +742,18 @@ SCIP_RETCODE SCIPvarChgExactObj(
 {
    SCIP_Real newobjreal;
    SCIP_Real oldobj;
-   SCIP_Rational* tmp = Rcreate(blkmem);
+   SCIP_Rational* tmp;
 
    assert(var != NULL);
    assert(set != NULL);
+
+   if( !set->misc_exactsolve )
+      return SCIP_OKAY;
+
    assert(var->exactdata != NULL);
    assert(var->scip == set->scip);
 
+   tmp = Rcreate(blkmem);
    newobjreal = RgetRealApprox(newobj);
 
    SCIPsetDebugMsg(set, "changing exact objective value of <%s> from %g to %g\n", var->name, var->obj, newobjreal);
@@ -731,7 +769,7 @@ SCIP_RETCODE SCIPvarChgExactObj(
 
             RmultReal(tmp, newobj, (SCIP_Real) prob->objsense/prob->objscale);
 
-            SCIP_CALL( SCIPvarChgExactObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
+            SCIP_CALL( SCIPvarChgObjExact(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
                   tmp) );
          }
          else

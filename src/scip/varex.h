@@ -92,7 +92,20 @@ SCIP_RETCODE SCIPvarColumnExact(
 
 /** changes objective value of variable */
 extern
-SCIP_RETCODE SCIPvarChgExactObj(
+SCIP_RETCODE SCIPvarScaleObjExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             scale               /**< new objective value for variable */
+   );
+
+/** changes objective value of variable */
+extern
+SCIP_RETCODE SCIPvarChgObjExact(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
