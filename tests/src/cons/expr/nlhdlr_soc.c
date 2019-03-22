@@ -309,3 +309,70 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+
+/* detects sqrt( 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) as soc expression */
+Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_Bool infeasible;
+   SCIP_Bool changed;
+   int i;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr,
+      (char*) "(8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1)", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   cr_expect(changed);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+   normexpr = SCIPgetConsExprExprChildren(expr)[1];
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* detect */
+   SCIP_CALL( SCIPinitlpCons(scip, cons, &infeasible) );
+   cr_assert(!infeasible);
+
+   SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < normexpr->nenfos; ++i )
+   {
+      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* check disvars */
+   cr_expect(nlhdlrexprdata->disvars[0] != NULL);
+   cr_expect(nlhdlrexprdata->disvars[1] != NULL);
+   cr_expect(nlhdlrexprdata->disvars[2] != NULL);
+
+   cr_expect(SCIProwGetNNonz(nlhdlrexprdata->row) == 4);
+
+   cr_expect(SCIProwGetVals(nlhdlrexprdata->row)[0] == -1.0);
+   cr_expect(SCIProwGetVals(nlhdlrexprdata->row)[1] == 1.0);
+   cr_expect(SCIProwGetVals(nlhdlrexprdata->row)[2] == 1.0);
+   cr_expect(SCIProwGetVals(nlhdlrexprdata->row)[3] == 1.0);
+
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[0]) == nlhdlrexprdata->vars[2]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[1]) == nlhdlrexprdata->disvars[0]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[2]) == nlhdlrexprdata->disvars[1]);
+   cr_expect(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->row)[3]) == nlhdlrexprdata->disvars[2]);
+
+   cr_expect(SCIProwGetLhs(nlhdlrexprdata->row) == -SCIPinfinity(scip));
+   cr_expect(SCIProwGetRhs(nlhdlrexprdata->row) == 0.0);
+
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* free expr and cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}

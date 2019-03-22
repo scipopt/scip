@@ -204,7 +204,7 @@ SCIP_RETCODE createDisaggr(
    nterms = nlhdlrexprdata->nterms;
 
    /* check whether constant has a separate entry */
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms : nterms + 1;
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nterms-1 : nterms;
    nvars = 0;
 
    /* allocate memory */
@@ -213,9 +213,9 @@ SCIP_RETCODE createDisaggr(
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, size + nrhsvars) );
 
    /* create disaggregation variables */
-   for( i = 0; i < nterms; ++i )
+   for( i = 0; i < nterms-1; ++i )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*)expr, i);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
             NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
@@ -228,7 +228,7 @@ SCIP_RETCODE createDisaggr(
    /* add constant <= rhscoef * rhvar * z_i */
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*)expr);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*) expr);
       SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
@@ -248,7 +248,7 @@ SCIP_RETCODE createDisaggr(
    }
 
    /* create row */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%p", (void*)expr);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%s", (void*) expr);
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
          nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
@@ -273,17 +273,17 @@ SCIP_RETCODE freeDisaggr(
    assert(nlhdlrexprdata != NULL);
 
    /* check whether constant has a separate entry */
-   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms : nlhdlrexprdata->nterms + 1;
-
-   if( nlhdlrexprdata->row != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->row) );
-   }
+   size = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
    /* release variables */
    for( i = 0; i < size; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &nlhdlrexprdata->disvars[i]) );
+   }
+
+   if( nlhdlrexprdata->row != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &nlhdlrexprdata->row) );
    }
 
    /* free memory */
