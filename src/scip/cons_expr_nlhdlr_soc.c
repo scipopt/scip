@@ -192,8 +192,6 @@ SCIP_RETCODE createDisaggr(
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    char name[SCIP_MAXSTRLEN];
-   SCIP_Bool success;
-   SCIP_Bool infeas;
    int nvars;
    int size;
    int nrhsvars;
@@ -294,34 +292,6 @@ SCIP_RETCODE freeDisaggr(
    return SCIP_OKAY;
 }
 
-/** helper method to evaluate a cone disaggregation term */
-static
-SCIP_Real evalDisaggr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< solution to evaluate (might be NULL) */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
-   int                   k                   /**< k-th disaggregation term */
-   )
-{
-   SCIP_Real disvarval;
-   SCIP_Real rhsval;
-   SCIP_Real lhsval;
-   SCIP_Real tmp;
-   int nterms;
-   int i;
-
-   assert(nlhdlrexprdata != NULL);
-   assert(k >= 0 && k < nlhdlrexprdata->nterms + 1);
-
-   nterms = nlhdlrexprdata->nterms;
-
-   disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
-   rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
-   lhsval = (k < nterms ? evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1) : nlhdlrexprdata->constant);
-
-   return SQR(lhsval) - rhsval * disvarval;
-}
-
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation */
 static
 SCIP_RETCODE generateCutSol(
@@ -357,6 +327,7 @@ SCIP_RETCODE generateCutSol(
 
    disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+
    if( k < nterms )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
@@ -799,9 +770,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
    assert(nlhdlrexprdata != NULL);
 
    /* create variables for cone disaggregation */
-/*
    SCIP_CALL( createDisaggr(scip, conshdlr, expr, nlhdlrexprdata) );
-*/
 
    return SCIP_OKAY;
 }
@@ -814,9 +783,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
    assert(nlhdlrexprdata != NULL);
 
    /* free variable for cone disaggregation */
-/*
    SCIP_CALL( freeDisaggr(scip, nlhdlrexprdata) );
-*/
 
    return SCIP_OKAY;
 }
