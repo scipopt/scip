@@ -44,6 +44,7 @@
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
@@ -11114,6 +11115,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
+
+   /* include nonlinear handler for perspective reformulations */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
 
    return SCIP_OKAY;
 }

@@ -34,6 +34,8 @@
 #define NLHDLR_DESC         "convex handler for expressions"
 #define NLHDLR_PRIORITY     50
 
+#define DETECTSUM    FALSE
+
 /*
  * Data structures
  */
@@ -139,6 +141,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    /* we currently cannot contribute in presolve */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* ignore sums */
+   if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
    curvature = SCIPgetConsExprExprCurvature(expr);
