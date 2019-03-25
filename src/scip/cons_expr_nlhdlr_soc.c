@@ -165,7 +165,7 @@ SCIP_Real evalSingleTerm(
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(sol != NULL);
-   assert(k > 0);
+   assert(k >= 0);
    assert(k < nlhdlrexprdata->nterms);
 
    termstart = nlhdlrexprdata->termbegins[k];
@@ -302,7 +302,7 @@ SCIP_RETCODE generateCutSol(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
    int                   k,                  /**< k-th disaggregation */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
-   SCIP_ROW**            row                 /**< pointer to store a cut */
+   SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
    SCIP_VAR* cutvar;
@@ -319,18 +319,18 @@ SCIP_RETCODE generateCutSol(
    assert(nlhdlrexprdata != NULL);
    assert(k < nlhdlrexprdata->nterms + 1);
    assert(mincutviolation >= 0.0);
-   assert(row != NULL);
+   assert(cut != NULL);
 
    nterms = nlhdlrexprdata->nterms;
 
-   *row = NULL;
+   *cut = NULL;
 
    disvarval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->disvars[k]);
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
 
    if( k < nterms )
    {
-      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nterms-1);
+      lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
       value = SQR(lhsval);
    }
    else
@@ -372,23 +372,30 @@ SCIP_RETCODE generateCutSol(
       termstartidx = nlhdlrexprdata->termbegins[nterms-1];
 
       /* add terms for rhs */
-      for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+      if( !SCIPisZero(scip, disvarval) )
       {
-         cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
-         cutcoef = nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
+         for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
+         {
+            cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
+            cutcoef = -nlhdlrexprdata->coefs[nterms-1] * nlhdlrexprdata->transcoefs[termstartidx + i] * disvarval;
+
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
+
+            sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
+         }
+      }
+
+      /* add term for disvar */
+      if( !SCIPisZero(scip, rhsval) )
+      {
+         cutvar = nlhdlrexprdata->disvars[k];
+         cutcoef = -rhsval * nlhdlrexprdata->coefs[nterms-1];
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
 
          sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
       }
 
-      /* add term for disvar */
-      cutvar = nlhdlrexprdata->disvars[k];
-      cutcoef = rhsval * nlhdlrexprdata->coefs[nterms-1];
-
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, cutcoef) );
-
-      sideval += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
 
       /* add side */
       SCIPaddRowprepSide(rowprep, sideval - value);
@@ -396,7 +403,7 @@ SCIP_RETCODE generateCutSol(
       if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
       }
 
       /* free memory */
