@@ -156,6 +156,9 @@ SCIP_RETCODE initComponent(
    component->slacksneg = NULL;
    component->nslacksneg = 0;
 
+   component->couplingcons = NULL;
+   component->ncouplingcons = 0;
+
    ++problem->ncomponents;
 
    return SCIP_OKAY;
@@ -186,10 +189,11 @@ SCIP_RETCODE freeComponent(
       SCIPfreeBlockMemoryArray(scip, &component->vars, component->nvars);
       SCIPfreeBlockMemoryArray(scip, &component->subvars, component->nvars);
    }
-#if 0
+
    SCIPfreeBufferArray(scip, &component->slackspos);
    SCIPfreeBufferArray(scip, &component->slacksneg);
-#endif
+   SCIPfreeBufferArray(scip, &component->couplingcons);
+
    component->nslackspos = 0;
    component->nslacksneg = 0;
    component->ncouplingcons = 0;
@@ -668,7 +672,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIP_CALL( createAndSplitProblem(scip, conss, compstartsconss, ncomponents, &problem) );
 
-#if 0
+#if 1
    for( i = 0; i < problem->ncomponents; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
@@ -856,9 +860,6 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       assert(blocktolinkvars[c].size == (problem->components[c]).ncouplingcons);
    }
 
-   /* TODO: the freeing of slackvars is not correct */
-
-
 #if 1
    for( i = 0; i < problem->ncomponents; i++ )
    {
@@ -866,6 +867,17 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_CALL( SCIPwriteOrigProblem((problem->components[i]).subscip, name, "lp", FALSE) );
    }
 #endif
+
+   /* release slack variables */
+   for( c = 0; c < problem->ncomponents; c++ )
+   {
+      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      {
+         SCIP_CALL( SCIPreleaseVar((problem->components[c]).subscip, &((problem->components[c]).slackspos[i])) );
+         SCIP_CALL( SCIPreleaseVar((problem->components[c]).subscip, &((problem->components[c]).slacksneg[i])) );
+         SCIP_CALL( SCIPreleaseCons((problem->components[c]).subscip, &((problem->components[c]).couplingcons[i])) );
+      }
+   }
 
    SCIPfreeBufferArray(scip, &tmpcouplingcoef);
    SCIPfreeBufferArray(scip, &tmpcouplingvars);
@@ -880,9 +892,11 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIPfreeBufferArray(scip, &linkvartoblocks);
    SCIPfreeBufferArray(scip, &linkvars);
+
    SCIPfreeBufferArray(scip, &compstartsconss);
    SCIPfreeBufferArray(scip, &conslabels);
    SCIPfreeBufferArray(scip, &varslabels);
+
    freeProblem(&problem);
 
    return SCIP_OKAY;
