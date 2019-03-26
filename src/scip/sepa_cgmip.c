@@ -34,14 +34,14 @@
  * Mathematical Programming 113, No. 2 (2008)
  *
  *
- * There are several versions to generate the final cut:
+ * There are several possibilities to generate the final cut:
  *
  * - The CMIR-routines of SCIP can be used (if @p usecmir is true). One can determine which bound is
  *   used in the rounding operation (if cmirownbounds is true) or let SCIP choose the best. This
  *   version is generally numerically the most stable.
  * - If @p usestrongcg is true, we try to generate Strong-CG cuts (as done in sepa_strongcg.c).
  * - One can directly generate the CG-cut as computed (if @p usecmir and @p usestrongcg are
- *   false). The cut is not take from the solution of the MIP, but is recomputed, and some care (but
+ *   false). The cut is not taken from the solution of the MIP, but is recomputed, and some care (but
  *   not as much as in the first version) has been taken to create a valid cut.
  *
  * The computation time of the separation MIP is limited as follows:
@@ -50,7 +50,7 @@
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
  *   the cuts are taken into account - which cannot easily be included into the separation subscip.)
- *   Then the solution is continued for a certain number of nodes.
+ *   Then the solution process is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
  * @todo Use pointers to originating separators to sort out cuts that should not be used.
@@ -962,14 +962,14 @@ SCIP_Real computeObjWeightSize(
  *  original system.  The separating MIP created below is
  *  \f[
  *    \begin{array}{rlr@{\;}l}
- *       \max & \multicolumn{2}{@{}l}{(x^*)^T \alpha - \beta - w^T y} &\\
- *            & f = & \tilde{A}^T y + \overline{z} - \alpha & \\
- *            & \tilde{f} = & \tilde{b}^T y + u^T \overline{z} - \beta &\\
- *            & & \tilde{C}^T y & \geq 0\\
- *            & & 0 \leq f & \leq 1 - \epsilon \\
- *            & & 0 \leq \tilde{f} & \leq 1 - \epsilon\\
- *            & & 0 \leq y, \overline{z} & \leq 1 - \epsilon.\\
- *            & & \alpha \in Z^m, \beta & \in Z.
+ *       \max & (x^*)^T \alpha - \beta - w^T y \\
+ *            & f = \tilde{A}^T y + \overline{z} - \alpha \\
+ *            & \tilde{f} = \tilde{b}^T y + u^T \overline{z} - \beta\\
+ *            & \tilde{C}^T y \geq 0\\
+ *            & 0 \leq f \leq 1 - \epsilon \\
+ *            & 0 \leq \tilde{f} \leq 1 - \epsilon\\
+ *            & 0 \leq y, \overline{z} \leq 1 - \epsilon.\\
+ *            & \alpha \in Z^m, \beta \in Z.
  *    \end{array}
  *  \f]
  *  Here, \f$w\f$ is a weight vector; it's idea is to make the sum over all components of \f$y\f$ as
@@ -1005,7 +1005,7 @@ SCIP_Real computeObjWeightSize(
  *    case, the combintation of rows and bounds has to be integral. We force this by requiring that
  *    \f$f_i = 0\f$.
  *
- *  - If @p contconvert is true some integral variables are randomly treated as if they were
+ *  - If @p contconvert is true, some integral variables are randomly treated as if they were
  *    continuous. This has the effect that in the resulting cut the corresponding coefficient has
  *    value 0. This makes the cuts more sparse. Moreover, the separation problems should become
  *    easier.
@@ -3035,7 +3035,7 @@ SCIP_RETCODE createCGCutDirect(
             /* add cut if it is violated */
             if ( violated )
             {
-               /* check whether cut has been found before - may happend due to projection */
+               /* check whether cut has been found before - may happened due to projection */
                for (k = 0; k < *nprevrows; ++k)
                {
                   SCIP_Real parval;
