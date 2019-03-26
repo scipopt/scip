@@ -1383,7 +1383,7 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->skipmultbounds )
       multvarub = SCIPinfinity(scip);
    else
-      multvarub =  1.0-EPSILONVALUE;
+      multvarub = 1.0 - EPSILONVALUE;
 
    /* create artificial variables for row combinations (y-variables) */
    cnt = 0;
