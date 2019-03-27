@@ -139,13 +139,16 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    SCIP_CALL( createSepaData(scip, sepadata) );
 
    cr_expect_eq(sepadata->nbilinvars, 4, "\nExpected 4 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nvarbilinvars[0], 2, "\nExpected 2 bilinear vars for entry [0], got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nvarbilinvars[1], 1, "\nExpected 1 bilinear vars for entry [1], got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nvarbilinvars[2], 0, "\nExpected 0 bilinear vars for entry [2], got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nvarbilinvars[3], 0, "\nExpected 0 bilinear vars for entry [3], got %d", sepadata->nbilinvars);
+   cr_expect_eq(sepadata->nvarbilinvars[0], 2, "\nExpected 2 bilinear vars for x1, got %d", sepadata->nvarbilinvars[0]);
+   cr_expect_eq(sepadata->nvarbilinvars[1], 2, "\nExpected 2 bilinear vars for x2, got %d", sepadata->nvarbilinvars[1]);
+   cr_expect_eq(sepadata->nvarbilinvars[2], 1, "\nExpected 1 bilinear vars for x3, got %d", sepadata->nvarbilinvars[2]);
+   cr_expect_eq(sepadata->nvarbilinvars[3], 1, "\nExpected 1 bilinear vars for entry [3], got %d", sepadata->nvarbilinvars[3]);
    cr_expect_eq(sepadata->varbilinvars[0][0], x2, "\nExpected varbilinvars[0][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[0][0]));
    cr_expect_eq(sepadata->varbilinvars[0][1], x3, "\nExpected varbilinvars[0][1] to be %s, got %s", SCIPvarGetName(x3), SCIPvarGetName(sepadata->varbilinvars[0][1]));
-   cr_expect_eq(sepadata->varbilinvars[1][0], x4, "\nExpected varbilinvars[1][0] to be %s, got %s", SCIPvarGetName(x4), SCIPvarGetName(sepadata->varbilinvars[1][0]));
+   cr_expect_eq(sepadata->varbilinvars[1][0], x1, "\nExpected varbilinvars[1][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[1][0]));
+   cr_expect_eq(sepadata->varbilinvars[1][1], x4, "\nExpected varbilinvars[1][1] to be %s, got %s", SCIPvarGetName(x4), SCIPvarGetName(sepadata->varbilinvars[1][1]));
+   cr_expect_eq(sepadata->varbilinvars[2][0], x1, "\nExpected varbilinvars[2][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[2][0]));
+   cr_expect_eq(sepadata->varbilinvars[3][0], x2, "\nExpected varbilinvars[3][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[3][0]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -252,9 +255,8 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIPfreeBufferArray(scip, &rows);
 }
 
-Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "test cut separation")
+Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test row marking")
 {
-   SCIP_RESULT result;
    SCIP_ROW** rows;
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -263,13 +265,14 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
    SCIP_Bool success, infeasible;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons;
-   int c, ncuts;
+   int c, row_mark;
    SCIP_LP* lp;
-   PROJLP* projlp;
+   SCIP_HASHMAP* row_marks;
 
    SCIPallocBufferArray(scip, &rows, 1);
    SCIPallocBufferArray(scip, &vars, 6);
    SCIPallocBufferArray(scip, &vals, 6);
+   SCIP_CALL( SCIPhashmapCreate(&row_marks, SCIPblkmem(scip), 1) );
 
    SCIPlpCreate(&lp, scip->set, scip->messagehdlr, scip->stat, "lp");
 
@@ -283,7 +286,7 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
    SCIPaddRow(scip, rows[0], FALSE, &infeasible);
 
    /* create a cons with some bilinear expressions */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x4>*<t_x2> <= 1", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x3>*<t_x2> <= 1", TRUE, TRUE,
                             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
    expr = SCIPgetExprConsExpr(scip, cons);
@@ -292,14 +295,15 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
    }
 
-   /* specify solution and local bounds */
+   /* specify solution */
    SCIPcreateSol(scip, &sol, NULL);
-   vars[0] = x1; vals[0] = 5.0;
-   vars[1] = x2; vals[1] = -6.0;
-   vars[2] = x3; vals[2] = 2.0;
-   vars[3] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]); vals[3] = -20;
-   vars[4] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]); vals[4] = 5;
-   vars[5] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[2]); vals[5] = 0;
+   vars[0] = x1; vals[0] = 5.0;   /* [-1,5] */
+   vars[1] = x2; vals[1] = -5.0;  /* [-6,-3] */
+   vars[2] = x3; vals[2] = 2.0;   /* [1,3] */
+
+   vars[3] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]); vals[3] = -25.0; /* y12 = x1*x2 */
+   vars[4] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]); vals[4] = 10.0; /* y13 = x1*x3 */
+   vars[5] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[2]); vals[5] = -9.0; /* y23 > x2*x3 */
    SCIP_CALL( SCIPsetSolVals(scip, sol, 6, vars, vals) );
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -312,18 +316,37 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
    cr_assert(sepadata->conshdlr != NULL);
    SCIP_CALL( createSepaData(scip, sepadata) );
    sepadata->maxusedvars = 4;
+   sepadata->maxncuts = 10;
+   SCIPinfoMessage(scip, NULL, "\nmaxindex = %d", sepadata->maxvarindex);
 
-   /* project the problem */
-   createProjLP(scip, rows, 1, sol, &projlp);
+   SCIPinfoMessage(scip, NULL, "\nvarssorted: ");
+   for( int i = 0; i < sepadata->nbilinvars; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "%s; ", SCIPvarGetName(sepadata->varssorted[i]));
+   }
 
-   /* generate cuts */
-   separateRltCuts(scip, sepa, sepadata, sol, projlp, rows, 1, TRUE, &ncuts, &result);
+   /* mark rows */
+   /* multiply by x1 */
+   markRowsXj(scip, sepa, sepadata, conshdlr, sol, 1, 0, row_marks);
 
    /* TODO check results */
-   SCIPinfoMessage(scip, NULL, "\n");
+   /* no products involving x1 are violated => no mark should have been added */
+   cr_assert(!SCIPhashmapExists(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0])));
+
+   /* multiply by x2 */
+   markRowsXj(scip, sepa, sepadata, conshdlr, sol, 1, 1, row_marks);
+   cr_assert(SCIPhashmapExists(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0])));
+   row_mark = SCIPhashmapGetImageInt(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0]));
+   cr_assert_eq(row_mark, 1, "\nExpected row mark 1, got %d", row_mark); //TODO what should the mark be?
+   SCIPhashmapRemoveAll(row_marks);
+
+   /* multiply by x3 */
+   markRowsXj(scip, sepa, sepadata, conshdlr, sol, 1, 2, row_marks);
+   cr_assert(SCIPhashmapExists(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0])));
+   row_mark = SCIPhashmapGetImageInt(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0]));
+   cr_assert_eq(row_mark, 2, "\nExpected row mark 2, got %d", row_mark); //TODO what should the mark be?
 
    /* free memory */
-   freeProjLP(scip, &projlp, 1);
    SCIPclearCuts(scip);
    SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBuffer(scip, &sepadata);
@@ -331,6 +354,7 @@ Test(rlt_selection, execlp, .init = setup, .fini = teardown, .description = "tes
    SCIPreleaseCons(scip, &cons);
    SCIPreleaseRow(scip, &rows[0]);
    SCIPlpFree(&lp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter);
+   SCIPhashmapFree(&row_marks);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &rows);
