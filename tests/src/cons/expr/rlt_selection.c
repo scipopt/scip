@@ -45,9 +45,8 @@ static SCIP_VAR* x3;
 static SCIP_VAR* x4;
 static SCIP_VAR* y12;
 static SCIP_VAR* auxvar;
-static SCIP_SOL* sol;
 
-/* creates scip, problem, includes expression constraint handler, creates  and adds variables */
+/* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -96,18 +95,12 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x4o) );
    SCIP_CALL( SCIPreleaseVar(scip, &y12o) );
    cr_assert(x1 != NULL);
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 }
 
 /* releases variables, frees scip */
 static
 void teardown(void)
 {
-   /* release solution */
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
@@ -150,6 +143,8 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    cr_expect_eq(sepadata->varbilinvars[2][0], x1, "\nExpected varbilinvars[2][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[2][0]));
    cr_expect_eq(sepadata->varbilinvars[3][0], x2, "\nExpected varbilinvars[3][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[3][0]));
 
+   /* TODO any special cases? */
+
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
    SCIPreleaseCons(scip, &cons);
@@ -186,9 +181,14 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    printProjLP(scip, projlp, 1, NULL);
 
    /* check results */
+
+   /* the projected cut should be: -72 <= x3 <= -57 */
    cr_assert_eq(projlp->nNonz[0], 1, "\nExpected 1 non-zero in the projected row, got %d", projlp->nNonz[0]);
    cr_assert_eq(projlp->coefs[0][0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projlp->coefs[0][0]);
    cr_assert_eq(projlp->vars[0][0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projlp->vars[0][0]));
+   cr_assert_eq(projlp->consts[0], 0.0, "\nExpected the const in projected row to be 0.0, got %f", projlp->consts[0]); /* TODO example with nonzero cst? */
+   cr_assert_eq(projlp->lhss[0], -72.0, "\nExpected the lhs in projected row to be -72.0, got %f", projlp->lhss[0]);
+   cr_assert_eq(projlp->rhss[0], -57.0, "\nExpected the rhs in projected row to be -57.0, got %f", projlp->rhss[0]);
 
    /* free memory */
    freeProjLP(scip, &projlp, 1);
@@ -201,7 +201,6 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
 
 Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
 {
-   SCIP_ROW** rows;
    SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_Real* vals;
@@ -210,23 +209,15 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_ROW* cut;
    SCIP_Bool success;
 
-   SCIPallocBufferArray(scip, &rows, 1);
    SCIPallocBufferArray(scip, &vars, 3);
    SCIPallocBufferArray(scip, &vals, 3);
 
-   /* create test row1: -10 <= 4x1 - 7x2 + x3 <= 5 */
-   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &rows[0], "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x1, 4.0) );
-   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x2, -7.0) );
-   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
-
    /* specify solution (only x3 is not at bound) */
    SCIPcreateSol(scip, &sol, NULL);
-   vars[0] = x1; vals[0] = 5.0;
-   vars[1] = x2; vals[1] = -6.0;
+   vars[0] = x1; vals[0] = 0.0;
+   vars[1] = x2; vals[1] = -1.0;
    vars[2] = x3; vals[2] = 2.0;
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
-   cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
    /* fill in sepadata */
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
@@ -235,13 +226,34 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_CALL( createSepaData(scip, sepadata) );
    sepadata->maxusedvars = 4;
 
-   createProjLP(scip, rows, 1, sol, &projlp);
-   printProjLP(scip, projlp, 1, NULL);
+   /* create projected LP with row -10 <= x1 + 2x2 - x3 <= 20 */
+   SCIP_CALL( SCIPallocBuffer(scip, &projlp) );
 
-   computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, x1, &success, TRUE, TRUE, TRUE, FALSE);
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->coefs, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->vars, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->nNonz, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->lhss, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->rhss, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->consts, 1) );
 
-   /* TODO check results */
+   SCIP_CALL( SCIPallocBufferArray(scip, &(projlp)->coefs[0], 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(projlp)->vars[0], 3) );
 
+   projlp->nNonz[0] = 3;
+   projlp->coefs[0][0] = 1.0; projlp->coefs[0][1] = 2.0; projlp->coefs[0][2] = -1.0;
+   projlp->vars[0][0] = x1;   projlp->vars[0][1] = x2;   projlp->vars[0][2] = x3;
+   projlp->consts[0] = 0.0;
+   projlp->lhss[0] = -10.0;
+   projlp->rhss[0] = 20.0;
+
+   /* compute a cut with x1, lb and lhs */
+   computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, x1, &success, TRUE, TRUE, FALSE, FALSE);
+
+   /* the cut should be -8 <= 8x1 */
+   cr_assert_eq(SCIProwGetLhs(cut), -8.0, "\nExpected cut lhs = -8.0, got %f", SCIProwGetLhs(cut));
+   cr_assert_eq(SCIProwGetNNonz(cut), 1, "\nExpected the cut to have 1 nonzero, got %d", SCIProwGetNNonz(cut));
+   cr_assert_eq(SCIPcolGetVar(SCIProwGetCols(cut)[0]), x1, "\nExpected var0 in the cut to be x1, got %s", SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(cut)[0])));
+   cr_assert_eq(SCIProwGetVals(cut)[0], 8.0, "\nExpected coef of x1 = 8.0, got %f", SCIProwGetVals(cut)[0]);
 
    /* free memory */
    SCIPreleaseRow(scip, &cut);
@@ -249,11 +261,11 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBuffer(scip, &sepadata);
    SCIPfreeSol(scip, &sol);
-   SCIPreleaseRow(scip, &rows[0]);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &rows);
 }
+
+/* test cut generation with auxiliary variables */
 
 Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test row marking")
 {
@@ -317,7 +329,6 @@ Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test 
    SCIP_CALL( createSepaData(scip, sepadata) );
    sepadata->maxusedvars = 4;
    sepadata->maxncuts = 10;
-   SCIPinfoMessage(scip, NULL, "\nmaxindex = %d", sepadata->maxvarindex);
 
    SCIPinfoMessage(scip, NULL, "\nvarssorted: ");
    for( int i = 0; i < sepadata->nbilinvars; ++i )
@@ -329,7 +340,6 @@ Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test 
    /* multiply by x1 */
    markRowsXj(scip, sepa, sepadata, conshdlr, sol, 1, 0, row_marks);
 
-   /* TODO check results */
    /* no products involving x1 are violated => no mark should have been added */
    cr_assert(!SCIPhashmapExists(row_marks, (void*)(size_t)SCIProwGetIndex(rows[0])));
 

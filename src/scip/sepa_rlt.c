@@ -95,9 +95,7 @@ struct SCIP_SepaData
    SCIP_Bool             useinsubscip;       /**< indicates whether the seperator should also be used in sub-scips */
 };
 
-/** projected LP data structure
- *
- */
+/** projected LP data structure */
 struct ProjLP
 {
    SCIP_Real** coefs;       /* arrays of coefficients for each row */
@@ -549,21 +547,25 @@ SCIP_RETCODE getInitialRows(
    return SCIP_OKAY;
 }
 
+/* add a linearisation of term coef*colvar*var to cut
+ *
+ * adds the linear term involving colvar to cut and updates coefvar and finalside
+ */
 static
-SCIP_RETCODE computeRltTerm(
-   SCIP*          scip,
-   SCIP_SEPADATA* sepadata,
-   SCIP_SOL*      sol,
-   SCIP_ROW*      cut,
-   SCIP_VAR*      var,
-   SCIP_VAR*      colvar,
-   SCIP_Real      coef,
-   SCIP_Bool      uselb,
-   SCIP_Bool      uselhs,
-   SCIP_Bool      local,
-   SCIP_Real*     coefvar,
-   SCIP_Real*     finalside,
-   SCIP_Bool*     success
+SCIP_RETCODE addRltTerm(
+   SCIP*          scip,        /**< SCIP data structure */
+   SCIP_SEPADATA* sepadata,    /**< separator data */
+   SCIP_SOL*      sol,         /**< the point to be separated (can be NULL) */
+   SCIP_ROW*      cut,         /**< cut to which the term is to be added */
+   SCIP_VAR*      var,         /**< multiplier variable */
+   SCIP_VAR*      colvar,      /**< row variable to be multiplied */
+   SCIP_Real      coef,        /**< coefficient of the bilinear term */
+   SCIP_Bool      uselb,       /**< whether we multiply with (var - lb) or (ub - var) */
+   SCIP_Bool      uselhs,      /**< whether to create a cut for the lhs or rhs */
+   SCIP_Bool      local,       /**< whether local or global cuts should be computed */
+   SCIP_Real*     coefvar,     /**< coefficient of var */
+   SCIP_Real*     finalside,   /**< buffer to store the left or right hand side of cut */
+   SCIP_Bool*     success      /**< buffer to store whether cut was created successfully */
    )
 {
    SCIP_VAR* auxvar;
@@ -593,7 +595,7 @@ SCIP_RETCODE computeRltTerm(
       SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
    }
 
-      /* otherwise, use the McCormick estimator in place of the bilinear term */
+   /* otherwise, use the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
    {
       /* TODO this is valid only locally! */
@@ -601,7 +603,7 @@ SCIP_RETCODE computeRltTerm(
       SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
       SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
 
-//      assert(!computeEqCut); /* TODO why? */
+      /* assert(!computeEqCut); TODO why? */
 
       if( REALABS(lbcolvar) > MAXVARBOUND || REALABS(ubcolvar) > MAXVARBOUND )
       {
@@ -623,7 +625,7 @@ SCIP_RETCODE computeRltTerm(
    {
       SCIPdebugMsg(scip, "auxvar for %s^2 not found, will use gradient and secant estimators\n", SCIPvarGetName(colvar));
 
-//      assert(!computeEqCut); /* TODO again why? */
+      /* assert(!computeEqCut); TODO again why? */
 
       /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
       if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
@@ -726,7 +728,7 @@ SCIP_RETCODE computeRltCuts(
    {
       SCIP_VAR* colvar;
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-      computeRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
+      addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
          &coefvar, &finalside, success);
    }
 
@@ -835,7 +837,7 @@ SCIP_RETCODE computeProjRltCut(
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < projlp->nNonz[idx]; ++i )
    {
-      computeRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i], uselb, uselhs,
+      addRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i], uselb, uselhs,
          local, &coefvar, &finalside, success);
    }
 
@@ -938,11 +940,12 @@ SCIP_RETCODE createProjLP(
    return SCIP_OKAY;
 }
 
+/* prints the projected LP */
 static
 void printProjLP(
-   SCIP*   scip,
-   PROJLP* projlp,
-   int     nrows,
+   SCIP*   scip,        /**< SCIP data structure */
+   PROJLP* projlp,      /**< the projected LP */
+   int     nrows,       /**< number of rows in projlp */
    FILE*   file         /**< output file (or NULL for standard output) */
    )
 {
@@ -985,20 +988,20 @@ void printProjLP(
    SCIPinfoMessage(scip, file, "\n");
 }
 
-/** frees the projected problem
+/** frees the projected LP
  */
 static
 void freeProjLP(
-      SCIP*    scip,
-      PROJLP** projlp,
-      int      nrows
+   SCIP*    scip,   /**< SCIP data structure */
+   PROJLP** projlp, /**< the projected LP */
+   int      nrows   /**< number of rows in projlp */
    )
 {
    int i;
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIPfreeBufferArray(scip, &((*projlp)->vars[i]));
+      SCIPfreeBufferArray(scip, &(*projlp)->vars[i]);
       SCIPfreeBufferArray(scip, &(*projlp)->coefs[i]);
    }
 
@@ -1014,8 +1017,9 @@ void freeProjLP(
 /* mark a row for rlt cut selection
  *
  * depending on the sign of value and row inequality type, set the mark to:
- * 0 - no cuts to be generated, 1 - cuts for axy < aw case,
- * 2 - cuts for axy > aw case, 3 - cuts for both cases
+ * 1 - cuts for axy < aw case,
+ * 2 - cuts for axy > aw case,
+ * 3 - cuts for both cases
  */
 static
 void addRowMark(
@@ -1047,14 +1051,14 @@ void addRowMark(
 /* mark all rows that should be multiplied by xj */
 static
 void markRowsXj(
-   SCIP*          scip,
-   SCIP_SEPA*     sepa,
-   SCIP_SEPADATA* sepadata,
-   SCIP_CONSHDLR* conshdlr,
-   SCIP_SOL*      sol,
-   int            nrows,
-   int            j,
-   SCIP_HASHMAP*  row_marks
+   SCIP*          scip,       /**< SCIP data structure */
+   SCIP_SEPA*     sepa,       /**< separator */
+   SCIP_SEPADATA* sepadata,   /**< separator data */
+   SCIP_CONSHDLR* conshdlr,   /**< constraint handler */
+   SCIP_SOL*      sol,        /**< point to be separated (can be NULL) */
+   int            nrows,      /**< number of rows in the problem */
+   int            j,          /**< index of the multiplier variable in sepadata */
+   SCIP_HASHMAP*  row_marks   /**< hashmap storing the row marks */
 )
 {
    int i, idx, img, ncolrows, r;
@@ -1069,7 +1073,7 @@ void markRowsXj(
    assert(xj != NULL);
    /* TODO will checking val and bounds here help? (same for xi) */
 
-   /* for each var that multiples xj, mark rows */
+   /* for each var which appears in a bilinear product together with xj, mark rows */
    for( i = 0; i < sepadata->nvarbilinvars[j]; ++i )
    {
       xi = sepadata->varbilinvars[j][i];
@@ -1128,7 +1132,6 @@ void markRowsXj(
    }
 }
 
-/*  */
 static
 SCIP_RETCODE separateRltCuts(
    SCIP*          scip,
