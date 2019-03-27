@@ -2057,7 +2057,8 @@ SCIP_RETCODE selectVarRecursive(
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores */
    LEVEL2DATA*           level2data,         /**< level 2 LP results data */
    int                   recursiondepth,     /**< remaining recursion depth */
-   SCIP_Real             lpobjval,           /**< base LP objective value */
+   SCIP_Real             lpobjval,           /**< LP objective value of current probing node*/
+   SCIP_Real             baselpobjval,       /**< LP objective value of focus node (not probing) */
    SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable */
    int*                  ndeepestcutoffs,    /**< pointer to store the total number of cutoffs on the deepest level */
    SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates */
@@ -3380,12 +3381,12 @@ SCIP_RETCODE getFSBResult(
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
-         lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
-               statistics, localstats, NULL, NULL) );
+         lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
+         statistics, localstats, NULL, NULL) );
 #else
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
          binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
-               lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
+         lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
    /* inform configuration that we leave scoring mode now */
@@ -3813,7 +3814,8 @@ SCIP_Real calculateScore(
    SCIP_VAR*             branchvar,          /**< variable to get the score for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
    BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
-   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
+   SCIP_Real             lpobjval,           /**< objective value to get difference to as gain */
+   SCIP_Real             baselpobjval        /**< base objective value to get difference to as gain */
    )
 {
    SCIP_Real score;
@@ -3854,6 +3856,9 @@ SCIP_Real calculateScore(
       break;
    case 'r':
       score = calculateRelCutoffScore(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
+      break;
+   case 'x':
+      score = calculateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult, baselpobjval);
       break;
    default:
       assert(scoringfunction == 'd');
@@ -4247,6 +4252,7 @@ SCIP_RETCODE executeBranchingRecursive(
    SCIP_SOL*             baselpsol,          /**< the base lp solution */
    CANDIDATE*            candidate,          /**< candidate to branch on */
    SCIP_Real             localbaselpsolval,  /**< the objective value of the current temporary problem */
+   SCIP_Real             baselpobjval,       /**< LP objective value of focus node (not probing) */
    int                   recursiondepth,     /**< remaining recursion depth */
    DOMAINREDUCTIONS*     domainreductions,   /**< container collecting all domain reductions found; or NULL */
    BINCONSDATA*          binconsdata,        /**< container collecting all binary constraints; or NULL */
@@ -4493,14 +4499,14 @@ SCIP_RETCODE executeBranchingRecursive(
                deeperlocalstats->ncutoffproofnodes = 0;
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, recursiondepth - 1,
-                     deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
+                     deeperlpobjval, baselpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
                      &branchingresult->ndeepestnodes,
                      statistics, deeperlocalstats, NULL, NULL) );
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidatelist, deeperdecision, scorecontainer, level2data, recursiondepth - 1,
-                     deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
+                     deeperlpobjval, baselpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
                      &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
                      &branchingresult->ndeepestnodes) );
 #endif
@@ -4601,7 +4607,8 @@ SCIP_RETCODE selectVarRecursive(
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores; or NULL */
    LEVEL2DATA*           level2data,         /**< level 2 LP results data */
    int                   recursiondepth,     /**< remaining recursion depth */
-   SCIP_Real             lpobjval,           /**< base LP objective value */
+   SCIP_Real             lpobjval,           /**< LP objective value of current probing node*/
+   SCIP_Real             baselpobjval,       /**< LP objective value of focus node (not probing) */
    SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable; or NULL*/
    int*                  ndeepestcutoffs,    /**< pointer to store the total number of cutoffs on the deepest level; or NULL */
    SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates; or NULL */
@@ -4624,7 +4631,6 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_Real bestscore = -SCIPinfinity(scip);
    SCIP_Real bestscorelowerbound;
    SCIP_Real bestscoreupperbound;
-   SCIP_Real localbaselpsolval = lpobjval;
    int start = 0;
    int i;
    int c;
@@ -4791,12 +4797,12 @@ SCIP_RETCODE selectVarRecursive(
             otherbranchingresult = down ? upbranchingresult : downbranchingresult;
 
 #ifdef SCIP_STATISTIC
-            SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
+            SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, lpobjval, baselpobjval,
                   recursiondepth, localdomainreductions, binconsdata, level2data, localbranchingresult, scorecontainer,
                   down, statistics, localstats) );
 #else
 
-            SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
+            SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, lpobjval, baselpobjval,
                   recursiondepth, localdomainreductions, binconsdata, level2data, localbranchingresult, scorecontainer,
                   down) );
 #endif
@@ -4863,7 +4869,7 @@ SCIP_RETCODE selectVarRecursive(
       {
          SCIP_Real scoringlpobjval = useoldbranching ? oldlpobjval : lpobjval;
          SCIP_Real score = calculateScore(scip, config, branchvar, downbranchingresult, upbranchingresult,
-            scoringlpobjval);
+            scoringlpobjval, baselpobjval);
 
          if( i == 0 && firstscoreptr != NULL )
             *firstscoreptr = score;
@@ -5275,11 +5281,11 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
+            decision, scorecontainer, level2data, recursiondepth, lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
             statistics, localstats, &firstscore, &bestscore) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
+            decision, scorecontainer, level2data, recursiondepth, lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
       if( level2data != NULL )
@@ -6127,7 +6133,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/deeperscoringfunction",
          "scoring function to be used at deeper levels",
-         &branchruledata->config->deeperscoringfunction, TRUE, DEFAULT_DEEPERSCORINGFUNCTION, "dfswplcr", NULL, NULL) );
+         &branchruledata->config->deeperscoringfunction, TRUE, DEFAULT_DEEPERSCORINGFUNCTION, "dfswplcrx", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringscoringfunction",
          "scoring function to be used during FSB scoring",
