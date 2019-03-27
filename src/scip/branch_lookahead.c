@@ -3466,9 +3466,9 @@ SCIP_Real calculateScoreFromResult(
     * if both children are infeasible we just reset the initial zero values again
     */
    if( downbranchingresult->cutoff )
-      downgain = 2 * upgain;
+      downgain = upgain;
    if( upbranchingresult->cutoff )
-      upgain = 2 * downgain;
+      upgain = downgain;
 
    score = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
@@ -3513,9 +3513,9 @@ SCIP_Real calculateScoreFromResult2(
     * if both children are infeasible we just reset the initial zero values again
     */
    if( downbranchingresult->cutoff )
-      downgain = 2 * upgain;
+      downgain = upgain;
    if( upbranchingresult->cutoff )
-      upgain = 2 * downgain;
+      upgain = downgain;
 
    lpscore = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
@@ -3535,9 +3535,9 @@ SCIP_Real calculateScoreFromResult2(
     * if both children are infeasible we just reset the initial zero values again
     */
    if( downbranchingresult->cutoff )
-      downgain = 2 * upgain;
+      downgain = upgain;
    if( upbranchingresult->cutoff )
-      upgain = 2 * downgain;
+      upgain = downgain;
 
    dbscore = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
@@ -3575,9 +3575,9 @@ SCIP_Real calculateScoreFromDeeperscore(
    upscore = MAX(upscore, SCIPsumepsilon(scip));
 
    if( downbranchingresult->cutoff )
-      downscore = 2 * upscore;
+      downscore = upscore;
    if( upbranchingresult->cutoff )
-      upscore = 2 * downscore;
+      upscore = downscore;
 
 
    score = SCIPgetBranchScore(scip, branchvar, downscore, upscore);
@@ -3727,12 +3727,12 @@ SCIP_Real calculateCutoffScore(
    if( downbranchingresult->cutoff )
    {
       nlowestlevelcutoffs += 2 * SCIPgetNPseudoBranchCands(scip);
-      downgain = 2 * upgain;
+      downgain = upgain;
    }
    if( upbranchingresult->cutoff )
    {
       nlowestlevelcutoffs += 2 * SCIPgetNPseudoBranchCands(scip);
-      upgain = 2 * downgain;
+      upgain = downgain;
    }
 
    gap = SCIPgetCutoffbound(scip) - lpobjval;
@@ -3789,11 +3789,11 @@ SCIP_Real calculateRelCutoffScore(
     */
    if( downbranchingresult->cutoff )
    {
-      downgain = 2 * upgain;
+      downgain = upgain;
    }
    if( upbranchingresult->cutoff )
    {
-      upgain = 2 * downgain;
+      upgain = downgain;
    }
 
    gap = SCIPgetCutoffbound(scip) - lpobjval;
