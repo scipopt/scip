@@ -2015,7 +2015,7 @@ SCIP_RETCODE reduce(
 #endif
 
    /* if no reduction methods available, return */
-   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG )
+   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
    {
       graph_path_exit(scip, graph);
       return SCIP_OKAY;

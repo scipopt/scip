@@ -3087,6 +3087,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
+   if( graph->stp_type == STP_BRMWCSP )
+      return SCIP_OKAY;
+
    runs = 0;
 
    /* set the runs, i.e. number of different starting points for the heuristic */

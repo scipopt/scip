@@ -125,6 +125,8 @@ struct key
 #define KEY_TERMINALS_TR         3009
 #define KEY_TERMINALS_TF         3010
 #define KEY_TERMINALS_TL         3011
+#define KEY_TERMINALS_TB         3012
+#define KEY_TERMINALS_RB         3013
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -234,13 +236,15 @@ static const struct key keyword_table[] =
 
       {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
       {  "terminals.groups",         KEY_TERMINALS_GROUPS,       "n"         },
+      {  "terminals.rb",             KEY_TERMINALS_RB,           "nnn"       },
       {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
       {  "terminals.rootp",          KEY_TERMINALS_ROOTP,        "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
+      {  "terminals.tb",             KEY_TERMINALS_TB,           "nnn"       },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
-      {  "terminals.tf",             KEY_TERMINALS_TF,           "n"        },
+      {  "terminals.tf",             KEY_TERMINALS_TF,           "n"         },
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
-      {  "terminals.tl",             KEY_TERMINALS_TL,           "n"        },
+      {  "terminals.tl",             KEY_TERMINALS_TL,           "n"         },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
 
@@ -1266,30 +1270,20 @@ SCIP_RETCODE graph_load(
                      if( stp_type == STP_RMWCSP )
                      {
                         assert(nodes == termcount);
-                        if( g != NULL )
-                        {
-                           SCIP_CALL( graph_pc_2rmw(scip, g) );
-                        }
-                        else
-                        {
-                           message(MSG_FATAL, &curf, "graph not initialized \n");
-                           ret = FAILURE;
-                           break;
-                        }
+                        SCIP_CALL( graph_pc_2rmw(scip, g) );
                      }
                      else if( stp_type == STP_MWCSP )
                      {
                         assert(nodes == termcount);
-                        if( g != NULL )
-                        {
-                           SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
-                        }
-                        else
-                        {
-                           message(MSG_FATAL, &curf, "graph not initialized \n");
-                           ret = FAILURE;
-                           break;
-                        }
+                        SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
+                     }
+                     else if( stp_type == STP_BRMWCSP )
+                     {
+                        assert(nodes == termcount);
+                        SCIP_CALL( graph_pc_2rmw(scip, g) );
+                        g->stp_type = STP_BRMWCSP;
+                        g->budget = 11824000;
+                        int todo;
                      }
                      else if( stp_type == STP_PCSPG )
                      {
@@ -1411,6 +1405,40 @@ SCIP_RETCODE graph_load(
                   assert(stp_type == STP_RMWCSP);
                   assert(g != NULL);
                   assert(g->prize != NULL);
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
+                  presol->fixed -= (double)para[1].n;
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  termcount++;
+                  break;
+               case KEY_TERMINALS_TB :
+                  stp_type = STP_BRMWCSP;
+                  assert(g != NULL);
+                  assert(g->prize != NULL);
+                  if( g->costbudget == NULL )
+                  {
+                     assert(terms == nodes );
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->costbudget), terms) );
+                  }
+
+                  g->costbudget[(int)para[0].n - 1] = (double)para[2].n;
+                  g->prize[(int)para[0].n - 1] = (double)para[1].n;
+
+                  if( SCIPisGT(scip, (double)para[1].n, 0.0) )
+                     presol->fixed -= (double)para[1].n;
+                  termcount++;
+                  break;
+               case KEY_TERMINALS_RB :
+                  stp_type = STP_BRMWCSP;
+                  assert(g != NULL);
+                  assert(g->prize != NULL);
+                  if( g->costbudget == NULL )
+                  {
+                     assert(terms == nodes );
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->costbudget), terms) );
+                  }
+                  assert((double)para[2].n == 0.0);
+
+                  g->costbudget[(int)para[0].n - 1] = 0.0;
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   presol->fixed -= (double)para[1].n;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);

@@ -2235,6 +2235,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(vars != NULL);
    assert(xval != NULL);
 
+   if( graph->stp_type == STP_BRMWCSP )
+      return SCIP_OKAY;
+
    /* for PC variants: test whether solution is trivial */
    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
    {

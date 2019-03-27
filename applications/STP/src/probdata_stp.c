@@ -109,6 +109,7 @@ struct SCIP_ProbData
    SCIP_CONS**           prizesymcons;       /**< prize-collecting symmetry constraints (to improve LP) */
    SCIP_CONS**           prizecyclecons;     /**< prize-collecting cycle constraints (to improve LP) */
    SCIP_CONS*            hopcons;            /**< hop constraint */
+   SCIP_CONS*            budgetcons;         /**< budget constraint */
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR**            edgevars;           /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
@@ -245,6 +246,10 @@ void writeCommentSection(
 
    case STP_RMWCSP:
       strcpy(probtype, "RMWCS");
+      break;
+
+   case STP_BRMWCSP:
+      strcpy(probtype, "BRMWCS");
       break;
 
    case STP_DHCSTP:
@@ -524,6 +529,12 @@ SCIP_RETCODE probdataFree(
       }
    }
 
+   if( (*probdata)->stp_type == STP_DHCSTP )
+      SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->hopcons)) );
+
+   if( (*probdata)->stp_type == STP_BRMWCSP )
+      SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->budgetcons)) );
+
    /* release path constraints */
    if( (*probdata)->mode == MODE_PRICE )
    {
@@ -675,6 +686,29 @@ SCIP_RETCODE createHopConstraint(
    return SCIP_OKAY;
 }
 
+
+static
+SCIP_RETCODE createBudgetConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   GRAPH* graph;
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   SCIPdebugMessage("create Budget constraint \n");
+   graph = probdata->graph;
+   assert(graph != NULL);
+   assert(graph->budget > 0.0);
+
+   SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->budgetcons), "BudgetConstraint", 0, NULL, NULL,
+         -SCIPinfinity(scip), graph->budget, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPaddCons(scip, probdata->budgetcons) );
+
+   return SCIP_OKAY;
+}
 
 /** create (node-) degree constraints (cut mode only) */
 static
@@ -1047,6 +1081,25 @@ SCIP_RETCODE createVariables(
                /* @note: When contractions are used in presolving: modify */
                hopfactor = 1.0;
                SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
+            }
+         }
+
+         if( graph->stp_type == STP_BRMWCSP )
+         {
+            for( k = 0; k < nnodes; ++k )
+            {
+               const SCIP_Real kbudget = graph->costbudget[k];
+               assert(kbudget >= 0.0);
+               assert(graph->extended);
+
+               if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
+                  continue;
+
+               if( SCIPisZero(scip, kbudget) )
+                  continue;
+
+               for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->budgetcons, probdata->edgevars[e], kbudget) );
             }
          }
 
@@ -1586,6 +1639,37 @@ SCIP_DECL_PROBCOPY(probcopyStp)
                SCIP_CALL(SCIPcaptureCons(scip, (*targetdata)->prizecons));
             }
          }
+
+         if( sourcedata->stp_type == STP_DHCSTP )
+         {
+            SCIP_CALL(
+                  SCIPgetConsCopy(sourcescip, scip, sourcedata->hopcons, &((*targetdata)->hopcons), SCIPconsGetHdlr(sourcedata->hopcons),
+                        varmap, consmap, SCIPconsGetName(sourcedata->hopcons), SCIPconsIsInitial(sourcedata->hopcons),
+                        SCIPconsIsSeparated(sourcedata->hopcons), SCIPconsIsEnforced(sourcedata->hopcons),
+                        SCIPconsIsChecked(sourcedata->hopcons), SCIPconsIsPropagated(sourcedata->hopcons),
+                        SCIPconsIsLocal(sourcedata->hopcons), SCIPconsIsModifiable(sourcedata->hopcons),
+                        SCIPconsIsDynamic(sourcedata->hopcons), SCIPconsIsRemovable(sourcedata->hopcons),
+                        SCIPconsIsStickingAtNode(sourcedata->hopcons), global, &success));
+            assert(success);
+
+            SCIP_CALL(SCIPcaptureCons(scip, (*targetdata)->hopcons));
+         }
+
+         if( sourcedata->stp_type == STP_BRMWCSP )
+         {
+            SCIP_CALL(
+                  SCIPgetConsCopy(sourcescip, scip, sourcedata->budgetcons, &((*targetdata)->budgetcons), SCIPconsGetHdlr(sourcedata->budgetcons),
+                        varmap, consmap, SCIPconsGetName(sourcedata->budgetcons), SCIPconsIsInitial(sourcedata->budgetcons),
+                        SCIPconsIsSeparated(sourcedata->budgetcons), SCIPconsIsEnforced(sourcedata->budgetcons),
+                        SCIPconsIsChecked(sourcedata->budgetcons), SCIPconsIsPropagated(sourcedata->budgetcons),
+                        SCIPconsIsLocal(sourcedata->budgetcons), SCIPconsIsModifiable(sourcedata->budgetcons),
+                        SCIPconsIsDynamic(sourcedata->budgetcons), SCIPconsIsRemovable(sourcedata->budgetcons),
+                        SCIPconsIsStickingAtNode(sourcedata->budgetcons), global, &success));
+            assert(success);
+
+            SCIP_CALL(SCIPcaptureCons(scip, (*targetdata)->budgetcons));
+         }
+
       }
       /* Price or Flow mode */
       else
@@ -1868,6 +1952,11 @@ SCIP_DECL_PROBTRANS(probtransStp)
             SCIP_CALL( SCIPtransformCons(scip, sourcedata->prizecons, &(*targetdata)->prizecons) );
          }
 
+         if( sourcedata->stp_type == STP_DHCSTP )
+            SCIP_CALL( SCIPtransformCons(scip, sourcedata->hopcons, &(*targetdata)->hopcons) );
+
+         if( sourcedata->stp_type == STP_BRMWCSP )
+            SCIP_CALL( SCIPtransformCons(scip, sourcedata->budgetcons, &(*targetdata)->budgetcons) );
       }
       /* Price or Flow mode */
       else
@@ -1959,7 +2048,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
          return SCIP_ERROR;
 #endif
 
-      if( probdata->stp_type == STP_MWCSP || probdata->stp_type == STP_RMWCSP )
+      if( probdata->stp_type == STP_MWCSP || probdata->stp_type == STP_RMWCSP || probdata->stp_type == STP_BRMWCSP )
          factor = -1.0;
 
       SCIPprobdataWriteLogLine(scip, "End\n");
@@ -2398,6 +2487,11 @@ SCIP_RETCODE SCIPprobdataCreate(
          {
             SCIP_CALL( createDegreeConstraints(scip, probdata) );
          }
+
+         if( graph->stp_type == STP_BRMWCSP )
+          {
+             SCIP_CALL( createBudgetConstraint(scip, probdata) );
+          }
 
          /* if the problem is a Prize-Collecting-STP or a Maximum Weight Connected Subgraph Problem, additional constraints are required */
          if( pc || mw )
@@ -3213,7 +3307,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
             while (curr != NULL)
             {
                const int ancestoredge = curr->index;
-               if( e < graph->edges && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP) )
+               if( e < graph->edges && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_BRMWCSP) )
                {
                   if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
                   {
@@ -3691,7 +3785,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
       int success;
       SCIP_Real factor = 1.0;
 
-      if( probdata->stp_type == STP_MWCSP || probdata->stp_type == STP_RMWCSP )
+      if( probdata->stp_type == STP_MWCSP || probdata->stp_type == STP_RMWCSP || probdata->stp_type == STP_BRMWCSP )
          factor = -1.0;
 
       SCIPprobdataWriteLogLine(scip, "End\n");

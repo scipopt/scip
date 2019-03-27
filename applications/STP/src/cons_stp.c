@@ -1720,7 +1720,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
 
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
-   if( graph_pc_isPcMw(g) )
+   if( graph_pc_isPcMw(g) && g->stp_type != STP_BRMWCSP )
       SCIP_CALL( sep_implicationsPcMw(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    /* change graph according to branch-and-bound terminal changes  */

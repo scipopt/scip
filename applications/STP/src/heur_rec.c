@@ -2088,7 +2088,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    probtype = graph->stp_type;
    *result = SCIP_DIDNOTRUN;
 
-   if( probtype == STP_RMWCSP )
+   if( probtype == STP_BRMWCSP )
       return SCIP_OKAY;
 
    SCIPdebugMessage("REC: checking ... \n");

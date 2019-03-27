@@ -2615,7 +2615,7 @@ SCIP_Bool graph_pc_isPcMw(
    const int type = g->stp_type;
    assert(g != NULL);
 
-   return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP);
+   return (type == STP_PCSPG || type == STP_RPCSPG || type == STP_MWCSP || type == STP_RMWCSP || type == STP_BRMWCSP);
 }
 
 /** get edge from root to (pseudo) terminal */
@@ -2708,7 +2708,7 @@ SCIP_Bool graph_pc_isRootedPcMw(
    const int type = g->stp_type;
    assert(g != NULL);
 
-   return (type == STP_RPCSPG || type == STP_RMWCSP);
+   return (type == STP_RPCSPG || type == STP_RMWCSP || type == STP_BRMWCSP);
 }
 
 /** add a vertex */
@@ -4190,6 +4190,8 @@ SCIP_RETCODE graph_init(
    p->path_heap = NULL;
    p->path_state = NULL;
    p->term2edge = NULL;
+   p->budget = -1.0;
+   p->costbudget = NULL;
 
    SCIPdebugMessage("Initialized new graph \n");
 
@@ -4287,8 +4289,11 @@ SCIP_RETCODE graph_resize(
       if( g->prize != NULL)
          SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->prize), ksize) );
 
+      if( g->costbudget != NULL)
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->costbudget), ksize) );
+
       if( g->term2edge != NULL)
-             SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term2edge), ksize) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term2edge), ksize) );
 
       g->ksize  = ksize;
    }
@@ -4329,6 +4334,9 @@ void graph_free(
 
    if( p->prize != NULL )
       SCIPfreeMemoryArray(scip, &(p->prize));
+
+   if( p->costbudget != NULL )
+      SCIPfreeMemoryArray(scip, &(p->costbudget));
 
    if( p->term2edge != NULL )
       SCIPfreeMemoryArray(scip, &(p->term2edge));
@@ -4468,6 +4476,7 @@ SCIP_RETCODE graph_copy_data(
    g->stp_type = p->stp_type;
    g->hoplimit = p->hoplimit;
    g->extended = p->extended;
+   g->budget = p->budget;
 
    BMScopyMemoryArray(g->term, p->term, ksize);
    BMScopyMemoryArray(g->mark, p->mark, ksize);
@@ -4483,15 +4492,28 @@ SCIP_RETCODE graph_copy_data(
    if( graph_pc_isPcMw(g) )
    {
       const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
+      const SCIP_Bool brpcmw = (g->stp_type == STP_BRMWCSP);
 
       if( g->prize != NULL )
          SCIPfreeMemoryArray(scip, &(g->prize));
+
+      if( g->costbudget != NULL )
+      {
+         assert(brpcmw);
+         SCIPfreeMemoryArray(scip, &(g->costbudget));
+      }
 
       if( g->term2edge != NULL )
          SCIPfreeMemoryArray(scip, &(g->term2edge));
 
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
+
+      if( brpcmw )
+      {
+         SCIP_CALL(SCIPallocMemoryArray(scip, &(g->costbudget), g->knots));
+         BMScopyMemoryArray(g->costbudget, p->costbudget, g->knots);
+      }
 
       for( int k = 0; k < g->knots; k++ )
          if( Is_term(p->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(p, k)) )
@@ -4705,6 +4727,7 @@ SCIP_RETCODE graph_pack(
    q->hoplimit = g->hoplimit;
    q->extended = g->extended;
    q->pcancestors = g->pcancestors;
+   q->budget = g->budget;
 
    if( new == NULL )
    {
@@ -4724,11 +4747,15 @@ SCIP_RETCODE graph_pack(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
 
-   rpcmw = (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP);
+   rpcmw = graph_pc_isRootedPcMw(g);
    pcmw = (rpcmw || g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG);
 
    if( pcmw )
+   {
       SCIP_CALL( graph_pc_init(scip, q, nnodes, nnodes) );
+      if( g->stp_type == STP_BRMWCSP )
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(q->costbudget), nnodes) );
+   }
 
    /* add nodes (of positive degree) */
 
@@ -4760,6 +4787,13 @@ SCIP_RETCODE graph_pack(
                q->prize[q->knots] = g->prize[i];
             else
                q->prize[q->knots] = 0.0;
+         }
+         if( g->stp_type == STP_BRMWCSP )
+         {
+            if( !Is_term(g->term[i]) || (g->mark[i]) )
+               q->costbudget[q->knots] = g->costbudget[i];
+            else
+               q->costbudget[q->knots] = 0.0;
          }
          graph_knot_add(q, g->term[i]);
       }
@@ -5054,7 +5088,7 @@ SCIP_Bool graph_valid(
       int npterms = 0;
       const int root = g->source;
       const SCIP_Bool extended = g->extended;
-      const SCIP_Bool rooted = (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP);
+      const SCIP_Bool rooted = graph_pc_isRootedPcMw(g);
       nterms = 0;
 
       assert(g->prize != NULL);

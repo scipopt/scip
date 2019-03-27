@@ -48,6 +48,8 @@
 #define STP_DHCSTP                   10
 #define STP_GSTP                     11
 #define STP_RMWCSP                   12
+#define STP_BRMWCSP                  13
+
 
 
 typedef unsigned char STP_Bool;
@@ -84,6 +86,8 @@ typedef struct
    int*                  term2edge;          /**< (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of edge to twin terminal or -1 */
 
    SCIP_Real*            prize;              /**< For (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of node costs       */
+   SCIP_Real*            costbudget;         /**< budget cost value for (R)BMWCSP:  Array [0..nodes-1] */
+   SCIP_Real             budget;             /**< budget value for (R)BMWCSP */
 
    /* Edges */
    IDX*                  fixedges;           /**< list of fixed edges*/
