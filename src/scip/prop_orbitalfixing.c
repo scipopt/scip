@@ -117,7 +117,7 @@ struct SCIP_PropData
    int*                  componentbegins;    /**< array containing in i-th position the first position of component i in components array */
    int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is contained in (-1 if not affected) */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
-   int                   nmovedpermvars;     /**< number of variables moved by any permutation */
+   int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component that is handled by OF */
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
@@ -214,7 +214,8 @@ SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
    int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
    int                   ncomponents,        /**< number of components of symmetry group */
-   int                   nmovedpermvars      /**< number of variables moved by any permutation */
+   int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
+                                              *   that is handled by OF */
    )
 {
    SCIP_Shortbool* varadded;
@@ -434,7 +435,9 @@ SCIP_RETCODE getSymmetries(
       /* collect number of moved permvars */
       for (v = 0; v < propdata->npermvars; ++v)
       {
-         if ( propdata->vartocomponent[v] > -1 )
+         componentidx = propdata->vartocomponent[v];
+
+         if ( componentidx > -1 && ! SCIPgetSymmetryComponentblocked(scip, componentidx) )
             propdata->nmovedpermvars += 1;
       }
    }
