@@ -221,6 +221,18 @@ do
 				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
+                    export SOLVERPATH=$SCIPPATH
+                    # this looks wrong but is totally correct
+                    export BASENAME=$FILENAME
+                    export FILENAME=$INSTANCE
+                    export CLIENTTMPDIR
+                    export OUTPUTDIR
+                    export HARDTIMELIMIT
+                    export HARDMEMLIMIT
+                    export CHECKERPATH=$SCIPPATH/solchecker
+                    export SETFILE
+                    export TIMELIMIT
+
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
 			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
