@@ -1962,11 +1962,11 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->permvarmap = NULL;
    presoldata->permvarsevents = NULL;
 
-   /* create event handler if orbital fixing is active */
+   /* create event handler for orbital fixing */
    presoldata->eventhdlr = NULL;
-      SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(presoldata->eventhdlr), EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC,
-            eventExecSymmetry, NULL) );
-      assert( presoldata->eventhdlr != NULL );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(presoldata->eventhdlr), EVENTHDLR_SYMMETRY_NAME, EVENTHDLR_SYMMETRY_DESC,
+         eventExecSymmetry, NULL) );
+   assert( presoldata->eventhdlr != NULL );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
