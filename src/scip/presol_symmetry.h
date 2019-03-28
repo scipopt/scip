@@ -66,14 +66,14 @@ SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
    SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
    );
 
-/* block component of symmetry group to be considered by symmetry handling routines */
+/** block component of symmetry group to be considered by symmetry handling routines */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   i                   /**< index of component to block */
    );
 
-/* get blocked status component of symmetry group */
+/** get blocked status component of symmetry group */
 SCIP_EXPORT
 SCIP_Shortbool SCIPgetSymmetryComponentblocked(
    SCIP*                 scip,               /**< SCIP data structure */
