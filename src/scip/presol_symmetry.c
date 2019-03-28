@@ -2214,7 +2214,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
           */
          if ( SCIPvarGetType((*permvars)[v]) == SCIP_VARTYPE_BINARY )
          {
-            /* catch whether lower bounds are changed, i.e., binary variables are fixed to 1;
+            /* catch whether binary variables are globally fixed;
              * also store filter position
              */
             SCIP_CALL( SCIPcatchVarEvent(scip, (*permvars)[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,

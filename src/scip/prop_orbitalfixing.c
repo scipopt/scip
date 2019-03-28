@@ -87,7 +87,7 @@
 #define DEFAULT_SYMCOMPTIMING         2           /**< timing of symmetry computation for orbital fixing
                                                    *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING     FALSE       /**< Run orbital fixing during presolving? */
-#define DEFAULT_RECOMPUTERESTART      TRUE        /**< Recompute symmetries after a restart has occured? */
+#define DEFAULT_RECOMPUTERESTART      TRUE        /**< Recompute symmetries after a restart has occurred? */
 #define DEFAULT_EITHERSYMBREAKOROF    FALSE       /**< whether orbital fixing should not be used when orbitopes are active */
 
 /* output table properties */
@@ -198,7 +198,7 @@ SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 static
-SCIP_RETCODE computeGroupOrbitsFilterSymbreak(
+SCIP_RETCODE computeGroupOrbitsFilter(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< length of a permutation array */
    int**                 permstrans,         /**< transposed matrix containing in each column a
@@ -347,6 +347,7 @@ SCIP_RETCODE getSymmetries(
    SCIP_Bool recompute = FALSE;
    SCIP_VAR** permvars;
    int v;
+   int componentidx;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -432,7 +433,7 @@ SCIP_RETCODE getSymmetries(
       for (v = 0; v < propdata->nperms; ++v)
          propdata->inactiveperms[v] = FALSE;
 
-      /* collect number of moved permvars */
+      /* collect number of moved permvars that are handled by OF */
       for (v = 0; v < propdata->npermvars; ++v)
       {
          componentidx = propdata->vartocomponent[v];
@@ -932,7 +933,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( computeGroupOrbitsFilterSymbreak(scip, npermvars, permstrans, nperms, inactiveperms,
+   SCIP_CALL( computeGroupOrbitsFilter(scip, npermvars, permstrans, nperms, inactiveperms,
          orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent, ncomponents, propdata->nmovedpermvars) );
 
    if ( norbits > 0 )
