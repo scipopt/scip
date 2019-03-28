@@ -121,6 +121,7 @@ struct SCIP_PropData
    SCIP_Bool             enabled;            /**< run orbital branching? */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
+   SCIP_Bool             eithersymbreakorof; /**< whether orbital fixing should not be used when orbitopes are active */
    int                   symcomptiming;      /**< timing of symmetry computation for orbital fixing
                                               *   (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
@@ -1146,7 +1147,6 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    SCIP_Longint nodenumber;
    int nprop = 0;
    int usesymmetry;
-   SCIP_Bool eithersymbreakorof;
 
    assert( scip != NULL );
    assert( result != NULL );
@@ -1185,8 +1185,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 
    /* deactivate OF if it should not be combined with orbitopes */
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "propagating/orbitalfixing/eithersymbreakorof", &eithersymbreakorof) );
-   if ( ISSYMRETOPESACTIVE(usesymmetry) && eithersymbreakorof )
+   if ( ISSYMRETOPESACTIVE(usesymmetry) && propdata->eithersymbreakorof )
    {
       SCIP_CONSHDLR* conshdlr;
 
@@ -1307,7 +1306,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/eithersymbreakorof",
          "whether orbital fixing should not be used when orbitopes are active",
-         NULL, TRUE, DEFAULT_EITHERSYMBREAKOROF, NULL, NULL) );
+         &propdata->eithersymbreakorof, TRUE, DEFAULT_EITHERSYMBREAKOROF, NULL, NULL) );
 
    return SCIP_OKAY;
 }
