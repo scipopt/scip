@@ -169,6 +169,9 @@ struct key
 
 #define KEY_TREE_S               11000
 
+#define KEY_BUDGET_B              12000
+
+
 static const struct key keyword_table[] =
    {
       /*
@@ -176,6 +179,9 @@ static const struct key keyword_table[] =
        */
       {  ".eof",                     KEY_EOF,                    NULL        },
       {  ".section",                 KEY_SECTION,                NULL        },
+
+      {  "budget.b",                 KEY_BUDGET_B,               "n"         },
+      {  "budget.end",               KEY_END,                    NULL        },
 
       {  "comment.creator",          KEY_COMMENT_CREATOR,        "s"         },
       {  "comment.date",             KEY_COMMENT_DATE,           "s"         },
@@ -274,6 +280,7 @@ static struct section section_table[] =
       /*
        * *** The section names MUST be sorted alphabetically ! ***
        */
+      { "budget", "bgt", FLAG_OPTIONAL, SECTION_MISSING },
       { "comment",     NULL,  FLAG_OPTIONAL, SECTION_MISSING },
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
@@ -1204,6 +1211,12 @@ SCIP_RETCODE graph_load(
                      ret = FAILURE;
                   }
                   break;
+               case KEY_BUDGET_B :
+                  assert(g != NULL && stp_type == STP_BRMWCSP);
+                  assert(para[0].n >= 0.0);
+                  g->budget = para[0].n;
+
+                  break;
                case KEY_NODEWEIGHTS_NW :
                   nodeweight = (double) para[0].n;
                   assert(g != NULL);
@@ -1282,8 +1295,6 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         SCIP_CALL( graph_pc_2rmw(scip, g) );
                         g->stp_type = STP_BRMWCSP;
-                        g->budget = 11824000;
-                        int todo;
                      }
                      else if( stp_type == STP_PCSPG )
                      {

@@ -3523,6 +3523,9 @@ void graph_printInfo(
    case 12:
       strcpy(type, "STP_RMWCSP");
       break;
+   case 13:
+      strcpy(type, "STP_BRMWCSP");
+      break;
    default:
       strcpy(type, "UNKNOWN");
    }
@@ -3532,6 +3535,9 @@ void graph_printInfo(
       printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s, isExtended=%d\n", g->knots, g->edges, g->terms, g->source, type, g->extended);
    else
       printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%s \n", g->knots, g->edges, g->terms, g->source, type);
+
+   if( g->stp_type == STP_BRMWCSP )
+      printf("budget=%f \n", g->budget);
 }
 
 /** print information on edge */
