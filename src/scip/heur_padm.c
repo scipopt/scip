@@ -723,6 +723,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_HASHTABLE* htable;
    SCIP_HASHTABLE* htable2;
    SCIP_Real absgap;
+   SCIP_Bool doScaling;
+
+   doScaling = FALSE;
    absgap = 2;
 
    SCIPdebugMsg(scip,"init padm heuristic...\n");
@@ -1167,18 +1170,38 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
                idx2out->linkVarVal = val;
             }
+         }
+      }
 
+      /* check wether problem has been solved and if not update penalty coeffs */
 
-            
+      /* TODO ... */
 
+      
+      if( doScaling )
+      {
+         /* apply sigmoid scaling */
+         increasedslacks = 0;
+
+         /* TODO: sigscale() */
+      }
+
+      if((aIter == 1 && solutionsdiffer == FALSE) || doScaling )
+      {
+         SCIP_Real minabsgap = 0.001;
+         SCIP_Real newabsgap = MAX(absgap*0.5,minabsgap);
+
+         if(newabsgap >= minabsgap)
+         {
+            if(doScaling)
+               (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "scale, %f", newabsgap);
+            else
+               (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "%f", newabsgap);
+
+            absgap = newabsgap;
          }
       }
    }
-
-
-
-
-   
 
    /* release slack variables and coupling constraints */
    for( c = 0; c < problem->ncomponents; c++ )
