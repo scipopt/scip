@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
 /**@file    presol_dualinfer.c
  * @ingroup PRESOLVERS
  * @brief   dual inference presolver
@@ -2154,7 +2153,7 @@ SCIP_RETCODE dualBoundStrengthening(
       SCIPfreeBlockMemoryArray(scip, &hashlistmm, listsizemm);
       SCIPfreeBlockMemoryArray(scip, &hashlistpp, listsizepp);
 
-#if 1 /*def SCIP_MORE_DEBUG*/
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip, "CombCols:\n");
       for( i = 0; i < nrows; i++ )
       {
@@ -2219,7 +2218,7 @@ SCIP_RETCODE dualBoundStrengthening(
       }
    }
 
-#if 1 /*def SCIP_MORE_DEBUG*/
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "BndStr:\n");
    for( i = 0; i < nrows; i++ )
    {
