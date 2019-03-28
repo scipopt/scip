@@ -135,6 +135,7 @@ typedef struct indexes2
    int                   blockContainingLinkVar;
    int                   linkVarIdx;
    SCIP_Real             linkVarVal;
+   SCIP_VAR*             linkVar;
 } INDEXES2;
 
 /** returns TRUE iff both keys are equal */
@@ -983,9 +984,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx2.blockContainingLinkVar = blockcontaininglinkvar;
                idx2.linkVarIdx = linkvaridx;
                idx2.linkVarVal = 0.0;
+               idx2.linkVar = SCIPfindVar((problem->components[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* fill variables for linking constraint */
-               tmpcouplingvars[0] = SCIPfindVar((problem->components[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               tmpcouplingvars[0] = idx2.linkVar;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
@@ -1144,8 +1146,30 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
             } while( SCIPgetStatus((problem->components[c]).subscip) != SCIP_STATUS_OPTIMAL );
 
-            /* a solution of each block was determined */
+            /* check if solutions differ */
+            for( i = 0; i < blocktolinkvars[c].size; i++ )
+            {
+               SCIP_SOL* sol;
+               SCIP_Real val;
+               SCIP_VAR* var;
+               int linkvaridx;
+               INDEXES2 idx2;
+               INDEXES2* idx2out;
+               idx2.blockContainingLinkVar = c;
+               idx2.linkVarIdx = linkvaridx;
+               idx2out = (INDEXES2*)SCIPhashtableRetrieve(htable2,(void*)&idx2);
 
+               sol = SCIPgetBestSol((problem->components[c]).subscip);
+               var = idx2out->linkVar;
+               val = SCIPgetSolVal((problem->components[c]).subscip, sol, var);
+               if( !EPSEQ(idx2out->linkVarVal, val, SCIP_DEFAULT_EPSILON) )
+                  solutionsdiffer = TRUE;
+
+               idx2out->linkVarVal = val;
+            }
+
+
+            
 
          }
       }
