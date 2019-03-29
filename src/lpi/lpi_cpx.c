@@ -3849,10 +3849,12 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
       if( rowsense == 'G' || rowsense == 'R' )
       {
-         int i;
+         int ncols;
+         int j;
 
-         for( i = 0; i < nrows; i++ )
-            coef[i] *= -1.0;
+         ncols = CPXgetnumcols(lpi->cpxenv, lpi->cpxlp);
+         for( j = 0; j < ncols; j++ )
+            coef[j] *= -1.0;
       }
    }
 
