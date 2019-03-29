@@ -923,7 +923,9 @@ SCIP_RETCODE propagateOrbitalFixing(
       }
    }
 
-   /* Clean bg1 list - need to do this after the main loop! (Not needed for bg0.) */
+   /* Clean bg1 list - need to do this after the main loop! (Not needed for bg0.)
+    * Note that variables globally fixed to 1 are not resetted, since the loop starts at *(propdata->nbg1).
+    */
    for (j = *(propdata->nbg1); j < nbg1; ++j)
       bg1[bg1list[j]] = FALSE;
 
