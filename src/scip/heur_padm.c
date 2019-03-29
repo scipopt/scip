@@ -686,7 +686,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    int i;
    int nblocks;
    int block;
-   int c;
+   int b;
    int k;
    int* blockstartsconss;
    char name[SCIP_MAXSTRLEN];
@@ -719,7 +719,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    doScaling = FALSE;
    absgap = 2.0;
 
-   SCIPdebugMsg(scip,"init padm heuristic...\n");
+   SCIPdebugMsg(scip,"init padm heuristic\n");
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
 #endif
@@ -733,8 +733,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    conss = SCIPgetOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
-   for( c = 0; c < nconss; c++ )
-      SCIPdebugPrintCons(scip, conss[c], NULL);
+   for( i = 0; i < nconss; i++ )
+      SCIPdebugPrintCons(scip, conss[i], NULL);
 
    /* determine threshold for penalty coefficients via maximum norm */
    slackthreshold = SCIP_REAL_MIN;
@@ -767,11 +767,11 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* determine start indices of blocks in sorted conss array */
    i = 0;
-   for( c = 0; c < nblocks + 1; ++c )
+   for( b = 0; b < nblocks + 1; ++b )
    {
-      assert(i == nconss || conslabels[i] >= c);
-      blockstartsconss[c] = i;
-      while( i < nconss && conslabels[i] == c )
+      assert(i == nconss || conslabels[i] >= b);
+      blockstartsconss[b] = i;
+      while( i < nconss && conslabels[i] == b )
          ++i;
    }
 
@@ -779,10 +779,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    assert(nblocks == problem->nblocks);
 
 #if 1
-   for( i = 0; i < problem->nblocks; i++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[i]).subscip, name, "lp", FALSE) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
+      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, "lp", FALSE) );
    }
 #endif
 
@@ -793,20 +793,21 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       if( varslabels[i] == -1 )
          numlinkvars++;
    }
+   SCIPdebugMsg(scip,"%d linking variables\n");
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
 
    /* extract linking variables and init linking variable to blocks set */
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
-   c = 0;
+   b = 0;
    for( i = 0; i < nvars; i++ )
    {
       if( varslabels[i] == -1 )
       {
-         linkvars[c] = vars[i];
-         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[c].indexes), problem->nblocks) );
-         linkvartoblocks[c].size = 0;
-         c++;
+         linkvars[b] = vars[i];
+         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[b].indexes), problem->nblocks) );
+         linkvartoblocks[b].size = 0;
+         b++;
       }
    }
 
@@ -817,12 +818,12 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       const char* vname;
       vname = SCIPvarGetName(linkvars[i]);
       k = 0;
-      for( c = 0; c < problem->nblocks; c++ )
+      for( b = 0; b < problem->nblocks; b++ )
       {
-         var = SCIPfindVar((problem->blocks[c]).subscip, vname);
+         var = SCIPfindVar((problem->blocks[b]).subscip, vname);
          if( var != NULL )
          {
-            linkvartoblocks[i].indexes[k] = c;
+            linkvartoblocks[i].indexes[k] = b;
             linkvartoblocks[i].size = k + 1;
             k++;
          }
@@ -830,37 +831,37 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* init block to linking variables set */
-   for( i = 0; i < problem->nblocks; i++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[i].indexes), numlinkvars) );
-      blocktolinkvars[i].size = 0;
+      SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[b].indexes), numlinkvars) );
+      blocktolinkvars[b].size = 0;
    }
 
    /* fill block to linking variables set */
-   for( i = 0; i < problem->nblocks; i++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
       k = 0;
-      for( c = 0; c < numlinkvars; c++ )
+      for( i = 0; i < numlinkvars; i++ )
       {
          SCIP_VAR* var;
          const char* vname;
-         vname = SCIPvarGetName(linkvars[c]);
-         var = SCIPfindVar((problem->blocks[i]).subscip,vname);
+         vname = SCIPvarGetName(linkvars[i]);
+         var = SCIPfindVar((problem->blocks[b]).subscip,vname);
          if( var != NULL )
          {
-            blocktolinkvars[i].indexes[k] = c;
-            blocktolinkvars[i].size = k + 1;
+            blocktolinkvars[b].indexes[k] = i;
+            blocktolinkvars[b].size = k + 1;
             k++;
          }
       }
    }
 
-   /* init slack variable arrays */
-   for( c = 0; c < problem->nblocks; c++ )
+   /* init arrays for slack variables and coupling constraints */
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).slackspos), blocktolinkvars[c].size) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).slacksneg), blocktolinkvars[c].size) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).couplingcons), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[b]).slackspos), blocktolinkvars[b].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[b]).slacksneg), blocktolinkvars[b].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[b]).couplingcons), blocktolinkvars[b].size) );
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcouplingvars, COUPLINGSIZE) );
@@ -871,115 +872,115 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* count hashtable entries */
    nentries = 0;
-   for( c = 0; c < problem->nblocks; c++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      for( i = 0; i < blocktolinkvars[b].size; i++ )
       {
-         int linkvaridx = blocktolinkvars[c].indexes[i];
+         int linkvaridx = blocktolinkvars[b].indexes[i];
          for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
          {
-            if( linkvartoblocks[linkvaridx].indexes[k] != c )
+            if( linkvartoblocks[linkvaridx].indexes[k] != b )
                nentries++;
          }
       }
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &idxlist, nentries) );
-   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), nentries, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
    idxlistfill = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &idxlist2, nentries) );
-   SCIP_CALL( SCIPhashtableCreate(&htable2, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexes2Equal, indexes2Hashval, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&htable2, SCIPblkmem(scip), nentries, SCIPhashGetKeyStandard, indexes2Equal, indexes2Hashval, (void*) scip) );
    idxlist2fill = 0;
 
    /* extend submips */
-   SCIPdebugMsg(scip,"extending block models...\n");
-   for( c = 0; c < problem->nblocks; c++ )
+   SCIPdebugMsg(scip,"extending block models\n");
+   for( b = 0; b < problem->nblocks; b++ )
    {
       SCIP_VAR** blockvars;
       int nblockvars;
-      blockvars = SCIPgetVars((problem->blocks[c]).subscip);
-      nblockvars = SCIPgetNVars((problem->blocks[c]).subscip);
+      blockvars = SCIPgetVars((problem->blocks[b]).subscip);
+      nblockvars = SCIPgetNVars((problem->blocks[b]).subscip);
 
       /* set objective function to zero */
       for( i = 0; i < nblockvars; i++ )
-         SCIP_CALL( SCIPchgVarObj((problem->blocks[c]).subscip, blockvars[i], 0.0) );
+         SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, blockvars[i], 0.0) );
 
       /* add two slack variables for each linking variable in block */
-      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      for( i = 0; i < blocktolinkvars[b].size; i++ )
       {
          int linkvaridx;
-         linkvaridx = blocktolinkvars[c].indexes[i];
+         linkvaridx = blocktolinkvars[b].indexes[i];
 
          for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
          {
             int blockcontaininglinkvar;
             blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-            if( blockcontaininglinkvar != c )
+            if( blockcontaininglinkvar != b )
             {
                INDEXES idx;
                idx = idxlist[idxlistfill];
                idxlistfill++;
-               idx.block = c;
+               idx.block = b;
                idx.blockContainingLinkVar = blockcontaininglinkvar;
                idx.linkVarIdx = linkvaridx;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->blocks[c]).nslackspos;
-               (problem->blocks[c]).slackspos[j] = NULL;
-               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[c]).subscip,
-                     &((problem->blocks[c]).slackspos[j]), name,
+               j = (problem->blocks[b]).nslackspos;
+               (problem->blocks[b]).slackspos[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
+                     &((problem->blocks[b]).slackspos[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->blocks[c]).subscip,
-                     (problem->blocks[c]).slackspos[j]) );
-               assert( (problem->blocks[c]).slackspos[j] != NULL );
-               idx.slackPosVar = (problem->blocks[c]).slackspos[j];
+               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip,
+                     (problem->blocks[b]).slackspos[j]) );
+               assert( (problem->blocks[b]).slackspos[j] != NULL );
+               idx.slackPosVar = (problem->blocks[b]).slackspos[j];
                idx.slackPosCoeff = 0;
-               (problem->blocks[c]).nslackspos++;
+               (problem->blocks[b]).nslackspos++;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->blocks[c]).nslacksneg;
-               (problem->blocks[c]).slacksneg[j] = NULL;
-               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[c]).subscip,
-                     &((problem->blocks[c]).slacksneg[j]), name,
+               j = (problem->blocks[b]).nslacksneg;
+               (problem->blocks[b]).slacksneg[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
+                     &((problem->blocks[b]).slacksneg[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->blocks[c]).subscip,
-                     (problem->blocks[c]).slacksneg[j]) );
-               assert( (problem->blocks[c]).slacksneg[j] != NULL );
-               idx.slackNegVar = (problem->blocks[c]).slacksneg[j];
+               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip,
+                     (problem->blocks[b]).slacksneg[j]) );
+               assert( (problem->blocks[b]).slacksneg[j] != NULL );
+               idx.slackNegVar = (problem->blocks[b]).slacksneg[j];
                idx.slackNegCoeff = 0;
-               (problem->blocks[c]).nslacksneg++;
+               (problem->blocks[b]).nslacksneg++;
                idx.couplingCons = NULL;
                SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)&idx) );
             }
          }
       }
 
-      assert((problem->blocks[c]).nslackspos == blocktolinkvars[c].size);
-      assert((problem->blocks[c]).nslacksneg == blocktolinkvars[c].size);
+      assert((problem->blocks[b]).nslackspos == blocktolinkvars[b].size);
+      assert((problem->blocks[b]).nslacksneg == blocktolinkvars[b].size);
 
       /* add linking constraint in block */
-      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      for( i = 0; i < blocktolinkvars[b].size; i++ )
       {
          int linkvaridx;
-         linkvaridx = blocktolinkvars[c].indexes[i];
+         linkvaridx = blocktolinkvars[b].indexes[i];
 
          for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
          {
             int blockcontaininglinkvar;
             blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-            if( blockcontaininglinkvar != c )
+            if( blockcontaininglinkvar != b )
             {
                INDEXES idx;
                INDEXES* idxout;
                INDEXES2 idx2;
 
-               idx.block = c;
+               idx.block = b;
                idx.blockContainingLinkVar = blockcontaininglinkvar;
                idx.linkVarIdx = linkvaridx;
 
@@ -988,45 +989,45 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx2.blockContainingLinkVar = blockcontaininglinkvar;
                idx2.linkVarIdx = linkvaridx;
                idx2.linkVarVal = 0.0;
-               idx2.linkVar = SCIPfindVar((problem->blocks[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               idx2.linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* fill variables for linking constraint */
                tmpcouplingvars[0] = idx2.linkVar;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[1] = SCIPfindVar((problem->blocks[c]).subscip, name);
+               tmpcouplingvars[1] = SCIPfindVar((problem->blocks[b]).subscip, name);
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[2] = SCIPfindVar((problem->blocks[c]).subscip, name);
+               tmpcouplingvars[2] = SCIPfindVar((problem->blocks[b]).subscip, name);
 
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->blocks[c]).ncouplingcons;
-               SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[c]).subscip, &((problem->blocks[c]).couplingcons[j]),
+               j = (problem->blocks[b]).ncouplingcons;
+               SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
                      name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
-               SCIP_CALL( SCIPaddCons((problem->blocks[c]).subscip, (problem->blocks[c]).couplingcons[j]) );
-               (problem->blocks[c]).ncouplingcons++;
+               SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
+               (problem->blocks[b]).ncouplingcons++;
 
                idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
-               idxout->couplingCons = (problem->blocks[c]).couplingcons[j];
+               idxout->couplingCons = (problem->blocks[b]).couplingcons[j];
 
                SCIP_CALL( SCIPhashtableSafeInsert(htable2, (void*)&idx2) );
             }
          }
       }
 
-      assert(blocktolinkvars[c].size == (problem->blocks[c]).ncouplingcons);
+      assert(blocktolinkvars[b].size == (problem->blocks[b]).ncouplingcons);
    }
 
 #if 0
-   for( i = 0; i < problem->nblocks; i++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[i]).subscip, name, "lp", FALSE) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
+      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, "lp", FALSE) );
    }
 #endif
 
@@ -1054,19 +1055,19 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          solutionsdiffer = FALSE;
          SCIPdebugMsg(scip,"%d\t%d\t%d\t",pIter,aIter,increasedslacks,info);
 
-         for( c = 0; c < problem->nblocks; c++ )
+         for( b = 0; b < problem->nblocks; b++ )
          {
-            for( i = 0; i < blocktolinkvars[c].size; i++ )
+            for( i = 0; i < blocktolinkvars[b].size; i++ )
             {
                int linkvaridx;
-               linkvaridx = blocktolinkvars[c].indexes[i];
+               linkvaridx = blocktolinkvars[b].indexes[i];
 
                for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
                {
                   int blockcontaininglinkvar;
                   blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-                  if( blockcontaininglinkvar != c )
+                  if( blockcontaininglinkvar != b )
                   {
                      INDEXES idx;
                      INDEXES* idxout;
@@ -1081,7 +1082,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      SCIP_VAR* slackNegVar;
                      SCIP_VARDATA* vardata;
 
-                     idx.block = c;
+                     idx.block = b;
                      idx.blockContainingLinkVar = blockcontaininglinkvar;
                      idx.linkVarIdx = linkvaridx;
                      idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
@@ -1107,26 +1108,26 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
-               SCIP_CALL( SCIPsetRealParam((problem->blocks[c]).subscip, "limits/absgap", absgap) );
-               SCIPsolve((problem->blocks[c]).subscip);
+               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/absgap", absgap) );
+               SCIPsolve((problem->blocks[b]).subscip);
 
-               if( SCIPgetStatus((problem->blocks[c]).subscip) == SCIP_STATUS_INFEASIBLE )
+               if( SCIPgetStatus((problem->blocks[b]).subscip) == SCIP_STATUS_INFEASIBLE )
                {
                   SCIPdebugMsg(scip,"infeasible subproblem\n");
                }
-               else if( SCIPgetStatus((problem->blocks[c]).subscip) == SCIP_STATUS_UNBOUNDED )
+               else if( SCIPgetStatus((problem->blocks[b]).subscip) == SCIP_STATUS_UNBOUNDED )
                {
-                  for( i = 0; i < blocktolinkvars[c].size; i++ )
+                  for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
                      int linkvaridx;
-                     linkvaridx = blocktolinkvars[c].indexes[i];
+                     linkvaridx = blocktolinkvars[b].indexes[i];
 
                      for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
                      {
                         int blockcontaininglinkvar;
                         blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-                        if( blockcontaininglinkvar != c )
+                        if( blockcontaininglinkvar != b )
                         {
                            INDEXES idx;
                            INDEXES* idxout;
@@ -1134,7 +1135,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                            SCIP_VAR* slackNegVar;
                            SCIP_VARDATA* vardata;
 
-                           idx.block = c;
+                           idx.block = b;
                            idx.blockContainingLinkVar = blockcontaininglinkvar;
                            idx.linkVarIdx = linkvaridx;
                            idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
@@ -1148,10 +1149,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                   }
                }
 
-            } while( SCIPgetStatus((problem->blocks[c]).subscip) != SCIP_STATUS_OPTIMAL );
+            } while( SCIPgetStatus((problem->blocks[b]).subscip) != SCIP_STATUS_OPTIMAL );
 
             /* check if solutions differ */
-            for( i = 0; i < blocktolinkvars[c].size; i++ )
+            for( i = 0; i < blocktolinkvars[b].size; i++ )
             {
                SCIP_SOL* sol;
                SCIP_Real val;
@@ -1159,13 +1160,13 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                int linkvaridx;
                INDEXES2 idx2;
                INDEXES2* idx2out;
-               idx2.blockContainingLinkVar = c;
+               idx2.blockContainingLinkVar = b;
                idx2.linkVarIdx = linkvaridx;
                idx2out = (INDEXES2*)SCIPhashtableRetrieve(htable2,(void*)&idx2);
 
-               sol = SCIPgetBestSol((problem->blocks[c]).subscip);
+               sol = SCIPgetBestSol((problem->blocks[b]).subscip);
                var = idx2out->linkVar;
-               val = SCIPgetSolVal((problem->blocks[c]).subscip, sol, var);
+               val = SCIPgetSolVal((problem->blocks[b]).subscip, sol, var);
                if( !EPSEQ(idx2out->linkVarVal, val, SCIP_DEFAULT_EPSILON) )
                   solutionsdiffer = TRUE;
 
@@ -1179,19 +1180,19 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       solved = TRUE;
       increasedslacks = 0;
       maxslack = SCIP_REAL_MIN;
-      for( c = 0; c < problem->nblocks; c++ )
+      for( b = 0; b < problem->nblocks; b++ )
       {
-         for( i = 0; i < blocktolinkvars[c].size; i++ )
+         for( i = 0; i < blocktolinkvars[b].size; i++ )
          {
             int linkvaridx;
-            linkvaridx = blocktolinkvars[c].indexes[i];
+            linkvaridx = blocktolinkvars[b].indexes[i];
 
             for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
             {
                int blockcontaininglinkvar;
                blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-               if( blockcontaininglinkvar != c )
+               if( blockcontaininglinkvar != b )
                {
                   SCIP_SOL* sol;
                   INDEXES idx;
@@ -1199,7 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                   SCIP_Real slackPosVal;
                   SCIP_Real slackNegVal;
 
-                  idx.block = c;
+                  idx.block = b;
                   idx.blockContainingLinkVar = blockcontaininglinkvar;
                   idx.linkVarIdx = linkvaridx;
                   idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
@@ -1259,25 +1260,25 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
          increasedslacks = 0;
 
-         for( c = 0; c < problem->nblocks; c++ )
+         for( b = 0; b < problem->nblocks; b++ )
          {
-            for( i = 0; i < blocktolinkvars[c].size; i++ )
+            for( i = 0; i < blocktolinkvars[b].size; i++ )
             {
                int linkvaridx;
-               linkvaridx = blocktolinkvars[c].indexes[i];
+               linkvaridx = blocktolinkvars[b].indexes[i];
 
                for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
                {
                   int blockcontaininglinkvar;
                   blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
-                  if( blockcontaininglinkvar != c )
+                  if( blockcontaininglinkvar != b )
                   {
                      INDEXES idx;
                      INDEXES* idxout;
                      SCIP_Real oldcoeff;
 
-                     idx.block = c;
+                     idx.block = b;
                      idx.blockContainingLinkVar = blockcontaininglinkvar;
                      idx.linkVarIdx = linkvaridx;
                      idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
@@ -1313,18 +1314,18 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
 
       /* free solution process data */
-      for( c = 0; c < problem->nblocks; c++ )
-         SCIP_CALL( SCIPfreeTransform((problem->blocks[c]).subscip) );
+      for( b = 0; b < problem->nblocks; b++ )
+         SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
    }
 
    /* release slack variables and coupling constraints */
-   for( c = 0; c < problem->nblocks; c++ )
+   for( b = 0; b < problem->nblocks; b++ )
    {
-      for( i = 0; i < blocktolinkvars[c].size; i++ )
+      for( i = 0; i < blocktolinkvars[b].size; i++ )
       {
-         SCIP_CALL( SCIPreleaseVar((problem->blocks[c]).subscip, &((problem->blocks[c]).slackspos[i])) );
-         SCIP_CALL( SCIPreleaseVar((problem->blocks[c]).subscip, &((problem->blocks[c]).slacksneg[i])) );
-         SCIP_CALL( SCIPreleaseCons((problem->blocks[c]).subscip, &((problem->blocks[c]).couplingcons[i])) );
+         SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slackspos[i])) );
+         SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slacksneg[i])) );
+         SCIP_CALL( SCIPreleaseCons((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[i])) );
       }
    }
 
@@ -1338,8 +1339,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIPfreeBufferArray(scip, &tmpcouplingcoef);
    SCIPfreeBufferArray(scip, &tmpcouplingvars);
 
-   for( i = 0; i < problem->nblocks; i++ )
-      SCIPfreeBufferArray(scip, &(blocktolinkvars[i].indexes));
+   for( b = 0; b < problem->nblocks; b++ )
+      SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
 
    SCIPfreeBufferArray(scip, &blocktolinkvars);
 
