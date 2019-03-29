@@ -724,6 +724,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_HASHTABLE* htable2;
    SCIP_Real absgap;
    SCIP_Bool doScaling;
+   SCIP_Real maxslack;
 
    doScaling = FALSE;
    absgap = 2;
@@ -1177,15 +1178,60 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
       /* TODO ... */
 
-      
+      /* should sigmoid scaling be applied? */
       if( doScaling )
       {
-         /* apply sigmoid scaling */
+         SCIP_Real shift;
+         SCIP_Real lowestslack;
+         SCIP_Real range;
+         SCIP_Real offset;
+         SCIP_Real flatness;
+
+         shift = maxslack / 2.0;
+         lowestslack = 0.1;
+         range = 10.0;
+         offset = range/2.0 + lowestslack;
+         flatness = maxslack/10.0;
+
          increasedslacks = 0;
 
-         /* TODO: sigscale() */
+         for( c = 0; c < problem->ncomponents; c++ )
+         {
+            for( i = 0; i < blocktolinkvars[c].size; i++ )
+            {
+               int linkvaridx;
+               linkvaridx = blocktolinkvars[c].indexes[i];
+
+               for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
+               {
+                  int blockcontaininglinkvar;
+                  blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
+
+                  if( blockcontaininglinkvar != c )
+                  {
+                     INDEXES idx;
+                     INDEXES* idxout;
+                     SCIP_Real oldcoeff;
+
+                     idx.block = c;
+                     idx.blockContainingLinkVar = blockcontaininglinkvar;
+                     idx.linkVarIdx = linkvaridx;
+                     idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+
+                     /* scale coefficient of positive slack variable */
+                     oldcoeff = idxout->slackPosCoeff;
+                     idxout->slackPosCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
+
+                     /* scale coefficient of negative slack variable */
+                     oldcoeff = idxout->slackNegCoeff;
+                     idxout->slackNegCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
+                  }
+               }
+            }
+         }
       }
 
+      /* adapt in some cases the absgap parameter */
       if((aIter == 1 && solutionsdiffer == FALSE) || doScaling )
       {
          SCIP_Real minabsgap = 0.001;
