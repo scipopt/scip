@@ -14,7 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
 /**@file   heur_padm.c
- * @brief  PADM primal heuristic
+ * @brief  PADM primal heuristic based on ideas published in the paper
+ *         "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems"
+ *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
  */
 
@@ -123,8 +125,8 @@ typedef struct indexes
    int                   blockContainingLinkVar;
    int                   linkVarIdx;
    SCIP_Real             slackPosCoeff;
-   SCIP_Real             slackNegCoeff;
    SCIP_VAR*             slackPosVar;
+   SCIP_Real             slackNegCoeff;
    SCIP_VAR*             slackNegVar;
    SCIP_CONS*            couplingCons;
 } INDEXES;
@@ -901,7 +903,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       blockvars = SCIPgetVars((problem->blocks[b]).subscip);
       nblockvars = SCIPgetNVars((problem->blocks[b]).subscip);
 
-      /* set objective function to zero */
+      /* set objective function of each block to zero */
       for( i = 0; i < nblockvars; i++ )
          SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, blockvars[i], 0.0) );
 
@@ -916,6 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             int blockcontaininglinkvar;
             blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
 
+            /* handle different blocks with common linking variable */
             if( blockcontaininglinkvar != b )
             {
                INDEXES idx;
@@ -925,35 +928,35 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx.blockContainingLinkVar = blockcontaininglinkvar;
                idx.linkVarIdx = linkvaridx;
 
+               /* create positive slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-
                j = (problem->blocks[b]).nslackspos;
                (problem->blocks[b]).slackspos[j] = NULL;
                SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
                      &((problem->blocks[b]).slackspos[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip,
-                     (problem->blocks[b]).slackspos[j]) );
+               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]) );
                assert( (problem->blocks[b]).slackspos[j] != NULL );
                idx.slackPosVar = (problem->blocks[b]).slackspos[j];
-               idx.slackPosCoeff = 0;
+               idx.slackPosCoeff = 1.0;
                (problem->blocks[b]).nslackspos++;
 
+               /* create negative slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-
                j = (problem->blocks[b]).nslacksneg;
                (problem->blocks[b]).slacksneg[j] = NULL;
                SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
                      &((problem->blocks[b]).slacksneg[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip,
-                     (problem->blocks[b]).slacksneg[j]) );
+               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slacksneg[j]) );
                assert( (problem->blocks[b]).slacksneg[j] != NULL );
                idx.slackNegVar = (problem->blocks[b]).slacksneg[j];
-               idx.slackNegCoeff = 0;
+               idx.slackNegCoeff = 1.0;
                (problem->blocks[b]).nslacksneg++;
+
+               /* insert slack variables into hashtable */
                idx.couplingCons = NULL;
                SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)&idx) );
             }
@@ -963,7 +966,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       assert((problem->blocks[b]).nslackspos == blocktolinkvars[b].size);
       assert((problem->blocks[b]).nslacksneg == blocktolinkvars[b].size);
 
-      /* add linking constraint in block */
+      /* add linking constraint with slack variables to block */
       for( i = 0; i < blocktolinkvars[b].size; i++ )
       {
          int linkvaridx;
