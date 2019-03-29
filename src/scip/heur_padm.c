@@ -83,11 +83,10 @@
 typedef struct Problem PROBLEM;
 
 /** data related to one component */
-typedef struct Component
+typedef struct Block
 {
    PROBLEM*              problem;            /**< the problem this component belongs to */
    SCIP*                 subscip;            /**< sub-SCIP representing the component */
-   SCIP_SOL*             workingsol;         /**< working solution for transferring solutions into the sub-SCIP */
    SCIP_VAR**            vars;               /**< variables belonging to this component (in complete problem) */
    SCIP_VAR**            subvars;            /**< variables belonging to this component (in subscip) */
    int                   nvars;              /**< number of variables belonging to this component */
@@ -100,7 +99,7 @@ typedef struct Component
 
    SCIP_CONS**           couplingcons;
    int                   ncouplingcons;
-} COMPONENT;
+} BLOCK;
 
 /** data related to one problem */
 struct Problem
@@ -108,14 +107,14 @@ struct Problem
    SCIP*                 scip;               /**< the SCIP instance this problem belongs to */
    SCIP_SOL*             bestsol;            /**< best solution found so far for the problem */
    char*                 name;               /**< name of the problem */
-   COMPONENT*            components;         /**< independent components into which the problem can be divided */
-   int                   ncomponents;        /**< number of independent components into which the problem can be divided */
+   BLOCK*                blocks;             /**< blocks into which the problem will be divided */
+   int                   nblocks;            /**< number of blocks */
 };
 
 typedef struct set
 {
-   int                   size;
-   int*                  indexes;
+   int                   size;               /**< size of the set */
+   int*                  indexes;            /**< set of indexes */
 } SET;
 
 typedef struct indexes
@@ -215,11 +214,11 @@ struct SCIP_HeurData
 
 /** initialize component structure */
 static
-SCIP_RETCODE initComponent(
+SCIP_RETCODE initBlock(
    PROBLEM*              problem             /**< subproblem structure */
    )
 {
-   COMPONENT* component;
+   BLOCK* block;
    SCIP* scip;
 
    assert(problem != NULL);
@@ -227,73 +226,64 @@ SCIP_RETCODE initComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   component = &problem->components[problem->ncomponents];
+   block = &problem->blocks[problem->nblocks];
 
-   component->problem = problem;
-   component->subscip = NULL;
-   component->workingsol = NULL;
-   component->vars = NULL;
-   component->subvars = NULL;
-   component->nvars = 0;
-   component->number = problem->ncomponents;
+   block->problem = problem;
+   block->subscip = NULL;
+   block->vars = NULL;
+   block->subvars = NULL;
+   block->nvars = 0;
+   block->number = problem->nblocks;
 
-   component->slackspos = NULL;
-   component->nslackspos = 0;
-   component->slacksneg = NULL;
-   component->nslacksneg = 0;
+   block->slackspos = NULL;
+   block->nslackspos = 0;
+   block->slacksneg = NULL;
+   block->nslacksneg = 0;
 
-   component->couplingcons = NULL;
-   component->ncouplingcons = 0;
+   block->couplingcons = NULL;
+   block->ncouplingcons = 0;
 
-   ++problem->ncomponents;
+   ++problem->nblocks;
 
    return SCIP_OKAY;
 }
 
 /** free component structure */
 static
-SCIP_RETCODE freeComponent(
-   COMPONENT*            component           /**< pointer to component structure */
+SCIP_RETCODE freeBlock(
+   BLOCK*                block           /**< pointer to block structure */
    )
 {
    PROBLEM* problem;
    SCIP* scip;
 
-   assert(component != NULL);
+   assert(block != NULL);
 
-   problem = component->problem;
+   problem = block->problem;
    assert(problem != NULL);
 
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPdebugMsg(scip, "freeing component %d of problem <%s>\n", component->number, component->problem->name);
+   SCIPdebugMsg(scip, "freeing block %d of problem <%s>\n", block->number, block->problem->name);
 
-   assert((component->vars != NULL) == (component->subvars != NULL));
-   if( component->vars != NULL )
+   assert((block->vars != NULL) == (block->subvars != NULL));
+   if( block->vars != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &component->vars, component->nvars);
-      SCIPfreeBlockMemoryArray(scip, &component->subvars, component->nvars);
+      SCIPfreeBlockMemoryArray(scip, &block->vars, block->nvars);
+      SCIPfreeBlockMemoryArray(scip, &block->subvars, block->nvars);
    }
 
-   SCIPfreeBufferArray(scip, &component->slackspos);
-   SCIPfreeBufferArray(scip, &component->slacksneg);
-   SCIPfreeBufferArray(scip, &component->couplingcons);
+   SCIPfreeBufferArray(scip, &block->slackspos);
+   SCIPfreeBufferArray(scip, &block->slacksneg);
+   SCIPfreeBufferArray(scip, &block->couplingcons);
 
-   component->nslackspos = 0;
-   component->nslacksneg = 0;
-   component->ncouplingcons = 0;
+   block->nslackspos = 0;
+   block->nslacksneg = 0;
+   block->ncouplingcons = 0;
 
-   /* free sub-SCIP belonging to this component and the working solution */
-   if( component->subscip != NULL )
-   {
-      if( component->workingsol != NULL )
-      {
-         SCIP_CALL( SCIPfreeSol(component->subscip, &component->workingsol) );
-      }
-
-      SCIP_CALL( SCIPfree(&component->subscip) );
-   }
+   if( block->subscip != NULL )
+      SCIP_CALL( SCIPfree(&block->subscip) );
 
    return SCIP_OKAY;
 }
@@ -303,7 +293,7 @@ static
 SCIP_RETCODE initProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    PROBLEM**             problem,            /**< pointer to subproblem structure */
-   int                   ncomponents         /**< number of independent components */
+   int                   nblocks             /**< number of blocks */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -320,10 +310,10 @@ SCIP_RETCODE initProblem(
    SCIP_CALL( SCIPallocBlockMemory(scip, problem) );
    assert(*problem != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*problem)->components, ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*problem)->blocks, nblocks) );
 
    (*problem)->scip = scip;
-   (*problem)->ncomponents = 0;
+   (*problem)->nblocks = 0;
 
    if( SCIPgetDepth(scip) == 0 )
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
@@ -369,14 +359,14 @@ SCIP_RETCODE freeProblem(
       SCIP_CALL( SCIPfreeSol(scip, &(*problem)->bestsol) );
    }
 
-   /* free all components */
-   for( c = (*problem)->ncomponents - 1; c >= 0; --c )
+   /* free all blocks */
+   for( c = (*problem)->nblocks - 1; c >= 0; --c )
    {
-      SCIP_CALL( freeComponent(&(*problem)->components[c]) );
+      SCIP_CALL( freeBlock(&(*problem)->blocks[c]) );
    }
-   if( (*problem)->components != NULL )
+   if( (*problem)->blocks != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*problem)->components, (*problem)->ncomponents);
+      SCIPfreeBlockMemoryArray(scip, &(*problem)->blocks, (*problem)->nblocks);
    }
 
    /* free problem name */
@@ -480,13 +470,13 @@ SCIP_RETCODE copyToSubscip(
    return SCIP_OKAY;
 }
 
-/** create the sub-SCIP for a given component */
+/** create the subscip for a given block */
 static
-SCIP_RETCODE componentCreateSubscip(
-   COMPONENT*            component,          /**< component structure */
+SCIP_RETCODE blockCreateSubscip(
+   BLOCK*                block,              /**< block structure */
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
-   SCIP_CONS**           conss,              /**< constraints contained in this component */
-   int                   nconss,             /**< number of constraints contained in this component */
+   SCIP_CONS**           conss,              /**< constraints contained in this block */
+   int                   nconss,             /**< number of constraints contained in this block */
    SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
    )
 {
@@ -495,12 +485,12 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP* scip;
    int minsize;
 
-   assert(component != NULL);
+   assert(block != NULL);
    assert(consmap != NULL);
    assert(conss != NULL);
    assert(success != NULL);
 
-   problem = component->problem;
+   problem = block->problem;
    assert(problem != NULL);
 
    scip = problem->scip;
@@ -508,20 +498,19 @@ SCIP_RETCODE componentCreateSubscip(
 
    (*success) = TRUE;
 
-   SCIP_CALL( createSubscip(scip, &component->subscip) );
+   SCIP_CALL( createSubscip(scip, &block->subscip) );
 
-   if( component->subscip != NULL )
+   if( block->subscip != NULL )
    {
       /* get name of the original problem and add "comp_nr" */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, component->number);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
-      SCIP_CALL( copyToSubscip(scip, component->subscip, name,
-            conss, consmap, nconss, success) );
+      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, consmap, nconss, success) );
 
       if( !(*success) )
       {
-         SCIP_CALL( SCIPfree(&component->subscip) );
-         component->subscip = NULL;
+         SCIP_CALL( SCIPfree(&block->subscip) );
+         block->subscip = NULL;
       }
    }
    else
@@ -530,44 +519,44 @@ SCIP_RETCODE componentCreateSubscip(
    return SCIP_OKAY;
 }
 
-/** create PROBLEM structure for the current node and split it into components */
+/** create problem structure and split it into blocks */
 static
 SCIP_RETCODE createAndSplitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by components */
-   int*                  compstartsconss,    /**< start points of components in sortedconss array */
-   int                   ncomponents,        /**< number of components */
+   SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by blocks */
+   int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
+   int                   nblocks,            /**< number of blocks */
    PROBLEM**             problem             /**< pointer to store problem structure */
    )
 {
-   COMPONENT* component;
+   BLOCK* block;
    SCIP_HASHMAP* consmap;
-   SCIP_CONS** compconss;
+   SCIP_CONS** blockconss;
    SCIP_Bool success = TRUE;
-   int ncompconss;
-   int comp;
+   int nblockconss;
+   int b;
 
    /* init subproblem data structure */
-   SCIP_CALL( initProblem(scip, problem, ncomponents) );
-   assert((*problem)->components != NULL);
+   SCIP_CALL( initProblem(scip, problem, nblocks) );
+   assert((*problem)->blocks != NULL);
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), compstartsconss[ncomponents]) );
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), blockstartsconss[nblocks]) );
 
-   /* loop over all components */
-   for( comp = 0; comp < ncomponents; comp++ )
+   /* loop over all blocks */
+   for( b = 0; b < nblocks; b++ )
    {
-      SCIP_CALL( initComponent(*problem) );
-      assert((*problem)->ncomponents == comp+1);
+      SCIP_CALL( initBlock(*problem) );
+      assert((*problem)->nblocks == b+1);
 
-      component = &(*problem)->components[comp];
+      block = &(*problem)->blocks[b];
 
-      /* get component constraints */
-      compconss = &(sortedconss[compstartsconss[comp]]);
-      ncompconss = compstartsconss[comp + 1] - compstartsconss[comp];
+      /* get block constraints */
+      blockconss = &(sortedconss[blockstartsconss[b]]);
+      nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
 
       /* build subscip for component */
-      SCIP_CALL( componentCreateSubscip(component, consmap, compconss, ncompconss, &success) );
+      SCIP_CALL( blockCreateSubscip(block, consmap, blockconss, nblockconss, &success) );
 
       if( !success )
          break;
@@ -577,7 +566,7 @@ SCIP_RETCODE createAndSplitProblem(
 
    if( !success )
    {
-      /* free subproblem data structure since not all component could be copied */
+      /* free subproblem data structure since not all blocks could be copied */
       SCIP_CALL( freeProblem(problem) );
    }
 
@@ -686,8 +675,8 @@ static
 SCIP_DECL_HEUREXEC(heurExecPADM)
 {  /*lint --e{715}*/
    PROBLEM* problem;
-   SCIP_DECOMPSTORE* decompstore = SCIPgetDecompstore(scip);
-   SCIP_DECOMP* decomp = NULL;
+   SCIP_DECOMPSTORE* decompstore;
+   SCIP_DECOMP* decomp;
    int nconss;
    int nvars;
    SCIP_VAR** vars;
@@ -697,10 +686,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    int i;
    int nblocks;
    int block;
-   int ncomponents;
    int c;
    int k;
-   int* compstartsconss;
+   int* blockstartsconss;
    char name[SCIP_MAXSTRLEN];
    char info[SCIP_MAXSTRLEN];
    int numlinkvars;
@@ -727,6 +715,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real maxslack;
    SCIP_Real slackthreshold;
 
+   decompstore = SCIPgetDecompstore(scip);
    doScaling = FALSE;
    absgap = 2.0;
 
@@ -735,7 +724,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
 #endif
 
-   /* for prove of concept we only use ORIG decomp, conss, vars */
+   /* currently only support for one original decomp */
    assert(SCIPdecompstoreGetNOrigDecomps(decompstore) == 1);
    decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
    assert(decomp != NULL);
@@ -747,7 +736,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    for( c = 0; c < nconss; c++ )
       SCIPdebugPrintCons(scip, conss[c], NULL);
 
-   /* determine slack threshold via maximum norm */
+   /* determine threshold for penalty coefficients via maximum norm */
    slackthreshold = SCIP_REAL_MIN;
    for( i = 0; i < nvars; i++ )
    {
@@ -760,7 +749,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &compstartsconss, nconss + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1) );
 
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
    for( i = 0; i < nconss; i++ )
@@ -773,28 +762,27 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
-   ncomponents = nblocks;
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
    assert(conslabels[0] == 0); /* TODO: currently we do not allow linking constraints */
 
-   /* determine start indices of components in sorted conss array */
+   /* determine start indices of blocks in sorted conss array */
    i = 0;
    for( c = 0; c < nblocks + 1; ++c )
    {
       assert(i == nconss || conslabels[i] >= c);
-      compstartsconss[c] = i;
+      blockstartsconss[c] = i;
       while( i < nconss && conslabels[i] == c )
          ++i;
    }
 
-   SCIP_CALL( createAndSplitProblem(scip, conss, compstartsconss, ncomponents, &problem) );
-   assert(nblocks == problem->ncomponents);
+   SCIP_CALL( createAndSplitProblem(scip, conss, blockstartsconss, nblocks, &problem) );
+   assert(nblocks == problem->nblocks);
 
 #if 1
-   for( i = 0; i < problem->ncomponents; i++ )
+   for( i = 0; i < problem->nblocks; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->components[i]).subscip, name, "lp", FALSE) );
+      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[i]).subscip, name, "lp", FALSE) );
    }
 #endif
 
@@ -806,9 +794,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          numlinkvars++;
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
 
-   /* extract linking variables and init linkvar to block indexes */
+   /* extract linking variables and init linking variable to blocks set */
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
    c = 0;
    for( i = 0; i < nvars; i++ )
@@ -816,22 +804,22 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       if( varslabels[i] == -1 )
       {
          linkvars[c] = vars[i];
-         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[c].indexes), problem->ncomponents) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[c].indexes), problem->nblocks) );
          linkvartoblocks[c].size = 0;
          c++;
       }
    }
 
-   /* fill linkvar to blocks */
+   /* fill linking variable to blocks set */
    for( i = 0; i < numlinkvars; i++ )
    {
       SCIP_VAR* var;
       const char* vname;
       vname = SCIPvarGetName(linkvars[i]);
       k = 0;
-      for( c = 0; c < problem->ncomponents; c++ )
+      for( c = 0; c < problem->nblocks; c++ )
       {
-         var = SCIPfindVar((problem->components[c]).subscip,vname);
+         var = SCIPfindVar((problem->blocks[c]).subscip, vname);
          if( var != NULL )
          {
             linkvartoblocks[i].indexes[k] = c;
@@ -841,15 +829,15 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
-   /* init block to linkvars set */
-   for( i = 0; i < problem->ncomponents; i++ )
+   /* init block to linking variables set */
+   for( i = 0; i < problem->nblocks; i++ )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[i].indexes), numlinkvars) );
       blocktolinkvars[i].size = 0;
    }
 
-   /* fill block to linkvars */
-   for( i = 0; i < problem->ncomponents; i++ )
+   /* fill block to linking variables set */
+   for( i = 0; i < problem->nblocks; i++ )
    {
       k = 0;
       for( c = 0; c < numlinkvars; c++ )
@@ -857,7 +845,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          SCIP_VAR* var;
          const char* vname;
          vname = SCIPvarGetName(linkvars[c]);
-         var = SCIPfindVar((problem->components[i]).subscip,vname);
+         var = SCIPfindVar((problem->blocks[i]).subscip,vname);
          if( var != NULL )
          {
             blocktolinkvars[i].indexes[k] = c;
@@ -868,11 +856,11 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* init slack variable arrays */
-   for( c = 0; c < problem->ncomponents; c++ )
+   for( c = 0; c < problem->nblocks; c++ )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).slackspos), blocktolinkvars[c].size) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).slacksneg), blocktolinkvars[c].size) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->components[c]).couplingcons), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).slackspos), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).slacksneg), blocktolinkvars[c].size) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((problem->blocks[c]).couplingcons), blocktolinkvars[c].size) );
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcouplingvars, COUPLINGSIZE) );
@@ -883,7 +871,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* count hashtable entries */
    nentries = 0;
-   for( c = 0; c < problem->ncomponents; c++ )
+   for( c = 0; c < problem->nblocks; c++ )
    {
       for( i = 0; i < blocktolinkvars[c].size; i++ )
       {
@@ -905,16 +893,16 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* extend submips */
    SCIPdebugMsg(scip,"extending block models...\n");
-   for( c = 0; c < problem->ncomponents; c++ )
+   for( c = 0; c < problem->nblocks; c++ )
    {
       SCIP_VAR** blockvars;
       int nblockvars;
-      blockvars = SCIPgetVars((problem->components[c]).subscip);
-      nblockvars = SCIPgetNVars((problem->components[c]).subscip);
+      blockvars = SCIPgetVars((problem->blocks[c]).subscip);
+      nblockvars = SCIPgetNVars((problem->blocks[c]).subscip);
 
       /* set objective function to zero */
       for( i = 0; i < nblockvars; i++ )
-         SCIP_CALL( SCIPchgVarObj((problem->components[c]).subscip, blockvars[i], 0.0) );
+         SCIP_CALL( SCIPchgVarObj((problem->blocks[c]).subscip, blockvars[i], 0.0) );
 
       /* add two slack variables for each linking variable in block */
       for( i = 0; i < blocktolinkvars[c].size; i++ )
@@ -939,40 +927,40 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->components[c]).nslackspos;
-               (problem->components[c]).slackspos[j] = NULL;
-               SCIP_CALL( SCIPcreateVarBasic((problem->components[c]).subscip,
-                     &((problem->components[c]).slackspos[j]), name,
+               j = (problem->blocks[c]).nslackspos;
+               (problem->blocks[c]).slackspos[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[c]).subscip,
+                     &((problem->blocks[c]).slackspos[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->components[c]).subscip,
-                     (problem->components[c]).slackspos[j]) );
-               assert( (problem->components[c]).slackspos[j] != NULL );
-               idx.slackPosVar = (problem->components[c]).slackspos[j];
+               SCIP_CALL( SCIPaddVar((problem->blocks[c]).subscip,
+                     (problem->blocks[c]).slackspos[j]) );
+               assert( (problem->blocks[c]).slackspos[j] != NULL );
+               idx.slackPosVar = (problem->blocks[c]).slackspos[j];
                idx.slackPosCoeff = 0;
-               (problem->components[c]).nslackspos++;
+               (problem->blocks[c]).nslackspos++;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->components[c]).nslacksneg;
-               (problem->components[c]).slacksneg[j] = NULL;
-               SCIP_CALL( SCIPcreateVarBasic((problem->components[c]).subscip,
-                     &((problem->components[c]).slacksneg[j]), name,
+               j = (problem->blocks[c]).nslacksneg;
+               (problem->blocks[c]).slacksneg[j] = NULL;
+               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[c]).subscip,
+                     &((problem->blocks[c]).slacksneg[j]), name,
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-               SCIP_CALL( SCIPaddVar((problem->components[c]).subscip,
-                     (problem->components[c]).slacksneg[j]) );
-               assert( (problem->components[c]).slacksneg[j] != NULL );
-               idx.slackNegVar = (problem->components[c]).slacksneg[j];
+               SCIP_CALL( SCIPaddVar((problem->blocks[c]).subscip,
+                     (problem->blocks[c]).slacksneg[j]) );
+               assert( (problem->blocks[c]).slacksneg[j] != NULL );
+               idx.slackNegVar = (problem->blocks[c]).slacksneg[j];
                idx.slackNegCoeff = 0;
-               (problem->components[c]).nslacksneg++;
+               (problem->blocks[c]).nslacksneg++;
                idx.couplingCons = NULL;
                SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)&idx) );
             }
          }
       }
 
-      assert((problem->components[c]).nslackspos == blocktolinkvars[c].size);
-      assert((problem->components[c]).nslacksneg == blocktolinkvars[c].size);
+      assert((problem->blocks[c]).nslackspos == blocktolinkvars[c].size);
+      assert((problem->blocks[c]).nslacksneg == blocktolinkvars[c].size);
 
       /* add linking constraint in block */
       for( i = 0; i < blocktolinkvars[c].size; i++ )
@@ -1000,45 +988,45 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx2.blockContainingLinkVar = blockcontaininglinkvar;
                idx2.linkVarIdx = linkvaridx;
                idx2.linkVarVal = 0.0;
-               idx2.linkVar = SCIPfindVar((problem->components[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               idx2.linkVar = SCIPfindVar((problem->blocks[c]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* fill variables for linking constraint */
                tmpcouplingvars[0] = idx2.linkVar;
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[1] = SCIPfindVar((problem->components[c]).subscip, name);
+               tmpcouplingvars[1] = SCIPfindVar((problem->blocks[c]).subscip, name);
 
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[2] = SCIPfindVar((problem->components[c]).subscip, name);
+               tmpcouplingvars[2] = SCIPfindVar((problem->blocks[c]).subscip, name);
 
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
 
-               j = (problem->components[c]).ncouplingcons;
-               SCIP_CALL( SCIPcreateConsBasicLinear((problem->components[c]).subscip, &((problem->components[c]).couplingcons[j]),
+               j = (problem->blocks[c]).ncouplingcons;
+               SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[c]).subscip, &((problem->blocks[c]).couplingcons[j]),
                      name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
-               SCIP_CALL( SCIPaddCons((problem->components[c]).subscip, (problem->components[c]).couplingcons[j]) );
-               (problem->components[c]).ncouplingcons++;
+               SCIP_CALL( SCIPaddCons((problem->blocks[c]).subscip, (problem->blocks[c]).couplingcons[j]) );
+               (problem->blocks[c]).ncouplingcons++;
 
                idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
-               idxout->couplingCons = (problem->components[c]).couplingcons[j];
+               idxout->couplingCons = (problem->blocks[c]).couplingcons[j];
 
                SCIP_CALL( SCIPhashtableSafeInsert(htable2, (void*)&idx2) );
             }
          }
       }
 
-      assert(blocktolinkvars[c].size == (problem->components[c]).ncouplingcons);
+      assert(blocktolinkvars[c].size == (problem->blocks[c]).ncouplingcons);
    }
 
 #if 0
-   for( i = 0; i < problem->ncomponents; i++ )
+   for( i = 0; i < problem->nblocks; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), i);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->components[i]).subscip, name, "lp", FALSE) );
+      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[i]).subscip, name, "lp", FALSE) );
    }
 #endif
 
@@ -1066,7 +1054,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          solutionsdiffer = FALSE;
          SCIPdebugMsg(scip,"%d\t%d\t%d\t",pIter,aIter,increasedslacks,info);
 
-         for( c = 0; c < problem->ncomponents; c++ )
+         for( c = 0; c < problem->nblocks; c++ )
          {
             for( i = 0; i < blocktolinkvars[c].size; i++ )
             {
@@ -1106,12 +1094,12 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      newRhs = idx2out->linkVarVal;
 
                      /* change side of coupling constraint equation */
-                     SCIP_CALL( SCIPchgLhsLinear((problem->components[blockcontaininglinkvar]).subscip, couplingcons, newRhs) );
-                     SCIP_CALL( SCIPchgRhsLinear((problem->components[blockcontaininglinkvar]).subscip, couplingcons, newRhs) );
+                     SCIP_CALL( SCIPchgLhsLinear((problem->blocks[blockcontaininglinkvar]).subscip, couplingcons, newRhs) );
+                     SCIP_CALL( SCIPchgRhsLinear((problem->blocks[blockcontaininglinkvar]).subscip, couplingcons, newRhs) );
 
                      /* change penalty coefficients of slack variables */
-                     SCIP_CALL( SCIPchgVarObj((problem->components[blockcontaininglinkvar]).subscip, idxout->slackPosVar, idxout->slackPosCoeff) );
-                     SCIP_CALL( SCIPchgVarObj((problem->components[blockcontaininglinkvar]).subscip, idxout->slackNegVar, idxout->slackNegCoeff) );
+                     SCIP_CALL( SCIPchgVarObj((problem->blocks[blockcontaininglinkvar]).subscip, idxout->slackPosVar, idxout->slackPosCoeff) );
+                     SCIP_CALL( SCIPchgVarObj((problem->blocks[blockcontaininglinkvar]).subscip, idxout->slackNegVar, idxout->slackNegCoeff) );
                   }
                }
             }
@@ -1119,14 +1107,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
-               SCIP_CALL( SCIPsetRealParam((problem->components[c]).subscip, "limits/absgap", absgap) );
-               SCIPsolve((problem->components[c]).subscip);
+               SCIP_CALL( SCIPsetRealParam((problem->blocks[c]).subscip, "limits/absgap", absgap) );
+               SCIPsolve((problem->blocks[c]).subscip);
 
-               if( SCIPgetStatus((problem->components[c]).subscip) == SCIP_STATUS_INFEASIBLE )
+               if( SCIPgetStatus((problem->blocks[c]).subscip) == SCIP_STATUS_INFEASIBLE )
                {
                   SCIPdebugMsg(scip,"infeasible subproblem\n");
                }
-               else if( SCIPgetStatus((problem->components[c]).subscip) == SCIP_STATUS_UNBOUNDED )
+               else if( SCIPgetStatus((problem->blocks[c]).subscip) == SCIP_STATUS_UNBOUNDED )
                {
                   for( i = 0; i < blocktolinkvars[c].size; i++ )
                   {
@@ -1153,14 +1141,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
                            idxout->slackPosCoeff *= 10.0;
                            idxout->slackNegCoeff *= 10.0;
-                           SCIP_CALL( SCIPchgVarObj((problem->components[blockcontaininglinkvar]).subscip, idxout->slackPosVar, idxout->slackPosCoeff) );
-                           SCIP_CALL( SCIPchgVarObj((problem->components[blockcontaininglinkvar]).subscip, idxout->slackNegVar, idxout->slackNegCoeff) );
+                           SCIP_CALL( SCIPchgVarObj((problem->blocks[blockcontaininglinkvar]).subscip, idxout->slackPosVar, idxout->slackPosCoeff) );
+                           SCIP_CALL( SCIPchgVarObj((problem->blocks[blockcontaininglinkvar]).subscip, idxout->slackNegVar, idxout->slackNegCoeff) );
                         }
                      }
                   }
                }
 
-            } while( SCIPgetStatus((problem->components[c]).subscip) != SCIP_STATUS_OPTIMAL );
+            } while( SCIPgetStatus((problem->blocks[c]).subscip) != SCIP_STATUS_OPTIMAL );
 
             /* check if solutions differ */
             for( i = 0; i < blocktolinkvars[c].size; i++ )
@@ -1175,9 +1163,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx2.linkVarIdx = linkvaridx;
                idx2out = (INDEXES2*)SCIPhashtableRetrieve(htable2,(void*)&idx2);
 
-               sol = SCIPgetBestSol((problem->components[c]).subscip);
+               sol = SCIPgetBestSol((problem->blocks[c]).subscip);
                var = idx2out->linkVar;
-               val = SCIPgetSolVal((problem->components[c]).subscip, sol, var);
+               val = SCIPgetSolVal((problem->blocks[c]).subscip, sol, var);
                if( !EPSEQ(idx2out->linkVarVal, val, SCIP_DEFAULT_EPSILON) )
                   solutionsdiffer = TRUE;
 
@@ -1191,7 +1179,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       solved = TRUE;
       increasedslacks = 0;
       maxslack = SCIP_REAL_MIN;
-      for( c = 0; c < problem->ncomponents; c++ )
+      for( c = 0; c < problem->nblocks; c++ )
       {
          for( i = 0; i < blocktolinkvars[c].size; i++ )
          {
@@ -1216,9 +1204,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                   idx.linkVarIdx = linkvaridx;
                   idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
 
-                  sol = SCIPgetBestSol((problem->components[blockcontaininglinkvar]).subscip);
-                  slackPosVal = SCIPgetSolVal((problem->components[blockcontaininglinkvar]).subscip, sol, idxout->slackPosVar);
-                  slackNegVal = SCIPgetSolVal((problem->components[blockcontaininglinkvar]).subscip, sol, idxout->slackNegVar);
+                  sol = SCIPgetBestSol((problem->blocks[blockcontaininglinkvar]).subscip);
+                  slackPosVal = SCIPgetSolVal((problem->blocks[blockcontaininglinkvar]).subscip, sol, idxout->slackPosVar);
+                  slackNegVal = SCIPgetSolVal((problem->blocks[blockcontaininglinkvar]).subscip, sol, idxout->slackNegVar);
 
                   /* increase penalty coefficient of positive slack variable */
                   if( SCIPisGT(scip,slackPosVal,0.0) )
@@ -1271,7 +1259,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
          increasedslacks = 0;
 
-         for( c = 0; c < problem->ncomponents; c++ )
+         for( c = 0; c < problem->nblocks; c++ )
          {
             for( i = 0; i < blocktolinkvars[c].size; i++ )
             {
@@ -1325,18 +1313,18 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
 
       /* free solution process data */
-      for( c = 0; c < problem->ncomponents; c++ )
-         SCIP_CALL( SCIPfreeTransform((problem->components[c]).subscip) );
+      for( c = 0; c < problem->nblocks; c++ )
+         SCIP_CALL( SCIPfreeTransform((problem->blocks[c]).subscip) );
    }
 
    /* release slack variables and coupling constraints */
-   for( c = 0; c < problem->ncomponents; c++ )
+   for( c = 0; c < problem->nblocks; c++ )
    {
       for( i = 0; i < blocktolinkvars[c].size; i++ )
       {
-         SCIP_CALL( SCIPreleaseVar((problem->components[c]).subscip, &((problem->components[c]).slackspos[i])) );
-         SCIP_CALL( SCIPreleaseVar((problem->components[c]).subscip, &((problem->components[c]).slacksneg[i])) );
-         SCIP_CALL( SCIPreleaseCons((problem->components[c]).subscip, &((problem->components[c]).couplingcons[i])) );
+         SCIP_CALL( SCIPreleaseVar((problem->blocks[c]).subscip, &((problem->blocks[c]).slackspos[i])) );
+         SCIP_CALL( SCIPreleaseVar((problem->blocks[c]).subscip, &((problem->blocks[c]).slacksneg[i])) );
+         SCIP_CALL( SCIPreleaseCons((problem->blocks[c]).subscip, &((problem->blocks[c]).couplingcons[i])) );
       }
    }
 
@@ -1350,7 +1338,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIPfreeBufferArray(scip, &tmpcouplingcoef);
    SCIPfreeBufferArray(scip, &tmpcouplingvars);
 
-   for( i = 0; i < problem->ncomponents; i++ )
+   for( i = 0; i < problem->nblocks; i++ )
       SCIPfreeBufferArray(scip, &(blocktolinkvars[i].indexes));
 
    SCIPfreeBufferArray(scip, &blocktolinkvars);
@@ -1361,7 +1349,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIPfreeBufferArray(scip, &linkvartoblocks);
    SCIPfreeBufferArray(scip, &linkvars);
 
-   SCIPfreeBufferArray(scip, &compstartsconss);
+   SCIPfreeBufferArray(scip, &blockstartsconss);
    SCIPfreeBufferArray(scip, &conslabels);
    SCIPfreeBufferArray(scip, &varslabels);
 
