@@ -725,9 +725,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real absgap;
    SCIP_Bool doScaling;
    SCIP_Real maxslack;
+   SCIP_Real slackthreshold;
 
    doScaling = FALSE;
-   absgap = 2;
+   absgap = 2.0;
 
    SCIPdebugMsg(scip,"init padm heuristic...\n");
 #if 0
@@ -745,6 +746,17 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    vars = SCIPgetOrigVars(scip);
    for( c = 0; c < nconss; c++ )
       SCIPdebugPrintCons(scip, conss[c], NULL);
+
+   /* determine slack threshold */
+   slackthreshold = SCIP_REAL_MIN;
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_Real obj;
+      obj = SCIPvarGetObj(vars[i]);
+      obj = REALABS(obj);
+      if( SCIPisGT(scip,obj,slackthreshold) )
+         slackthreshold = obj;
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
@@ -1047,7 +1059,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       solutionsdiffer = TRUE;
       aIter = 0;
 
-      /* ADM loop */
+      /*  Alternating direction method loop */
       while (solutionsdiffer && aIter < MAX_ADM_ITERATIONS)
       {
          aIter++;
@@ -1175,8 +1187,72 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
 
       /* check wether problem has been solved and if not update penalty coeffs */
+      doScaling = FALSE;
+      solved = TRUE;
+      increasedslacks = 0;
+      maxslack = SCIP_REAL_MIN;
+      for( c = 0; c < problem->ncomponents; c++ )
+      {
+         for( i = 0; i < blocktolinkvars[c].size; i++ )
+         {
+            int linkvaridx;
+            linkvaridx = blocktolinkvars[c].indexes[i];
 
-      /* TODO ... */
+            for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
+            {
+               int blockcontaininglinkvar;
+               blockcontaininglinkvar = linkvartoblocks[linkvaridx].indexes[k];
+
+               if( blockcontaininglinkvar != c )
+               {
+                  SCIP_SOL* sol;
+                  INDEXES idx;
+                  INDEXES* idxout;
+                  SCIP_Real slackPosVal;
+                  SCIP_Real slackNegVal;
+
+                  idx.block = c;
+                  idx.blockContainingLinkVar = blockcontaininglinkvar;
+                  idx.linkVarIdx = linkvaridx;
+                  idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+
+                  sol = SCIPgetBestSol((problem->components[blockcontaininglinkvar]).subscip);
+                  slackPosVal = SCIPgetSolVal((problem->components[blockcontaininglinkvar]).subscip, sol, idxout->slackPosVar);
+                  slackNegVal = SCIPgetSolVal((problem->components[blockcontaininglinkvar]).subscip, sol, idxout->slackNegVar);
+
+                  /* increase penalty coefficient of positive slack variable */
+                  if( SCIPisGT(scip,slackPosVal,0.0) )
+                  {
+                     idxout->slackPosCoeff *= 10.0;
+
+                     if( idxout->slackPosCoeff > slackthreshold )
+                        doScaling = TRUE;
+
+                     if( idxout->slackPosCoeff > maxslack )
+                        maxslack = idxout->slackPosCoeff;
+
+                     solved = FALSE;
+                     increasedslacks++;
+                  }
+
+                  /* increase penalty coefficient of positive slack variable */
+                  if( SCIPisGT(scip,slackNegVal,0.0) )
+                  {
+                     idxout->slackNegCoeff *= 10.0;
+
+                     if( idxout->slackNegCoeff > slackthreshold )
+                        doScaling = TRUE;
+
+                     if( idxout->slackNegCoeff > maxslack )
+                        maxslack = idxout->slackNegCoeff;
+
+                     solved = FALSE;
+                     increasedslacks++;
+                  }
+               }
+            }
+         }
+      }
 
       /* should sigmoid scaling be applied? */
       if( doScaling )
