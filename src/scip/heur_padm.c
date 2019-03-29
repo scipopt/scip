@@ -124,6 +124,7 @@ typedef struct indexes
    int                   block;
    int                   blockContainingLinkVar;
    int                   linkVarIdx;
+   SCIP_VAR*             linkVar;
    SCIP_Real             slackPosCoeff;
    SCIP_VAR*             slackPosVar;
    SCIP_Real             slackNegCoeff;
@@ -928,6 +929,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx.block = b;
                idx.blockContainingLinkVar = blockcontaininglinkvar;
                idx.linkVarIdx = linkvaridx;
+               idx.linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* create positive slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
@@ -988,6 +990,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx.blockContainingLinkVar = blockcontaininglinkvar;
                idx.linkVarIdx = linkvaridx;
 
+               /* use in the second list the linking variable of the connected block */
                idx2 = idxlist2[idxlist2fill];
                idxlist2fill++;
                idx2.blockContainingLinkVar = blockcontaininglinkvar;
@@ -996,20 +999,13 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                idx2.linkVar = SCIPfindVar((problem->blocks[blockcontaininglinkvar]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* fill variables for linking constraint */
-               tmpcouplingvars[0] = idx2.linkVar;
-
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d",
-                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[1] = SCIPfindVar((problem->blocks[b]).subscip, name);
-
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d",
-                  SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-               tmpcouplingvars[2] = SCIPfindVar((problem->blocks[b]).subscip, name);
+               tmpcouplingvars[0] = idx.linkVar;
+               tmpcouplingvars[1] = idx.slackPosVar;
+               tmpcouplingvars[2] = idx.slackNegVar;
 
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                   SCIPvarGetName(linkvars[linkvaridx]), blockcontaininglinkvar);
-
                j = (problem->blocks[b]).ncouplingcons;
                (problem->blocks[b]).couplingcons[j] = NULL;
                SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
