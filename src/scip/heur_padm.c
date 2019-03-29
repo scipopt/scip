@@ -1119,7 +1119,6 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
-               /* set absgap parameter and solve subscip */
                SCIP_CALL( SCIPsetRealParam((problem->components[c]).subscip, "limits/absgap", absgap) );
                SCIPsolve((problem->components[c]).subscip);
 
@@ -1324,6 +1323,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             absgap = newabsgap;
          }
       }
+
+      /* free solution process data */
+      for( c = 0; c < problem->ncomponents; c++ )
+         SCIP_CALL( SCIPfreeTransform((problem->components[c]).subscip) );
    }
 
    /* release slack variables and coupling constraints */
