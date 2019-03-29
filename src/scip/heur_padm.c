@@ -378,6 +378,9 @@ SCIP_RETCODE createSubscip(
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
+
+      /* avoid recursive calls */
+      SCIP_CALL( SCIPsetIntParam(*subscip, "heuristics/padm/freq", 0) );
    }
    else
    {
@@ -853,7 +856,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    idxlistfill = 0;
 
    /* extend submips */
-   SCIPdebugMsg(scip,"Extending block models\n");
+   SCIPdebugMsg(scip,"Extending %d block models\n", problem->nblocks);
    for( b = 0; b < problem->nblocks; b++ )
    {
       SCIP_VAR** blockvars;
@@ -897,8 +900,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]) );
                assert( (problem->blocks[b]).slackspos[j] != NULL );
-               idx.slackPosVar = (problem->blocks[b]).slackspos[j];
                idx.slackPosObjCoeff = 1.0;
+               idx.slackPosVar = (problem->blocks[b]).slackspos[j];
                (problem->blocks[b]).nslackspos++;
 
                /* create negative slack variable */
@@ -910,8 +913,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slacksneg[j]) );
                assert( (problem->blocks[b]).slacksneg[j] != NULL );
-               idx.slackNegVar = (problem->blocks[b]).slacksneg[j];
                idx.slackNegObjCoeff = 1.0;
+               idx.slackNegVar = (problem->blocks[b]).slacksneg[j];
                (problem->blocks[b]).nslacksneg++;
 
                /* fill variables for linking constraint */
@@ -1026,10 +1029,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             do
             {
                SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/absgap", absgap) );
-#if 1
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "debug_padm_block_%d.lp", b);
-               SCIP_CALL( SCIPwriteOrigProblem(scip, name, "lp", FALSE) );
-#endif
+
                /* solve block */
                SCIPsolve((problem->blocks[b]).subscip);
                status = SCIPgetStatus((problem->blocks[b]).subscip);
