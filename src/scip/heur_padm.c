@@ -747,7 +747,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    for( c = 0; c < nconss; c++ )
       SCIPdebugPrintCons(scip, conss[c], NULL);
 
-   /* determine slack threshold */
+   /* determine slack threshold via maximum norm */
    slackthreshold = SCIP_REAL_MIN;
    for( i = 0; i < nvars; i++ )
    {
@@ -1119,9 +1119,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
-               /* TODO: set absgap parameter */
-
+               /* set absgap parameter and solve subscip */
+               SCIP_CALL( SCIPsetRealParam((problem->components[c]).subscip, "limits/absgap", absgap) );
                SCIPsolve((problem->components[c]).subscip);
+
                if( SCIPgetStatus((problem->components[c]).subscip) == SCIP_STATUS_INFEASIBLE )
                {
                   SCIPdebugMsg(scip,"infeasible subproblem\n");
