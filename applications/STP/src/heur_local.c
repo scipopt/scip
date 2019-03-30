@@ -1827,6 +1827,74 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    return SCIP_OKAY;
 }
 
+/** Implication based local heuristic for (R)PC and MW */
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  result              /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+)
+{
+   const int* starts = SCIPStpGetPcImplStarts(scip);
+   const int* verts = SCIPStpGetPcImplVerts(scip);
+
+   assert(graph_pc_isPcMw(graph));
+
+   if( starts != NULL )
+   {
+      const int nnodes = graph->knots;
+      STP_Bool* stvertex;
+      int nfound = 0;
+      int ptermcount = 0;
+
+      assert(graph->extended);
+      assert(verts != NULL);
+
+      SCIPallocBufferArray(scip, &stvertex, nnodes);
+
+      graph_sol_setVertexFromEdge(graph, result, stvertex);
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( !Is_pterm(graph->term[i]) )
+            continue;
+
+         assert(!graph_pc_knotIsFixedTerm(graph, i));
+
+         ptermcount++;
+
+         if( stvertex[i] )
+            continue;
+
+         for( int j = starts[ptermcount - 1]; j < starts[ptermcount]; j++ )
+         {
+            const int vert = verts[j];
+            if( stvertex[vert] )
+            {
+               /* now connect the vertex */
+
+               graph_knot_printInfo(graph, i);
+               nfound++;
+               break;
+            }
+         }
+      }
+
+      assert(ptermcount == graph_pc_nPotentialTerms(graph));
+
+      if( nfound > 0 )
+      {
+         printf("nfound: %d \n\n\n", nfound);
+         /* todo prune! */
+         //return SCIP_ERROR;
+      }
+      else
+         printf("none %d \n", 0);
+
+      SCIPfreeBufferArray(scip, &stvertex);
+   }
+   return SCIP_OKAY;
+}
+
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2235,13 +2303,12 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(vars != NULL);
    assert(xval != NULL);
 
-   if( graph->stp_type == STP_BRMWCSP )
-      return SCIP_OKAY;
-
-   /* for PC variants: test whether solution is trivial */
-   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
+   /* for PC/MW: test whether solution is trivial */
+   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
    {
       int e;
+      assert(graph->extended);
+
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && SCIPisEQ(scip, xval[e], 1.0) )
             break;
@@ -2279,20 +2346,12 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
       assert(graph_sol_valid(scip, graph, results));
 
-      for( v = nnodes - 1; v >= 0; --v )
-         steinertree[v] = FALSE;
+      graph_sol_setVertexFromEdge(graph, results, steinertree);
 
-      for( int e = nedges - 1; e >= 0; --e )
-      {
-         if( results[e] == CONNECT )
-         {
-            steinertree[graph->tail[e]] = TRUE;
-            steinertree[graph->head[e]] = TRUE;
-         }
+      for( int e = 0; e < nedges; e++ )
          results[e] = UNKNOWN;
-      }
 
-      if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
+      if( graph_pc_isPcMw(graph) )
          SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, results, steinertree) );
       else
          SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, results, steinertree) );
@@ -2303,65 +2362,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* execute local heuristics */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, results) );
 
-
 #if 0
    if( graph_pc_isPcMw(graph) )
-   {
-      int todo; // before and after local!
-      const int* starts = SCIPStpGetPcImplStarts(scip);
-      const int* verts = SCIPStpGetPcImplVerts(scip);
-
-      if( starts != NULL )
-      {
-         SCIP_Bool* stvertex;
-         int y = 0;
-         int ptermcount = 0;
-         SCIPallocBufferArray(scip, &stvertex, graph->knots);
-         assert(verts != NULL);
-
-         for( int i = 0; i < graph->knots; i++ )
-            stvertex[i] = FALSE;
-
-         for( int i = 0; i < graph->edges; i++ )
-            if( results[i] == CONNECT )
-            {
-               stvertex[graph->head[i]] = TRUE;
-               stvertex[graph->tail[i]] = TRUE;
-            }
-
-
-         for( int i = 0; i < graph->knots; i++ )
-         {
-            if( !Is_pterm(graph->term[i]) )
-               continue;
-
-            if( stvertex[i] )
-               continue;
-
-            ptermcount++;
-
-            for( int j = starts[ptermcount - 1]; j < starts[ptermcount]; j++ )
-            {
-               const int vert = verts[j];
-               if( stvertex[vert] )
-               {
-
-                  graph_knot_printInfo(graph, i);
-                  y++;
-                  break;
-               }
-            }
-         }
-         if( y > 0 )
-         {
-            printf("y %d \n\n\n", y);
-            assert(0);
-
-         }
-
-         SCIPfreeBufferArray(scip, &stvertex);
-      }
-   }
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMwImp(scip, graph, results) );
 #endif
 
    /* can we connect the network */

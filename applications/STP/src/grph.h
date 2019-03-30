@@ -211,6 +211,7 @@ extern void   graph_free_history(SCIP*, GRAPH*);
 extern void   graph_free_historyDeep(SCIP*, GRAPH*);
 extern void   graph_get_NVET(const GRAPH*, int*, int*, int*);
 extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
+extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
 extern void   graph_pc_2org(GRAPH*);
 extern void   graph_pc_2trans(GRAPH*);
 extern void   graph_pc_2orgcheck(GRAPH*);

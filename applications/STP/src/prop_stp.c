@@ -628,7 +628,7 @@ SCIP_RETCODE redbasedVarfixing(
       const int erev = e + 1;
       const int tail = propgraph->tail[e];
       const int head = propgraph->head[e];
-#if 1
+
       /* e OR its anti-parallel edge fixed to 1? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
@@ -695,12 +695,12 @@ SCIP_RETCODE redbasedVarfixing(
          remain[e] = PROP_STP_EDGE_KILLED;
          remain[erev] = PROP_STP_EDGE_KILLED;
       }
-#endif
    }
 
-#if 1
    if( pcmw )
    {
+      assert(propgraph->knots == g->knots);
+
       for( int k = 0; k < propgraph->knots; k++ )
       {
          if( Is_term(propgraph->term[k]) && !graph_pc_knotIsFixedTerm(propgraph, k) )
@@ -729,7 +729,7 @@ SCIP_RETCODE redbasedVarfixing(
          MIGHT CHANGE OFFSET FOR PCSPG/RPCSPG! */
       SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
    }
-#endif
+
    SCIP_CALL( graph_path_init(scip, propgraph) );
 
    *probisinfeas = FALSE;
@@ -749,6 +749,8 @@ SCIP_RETCODE redbasedVarfixing(
          {
             if( !Is_pterm(g->term[i]) )
                continue;
+
+            assert(!graph_pc_knotIsFixedTerm(g, i));
 
             ptermcount++;
 
@@ -798,6 +800,8 @@ SCIP_RETCODE redbasedVarfixing(
                }
             }
          }
+
+         assert(ptermcount == graph_pc_nPotentialTerms(g));
 
          if( *probisinfeas )
             goto TERMINATE;

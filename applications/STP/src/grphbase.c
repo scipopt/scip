@@ -3844,6 +3844,29 @@ SCIP_Real graph_sol_getObj(
    return obj;
 }
 
+/** marks vertices for given edge-solution array (CONNECT/UNKNOWN) */
+void graph_sol_setVertexFromEdge(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            result,             /**< solution array (CONNECT/UNKNOWN) */
+   STP_Bool*             solnode             /**< marks whether node is in solution */
+)
+{
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+
+   assert(g && result && solnode);
+
+   for( int i = 0; i < nnodes; i++ )
+      solnode[i] = FALSE;
+
+   for( int e = 0; e < nedges; e++ )
+      if( result[e] == CONNECT )
+      {
+         solnode[g->head[e]] = TRUE;
+         solnode[g->tail[e]] = TRUE;
+      }
+}
+
 /** get original solution */
 SCIP_RETCODE graph_sol_getOrg(
    SCIP*           scip,               /**< SCIP data structure */

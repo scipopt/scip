@@ -50,7 +50,13 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    );
 
-
+/** Implication based local heuristic for (R)PC and MW */
+extern
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  result              /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   );
 
 /** greedy extension local heuristic for (R)PC and MW */
 extern
