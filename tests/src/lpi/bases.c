@@ -17,6 +17,7 @@
  * @brief  unit test for checking the settings of slack variables in a basis of the lpi
  * @author Marc Pfetsch
  * @author Franziska Schloesser
+ * @author Felipe Serrano
  *
  * The behavior of different LP solvers w.r.t. the slack variables should not differ, if interfaced by LPI.
  */
@@ -452,10 +453,10 @@ Test(more_vars, test1)
    cr_assert(rstats[1] == SCIP_BASESTAT_LOWER);
    cr_assert(rstats[2] == SCIP_BASESTAT_LOWER);
 
-   /* BinvArow should be
+   /* binvarow should be
     * 1.0   2.0  0.0   3.0  <- basic var x1
     * 0.0   1.0  1.0   4.0  <- basic var x3
-    * 0.0   -3.0  0.0   -6.0  <- basic var s1
+    * 0.0  -3.0  0.0  -6.0  <- basic var s1
     */
 
    /* get basis indices */
@@ -463,33 +464,43 @@ Test(more_vars, test1)
 
    /* find position of x1 in basis indices; check binvarow of row where x1 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
+   {
       if( basinds[basicvarpos] == 0 )
          break;
-
+   }
    cr_assert(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 1.0, EPS); cr_expect_float_eq(binvarow[1], 2.0, EPS);
-   cr_expect_float_eq(binvarow[2], 0.0, EPS); cr_expect_float_eq(binvarow[3], 3.0, EPS);
+   cr_expect_float_eq(binvarow[0], 1.0, EPS);
+   cr_expect_float_eq(binvarow[1], 2.0, EPS);
+   cr_expect_float_eq(binvarow[2], 0.0, EPS);
+   cr_expect_float_eq(binvarow[3], 3.0, EPS);
 
    /* find position of x3 in basis indices; check binvarow of row where x3 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
+   {
       if( basinds[basicvarpos] == 2 )
          break;
-
+   }
    cr_assert(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS); cr_expect_float_eq(binvarow[1], 1.0, EPS);
-   cr_expect_float_eq(binvarow[2], 1.0, EPS); cr_expect_float_eq(binvarow[3], 4.0, EPS);
+   cr_expect_float_eq(binvarow[0], 0.0, EPS);
+   cr_expect_float_eq(binvarow[1], 1.0, EPS);
+   cr_expect_float_eq(binvarow[2], 1.0, EPS);
+   cr_expect_float_eq(binvarow[3], 4.0, EPS);
 
    /* find position of s1 in basis indices; check binvarow of row where s1 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
+   {
       if( basinds[basicvarpos] == -1 )
          break;
-
+   }
    cr_assert(basicvarpos < 3); /* assert that we found the variable */
+
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS); cr_expect_float_eq(binvarow[1], -3.0, EPS);
-   cr_expect_float_eq(binvarow[2], 0.0, EPS); cr_expect_float_eq(binvarow[3], -6.0, EPS);
+   cr_expect_float_eq(binvarow[0], 0.0, EPS);
+   cr_expect_float_eq(binvarow[1], -3.0, EPS);
+   cr_expect_float_eq(binvarow[2], 0.0, EPS);
+   cr_expect_float_eq(binvarow[3], -6.0, EPS);
 }
