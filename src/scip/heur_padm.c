@@ -378,9 +378,10 @@ SCIP_RETCODE createSubscip(
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
-
+#if 0
       /* avoid recursive calls */
-      SCIP_CALL( SCIPsetIntParam(*subscip, "heuristics/padm/freq", 0) );
+      SCIP_CALL( SCIPsetIntParam(*subscip, "heuristics/" HEUR_NAME "padm/freq", 0) );
+#endif
    }
    else
    {
@@ -760,7 +761,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       if( varslabels[i] == -1 )
          numlinkvars++;
    }
-   SCIPdebugMsg(scip,"%d linking variables\n");
+   SCIPdebugMsg(scip,"%d linking variables\n", numlinkvars);
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
 
@@ -852,7 +853,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &idxlist, nentries) );
-   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), nentries, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
    idxlistfill = 0;
 
    /* extend submips */
@@ -882,14 +883,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* handle different blocks with common linking variable */
             if( b2 != b )
             {
-               INDEXES idx;
-               idx = idxlist[idxlistfill];
+               INDEXES* idx;
+               idx = &idxlist[idxlistfill];
                idxlistfill++;
-               idx.block = b;
-               idx.otherblock = b2;
-               idx.linkVarIdx = linkvaridx;
-               idx.linkVarVal = 0.0;
-               idx.linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               idx->block = b;
+               idx->otherblock = b2;
+               idx->linkVarIdx = linkvaridx;
+               idx->linkVarVal = 0.0;
+               idx->linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* create positive slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
@@ -900,8 +901,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]) );
                assert( (problem->blocks[b]).slackspos[j] != NULL );
-               idx.slackPosObjCoeff = 1.0;
-               idx.slackPosVar = (problem->blocks[b]).slackspos[j];
+               idx->slackPosObjCoeff = 1.0;
+               idx->slackPosVar = (problem->blocks[b]).slackspos[j];
                (problem->blocks[b]).nslackspos++;
 
                /* create negative slack variable */
@@ -913,14 +914,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slacksneg[j]) );
                assert( (problem->blocks[b]).slacksneg[j] != NULL );
-               idx.slackNegObjCoeff = 1.0;
-               idx.slackNegVar = (problem->blocks[b]).slacksneg[j];
+               idx->slackNegObjCoeff = 1.0;
+               idx->slackNegVar = (problem->blocks[b]).slacksneg[j];
                (problem->blocks[b]).nslacksneg++;
 
                /* fill variables for linking constraint */
-               tmpcouplingvars[0] = idx.linkVar;
-               tmpcouplingvars[1] = idx.slackPosVar;
-               tmpcouplingvars[2] = idx.slackNegVar;
+               tmpcouplingvars[0] = idx->linkVar;
+               tmpcouplingvars[1] = idx->slackPosVar;
+               tmpcouplingvars[2] = idx->slackNegVar;
 
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
@@ -932,10 +933,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
                assert((problem->blocks[b]).couplingcons[j] != NULL);
                (problem->blocks[b]).ncouplingcons++;
-               idx.couplingCons = (problem->blocks[b]).couplingcons[j];
+               idx->couplingCons = (problem->blocks[b]).couplingcons[j];
 
                /* feed hashtable */
-               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)&idx) );
+               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)idx) );
             }
          }
       }
@@ -944,6 +945,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       assert((problem->blocks[b]).nslacksneg == blocktolinkvars[b].size);
       assert(blocktolinkvars[b].size == (problem->blocks[b]).ncouplingcons);
    }
+
+   assert(nentries == SCIPhashtableGetNElements(htable));
+   SCIPdebugMsg(scip,"Hashtable %d elements\n",SCIPhashtableGetNElements(htable));
 
 #if 0
    for( b = 0; b < problem->nblocks; b++ )
@@ -960,7 +964,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    pIter = 0;
    solutionsdiffer = FALSE;
    increasedslacks = 0;
-   (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, " ");
+   (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
    solved = FALSE;
 
    /* Penalty loop */
@@ -975,7 +979,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       {
          aIter++;
          solutionsdiffer = FALSE;
-         SCIPdebugMsg(scip,"%d\t%d\t%d\t%s",pIter,aIter,increasedslacks,info);
+         SCIPdebugMsg(scip,"%d\t%d\t%d\t%s\n",pIter,aIter,increasedslacks,info);
 
          for( b = 0; b < problem->nblocks; b++ )
          {
@@ -1003,6 +1007,12 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      idx.block = b;
                      idx.otherblock = b2;
                      idx.linkVarIdx = linkvaridx;
+#if 0
+                     if(SCIPhashtableExists(htable,(void*)&idx))
+                        SCIPdebugMsg(scip,"Exists\n");
+                     else
+                        SCIPdebugMsg(scip,"Exists not\n");
+#endif
                      idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
                      couplingcons = idxout->couplingCons;
                      oldRhs = SCIPgetRhsLinear(scip, couplingcons);
