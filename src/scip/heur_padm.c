@@ -704,7 +704,6 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    doScaling = FALSE;
    absgap = 2.0;
-   goto TERMINATE;
    SCIPdebugMsg(scip,"Initialize padm heuristic\n");
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
@@ -754,7 +753,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
    if(conslabels[0] != 0)
    {
-      SCIPdebugMsg(scip,"Currently not support for linking contraints\n");
+      SCIPdebugMsg(scip,"No support for linking contraints\n");
       goto TERMINATE;
    }
 
@@ -878,7 +877,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &blockinfolist, nentries) );
-   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
+   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*)scip) );
    blockinfolistfill = 0;
 
    /* extend submips */
@@ -972,7 +971,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    assert(nentries == SCIPhashtableGetNElements(htable));
-   SCIPdebugMsg(scip,"Hashtable %d elements\n",SCIPhashtableGetNElements(htable));
+   SCIPdebugMsg(scip,"Hashtable has %d elements\n",SCIPhashtableGetNElements(htable));
 
 #if 1
    for( b = 0; b < problem->nblocks; b++ )
@@ -982,7 +981,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 #endif
 
-   SCIPdebugMsg(scip,"Starting padm iterations\n");
+   SCIPdebugMsg(scip,"Starting iterations\n");
    SCIPdebugMsg(scip,"PIt\tADMIt\tSlacks\tInfo\n");
 
    aIter = 0;
@@ -1037,7 +1036,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      couplingcons = binfoout->couplingCons;
                      oldRhs = SCIPgetRhsLinear(scip, couplingcons);
 
-                     /* here interchange blocks b and b2 */
+                     /* interchange blocks b and b2 for getting new right hand side */
                      binfo2.block = b2;
                      binfo2.otherblock = b;
                      binfo2.linkVarIdx = linkvaridx;
@@ -1137,7 +1136,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                }
                else
                {
-                  SCIPdebugMsg(scip,"Block status nor supported\n");
+                  SCIPdebugMsg(scip,"Block solving status not supported\n");
                   goto TERMINATE;
                }
 
