@@ -30,7 +30,7 @@ else()
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc/shelltutorial/shelltutorialraw.tmp
         COMMAND $<TARGET_FILE:scip> < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
         COMMAND ${BASH} -c "rm stein27.lp stein27.sol settingsfile.set"
-        WORKING_DIRECTORY ../../
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../
     )
 
     #
