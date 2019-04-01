@@ -685,17 +685,36 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real slackthreshold;
    SCIP_STATUS status;
 
-   decompstore = SCIPgetDecompstore(scip);
+   assert(scip != NULL);
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   problem = NULL;
+   varslabels = NULL;
+   conslabels = NULL;
+   blockstartsconss = NULL;
+   linkvars = NULL;
+   linkvartoblocks = NULL;
+   numlinkvars = 0;
+   blocktolinkvars = NULL;
+   tmpcouplingvars = NULL;
+   tmpcouplingcoef = NULL;
+   blockinfolist = NULL;
+   htable = NULL;
+
    doScaling = FALSE;
    absgap = 2.0;
-
+   goto TERMINATE;
    SCIPdebugMsg(scip,"Initialize padm heuristic\n");
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
 #endif
 
    /* currently only support for one original decomp */
-   assert(SCIPdecompstoreGetNOrigDecomps(decompstore) == 1);
+   decompstore = SCIPgetDecompstore(scip);
+   if(SCIPdecompstoreGetNOrigDecomps(decompstore) != 1)
+      return SCIP_OKAY;
+
    decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
    assert(decomp != NULL);
 
@@ -733,7 +752,11 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
-   assert(conslabels[0] == 0); /* TODO: currently we do not allow linking constraints */
+   if(conslabels[0] != 0)
+   {
+      SCIPdebugMsg(scip,"Currently not support for linking contraints\n");
+      goto TERMINATE;
+   }
 
    /* determine start indices of blocks in sorted conss array */
    i = 0;
@@ -1114,8 +1137,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                }
                else
                {
-                  SCIPdebugMsg(scip,"not supported status of subproblem\n");
-                  assert(0); /* TODO: safe stop */
+                  SCIPdebugMsg(scip,"Block status nor supported\n");
+                  goto TERMINATE;
                }
 
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
@@ -1268,40 +1291,60 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
    }
 
-   /* release slack variables and coupling constraints */
-   for( b = 0; b < problem->nblocks; b++ )
+TERMINATE:
+   /* release variables, constraints and free memory */
+   if(problem != NULL)
    {
-      for( i = 0; i < blocktolinkvars[b].size; i++ )
+      for( b = 0; b < problem->nblocks; b++ )
       {
-         SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slackspos[i])) );
-         SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slacksneg[i])) );
-         SCIP_CALL( SCIPreleaseCons((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[i])) );
+         for( i = 0; i < blocktolinkvars[b].size; i++ )
+         {
+            SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slackspos[i])) );
+            SCIP_CALL( SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slacksneg[i])) );
+            SCIP_CALL( SCIPreleaseCons((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[i])) );
+         }
       }
+
+      for( b = 0; b < problem->nblocks; b++ )
+         SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
    }
 
-   /* free memory */
-   SCIPhashtableFree(&htable);
-   SCIPfreeBufferArray(scip, &blockinfolist);
+   if(htable != NULL)
+      SCIPhashtableFree(&htable);
 
-   SCIPfreeBufferArray(scip, &tmpcouplingcoef);
-   SCIPfreeBufferArray(scip, &tmpcouplingvars);
+   if(blockinfolist != NULL)
+      SCIPfreeBufferArray(scip, &blockinfolist);
 
-   for( b = 0; b < problem->nblocks; b++ )
-      SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
+   if(tmpcouplingcoef != NULL)
+      SCIPfreeBufferArray(scip, &tmpcouplingcoef);
 
-   SCIPfreeBufferArray(scip, &blocktolinkvars);
+   if(tmpcouplingvars != NULL)
+      SCIPfreeBufferArray(scip, &tmpcouplingvars);
+
+   if(blocktolinkvars != NULL)
+      SCIPfreeBufferArray(scip, &blocktolinkvars);
 
    for( i = 0; i < numlinkvars; i++ )
-      SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
+      if(linkvartoblocks[i].indexes != NULL)
+         SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
 
-   SCIPfreeBufferArray(scip, &linkvartoblocks);
-   SCIPfreeBufferArray(scip, &linkvars);
+   if(linkvartoblocks != NULL)
+      SCIPfreeBufferArray(scip, &linkvartoblocks);
 
-   SCIPfreeBufferArray(scip, &blockstartsconss);
-   SCIPfreeBufferArray(scip, &conslabels);
-   SCIPfreeBufferArray(scip, &varslabels);
+   if(linkvars != NULL)
+      SCIPfreeBufferArray(scip, &linkvars);
 
-   freeProblem(&problem);
+   if(blockstartsconss != NULL)
+      SCIPfreeBufferArray(scip, &blockstartsconss);
+
+   if(conslabels != NULL)
+      SCIPfreeBufferArray(scip, &conslabels);
+
+   if(varslabels != NULL)
+      SCIPfreeBufferArray(scip, &varslabels);
+
+   if(problem != NULL)
+      freeProblem(&problem);
 
    return SCIP_OKAY;
 }
