@@ -56,6 +56,9 @@
  * initial propagation and repropagation might differ, which may cause conflicts. For this reason, orbital fixing cannot
  * be called in repropagation.
  *
+ * @note If, besides orbital fixing, also symmetry handling constraints shall be added, orbital fixing is only applied
+ *       to symmetry components that are not handled by orbitope constraints.
+ *
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
  */

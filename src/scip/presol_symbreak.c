@@ -22,6 +22,8 @@
  * This presolver adds the following symmetry breaking constraints:
  *
  * - minimal cover inequalities for symresacks via a constraint handler
+ * - if special symmetry group structures are detected, orbitope constraints
+ * - if orbital fixing is active, only orbitopes are added (if present) and no symresacks
  *
  * @note It is important to control the order of presolvers within SCIP in order to avoid contraditions. First, one needs
  * to take care of presolvers that have an effect on symmetry, e.g., presol_domcol. If symmetry is computed on the
@@ -64,7 +66,7 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_COMPUTEORBITS       FALSE    /**< Should the orbits of the symmetry group be computed? */
-#define DEFAULT_DETECTORBITOPES     FALSE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 #define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
