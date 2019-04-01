@@ -739,6 +739,12 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* possibly get symmetries */
    SCIP_CALL( getSymmetries(scip, propdata) );
 
+   if ( propdata->nmovedpermvars == 0 )
+   {
+      propdata->enabled = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
    if ( nperms <= 0 )
@@ -1084,6 +1090,9 @@ SCIP_DECL_PROPINITPRE(propInitpreOrbitalfixing)
    /* possibly get symmetries */
    SCIP_CALL( getSymmetries(scip, propdata) );
 
+   if ( propdata->nmovedpermvars == 0 )
+      propdata->enabled = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -1137,6 +1146,9 @@ SCIP_DECL_PROPPRESOL(propPresolOrbitalFixing)
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( getSymmetries(scip, propdata) );
+
+      if ( propdata->nmovedpermvars == 0 )
+         propdata->enabled = FALSE;
    }
 
    return SCIP_OKAY;
