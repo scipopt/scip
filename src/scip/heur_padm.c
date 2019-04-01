@@ -87,11 +87,10 @@ typedef struct Problem PROBLEM;
 /** data related to one block */
 typedef struct Block
 {
-   PROBLEM*              problem;            /**< the problem this component belongs to */
-   SCIP*                 subscip;            /**< sub-SCIP representing the component */
-   SCIP_VAR**            vars;               /**< variables belonging to this component (in complete problem) */
-   SCIP_VAR**            subvars;            /**< variables belonging to this component (in subscip) */
-   int                   nvars;              /**< number of variables belonging to this component */
+   PROBLEM*              problem;            /**< the problem this block belongs to */
+   SCIP*                 subscip;            /**< sub-SCIP representing this block */
+   SCIP_VAR**            subvars;            /**< variables belonging to this block (without slack variables) */
+   int                   nsubvars;           /**< number of variables belonging to this block (without slack variables) */
    int                   number;             /**< component number */
 
    SCIP_VAR**            slackspos;          /**< positive slack variables */
@@ -107,7 +106,6 @@ typedef struct Block
 struct Problem
 {
    SCIP*                 scip;               /**< the SCIP instance this problem belongs to */
-   SCIP_SOL*             bestsol;            /**< best solution found so far for the problem */
    char*                 name;               /**< name of the problem */
    BLOCK*                blocks;             /**< blocks into which the problem will be divided */
    int                   nblocks;            /**< number of blocks */
@@ -198,9 +196,8 @@ SCIP_RETCODE initBlock(
 
    block->problem = problem;
    block->subscip = NULL;
-   block->vars = NULL;
    block->subvars = NULL;
-   block->nvars = 0;
+   block->nsubvars = 0;
    block->number = problem->nblocks;
 
    block->slackspos = NULL;
@@ -235,13 +232,7 @@ SCIP_RETCODE freeBlock(
 
    SCIPdebugMsg(scip, "freeing block %d of problem <%s>\n", block->number, block->problem->name);
 
-   assert((block->vars != NULL) == (block->subvars != NULL));
-   if( block->vars != NULL )
-   {
-      SCIPfreeBlockMemoryArray(scip, &block->vars, block->nvars);
-      SCIPfreeBlockMemoryArray(scip, &block->subvars, block->nvars);
-   }
-
+   SCIPfreeBlockMemoryArray(scip, &block->subvars, block->nsubvars);
    SCIPfreeBufferArray(scip, &block->slackspos);
    SCIPfreeBufferArray(scip, &block->slacksneg);
    SCIPfreeBufferArray(scip, &block->couplingcons);
@@ -265,15 +256,9 @@ SCIP_RETCODE initProblem(
    )
 {
    char name[SCIP_MAXSTRLEN];
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
 
    assert(scip != NULL);
    assert(problem != NULL);
-
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, problem) );
    assert(*problem != NULL);
@@ -283,23 +268,9 @@ SCIP_RETCODE initProblem(
    (*problem)->scip = scip;
    (*problem)->nblocks = 0;
 
-   if( SCIPgetDepth(scip) == 0 )
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
-   else
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_node_%d", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*problem)->name, name, strlen(name)+1) );
-
-   SCIP_CALL( SCIPcreateSol(scip, &(*problem)->bestsol, NULL) );
-
-   for( v = 0; v < nvars; v++ )
-   {
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, (*problem)->bestsol, vars[v],
-               (SCIPvarGetUbLocal(vars[v]) + SCIPvarGetLbLocal(vars[v]))/2) );
-      }
-   }
 
    SCIPdebugMessage("initialized problem <%s>\n", (*problem)->name);
 
@@ -320,12 +291,6 @@ SCIP_RETCODE freeProblem(
 
    scip = (*problem)->scip;
    assert(scip != NULL);
-
-   /* free best solution */
-   if( (*problem)->bestsol != NULL )
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &(*problem)->bestsol) );
-   }
 
    /* free all blocks */
    for( c = (*problem)->nblocks - 1; c >= 0; --c )
@@ -456,6 +421,9 @@ SCIP_RETCODE blockCreateSubscip(
    PROBLEM* problem;
    SCIP* scip;
    int minsize;
+   int nsubscipvars;
+   SCIP_VAR** subscipvars;
+   int i;
 
    assert(block != NULL);
    assert(consmap != NULL);
@@ -478,6 +446,13 @@ SCIP_RETCODE blockCreateSubscip(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
       SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, consmap, nconss, success) );
+
+      /* save variables of subscip (without slack variables) */
+      nsubscipvars = SCIPgetNOrigVars(block->subscip);
+      subscipvars = SCIPgetOrigVars(block->subscip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &(block->subvars), nsubscipvars ) );
+      for( i = 0; i< nsubscipvars; i++ )
+         block->subvars[i] = subscipvars[i];
 
       if( !(*success) )
       {
@@ -527,7 +502,7 @@ SCIP_RETCODE createAndSplitProblem(
       blockconss = &(sortedconss[blockstartsconss[b]]);
       nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
 
-      /* build subscip for component */
+      /* build subscip for block */
       SCIP_CALL( blockCreateSubscip(block, consmap, blockconss, nblockconss, &success) );
 
       if( !success )
@@ -686,6 +661,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_STATUS status;
 
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
@@ -1286,8 +1262,66 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       }
 
       /* free solution process data */
+      if( !solved )
+         for( b = 0; b < problem->nblocks; b++ )
+            SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
+   }
+
+   /* copy solution if present */
+   if( solved )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      SCIP_SOL* newsol;
+      SCIP_Bool success;
+      SCIP_Real* blocksolvals;
+
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &blocksolvals, nvars) );
+      SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+
       for( b = 0; b < problem->nblocks; b++ )
-         SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
+      {
+         SCIP_SOL* blocksol;
+         SCIP_VAR** blockvars;
+         int nblockvars;
+
+         /* get solution of block variables (without slack variables) */
+         blocksol = SCIPgetBestSol((problem->blocks[b]).subscip);
+         blockvars = (problem->blocks[b]).subvars;
+         nblockvars = (problem->blocks[b]).nsubvars;
+         SCIP_CALL( SCIPgetSolVals((problem->blocks[b]).subscip, blocksol, nblockvars, blockvars, blocksolvals) );
+
+         for( i = 0; i < nblockvars; i++ )
+         {
+            SCIP_VAR* origvar;
+            SCIP_Real solval;
+
+            origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
+            solval = blocksolvals[i];
+            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
+         }
+      }
+
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+      if( !success )
+         SCIPdebugMsg(scip,"Solution copy failed\n");
+      else
+      {
+         SCIP_SOL* sol;
+         SCIP_Bool feasible;
+         sol = SCIPgetBestSol(scip);
+         SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
+
+         if(feasible)
+         {
+            SCIPdebugMsg(scip,"Solution copy successful\n");
+            SCIPdebugMsg(scip,"Objective value %.2f\n",SCIPgetSolOrigObj(scip,sol));
+            *result = SCIP_FOUNDSOL;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &blocksolvals);
    }
 
 TERMINATE:
