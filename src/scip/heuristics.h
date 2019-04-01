@@ -43,7 +43,7 @@ extern "C" {
  * @{
  */
 
-/** performs a diving within the limits of the diveset parameters
+/** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
@@ -76,7 +76,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_SOL*             worksol,            /**< non-NULL working solution */
    SCIP_HEUR*            heur,               /**< the calling primal heuristic */
    SCIP_RESULT*          result,             /**< SCIP result pointer */
-   SCIP_Bool             nodeinfeasible      /**< is the current node known to be infeasible? */
+   SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
+   SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** get a sub-SCIP copy of the transformed problem */
@@ -104,6 +106,28 @@ SCIP_RETCODE SCIPtranslateSubSols(
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
    SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   );
+
+/** adds a trust region neighborhood constraint to the @p targetscip
+ *
+ *  a trust region constraint measures the deviation from the current incumbent solution \f$x^*\f$ by an auxiliary
+ *  continuous variable \f$v \geq 0\f$:
+ *  \f[
+ *    \sum\limits_{j\in B} |x_j^* - x_j| = v
+ *  \f]
+ *  Only binary variables are taken into account. The deviation is penalized in the objective function using
+ *  a positive \p violpenalty.
+ *
+ *  @note: the trust region constraint creates an auxiliary variable to penalize the deviation from
+ *  the current incumbent solution. This variable can afterwards be accessed using SCIPfindVar() by its name
+ *  'trustregion_violationvar'
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
    );
 
 /* @} */

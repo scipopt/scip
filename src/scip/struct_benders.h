@@ -117,6 +117,20 @@ struct SCIP_Benders
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
+   /* cut strengthening details */
+   SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */
+   SCIP_Real             convexmult;         /**< the multiplier for the convex comb of the LP and sepa point */
+   SCIP_Real             perturbeps;         /**< epsilon value to perturb the LP solution */
+   int                   noimprovecount;     /**< count of the iterations without improvement */
+   int                   noimprovelimit;     /**< limit used to change behaviour of stabilitation */
+   SCIP_Longint          prevnlpiter;        /**< number of LP iters at the previous call of the cut strengthening */
+   SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
+   SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
+   SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
+   int                   nstrengthencuts;    /**< the number of strengthened cuts found */
+   int                   nstrengthencalls;   /**< the number of calls to the strengthening round */
+   int                   nstrengthenfails;   /**< the number of calls to the strengthening round that fail to find cuts */
+
    /* solving process information */
    int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
 

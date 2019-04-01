@@ -24,7 +24,7 @@
 #
 
 QUEUETYPE	=	srun
-QUEUE		=	mip-dbg
+QUEUE		=	M620v2
 PPN 		=	-1
 CLIENTTMPDIR	=	/local/tmp
 NOWAITCLUSTER   =       1

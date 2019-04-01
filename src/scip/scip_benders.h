@@ -350,6 +350,7 @@ int SCIPgetNBenders(
    );
 
 /** returns the number of currently active Benders' decomposition */
+SCIP_EXPORT
 int SCIPgetNActiveBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -367,6 +368,7 @@ int SCIPgetNActiveBenders(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
@@ -382,6 +384,7 @@ SCIP_RETCODE SCIPactivateBenders(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
