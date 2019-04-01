@@ -84,7 +84,7 @@
 /** data related to one problem (see below) */
 typedef struct Problem PROBLEM;
 
-/** data related to one component */
+/** data related to one block */
 typedef struct Block
 {
    PROBLEM*              problem;            /**< the problem this component belongs to */
@@ -94,13 +94,13 @@ typedef struct Block
    int                   nvars;              /**< number of variables belonging to this component */
    int                   number;             /**< component number */
 
-   SCIP_VAR**            slackspos;
-   int                   nslackspos;
-   SCIP_VAR**            slacksneg;
-   int                   nslacksneg;
+   SCIP_VAR**            slackspos;          /**< positive slack variables */
+   int                   nslackspos;         /**< number of positive slack variables */
+   SCIP_VAR**            slacksneg;          /**< negative slack variables */
+   int                   nslacksneg;         /**< number of negative slack variables */
 
-   SCIP_CONS**           couplingcons;
-   int                   ncouplingcons;
+   SCIP_CONS**           couplingcons;       /**< coupling contraints */
+   int                   ncouplingcons;      /**< number of coupling contraints */
 } BLOCK;
 
 /** data related to one problem */
@@ -113,25 +113,27 @@ struct Problem
    int                   nblocks;            /**< number of blocks */
 };
 
+/** set data structure */
 typedef struct set
 {
    int                   size;               /**< size of the set */
    int*                  indexes;            /**< set of indexes */
 } SET;
 
-typedef struct indexes
+/** data of one linking varaibles related to one block */
+typedef struct blockinfo
 {
-   int                   block;
-   int                   otherblock;
-   int                   linkVarIdx;
-   SCIP_Real             linkVarVal;
-   SCIP_VAR*             linkVar;
-   SCIP_Real             slackPosObjCoeff;
-   SCIP_VAR*             slackPosVar;
-   SCIP_Real             slackNegObjCoeff;
-   SCIP_VAR*             slackNegVar;
-   SCIP_CONS*            couplingCons;
-} INDEXES;
+   int                   block;              /**< index of this block */
+   int                   otherblock;         /**< index of the other conntected block */
+   int                   linkVarIdx;         /**< linking variable index */
+   SCIP_Real             linkVarVal;         /**< value of linking variable */
+   SCIP_VAR*             linkVar;            /**< linking variable */
+   SCIP_Real             slackPosObjCoeff;   /**< penalty coefficient of positive slack variable */
+   SCIP_VAR*             slackPosVar;        /**< positive slack variable */
+   SCIP_Real             slackNegObjCoeff;   /**< penalty coefficient of negative slack variable */
+   SCIP_VAR*             slackNegVar;        /**< negative slack variable */
+   SCIP_CONS*            couplingCons;       /**< coupling contraint (equation) */
+} BLOCKINFO;
 
 
 /** returns TRUE iff both keys are equal */
@@ -139,20 +141,20 @@ static
 SCIP_DECL_HASHKEYEQ(indexesEqual)
 {
    SCIP* scip;
-   INDEXES* idx1;
-   INDEXES* idx2;
+   BLOCKINFO* binfo1;
+   BLOCKINFO* binfo2;
 
    scip = (SCIP*) userptr;
-   idx1 = (INDEXES*) key1;
-   idx2 = (INDEXES*) key2;
+   binfo1 = (BLOCKINFO*) key1;
+   binfo2 = (BLOCKINFO*) key2;
 
-   if( idx1->block != idx2->block )
+   if( binfo1->block != binfo2->block )
       return FALSE;
 
-   if( idx1->otherblock != idx2->otherblock )
+   if( binfo1->otherblock != binfo2->otherblock )
       return FALSE;
 
-   if( idx1->linkVarIdx != idx2->linkVarIdx )
+   if( binfo1->linkVarIdx != binfo2->linkVarIdx )
       return FALSE;
 
    return TRUE;
@@ -162,10 +164,10 @@ SCIP_DECL_HASHKEYEQ(indexesEqual)
 static
 SCIP_DECL_HASHKEYVAL(indexesHashval)
 {  /*lint --e{715}*/
-   INDEXES* idx;
-   idx = (INDEXES*) key;
+   BLOCKINFO* binfo;
+   binfo = (BLOCKINFO*) key;
 
-   return SCIPhashFour(idx->block, idx->otherblock, idx->linkVarIdx, idx->linkVarIdx);
+   return SCIPhashFour(binfo->block, binfo->otherblock, binfo->linkVarIdx, binfo->linkVarIdx);
 }
 
 /** primal heuristic data */
@@ -178,10 +180,10 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** initialize component structure */
+/** initialize one block */
 static
 SCIP_RETCODE initBlock(
-   PROBLEM*              problem             /**< subproblem structure */
+   PROBLEM*              problem             /**< problem structure */
    )
 {
    BLOCK* block;
@@ -258,7 +260,7 @@ SCIP_RETCODE freeBlock(
 static
 SCIP_RETCODE initProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   PROBLEM**             problem,            /**< pointer to subproblem structure */
+   PROBLEM**             problem,            /**< pointer to problem structure */
    int                   nblocks             /**< number of blocks */
    )
 {
@@ -674,8 +676,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    int increasedslacks;
    SCIP_Bool solved;
    int nentries;
-   INDEXES* idxlist;
-   int idxlistfill;
+   BLOCKINFO* blockinfolist;
+   int blockinfolistfill;
    SCIP_HASHTABLE* htable;
    SCIP_Real absgap;
    SCIP_Bool doScaling;
@@ -746,7 +748,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( createAndSplitProblem(scip, conss, blockstartsconss, nblocks, &problem) );
    assert(nblocks == problem->nblocks);
 
-#if 1
+#if 0
    for( b = 0; b < problem->nblocks; b++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
@@ -852,9 +854,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
    }
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxlist, nentries) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blockinfolist, nentries) );
    SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
-   idxlistfill = 0;
+   blockinfolistfill = 0;
 
    /* extend submips */
    SCIPdebugMsg(scip,"Extending %d block models\n", problem->nblocks);
@@ -883,14 +885,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
             /* handle different blocks with common linking variable */
             if( b2 != b )
             {
-               INDEXES* idx;
-               idx = &idxlist[idxlistfill];
-               idxlistfill++;
-               idx->block = b;
-               idx->otherblock = b2;
-               idx->linkVarIdx = linkvaridx;
-               idx->linkVarVal = 0.0;
-               idx->linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               BLOCKINFO* binfo;
+               binfo = &blockinfolist[blockinfolistfill];
+               blockinfolistfill++;
+               binfo->block = b;
+               binfo->otherblock = b2;
+               binfo->linkVarIdx = linkvaridx;
+               binfo->linkVarVal = 0.0;
+               binfo->linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
 
                /* create positive slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
@@ -901,8 +903,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                      0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]) );
                assert( (problem->blocks[b]).slackspos[j] != NULL );
-               idx->slackPosObjCoeff = 1.0;
-               idx->slackPosVar = (problem->blocks[b]).slackspos[j];
+               binfo->slackPosObjCoeff = 1.0;
+               binfo->slackPosVar = (problem->blocks[b]).slackspos[j];
                (problem->blocks[b]).nslackspos++;
 
                /* create negative slack variable */
@@ -914,14 +916,14 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                         0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
                SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slacksneg[j]) );
                assert( (problem->blocks[b]).slacksneg[j] != NULL );
-               idx->slackNegObjCoeff = 1.0;
-               idx->slackNegVar = (problem->blocks[b]).slacksneg[j];
+               binfo->slackNegObjCoeff = 1.0;
+               binfo->slackNegVar = (problem->blocks[b]).slacksneg[j];
                (problem->blocks[b]).nslacksneg++;
 
                /* fill variables for linking constraint */
-               tmpcouplingvars[0] = idx->linkVar;
-               tmpcouplingvars[1] = idx->slackPosVar;
-               tmpcouplingvars[2] = idx->slackNegVar;
+               tmpcouplingvars[0] = binfo->linkVar;
+               tmpcouplingvars[1] = binfo->slackPosVar;
+               tmpcouplingvars[2] = binfo->slackNegVar;
 
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
@@ -933,10 +935,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
                assert((problem->blocks[b]).couplingcons[j] != NULL);
                (problem->blocks[b]).ncouplingcons++;
-               idx->couplingCons = (problem->blocks[b]).couplingcons[j];
+               binfo->couplingCons = (problem->blocks[b]).couplingcons[j];
 
                /* feed hashtable */
-               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)idx) );
+               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*)binfo) );
             }
          }
       }
@@ -949,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    assert(nentries == SCIPhashtableGetNElements(htable));
    SCIPdebugMsg(scip,"Hashtable %d elements\n",SCIPhashtableGetNElements(htable));
 
-#if 0
+#if 1
    for( b = 0; b < problem->nblocks; b++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
@@ -995,42 +997,37 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
                   if( b2 != b )
                   {
-                     INDEXES idx;
-                     INDEXES* idxout;
-                     INDEXES idx2;
-                     INDEXES* idx2out;
+                     BLOCKINFO binfo;
+                     BLOCKINFO* binfoout;
+                     BLOCKINFO binfo2;
+                     BLOCKINFO* binfo2out;
 
                      SCIP_CONS* couplingcons;
                      SCIP_Real oldRhs;
                      SCIP_Real newRhs;
 
-                     idx.block = b;
-                     idx.otherblock = b2;
-                     idx.linkVarIdx = linkvaridx;
-#if 0
-                     if(SCIPhashtableExists(htable,(void*)&idx))
-                        SCIPdebugMsg(scip,"Exists\n");
-                     else
-                        SCIPdebugMsg(scip,"Exists not\n");
-#endif
-                     idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
-                     couplingcons = idxout->couplingCons;
+                     binfo.block = b;
+                     binfo.otherblock = b2;
+                     binfo.linkVarIdx = linkvaridx;
+
+                     binfoout = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo);
+                     couplingcons = binfoout->couplingCons;
                      oldRhs = SCIPgetRhsLinear(scip, couplingcons);
 
                      /* here interchange blocks b and b2 */
-                     idx2.block = b2;
-                     idx2.otherblock = b;
-                     idx2.linkVarIdx = linkvaridx;
-                     idx2out = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx2);
-                     newRhs = idx2out->linkVarVal;
+                     binfo2.block = b2;
+                     binfo2.otherblock = b;
+                     binfo2.linkVarIdx = linkvaridx;
+                     binfo2out = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo2);
+                     newRhs = binfo2out->linkVarVal;
 
                      /* change side of coupling constraint equation with linking variable value of the other block */
                      SCIP_CALL( SCIPchgLhsLinear((problem->blocks[b]).subscip, couplingcons, newRhs) );
                      SCIP_CALL( SCIPchgRhsLinear((problem->blocks[b]).subscip, couplingcons, newRhs) );
 
                      /* change penalty coefficients of slack variables */
-                     SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, idxout->slackPosVar, idxout->slackPosObjCoeff) );
-                     SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, idxout->slackNegVar, idxout->slackNegObjCoeff) );
+                     SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, binfoout->slackPosVar, binfoout->slackPosObjCoeff) );
+                     SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, binfoout->slackNegVar, binfoout->slackNegObjCoeff) );
                   }
                }
             }
@@ -1059,24 +1056,24 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                         if( b2 != b )
                         {
                            SCIP_SOL* sol;
-                           INDEXES idx;
-                           INDEXES* idxout;
+                           BLOCKINFO binfo;
+                           BLOCKINFO* binfoout;
                            SCIP_VAR* var;
                            SCIP_Real val;
 
-                           idx.block = b;
-                           idx.otherblock = b2;
-                           idx.linkVarIdx = linkvaridx;
-                           idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+                           binfo.block = b;
+                           binfo.otherblock = b2;
+                           binfo.linkVarIdx = linkvaridx;
+                           binfoout = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo);
 
                            sol = SCIPgetBestSol((problem->blocks[b]).subscip);
-                           var = idxout->linkVar;
+                           var = binfoout->linkVar;
                            val = SCIPgetSolVal((problem->blocks[b]).subscip, sol, var);
 
-                           if( !EPSEQ(idxout->linkVarVal, val, SCIP_DEFAULT_EPSILON) )
+                           if( !EPSEQ(binfoout->linkVarVal, val, SCIP_DEFAULT_EPSILON) )
                               solutionsdiffer = TRUE;
 
-                           idxout->linkVarVal = val;
+                           binfoout->linkVarVal = val;
                         }
                      }
                   }
@@ -1095,22 +1092,22 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
                         if( b2 != b )
                         {
-                           INDEXES idx;
-                           INDEXES* idxout;
+                           BLOCKINFO binfo;
+                           BLOCKINFO* binfoout;
                            SCIP_VAR* slackPosVar;
                            SCIP_VAR* slackNegVar;
                            SCIP_VARDATA* vardata;
 
-                           idx.block = b;
-                           idx.otherblock = b2;
-                           idx.linkVarIdx = linkvaridx;
-                           idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+                           binfo.block = b;
+                           binfo.otherblock = b2;
+                           binfo.linkVarIdx = linkvaridx;
+                           binfoout = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo);
 
                            /* increase penalty coefficients to obtain a bounded subproblem */
-                           idxout->slackPosObjCoeff *= 10.0;
-                           idxout->slackNegObjCoeff *= 10.0;
-                           SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, idxout->slackPosVar, idxout->slackPosObjCoeff) );
-                           SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, idxout->slackNegVar, idxout->slackNegObjCoeff) );
+                           binfoout->slackPosObjCoeff *= 10.0;
+                           binfoout->slackNegObjCoeff *= 10.0;
+                           SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, binfoout->slackPosVar, binfoout->slackPosObjCoeff) );
+                           SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, binfoout->slackNegVar, binfoout->slackNegObjCoeff) );
                         }
                      }
                   }
@@ -1148,30 +1145,30 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                if( b2 != b )
                {
                   SCIP_SOL* sol;
-                  INDEXES idx;
-                  INDEXES* idxout;
+                  BLOCKINFO binfo;
+                  BLOCKINFO* binfoout;
                   SCIP_Real slackPosVal;
                   SCIP_Real slackNegVal;
 
-                  idx.block = b;
-                  idx.otherblock = b2;
-                  idx.linkVarIdx = linkvaridx;
-                  idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+                  binfo.block = b;
+                  binfo.otherblock = b2;
+                  binfo.linkVarIdx = linkvaridx;
+                  binfoout = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo);
 
                   sol = SCIPgetBestSol((problem->blocks[b]).subscip);
-                  slackPosVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, idxout->slackPosVar);
-                  slackNegVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, idxout->slackNegVar);
+                  slackPosVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, binfoout->slackPosVar);
+                  slackNegVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, binfoout->slackNegVar);
 
                   /* increase penalty coefficient of positive slack variable */
                   if( SCIPisGT(scip,slackPosVal,0.0) )
                   {
-                     idxout->slackPosObjCoeff *= 10.0;
+                     binfoout->slackPosObjCoeff *= 10.0;
 
-                     if( idxout->slackPosObjCoeff > slackthreshold )
+                     if( binfoout->slackPosObjCoeff > slackthreshold )
                         doScaling = TRUE;
 
-                     if( idxout->slackPosObjCoeff > maxslack )
-                        maxslack = idxout->slackPosObjCoeff;
+                     if( binfoout->slackPosObjCoeff > maxslack )
+                        maxslack = binfoout->slackPosObjCoeff;
 
                      solved = FALSE;
                      increasedslacks++;
@@ -1180,13 +1177,13 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                   /* increase penalty coefficient of negative slack variable */
                   if( SCIPisGT(scip,slackNegVal,0.0) )
                   {
-                     idxout->slackNegObjCoeff *= 10.0;
+                     binfoout->slackNegObjCoeff *= 10.0;
 
-                     if( idxout->slackNegObjCoeff > slackthreshold )
+                     if( binfoout->slackNegObjCoeff > slackthreshold )
                         doScaling = TRUE;
 
-                     if( idxout->slackNegObjCoeff > maxslack )
-                        maxslack = idxout->slackNegObjCoeff;
+                     if( binfoout->slackNegObjCoeff > maxslack )
+                        maxslack = binfoout->slackNegObjCoeff;
 
                      solved = FALSE;
                      increasedslacks++;
@@ -1227,22 +1224,22 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
                   if( b2 != b )
                   {
-                     INDEXES idx;
-                     INDEXES* idxout;
+                     BLOCKINFO binfo;
+                     BLOCKINFO* binfoout;
                      SCIP_Real oldcoeff;
 
-                     idx.block = b;
-                     idx.otherblock = b2;
-                     idx.linkVarIdx = linkvaridx;
-                     idxout = (INDEXES*)SCIPhashtableRetrieve(htable,(void*)&idx);
+                     binfo.block = b;
+                     binfo.otherblock = b2;
+                     binfo.linkVarIdx = linkvaridx;
+                     binfoout = (BLOCKINFO*)SCIPhashtableRetrieve(htable,(void*)&binfo);
 
                      /* scale coefficient of positive slack variable */
-                     oldcoeff = idxout->slackPosObjCoeff;
-                     idxout->slackPosObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
+                     oldcoeff = binfoout->slackPosObjCoeff;
+                     binfoout->slackPosObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
 
                      /* scale coefficient of negative slack variable */
-                     oldcoeff = idxout->slackNegObjCoeff;
-                     idxout->slackNegObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
+                     oldcoeff = binfoout->slackNegObjCoeff;
+                     binfoout->slackNegObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range/2.0 + offset;
                   }
                }
             }
@@ -1284,7 +1281,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* free memory */
    SCIPhashtableFree(&htable);
-   SCIPfreeBufferArray(scip, &idxlist);
+   SCIPfreeBufferArray(scip, &blockinfolist);
 
    SCIPfreeBufferArray(scip, &tmpcouplingcoef);
    SCIPfreeBufferArray(scip, &tmpcouplingvars);
