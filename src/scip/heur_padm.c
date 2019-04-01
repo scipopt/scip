@@ -232,7 +232,7 @@ SCIP_RETCODE freeBlock(
 
    SCIPdebugMsg(scip, "freeing block %d of problem <%s>\n", block->number, block->problem->name);
 
-   SCIPfreeBlockMemoryArray(scip, &block->subvars, block->nsubvars);
+   SCIPfreeBufferArray(scip, &block->subvars);
    SCIPfreeBufferArray(scip, &block->slackspos);
    SCIPfreeBufferArray(scip, &block->slacksneg);
    SCIPfreeBufferArray(scip, &block->couplingcons);
@@ -333,14 +333,7 @@ SCIP_RETCODE createSubscip(
    {
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
-
-      /* some general settings should not be fixed */
-      assert(!SCIPisParamFixed(*subscip, "limits/solutions"));
-      assert(!SCIPisParamFixed(*subscip, "limits/bestsol"));
-      assert(!SCIPisParamFixed(*subscip, "misc/usevartable"));
-      assert(!SCIPisParamFixed(*subscip, "misc/useconstable"));
-      assert(!SCIPisParamFixed(*subscip, "numerics/feastol"));
-      assert(!SCIPisParamFixed(*subscip, "misc/usesmalltables"));
+      SCIP_CALL( SCIPsetIntParam(*subscip, "display/verblevel", 0) );
 
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
@@ -451,6 +444,7 @@ SCIP_RETCODE blockCreateSubscip(
       nsubscipvars = SCIPgetNOrigVars(block->subscip);
       subscipvars = SCIPgetOrigVars(block->subscip);
       SCIP_CALL( SCIPallocBufferArray(scip, &(block->subvars), nsubscipvars ) );
+      block->nsubvars = nsubscipvars;
       for( i = 0; i< nsubscipvars; i++ )
          block->subvars[i] = subscipvars[i];
 
@@ -1299,6 +1293,9 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
             solval = blocksolvals[i];
+#if 1
+            SCIPdebugMsg(scip,"Fixing: %s = %.2f\n",SCIPvarGetName(origvar),solval);
+#endif
             SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
          }
       }
