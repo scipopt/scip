@@ -1183,7 +1183,6 @@ SCIP_RETCODE separateCuts(
    for( r = 0; r < nrows; r++ )
    {
       int nnonz;
-      int i;
 
       assert(SCIProwGetLPPos(rows[r]) == r);
 
