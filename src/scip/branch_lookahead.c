@@ -105,6 +105,7 @@
 #define DEFAULT_USELEVEL2DATA                TRUE  /**< should branching data generated at depth level 2 be stored for re-using it? */
 #define DEFAULT_APPLYCHILDBOUNDS             TRUE  /**< should bounds known for child nodes be applied? */
 #define DEFAULT_ENFORCEMAXDOMREDS            FALSE /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
+#define DEFAULT_UPDATEBRANCHINGRESULTS       FALSE /**< should branching results (and scores) be updated w.r.t. proven dual bounds? */
 #define DEFAULT_MAXPROPROUNDS                -1    /**< maximum number of propagation rounds to perform at temporary
                                                     *   nodes (-1: unlimited) */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
@@ -1055,6 +1056,7 @@ typedef struct
    SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
    SCIP_Bool             applychildbounds;   /**< should bounds known for child nodes be applied? */
    SCIP_Bool             enforcemaxdomreds;  /**< should the maximum number of domain reductions maxnviolateddomreds be enforced? */
+   SCIP_Bool             updatebranchingresults; /**< should branching results (and scores) be updated w.r.t. proven dual bounds? */
    SCIP_Bool             inscoring;          /**< are we currently in FSB-scoring (only used internally) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to perform at temporary nodes
                                               *   (-1: unlimited) */
@@ -4985,7 +4987,7 @@ SCIP_RETCODE selectVarRecursive(
                applySingleDeeperDomainReductions(scip, baselpsol, maxstoredomreds, domainreductions, updomainreductions);
          }
 
-         if( bestscore > -1.0 &&
+         if( config->updatebranchingresults && bestscore > -1.0 &&
             (SCIPisGT(scip, decision->proveddb, bestdownbranchingresult->dualbound)
                || SCIPisGT(scip, decision->proveddb, bestupbranchingresult->dualbound)) )
          {
@@ -5251,7 +5253,9 @@ SCIP_RETCODE selectVarStart(
       return SCIP_OKAY;
    }
 
-   if( !config->inscoring && candidatelist->ncandidates == 1 )
+   assert(!config->inscoring);
+
+   if( candidatelist->ncandidates == 1 )
    {
       decision->branchvar = candidatelist->candidates[0]->branchvar;
       decision->branchval = candidatelist->candidates[0]->branchval;
@@ -5305,6 +5309,25 @@ SCIP_RETCODE selectVarStart(
    SCIP_CALL( filterCandidates(scip, status, persistent, config, baselpsol, domainreductions, NULL, candidatelist,
             decision, scorecontainer, level2data, recursiondepth, lpobjval) );
 #endif
+
+   if( candidatelist->ncandidates == 1 )
+   {
+      decision->branchvar = candidatelist->candidates[0]->branchvar;
+      decision->branchval = candidatelist->candidates[0]->branchval;
+      decision->downdb = lpobjval;
+      decision->downdbvalid = TRUE;
+      decision->updb = lpobjval;
+      decision->updbvalid = TRUE;
+      decision->proveddb = lpobjval;
+
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
+         "calculations.\n", SCIPvarGetName(decision->branchvar));
+
+#ifdef SCIP_STATISTIC
+      statistics->nsinglecandidate++;
+#endif
+      goto TERMINATE;
+   }
 
    /* the status may have changed because of FSB to get the best candidates
     * if that is the case, we already changed the base node and should start again */
@@ -5383,6 +5406,7 @@ SCIP_RETCODE selectVarStart(
 #endif
    }
 
+ TERMINATE:
    SCIP_CALL( SCIPendStrongbranch(scip) );
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Ended probing.\n");
 
@@ -6163,6 +6187,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/enforcemaxdomreds",
          "should the maximum number of domain reductions maxnviolateddomreds be enforced?",
          &branchruledata->config->enforcemaxdomreds, TRUE, DEFAULT_ENFORCEMAXDOMREDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/updatebranchingresults",
+         "should branching results (and scores) be updated w.r.t. proven dual bounds?",
+         &branchruledata->config->updatebranchingresults, TRUE, DEFAULT_UPDATEBRANCHINGRESULTS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/maxproprounds",
          "maximum number of propagation rounds to perform at each temporary node (-1: unlimited)",
