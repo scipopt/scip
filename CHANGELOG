@@ -190,7 +190,8 @@ Interface changes
   - constraints/benderslp/stalllimit: after the maxdepth is reached, if there has been no improvement in the dual bound
     for stalllimit number of nodes, then the two-phase method is executed for the next fractional LP solution that is
     encountered.
-  - constraints/benderslp/iterlimit: after the root node, only iterlimit calls to the two-phase method are executed.
+  - constraints/benderslp/iterlimit: after the root node, only iterlimit fractional LP solutions are used at each node
+    to generate Benders' decomposition cuts.
 
 ### Data structures
 
