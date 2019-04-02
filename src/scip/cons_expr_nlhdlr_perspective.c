@@ -906,7 +906,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( *success )
    {
-      SCIPinfoMessage(scip, NULL, "\ndetected an on/off expr");
+      SCIPdebugMsg(scip, "\ndetected an on/off expr");
+
       /* depending on curvature, set enforcemethods */
       if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
       {
