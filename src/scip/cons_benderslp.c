@@ -55,7 +55,7 @@
                                          *   solution (-1: always, 0: only at root) */
 #define DEFAULT_CONSBENDERSLP_FREQ     0/**< the depth frequency for generating LP cuts after the max depth is reached (0: never, 1: all nodes, ...) */
 #define DEFAULT_CONSBENDERSLP_STALLLIMIT 100/**< the number of nodes processed without a dual bound improvement before enforcing the LP relaxation, 0: no stall count applied */
-#define DEFAULT_CONSBENDERSLP_ITERLIMIT 100 /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
+#define DEFAULT_CONSBENDERSLP_ITERLIMIT 100 /**< after the root node, only iterlimit fractional LP solutions are used at each node to generate Benders' decomposition cuts. */
 #define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active? */
 
 /*
@@ -293,7 +293,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/iterlimit",
-         "the iteration limit for the first phase of the two-phase method at a nodes lower than the root.",
+         "after the root node, only iterlimit fractional LP solutions are used at each node to generate Benders' decomposition cuts.",
          &conshdlrdata->iterlimit, TRUE, DEFAULT_CONSBENDERSLP_ITERLIMIT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
