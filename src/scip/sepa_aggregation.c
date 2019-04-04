@@ -1250,9 +1250,9 @@ SCIP_RETCODE separateCuts(
          /* for the row order only use the fractionality score since it best indicates how likely it is to find a cut */
          if( fracscore != 0.0 )
          {
-            int k = nnonzrows++;
-            roworder[k] = r;
-            rowscores[k] = fracscore;
+            roworder[nnonzrows] = r;
+            rowscores[nnonzrows] = fracscore;
+            ++nnonzrows;
          }
       }
 
