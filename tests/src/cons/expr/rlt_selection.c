@@ -331,11 +331,13 @@ Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test 
    SCIP_CALL( createSepaData(scip, sepadata) );
    sepadata->maxusedvars = 4;
    sepadata->maxncuts = 10;
+   sepadata->maxnonzeroprop = 0;
+   sepadata->maxunknownterms = 100;
 
    SCIPinfoMessage(scip, NULL, "\nvarssorted: ");
    for( int i = 0; i < sepadata->nbilinvars; ++i )
    {
-      SCIPinfoMessage(scip, NULL, "%s; ", SCIPvarGetName(sepadata->varssorted[i]));
+      SCIPinfoMessage(scip, NULL, "%s; prior = %d", SCIPvarGetName(sepadata->varssorted[i]), sepadata->varpriorities[i]);
    }
 
    /* mark rows */
@@ -344,20 +346,22 @@ Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test 
    row_marks[0] = 0;
 
    /* multiply by x1 */
-   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 0, row_marks, TRUE);
+   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 0, row_marks);
 
-   /* TODO examples where isAcceptableRow returns true */
    /* no products involving x1 are violated => no mark should have been added */
-   cr_assert(row_marks[0] == -1); /* TODO should isAcceptableRow indeed return false? */
+   cr_assert_eq(row_marks[0], 0, "\nExpected row_marks[0] = 0 for x1, got %d", row_marks[0]);
+
 
    /* multiply by x2 */
-   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 1, row_marks, TRUE);
-//   cr_assert_eq(row_marks[0], 1, "\nExpected row mark 1, got %d", row_marks[0]); //TODO what should the mark be?
+   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 1, row_marks);
+   cr_assert_eq(row_marks[0], 1, "\nExpected row_marks[0] = 1 for x2, got %d", row_marks[0]);
+
    row_marks[0] = 0;
 
    /* multiply by x3 */
-   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 2, row_marks, TRUE);
-//   cr_assert_eq(row_mark, 2, "\nExpected row mark 2, got %d", row_mark); //TODO what should the mark be?
+   markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, 1, 2, row_marks);
+   cr_assert_eq(row_marks[0], 2, "\nExpected row_marks[0] = 2 for x3, got %d", row_marks[0]);
+
 
    /* free memory */
    SCIPclearCuts(scip);

@@ -24,8 +24,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define SCIP_DEBUG
-
 #include <assert.h>
 #include <string.h>
 
@@ -553,19 +551,20 @@ SCIP_RETCODE getInitialRows(
  */
 static
 SCIP_RETCODE addRltTerm(
-   SCIP*          scip,        /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata,    /**< separator data */
-   SCIP_SOL*      sol,         /**< the point to be separated (can be NULL) */
-   SCIP_ROW*      cut,         /**< cut to which the term is to be added */
-   SCIP_VAR*      var,         /**< multiplier variable */
-   SCIP_VAR*      colvar,      /**< row variable to be multiplied */
-   SCIP_Real      coef,        /**< coefficient of the bilinear term */
-   SCIP_Bool      uselb,       /**< whether we multiply with (var - lb) or (ub - var) */
-   SCIP_Bool      uselhs,      /**< whether to create a cut for the lhs or rhs */
-   SCIP_Bool      local,       /**< whether local or global cuts should be computed */
-   SCIP_Real*     coefvar,     /**< coefficient of var */
-   SCIP_Real*     finalside,   /**< buffer to store the left or right hand side of cut */
-   SCIP_Bool*     success      /**< buffer to store whether cut was created successfully */
+   SCIP*          scip,         /**< SCIP data structure */
+   SCIP_SEPADATA* sepadata,     /**< separator data */
+   SCIP_SOL*      sol,          /**< the point to be separated (can be NULL) */
+   SCIP_ROW*      cut,          /**< cut to which the term is to be added */
+   SCIP_VAR*      var,          /**< multiplier variable */
+   SCIP_VAR*      colvar,       /**< row variable to be multiplied */
+   SCIP_Real      coef,         /**< coefficient of the bilinear term */
+   SCIP_Bool      uselb,        /**< whether we multiply with (var - lb) or (ub - var) */
+   SCIP_Bool      uselhs,       /**< whether to create a cut for the lhs or rhs */
+   SCIP_Bool      local,        /**< whether local or global cuts should be computed */
+   SCIP_Bool      computeEqCut, /**< whether conditions are fulfilled to compute equality cuts */
+   SCIP_Real*     coefvar,      /**< coefficient of var */
+   SCIP_Real*     finalside,    /**< buffer to store the left or right hand side of cut */
+   SCIP_Bool*     success       /**< buffer to store whether cut was created successfully */
    )
 {
    SCIP_VAR* auxvar;
@@ -603,7 +602,7 @@ SCIP_RETCODE addRltTerm(
       SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
       SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
 
-      /* assert(!computeEqCut); TODO why? */
+      assert(!computeEqCut);
 
       if( REALABS(lbcolvar) > MAXVARBOUND || REALABS(ubcolvar) > MAXVARBOUND )
       {
@@ -625,7 +624,7 @@ SCIP_RETCODE addRltTerm(
    {
       SCIPdebugMsg(scip, "auxvar for %s^2 not found, will use gradient and secant estimators\n", SCIPvarGetName(colvar));
 
-      /* assert(!computeEqCut); TODO again why? */
+      assert(!computeEqCut);
 
       /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
       if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
@@ -728,7 +727,7 @@ SCIP_RETCODE computeRltCuts(
    {
       SCIP_VAR* colvar;
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-      addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
+      addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local, computeEqCut,
          &coefvar, &finalside, success);
    }
 
@@ -838,7 +837,7 @@ SCIP_RETCODE computeProjRltCut(
    for( i = 0; i < projlp->nNonz[idx]; ++i )
    {
       addRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i], uselb, uselhs,
-         local, &coefvar, &finalside, success);
+         local, computeEqCut, &coefvar, &finalside, success);
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -882,15 +881,16 @@ static
 SCIP_RETCODE createProjLP(
    SCIP*            scip,       /**< SCIP data structure */
    SCIP_ROW**       rows,       /**< problem rows */
-   int              nrows,      /**> number of rows */
-   SCIP_SOL*        sol,        /**> the point to be separated (can be NULL) */
-   PROJLP**         projlp      /**> the projected problem data structure */
+   int              nrows,      /**< number of rows */
+   SCIP_SOL*        sol,        /**< the point to be separated (can be NULL) */
+   PROJLP**         projlp,     /**< the projected problem data structure */
+   SCIP_Bool        local       /**< are local cuts allowed? */
    )
 {
    SCIP_COL** cols;
    int i, v;
    SCIP_VAR* var;
-   SCIP_Real val;
+   SCIP_Real val, vlb, vub;
 
    assert(scip != NULL);
    assert(rows != NULL);
@@ -919,9 +919,10 @@ SCIP_RETCODE createProjLP(
       {
          var = SCIPcolGetVar(cols[v]);
          val = SCIPgetSolVal(scip, sol, var);
-         SCIPinfoMessage(scip, NULL, "\nvar %s, loc lb = %f, ", SCIPvarGetName(var), SCIPvarGetLbLocal(var));
-         SCIPinfoMessage(scip, NULL, "loc ub = %f, sol val = %f", SCIPvarGetUbLocal(var), val);
-         if( SCIPvarGetLbLocal(var) == val || SCIPvarGetUbLocal(var) == val ) /* TODO use of local/global bounds? */
+         vlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+         vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+         SCIPdebugMsg(scip, "\nvar %s, %s lb = %f, ub = %f, sol val = %f", SCIPvarGetName(var), local ? "local" : "global", vlb, vub, val);
+         if( vlb == val || vub == val )
          {
             /* add var as a constant to row of projlp */
             (*projlp)->lhss[i] -= SCIProwGetVals(rows[i])[v]*val;
@@ -1017,12 +1018,10 @@ void freeProjLP(
 /* mark a row for rlt cut selection
  *
  * depending on the sign of value and row inequality type, set the mark to:
- * -1 - no cuts to be generated
  * 1 - cuts for axy < aw case,
  * 2 - cuts for axy > aw case,
  * 3 - cuts for both cases
  */
-/* TODO move the description of the marks */
 static
 void addRowMark(
    int*          row_marks,    /**< array to store the marks */
@@ -1057,8 +1056,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_ROW**     rows,       /**< problem rows */
    int            nrows,      /**< number of rows in the problem */
    int            j,          /**< index of the multiplier variable in sepadata */
-   int*           row_marks,  /**< hashmap storing the row marks */
-   SCIP_Bool      allowlocal  /**< should the separator allow local cuts? */
+   int*           row_marks   /**< hashmap storing the row marks */
 )
 {
    int i, idx, img, ncolrows, r, ridx, rpos;
@@ -1077,23 +1075,7 @@ SCIP_RETCODE markRowsXj(
    /* mark the unsuitable rows with -1 */
    for( r = 0; r < nrows; ++r )
    {
-      /* check whether this row and var fulfill the conditions */
-      SCIP_CALL( isAcceptableRow(scip, sepadata, rows[r], xj, sepadata->varpriorities[j], &accepted) );
 
-      if( !accepted )
-      {
-         SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
-         row_marks[r] = -1;
-         continue;
-      }
-
-      SCIPdebugMsg(scip, "accepted row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintRow(scip, rows[r], NULL) );
-#endif
-
-      /* if all terms are known and it is an equality row, compute equality cuts */
-      buildeqcut = (sepadata->currentnunknown == 0 && iseqrow); /* TODO should this be elsewhere? */
    }
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
@@ -1181,10 +1163,9 @@ SCIP_RETCODE separateRltCuts(
    SCIP_VAR* xj;
    int* row_marks;
    SCIP_ROW* cut;
-   SCIP_Bool success;
    SCIP_Bool uselb[4] = {TRUE, TRUE, FALSE, FALSE};
    SCIP_Bool uselhs[4] = {TRUE, FALSE, TRUE, FALSE};
-   SCIP_Bool infeasible;
+   SCIP_Bool success, infeasible, accepted, buildeqcut, iseqrow;
 
    assert(projlp != NULL);
 
@@ -1205,19 +1186,15 @@ SCIP_RETCODE separateRltCuts(
    for( j = 0; j < sepadata->nbilinvars && (sepadata->maxusedvars < 0 || j < sepadata->maxusedvars); ++j )
    {
       /* mark all rows for multiplier xj */
-      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, nrows, j, row_marks, allowlocal) );
+      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, nrows, j, row_marks) );
 
       xj = sepadata->varssorted[j];
 
-      /* TODO equality cuts */
       /* generate the projected cut and if it is violated, generate the actual cut */
       for( r = 0; r < nrows; ++r )
       {
          ridx = SCIProwGetIndex(rows[r]);
-
-         /* TODO local and global */
          SCIPdebugMsg(scip, "\nprocessing row %d\n", ridx);
-
          rpos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)ridx);
 
          if( row_marks[rpos] == 0 )
@@ -1228,22 +1205,50 @@ SCIP_RETCODE separateRltCuts(
             continue;
          }
 
+         /* check whether this row and var fulfill the conditions */
+         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[r], xj, sepadata->varpriorities[j], &accepted) );
+
+         if( !accepted )
+         {
+            SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
+            row_marks[r] = 0;
+            continue;
+         }
+
+         SCIPdebugMsg(scip, "accepted row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintRow(scip, rows[r], NULL) );
+#endif
+         iseqrow = SCIPisEQ(scip, SCIProwGetLhs(rows[r]), SCIProwGetRhs(rows[r]));
+
+         /* if all terms are known and it is an equality row, compute equality cuts */
+         buildeqcut = (sepadata->currentnunknown == 0 && iseqrow);
+
          /* go over all suitable combinations of sides and bounds and compute the respective cuts */
          for( k = 0; k < 4; ++k )
          {
+            /* if equality cuts are possible, lhs and rhs cuts are equal so skip rhs */
+            if( buildeqcut )
+            {  /* TODO do we want to generate equalities when only one side will be violated? */
+               if( k % 2 == 1 )
+                  continue;
+            }
+            else
+            {
+               if( row_marks[rpos] == 1 && uselb[k] == uselhs[k] )
+                  continue;
+
+               if( row_marks[rpos] == 2 && uselb[k] != uselhs[k] )
+                  continue;
+            }
+
             success = TRUE;
-
-            if( row_marks[rpos] == 1 && uselb[k] == uselhs[k] )
-               continue;
-
-            if( row_marks[rpos] == 2 && uselb[k] != uselhs[k] )
-               continue;
 
             SCIPdebugMsg(scip, "uselb = %d, uselhs = %d\n", uselb[k], uselhs[k]);
 
             /* compute the rlt cut for a projected row first */
             SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, r, sol, xj, &success, uselb[k], uselhs[k],
-                                      allowlocal, FALSE) );
+                                      allowlocal, buildeqcut) );
 
             /* if the projected cut is not violated, set success to FALSE */
             if( cut != NULL )
@@ -1261,7 +1266,7 @@ SCIP_RETCODE separateRltCuts(
             /* if the projected cut was generated successfully and is violated, generate the actual cut */
             if( success )
                SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[r], sol, xj, &success, uselb[k], uselhs[k],
-                  allowlocal, FALSE) ); /* TODO buildeqcut */
+                  allowlocal, buildeqcut) );
 
             /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )
@@ -1308,7 +1313,6 @@ SCIP_RETCODE separateRltCuts(
    }
 
    SCIPdebugMsg(scip, "exit separator because cut calculation is finished\n");
-
 
    TERMINATE:
    SCIPfreeCleanBufferArray(scip, &row_marks);
@@ -1371,16 +1375,17 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolRlt)
    return SCIP_OKAY;
 }
 
+/** creates an array of rows suitable for RLT cut generation */
 static
 void storeSuitableRows(
-   SCIP*          scip,
-   SCIP_SEPA*     sepa,
-   SCIP_SEPADATA* sepadata,
-   SCIP_ROW**     prob_rows,
-   SCIP_ROW**     rows,
-   int*           nrows,
-   SCIP_HASHMAP*  row_to_pos,
-   SCIP_Bool      allowlocal
+   SCIP*          scip,        /**< SCIP data structure */
+   SCIP_SEPA*     sepa,        /**< separator */
+   SCIP_SEPADATA* sepadata,    /**< separator data */
+   SCIP_ROW**     prob_rows,   /**< problem rows */
+   SCIP_ROW**     rows,        /**< an array to be filled with suitable rows */
+   int*           nrows,       /**< buffer to store the number of suitable rows */
+   SCIP_HASHMAP*  row_to_pos,  /**< hashmap linking row indices to positions in rows */
+   SCIP_Bool      allowlocal   /**< are local rows allowed? */
    )
 {
    int new_nrows, r, j;
@@ -1464,21 +1469,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
    if( sepadata->maxncuts == 0 )
    {
-      SCIPdebugMsg(scip, "exit seperator because maxncuts is set to 0\n");
+      SCIPdebugMsg(scip, "exit separator because maxncuts is set to 0\n");
       return SCIP_OKAY;
    }
 
    /* don't run in a sub-SCIP or in probing */
    if( SCIPgetSubscipDepth(scip) > 0 && !sepadata->useinsubscip )
    {
-      SCIPdebugMsg(scip, "exit seperator because in sub-SCIP\n");
+      SCIPdebugMsg(scip, "exit separator because in sub-SCIP\n");
       return SCIP_OKAY;
    }
 
    /* don't run in a sub-SCIP or in probing */
    if( SCIPinProbing(scip) )
    {
-      SCIPdebugMsg(scip, "exit seperator because in or probing\n");
+      SCIPdebugMsg(scip, "exit separator because in or probing\n");
       return SCIP_OKAY;
    }
 
@@ -1488,7 +1493,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
         || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
    {
-      SCIPdebugMsg(scip, "exit seperator because round limit for this node is reached\n");
+      SCIPdebugMsg(scip, "exit separator because round limit for this node is reached\n");
       return SCIP_OKAY;
    }
 
@@ -1502,21 +1507,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    /* no bilinear terms available -> skip */
    if( sepadata->nbilinvars == 0 )
    {
-      SCIPdebugMsg(scip, "exit seperator because there are no known bilinear terms\n");
+      SCIPdebugMsg(scip, "exit separator because there are no known bilinear terms\n");
       return SCIP_OKAY;
    }
 
    /* only call separator, if we are not close to terminating */
    if( SCIPisStopped(scip) )
    {
-      SCIPdebugMsg(scip, "exit seperator because we are too close to terminating\n");
+      SCIPdebugMsg(scip, "exit separator because we are too close to terminating\n");
       return SCIP_OKAY;
    }
 
    /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIPdebugMsg(scip, "exit seperator because there is no LP solution at hand\n");
+      SCIPdebugMsg(scip, "exit separator because there is no LP solution at hand\n");
       return SCIP_OKAY;
    }
 
@@ -1555,7 +1560,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
    /* create the projected problem */
    PROJLP* projlp;
-   createProjLP(scip, rows, nrows, NULL, &projlp);
+   createProjLP(scip, rows, nrows, NULL, &projlp, allowlocal);
 
 #ifdef SCIP_DEBUG
    printProjLP(scip, projlp, nrows, NULL);
