@@ -52,10 +52,10 @@
 
 #define DEFAULT_DURINGROOT    TRUE
 #define DEFAULT_MAXFREQLOC    FALSE
-#define DEFAULT_MAXNBESTSOLS  25
-#define DEFAULT_NBESTSOLS     10
-#define DEFAULT_MINNBESTSOLS  6
-#define LOCAL_MAXRESTARTS  5
+#define DEFAULT_MAXNBESTSOLS  30
+#define DEFAULT_NBESTSOLS     15
+#define DEFAULT_MINNBESTSOLS  10
+#define LOCAL_MAXRESTARTS  6
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
 #define GREEDY_EXTENSIONS_MW 6   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */

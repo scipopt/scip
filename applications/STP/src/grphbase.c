@@ -1329,7 +1329,7 @@ SCIP_RETCODE graph_pc_getSap(
       head = (*newgraph)->head[e];
       if( Is_term((*newgraph)->term[head]) )
       {
-         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e], TRUE);
+         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e], TRUE, FALSE);
          (*newgraph)->cost[flipedge(e)] = FARAWAY;
          assert((*newgraph)->head[e] == head);
          assert((*newgraph)->tail[e] == pseudoroot);
@@ -1519,7 +1519,7 @@ SCIP_RETCODE graph_pc_getSapShift(
 
       if( Is_term(newg->term[head]) )
       {
-         (void) graph_edge_redirect(scip, newg, e, pseudoroot, head, graph->cost[e], TRUE);
+         (void) graph_edge_redirect(scip, newg, e, pseudoroot, head, graph->cost[e], TRUE, TRUE);
          newg->cost[flipedge(e)] = FARAWAY;
          assert(newg->head[e] == head);
          assert(newg->tail[e] == pseudoroot);
@@ -1707,7 +1707,7 @@ SCIP_RETCODE graph_pc_getRsap(
       {
          assert(Is_term(p->term[head]));
 
-         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e], TRUE);
+         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e], TRUE, TRUE);
          p->cost[flipedge(e)] = FARAWAY;
 
          for( e2 = p->outbeg[head]; e2 != EAT_LAST; e2 = p->oeat[e2] )
@@ -2247,7 +2247,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          const int k = graph->head[e];
          if( Is_term(graph->term[k]) && !SCIPisZero(scip, graph->cost[e]) )
          {
-            (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e], TRUE);
+            (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e], TRUE, TRUE);
             graph->cost[flipedge(e)] = FARAWAY;
          }
          e = enext;
@@ -3226,7 +3226,8 @@ int graph_edge_redirect(
    int                   k,                  /**< new tail */
    int                   j,                  /**< new head */
    SCIP_Real             cost,               /**< new cost */
-   SCIP_Bool             forcedelete         /**< delete edge eki if it is not used? */
+   SCIP_Bool             forcedelete,        /**< delete edge eki if it is not used? */
+   SCIP_Bool             checkexist          /**< check if there is already an edge kj */
    )
 {
    int e;
@@ -3234,12 +3235,30 @@ int graph_edge_redirect(
    if( forcedelete )
       graph_edge_del(NULL, g, eki, FALSE);
 
-   for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+   if( checkexist )
    {
-      assert(g->tail[e] == k);
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         assert(g->tail[e] == k);
 
-      if( g->head[e] == j )
-         break;
+         if( g->head[e] == j )
+            break;
+      }
+   }
+   else
+   {
+#ifndef NDEBUG
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         assert(g->tail[e] == k);
+
+         if( g->head[e] == j )
+            break;
+      }
+      assert(e == EAT_LAST);
+#endif
+
+      e = EAT_LAST;
    }
 
    /* does edge already exist? */
@@ -3307,7 +3326,7 @@ SCIP_RETCODE graph_edge_reinsert(
    )
 {
    /* redirect; store new edge in n1 */
-   const int n1 = graph_edge_redirect(scip, g, e1, k1, k2, cost, forcedelete);
+   const int n1 = graph_edge_redirect(scip, g, e1, k1, k2, cost, forcedelete, TRUE);
 
    if( n1 >= 0 )
    {

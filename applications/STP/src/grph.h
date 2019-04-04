@@ -253,7 +253,7 @@ extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_pc_presolInit(SCIP*, GRAPH*);
-extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool);
+extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
 extern int    graph_pc_realDegree(const GRAPH*, int, SCIP_Bool);
 extern int    graph_pc_getRoot2PtermEdge(const GRAPH*, int);
