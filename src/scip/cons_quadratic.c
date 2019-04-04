@@ -12451,6 +12451,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
+      if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
+         continue;
+
       SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613 */

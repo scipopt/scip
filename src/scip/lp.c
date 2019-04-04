@@ -11457,6 +11457,9 @@ SCIP_RETCODE ignoreInstability(
    SCIP_Bool*            success             /**< was instability successfully ignored */
    )
 {
+   assert(lp != NULL);
+   assert(set != NULL);
+
    SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, success) );
 
    if( *success )
