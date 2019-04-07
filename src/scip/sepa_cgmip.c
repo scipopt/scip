@@ -1140,7 +1140,7 @@ SCIP_RETCODE createSubscip(
       if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
          continue;
 
-      /* check whether we want to skip cut produced by the CGMIP separator */
+      /* check whether we want to skip cuts produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
          if ( SCIProwGetOriginSepa(row) == sepa )
@@ -1405,7 +1405,7 @@ SCIP_RETCODE createSubscip(
       if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
          continue;
 
-      /* check whether we want to skip cut produced by the CGMIP separator */
+      /* check whether we want to skip cuts produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
          if ( SCIProwGetOriginSepa(row) == sepa )
@@ -3260,10 +3260,9 @@ SCIP_RETCODE createCGCutCMIR(
    SCIPdebugMsg(scip, "CMIR: success = %u, cut is%sefficacious (cutefficacy: %g, cutrhs: %g)\n", success,
       SCIPisEfficacious(scip, cutefficacy) ? " " : " not ", cutefficacy, cutrhs);
 
-   /* if successful, convert dense cut into sparse row, and add the row as a cut
-    * only if the cut if violated - if it is not violated we might store non-local cuts in the pool
-    */
-   if( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
+   /* If successful, convert dense cut into sparse row, and add the row as a cut only if the cut if violated - if it is
+    * not violated we might store non-local cuts in the pool. */
+   if ( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
    {
       SCIP_ROW* cut;
 
@@ -3491,10 +3490,9 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIPdebugMsg(scip, "Strong-CG: success = %u, cut is%sefficacious (cutefficacy: %g, cutrhs: %g)\n", success,
       SCIPisEfficacious(scip, cutefficacy) ? " " : " not ", cutefficacy, cutrhs);
 
-   /* if successful, convert dense cut into sparse row, and add the row as a cut
-    * only if the cut if violated - if it is not violated we might store non-local cuts in the pool
-    */
-   if( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
+   /* If successful, convert dense cut into sparse row, and add the row as a cut only if the cut if violated - if it is
+    * not violated we might store non-local cuts in the pool. */
+   if ( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
    {
       SCIP_ROW* cut;
 
