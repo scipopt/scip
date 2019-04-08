@@ -411,7 +411,7 @@ void transformVariable(
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
     */
-   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+   if( SCIPisHugeValue(scip, -lb) && SCIPisHugeValue(scip, ub) )
    {
       if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
