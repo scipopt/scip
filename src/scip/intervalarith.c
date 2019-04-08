@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
-#ifdef ROUNDING_FE
+#ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
  * Linux rounding operations
@@ -79,7 +79,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_FP
+#ifdef SCIP_ROUNDING_FP
 #define ROUNDING
 /*
  * OSF rounding operations
@@ -125,7 +125,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_MS
+#ifdef SCIP_ROUNDING_MS
 #define ROUNDING
 /*
  * Microsoft compiler rounding operations
@@ -2884,6 +2884,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity )
    {
       SCIP_INTERVAL res2;
+      /* coverity[uninit_use_in_call] */
       SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf, xbnds);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
       SCIPdebugMessage("intersection of [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
@@ -3178,7 +3179,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    if( xbnds.sup >= 0 )
    {
       SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs, xbnds);
-      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.20g,%.20g]\n",
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.15g,%.15g]\n",
          sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, MAX(xbnds.inf, 0.0), xbnds.sup, xpos.inf, xpos.sup);
    }
    else

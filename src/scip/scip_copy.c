@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -628,6 +628,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
 
    /* set the correct objective sense; necessary if we maximize in the original problem */
    SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
+
+   /* set the objective offset */
+   SCIP_CALL( SCIPaddOrigObjoffset(targetscip, SCIPgetOrigObjoffset(sourcescip)) );
 
    return SCIP_OKAY;
 }

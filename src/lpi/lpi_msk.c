@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,7 +45,7 @@
 #endif
 
 #if ( MSK_VERSION_MAJOR < 7 )
-#error "The MOSEK intreface only works for MOSEK versions 7.0.0.0 and newer"
+#error "The MOSEK interface only works for MOSEK versions 7.0.0.0 and newer"
 #endif
 
 #define scipmskobjsen MSKobjsensee
@@ -88,6 +88,9 @@ static int numlp         =           0;
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
 
+#if MSK_VERSION_MAJOR >= 9
+#define NEAR_REL_TOLERANCE           1.0     /* MOSEK will multiply all tolerances with this factor after stalling */
+#endif
 #define DEBUG_PRINT_STAT             0
 #define DEBUG_CHECK_DATA             0
 #define DEBUG_EASY_REPRODUCE         0
@@ -725,7 +728,11 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
+#if MSK_VERSION_MAJOR < 9
    sprintf(mskname, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
+#else
+   sprintf(mskname, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
+#endif
    return mskname;
 }
 
@@ -1428,7 +1435,11 @@ SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_CALL( ensureBkxMem(lpi, ncols) );
 
    generateMskBoundkeys(ncols, lb, ub, lpi->bkx);
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, lpi->bkx, lb, ub) );
+#else
+   MOSEK_CALL( MSK_putvarboundlist(lpi->task, ncols, ind, lpi->bkx, lb, ub) );
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgBounds") );
@@ -1465,7 +1476,11 @@ SCIP_RETCODE SCIPlpiChgSides(
    SCIP_CALL( ensureBkcMem(lpi, nrows) );
 
    generateMskBoundkeys(nrows, lhs, rhs, lpi->bkc);
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, lpi->bkc, lhs, rhs) );
+#else
+   MOSEK_CALL( MSK_putconboundlist(lpi->task, nrows, ind, lpi->bkc, lhs, rhs) );
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiChgSides") );
@@ -1596,9 +1611,15 @@ SCIP_RETCODE SCIPlpiScaleRow(
       BMSfreeMemoryArray(&sub);
    }
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getbound(lpi->task, MSK_ACC_CON, row, &bkc, &blc, &buc) );
    scale_bound(&bkc, &blc, &buc, scaleval);
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_CON, row, bkc, blc, buc) );
+#else
+   MOSEK_CALL( MSK_getconbound(lpi->task, row, &bkc, &blc, &buc) );
+   scale_bound(&bkc, &blc, &buc, scaleval);
+   MOSEK_CALL( MSK_putconbound(lpi->task, row, bkc, blc, buc) );
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiScaleRow") );
@@ -1650,9 +1671,15 @@ SCIP_RETCODE SCIPlpiScaleCol(
       BMSfreeMemoryArray(&sub);
    }
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getbound(lpi->task, MSK_ACC_VAR, col, &bkx, &blx, &bux) );
    scale_bound(&bkx, &blx, &bux, 1.0/scaleval);
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, bkx, blx, bux) );
+#else
+   MOSEK_CALL( MSK_getvarbound(lpi->task, col, &bkx, &blx, &bux) );
+   scale_bound(&bkx, &blx, &bux, 1.0/scaleval);
+   MOSEK_CALL( MSK_putvarbound(lpi->task, col, bkx, blx, bux) );
+#endif
 
    MOSEK_CALL( MSK_getcslice(lpi->task, col, col+1, &c) );
    MOSEK_CALL( MSK_putcj(lpi->task, col, c*scaleval) );
@@ -1728,7 +1755,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 static
 SCIP_RETCODE getASlice(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           iscon,              /**< whether we are requesting a slice of a constraint or column */
+   SCIP_Bool             iscon,              /**< whether we are requesting a slice of a constraint or column */
    int                   first,              /**< first index */
    int                   last,               /**< last index */
    int*                  nnonz,              /**< pointer to store the number of nonzeros */
@@ -1758,9 +1785,24 @@ SCIP_RETCODE getASlice(
 
       SCIP_CALL( ensureAptreMem(lpi, last - first + 1) );
 
-      MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon, first, last+1, nnonz) );
+#if MSK_VERSION_MAJOR < 9
+      MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, nnonz) );
       surplus = *nnonz;
-      MOSEK_CALL( MSK_getaslice(lpi->task, iscon, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+      MOSEK_CALL( MSK_getaslice(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+#else
+      if( iscon )
+      {
+         MOSEK_CALL( MSK_getarowslicenumnz(lpi->task, first, last+1, nnonz) );
+         surplus = *nnonz;
+         MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+      }
+      else
+      {
+         MOSEK_CALL( MSK_getacolslicenumnz(lpi->task, first, last+1, nnonz) );
+         surplus = *nnonz;
+         MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+      }
+#endif
 
       assert(surplus == 0);
    }
@@ -1805,7 +1847,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIPdebugMessage("Calling SCIPlpiGetCols (%d)\n", lpi->lpid);
 
    SCIP_CALL( SCIPlpiGetBounds(lpi, firstcol, lastcol, lb, ub) );
-   SCIP_CALL( getASlice(lpi, MSK_ACC_VAR, firstcol, lastcol, nnonz, beg, ind, val) );
+   SCIP_CALL( getASlice(lpi, FALSE, firstcol, lastcol, nnonz, beg, ind, val) );
 
    return SCIP_OKAY;
 }
@@ -1847,7 +1889,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 #endif
 
    SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhs, rhs) );
-   SCIP_CALL( getASlice(lpi, MSK_ACC_CON, firstrow, lastrow, nnonz, beg, ind, val) );
+   SCIP_CALL( getASlice(lpi, TRUE, firstrow, lastrow, nnonz, beg, ind, val) );
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiGetRows") );
@@ -1966,7 +2008,11 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiGetBounds") );
 #endif
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getboundslice(lpi->task, MSK_ACC_VAR, firstcol, lastcol+1, NULL, lbs, ubs) );
+#else
+   MOSEK_CALL( MSK_getvarboundslice(lpi->task, firstcol, lastcol+1, NULL, lbs, ubs) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -1991,7 +2037,11 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiGetSides") );
 #endif
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getboundslice(lpi->task, MSK_ACC_CON, firstrow, lastrow+1, NULL, lhss, rhss) );
+#else
+   MOSEK_CALL( MSK_getconboundslice(lpi->task, firstrow, lastrow+1, NULL, lhss, rhss) );
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiGetSides") );
@@ -2257,6 +2307,7 @@ SCIP_RETCODE SolveWSimplex(
       }
       break;
 
+#if MSK_VERSION_MAJOR < 9
    case MSK_SOL_STA_NEAR_OPTIMAL:
    case MSK_SOL_STA_NEAR_PRIM_FEAS:
    case MSK_SOL_STA_NEAR_DUAL_FEAS:
@@ -2272,9 +2323,12 @@ SCIP_RETCODE SolveWSimplex(
       assert(0);
 #endif
       break;
+#endif
 
    case MSK_SOL_STA_INTEGER_OPTIMAL:
+#if MSK_VERSION_MAJOR < 9
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
+#endif
    default:
 #if SHOW_ERRORS
       SCIPerrorMessage("Simplex[%d] returned solsta = %d\n", optimizecount, solsta);
@@ -2299,9 +2353,11 @@ SCIP_RETCODE SolveWSimplex(
    case MSK_PRO_STA_UNKNOWN:
       break;
 
+#if MSK_VERSION_MAJOR < 9
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
+#endif
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
       assert(lpi->termcode == MSK_RES_OK);
@@ -2611,6 +2667,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_INTPNT) );
    lpi->lastalgo = MSK_OPTIMIZER_INTPNT;
 
+#if MSK_VERSION_MAJOR >= 9
+   MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_CO_TOL_NEAR_REL, NEAR_REL_TOLERANCE) );
+#endif
+
 #if WRITE_INTPNT > 0
    if( optimizecount > WRITE_ABOVE )
    {
@@ -2647,12 +2707,14 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
          lpi->solved = TRUE;
       break;
    case MSK_SOL_STA_UNKNOWN:
+#if MSK_VERSION_MAJOR < 9
    case MSK_SOL_STA_NEAR_OPTIMAL:
    case MSK_SOL_STA_NEAR_PRIM_FEAS:
    case MSK_SOL_STA_NEAR_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_SOL_STA_NEAR_PRIM_INFEAS_CER:
    case MSK_SOL_STA_NEAR_DUAL_INFEAS_CER:
+#endif
       SCIPmessagePrintWarning(lpi->messagehdlr, "Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
 
       if (lpi->termcode == MSK_RES_OK)
@@ -2663,7 +2725,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #endif
       break;
    case MSK_SOL_STA_INTEGER_OPTIMAL:
+#if MSK_VERSION_MAJOR < 9
    case MSK_SOL_STA_NEAR_INTEGER_OPTIMAL:
+#endif
    default:
 #if SHOW_ERRORS
       SCIPerrorMessage("Barrier[%d] returned solsta = %d\n", optimizecount, solsta);
@@ -2686,9 +2750,11 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    case MSK_PRO_STA_DUAL_INFEAS:
       break;
    case MSK_PRO_STA_UNKNOWN:
+#if MSK_VERSION_MAJOR < 9
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
+#endif
    case MSK_PRO_STA_ILL_POSED:
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
       SCIPmessagePrintWarning(lpi->messagehdlr, "Barrier[%d] returned prosta = %d\n", optimizecount, prosta);
@@ -2817,7 +2883,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, &bound) );
    }
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getbound(lpi->task, MSK_ACC_VAR, col, &bkx, &blx, &bux) );
+#else
+   MOSEK_CALL( MSK_getvarbound(lpi->task, col, &bkx, &blx, &bux) );
+#endif
 
    *iter = 0;
 
@@ -2842,7 +2912,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       else
          newbk = MSK_BK_RA;
 
+#if MSK_VERSION_MAJOR < 9
       MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, newbk, blx, newub) );
+#else
+      MOSEK_CALL( MSK_putvarbound(lpi->task, col, newbk, blx, newub) );
+#endif
 
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
 
@@ -2894,7 +2968,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    }
 
    /* Reset basis solution before doing the up branch */
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, bkx, blx, bux) );
+#else
+   MOSEK_CALL( MSK_putvarbound(lpi->task, col, bkx, blx, bux) );
+#endif
    SCIP_CALL( setbase(lpi) );
 
    newlb = EPSFLOOR(psol+1.0, 1e-06);
@@ -2917,7 +2995,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       else
          newbk = MSK_BK_RA;
 
+#if MSK_VERSION_MAJOR < 9
       MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, newbk, newlb, bux) );
+#else
+      MOSEK_CALL( MSK_putvarbound(lpi->task, col, newbk, newlb, bux) );
+#endif
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
 
       *iter += lpi->itercount;
@@ -2965,7 +3047,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 #endif
    }
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, bkx, blx, bux) );
+#else
+   MOSEK_CALL( MSK_putvarbound(lpi->task, col, bkx, blx, bux) );
+#endif
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, olditerlim) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_DUAL_SELECTION, oldselection) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART, oldhotstart) );
@@ -3181,9 +3267,11 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    case MSK_PRO_STA_PRIM_INFEAS:
    case MSK_PRO_STA_PRIM_AND_DUAL_INFEAS:
    case MSK_PRO_STA_ILL_POSED:
+#if MSK_VERSION_MAJOR < 9
    case MSK_PRO_STA_NEAR_PRIM_AND_DUAL_FEAS:
    case MSK_PRO_STA_NEAR_PRIM_FEAS:
    case MSK_PRO_STA_NEAR_DUAL_FEAS:
+#endif
    case MSK_PRO_STA_PRIM_INFEAS_OR_UNBOUNDED:
       *primalfeasible = FALSE;
       *dualfeasible = FALSE;
@@ -3717,7 +3805,7 @@ SCIP_RETCODE handle_singular(
 static
 SCIP_RETCODE convertstat_mosek2scip(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< whether constraints/variables are considered */
+   SCIP_Bool             iscon,              /**< whether constraints/variables are considered */
    MSKstakeye*           sk,                 /**< status array of Mosek */
    int                   n,                  /**< size */
    int*                  stat                /**< status array of SCIP */
@@ -3741,7 +3829,20 @@ SCIP_RETCODE convertstat_mosek2scip(
          stat[i] = (int)SCIP_BASESTAT_ZERO;
          break;
       case MSK_SK_FIX:
-         MOSEK_CALL( MSK_getsolutioni(lpi->task, acc, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#if MSK_VERSION_MAJOR < 9
+         MOSEK_CALL( MSK_getsolutioni(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#else
+         if( iscon )
+         {
+            MOSEK_CALL( MSK_getslcslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+         else
+         {
+            MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+#endif
 
          if (sl < su) /* Negative reduced cost */
             stat[i] = (int)SCIP_BASESTAT_UPPER;
@@ -3778,7 +3879,7 @@ SCIP_RETCODE convertstat_mosek2scip(
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< whether constraints or variables are accessed */
+   SCIP_Bool             iscon,              /**< whether constraints or variables are accessed */
    MSKstakeye*           sk,                 /**< Mosek basis status */
    int                   m,                  /**< size */
    int*                  stat                /**< status array */
@@ -3801,7 +3902,20 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          stat[i] = (int)SCIP_BASESTAT_ZERO;
          break;
       case MSK_SK_FIX:
-         MOSEK_CALL( MSK_getsolutioni(lpi->task, acc, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#if MSK_VERSION_MAJOR < 9
+         MOSEK_CALL( MSK_getsolutioni(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#else
+         if( iscon )
+         {
+            MOSEK_CALL( MSK_getslcslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+         else
+         {
+            MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+#endif
 
          if (sl < su) /* Negative reduced cost */
             stat[i] = (int)SCIP_BASESTAT_UPPER;
@@ -3917,12 +4031,12 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    if (cstat)
    {
-      SCIP_CALL( convertstat_mosek2scip(lpi, MSK_ACC_VAR, lpi->skx, ncols, cstat) );
+      SCIP_CALL( convertstat_mosek2scip(lpi, FALSE, lpi->skx, ncols, cstat) );
    }
 
    if (rstat)
    {
-      SCIP_CALL( convertstat_mosek2scip_slack(lpi, MSK_ACC_CON, lpi->skc, nrows, rstat) );
+      SCIP_CALL( convertstat_mosek2scip_slack(lpi, TRUE, lpi->skc, nrows, rstat) );
    }
 
    return SCIP_OKAY;
@@ -4366,7 +4480,7 @@ SCIP_RETCODE checkState1(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   n,                  /**< number of rows or columns */
    MSKstakeye*           sk,                 /**< basis status */
-   MSKaccmodee           accmode             /**< whether rows/columns are considered */
+   SCIP_Bool             isrow               /**< whether rows/columns are considered */
    )
 {
    char xc;
@@ -4375,13 +4489,10 @@ SCIP_RETCODE checkState1(
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
-   if( accmode == MSK_ACC_VAR )
+   if( !isrow )
       xc = 'x';
    else
-   {
-      assert( accmode == MSK_ACC_CON );
       xc = 'c';
-   }
 
    /* printout for all except LOW, UPR, FIX and BAS with sl[xc]==su[xc] */
    for( i = 0; i < n; i++ )
@@ -4395,7 +4506,20 @@ SCIP_RETCODE checkState1(
          break;
       case MSK_SK_BAS:
          /* the following function is deprecated */
-         MOSEK_CALL( MSK_getsolutioni(lpi->task, accmode, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#if MSK_VERSION_MAJOR < 9
+         MOSEK_CALL( MSK_getsolutioni(lpi->task, isrow ? MSK_ACC_CON : MSK_ACC_VAR, i, MSK_SOL_BAS, NULL, NULL, &sl, &su, NULL) );
+#else
+         if( isrow )
+         {
+            MOSEK_CALL( MSK_getslcslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsucslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+         else
+         {
+            MOSEK_CALL( MSK_getslxslice(lpi->task, MSK_SOL_BAS, i, i+1, &sl ) );
+            MOSEK_CALL( MSK_getsuxslice(lpi->task, MSK_SOL_BAS, i, i+1, &su ) );
+         }
+#endif
          if (fabs(sl-su) > DEBUG_CHECK_STATE_TOL)
          {
             SCIPdebugMessage("STATE[%d]: %c[%d] = bas, sl%c = %g, su%c = %g\n", optimizecount, xc, i, xc, sl, xc, su);
@@ -4434,8 +4558,8 @@ SCIP_RETCODE checkState(
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
-   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, MSK_ACC_VAR) );
-   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, MSK_ACC_CON) );
+   SCIP_CALL( checkState1(lpi, ncols, lpi->skx, FALSE) );
+   SCIP_CALL( checkState1(lpi, nrows, lpi->skc, TRUE) );
 
    return SCIP_OKAY;
  }
@@ -4459,8 +4583,8 @@ SCIP_RETCODE lpistatePack(
    assert(lpistate != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
-   SCIP_CALL( convertstat_mosek2scip(lpi, MSK_ACC_VAR, lpi->skx, lpistate->ncols, skxi) );
-   SCIP_CALL( convertstat_mosek2scip_slack(lpi, MSK_ACC_CON, lpi->skc, lpistate->nrows, skci) );
+   SCIP_CALL( convertstat_mosek2scip(lpi, FALSE, lpi->skx, lpistate->ncols, skxi) );
+   SCIP_CALL( convertstat_mosek2scip_slack(lpi, TRUE, lpi->skc, lpistate->nrows, skci) );
 
    SCIPencodeDualBit(skxi, lpistate->skx, lpistate->ncols);
    SCIPencodeDualBit(skci, lpistate->skc, lpistate->nrows);
@@ -4590,7 +4714,11 @@ SCIP_RETCODE SCIPlpiSetState(
    {
       SCIP_Real lb;
       SCIP_Real ub;
+#if MSK_VERSION_MAJOR < 9
       MOSEK_CALL( MSK_getboundslice(lpi->task, MSK_ACC_VAR, i, i, NULL, &lb, &ub) );
+#else
+      MOSEK_CALL( MSK_getvarboundslice(lpi->task, i, i, NULL, &lb, &ub) );
+#endif
       if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
@@ -5195,7 +5323,9 @@ SCIP_RETCODE SCIPlpiReadLP(
    const char*           fname               /**< file name */
    )
 {
+#if MSK_VERSION_MAJOR < 9
    int olddataformat;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -5204,10 +5334,14 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n", lpi->lpid, fname);
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_READ_DATA_FORMAT, &olddataformat) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_READ_DATA_FORMAT, MSK_DATA_FORMAT_LP) );
    MOSEK_CALL( MSK_readdata(lpi->task, fname) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_READ_DATA_FORMAT, olddataformat) );
+#else
+   MOSEK_CALL( MSK_readdataformat(lpi->task, fname, MSK_DATA_FORMAT_LP, MSK_COMPRESS_FREE) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -5218,19 +5352,29 @@ SCIP_RETCODE SCIPlpiWriteLP(
    const char*           fname               /**< file name */
    )
 {
+#if MSK_VERSION_MAJOR < 9
    int olddataformat;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(fname != NULL);
+#if MSK_VERSION_MAJOR >= 9
+   /* Mosek 9 derives file format from given filename */
+   assert(strstr(fname, ".lp") != NULL);
+#endif
 
-   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n", lpi->lpid, fname);
+   SCIPdebugMessage("Calling SCIPlpiWriteLP (%d), filename <%s>\n", lpi->lpid, fname);
 
+#if MSK_VERSION_MAJOR < 9
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, &olddataformat) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, MSK_DATA_FORMAT_LP) );
    MOSEK_CALL( MSK_writedata(lpi->task, fname) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, olddataformat) );
+#else
+   MOSEK_CALL( MSK_writedata(lpi->task, fname) );
+#endif
 
    return SCIP_OKAY;
 }

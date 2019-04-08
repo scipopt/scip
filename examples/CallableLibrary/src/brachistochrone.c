@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -293,7 +293,7 @@ void visualizeSolutionGnuplot(
    unsigned int          n,                  /**< number of points for discretization */
    SCIP_VAR**            x,                  /**< x coordinates */
    SCIP_VAR**            y                   /**< y coordinates */
-)
+   )
 {
 #if _POSIX_C_SOURCE < 2
    SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
@@ -325,7 +325,7 @@ static
 SCIP_RETCODE runBrachistochrone(
    unsigned int          n,                  /**< number of points for discretization */
    SCIP_Real*            coord               /**< array containing [y(0), y(N), x(0), x(N)] */
-)
+   )
 {
    SCIP* scip;
    SCIP_VAR** y;

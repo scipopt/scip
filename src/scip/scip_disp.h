@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,7 +66,7 @@ extern "C" {
  */
 
 /** creates a display column and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of display column */
@@ -88,32 +88,32 @@ SCIP_RETCODE SCIPincludeDisp(
    );
 
 /** returns the display column of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_DISP* SCIPfindDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of display column */
    );
 
 /** returns the array of currently available display columns */
-EXTERN
+SCIP_EXPORT
 SCIP_DISP** SCIPgetDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available display columns */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** automatically selects display columns for being shown w.r.t. the display width parameter */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** changes the display column mode */
-EXTERN
+SCIP_EXPORT
 void SCIPchgDispMode(
    SCIP_DISP*            disp,               /**< display column */
    SCIP_DISPMODE         mode                /**< the display column mode */

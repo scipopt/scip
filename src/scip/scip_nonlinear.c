@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -489,7 +489,7 @@ void SCIPaddBilinMcCormick(
       constant = -constant;
    }
 
-   SCIPdebugMsg(scip, "%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx,
+   SCIPdebugMsg(scip, "%.15g * x[%.15g,%.15g] * y[%.15g,%.15g] %c= %.15g * x %+.15g * y %+.15g\n", bilincoef, lbx, ubx,
       lby, uby, overestimate ? '<' : '>', coefx, coefy, constant);
 
    *lincoefx    += coefx;
@@ -949,7 +949,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    for( i = 0; i < nvars; ++i )
    {
       assert(vars[i] != NULL);
-      SCIP_CALL( SCIPhashmapInsert(var2idx, (void*)vars[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(var2idx, (void*)vars[i], i) );
 
       lbs[i] = SCIPvarGetLbLocal(vars[i]);
       ubs[i] = SCIPvarGetUbLocal(vars[i]);
@@ -1069,7 +1069,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             assert(var != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var));
 
-            lininds[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+            lininds[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
             assert(var == vars[lininds[nconss][k]]);
             linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrows[i])[k];
          }
@@ -1098,8 +1098,8 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             assert(SCIPhashmapExists(var2idx, (void*)var2));
 
             quadelems[nconss][k].coef = quadelem.coef;
-            quadelems[nconss][k].idx1 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var1);
-            quadelems[nconss][k].idx2 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var2);
+            quadelems[nconss][k].idx1 = SCIPhashmapGetImageInt(var2idx, (void*)var1);
+            quadelems[nconss][k].idx2 = SCIPhashmapGetImageInt(var2idx, (void*)var2);
 
             /* expr.c assumes that the indices are ordered */
             if( quadelems[nconss][k].idx1 > quadelems[nconss][k].idx2 )
@@ -1136,7 +1136,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             assert(var != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var));
 
-            exprvaridxs[nconss][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+            exprvaridxs[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
 
             /* update nlscore */
             if( nlscore != NULL )
@@ -1225,7 +1225,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
 
       lbs[i] = SCIPvarGetLbLocal(nlpivars[i]);
       ubs[i] = SCIPvarGetUbLocal(nlpivars[i]);
-      inds[i] = (int)(uintptr_t)SCIPhashmapGetImage(var2nlpiidx, (void*)nlpivars[i]);
+      inds[i] = SCIPhashmapGetImageInt(var2nlpiidx, (void*)nlpivars[i]);
       assert(inds[i] >= 0 && inds[i] < nlpinvars);
    }
 
@@ -1305,7 +1305,7 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
          assert(var != NULL);
          assert(SCIPhashmapExists(var2idx, (void*)var));
 
-         lininds[i][k] = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var);
+         lininds[i][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
          assert(lininds[i][k] >= 0 && lininds[i][k] < SCIPgetNVars(scip));
       }
    }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,6 @@ extern "C" {
 #endif
 
 /** updates solutions for pruned graph */
-extern
 SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -54,12 +53,10 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    );
 
 /** creates the prune primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPStpIncludeHeurPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-extern
 /** execute prune heuristic on given graph */
 SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */

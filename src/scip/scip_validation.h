@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,7 +77,7 @@ extern "C" {
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
  *  of the original problem.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */

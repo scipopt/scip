@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -435,7 +435,7 @@ SCIP_RETCODE constructCompression(
        * 2. check if we need to reallocate the memory
        * 3. set the new representation
        */
-      if( SCIPisSumGT(scip, score, comprdata->score) )
+      if( nreps > 0 && SCIPisSumGT(scip, score, comprdata->score) )
       {
          /* reset the current representation */
          SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,7 +80,7 @@ extern "C" {
 /** adds a generalized variable bound to the genvbounds propagator; if there is already a genvbound for the bound
  *  "boundtype" of variable "var", it will be replaced
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

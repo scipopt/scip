@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page SCFLP_MAIN Stochastic capacitated facility location problem example
+/**@page SCFLP_MAIN Stochastic Capacitated Facility Location Problem
  * @version  0.9
  * @author   Stephen J. Maher
 
@@ -43,9 +43,14 @@
  *
  * -# @subpage SCFLP_PROBLEM "Problem description"
  * -# @subpage SCFLP_READER "Parsing the input format"
- * -# @subpage SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP
+ * -# @subpage SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP"
  *    - @subpage SCFLP_DETEQUIV "Directly as a monolithic MIP"
  *    - @subpage SCFLP_BENDERS "Applying Benders' decomposition"
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */
 
 /**@page SCFLP_PROBLEM Problem description
@@ -83,7 +88,7 @@
  *         & \\
  *         & \displaystyle \sum_{j \in J} y^{s}_{ij} \le k_{i}x_{i} & \quad \forall i \in I, \forall s \in  S \\
  *         & \\
- *         & \displaystyle \sum_{i \in I} k_{i}x_{i} \le \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
+ *         & \displaystyle \sum_{i \in I} k_{i}x_{i} \ge \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
  *         & \\
  *         & \displaystyle x_{i} \in \{0, 1\} & \quad \forall i \in I \\
  *         & \\
@@ -107,7 +112,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle \sum_{i \in I} f_{i} x_{i} + \frac{1}{|S|}\sum_{s \in S}\varphi^{s} \\
  *         & \\
- *    subject \ to & \displaystyle \sum_{i \in I} k_{i}x_{i} \le \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
+ *    subject \ to & \displaystyle \sum_{i \in I} k_{i}x_{i} \ge \max_{s \in S}\sum_{j \in J}\lambda^{s}_{j} & \\
  *         & \\
  *         & \displaystyle \varphi^{s} \geq \sum_{j \in J}\lambda^{s}_{j}u^{p}_{j} + \sum_{i \in I}k_{i}x_{i}v^{p}_{i} & \quad \forall s \in S, \forall p \in P^{s} \\
  *         & \\

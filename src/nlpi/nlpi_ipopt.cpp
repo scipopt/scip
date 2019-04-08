@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2851,7 +2851,7 @@ void ScipNLP::finalize_solution(
          nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-         else
+         else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }

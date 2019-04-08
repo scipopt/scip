@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2905,7 +2905,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
    /* free space; only up to row i if copying failed */
    assert( 0 <= i && i <= nspcons );
-   for (k = 0; k < i; ++k)
+   for (k = i - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -3033,7 +3033,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-   for (k = 0; k < nspcons; ++k)
+   for (k = nspcons - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -194,7 +194,7 @@ SCIP_RETCODE getSymmetries(
       /* insert variables */
       for (v = 0; v < propdata->npermvars; ++v)
       {
-         SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[v], (void*) (size_t) v) );
+         SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
       }
    }
 
@@ -380,41 +380,45 @@ SCIP_RETCODE computeBranchingVariables(
 
       /* get domain changes of current node */
       domchg = SCIPnodeGetDomchg(node);
-      assert( domchg != NULL );
 
-      /* loop through all bound changes */
-      nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
-      for (i = 0; i < nboundchgs; ++i)
+      /* If we stopped due to a solving limit, it might happen that a non-root node has no domain changes, in all other
+       * cases domchg should not be NULL. */
+      if ( domchg != NULL )
       {
-         /* get bound change info */
-         boundchg = SCIPdomchgGetBoundchg(domchg, i);
-         assert( boundchg != NULL );
-
-         /* branching decisions have to be in the beginning of the bound change array */
-         if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
-            break;
-
-         /* get corresponding branching variable */
-         branchvar = SCIPboundchgGetVar(boundchg);
-
-         /* we only consider binary variables */
-         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
+         /* loop through all bound changes */
+         nboundchgs = SCIPdomchgGetNBoundchgs(domchg);
+         for (i = 0; i < nboundchgs; ++i)
          {
-            /* make sure that branching variable is known, since new binary variables may have
-             * been created meanwhile, e.g., by presol_inttobinary */
-            if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
-            {
-               *success = FALSE;
-               return SCIP_OKAY;
-            }
+            /* get bound change info */
+            boundchg = SCIPdomchgGetBoundchg(domchg, i);
+            assert( boundchg != NULL );
 
-            if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
-            {
-               int branchvaridx;
+            /* branching decisions have to be in the beginning of the bound change array */
+            if ( SCIPboundchgGetBoundchgtype(boundchg) != SCIP_BOUNDCHGTYPE_BRANCHING )
+               break;
 
-               branchvaridx = (int) (size_t) SCIPhashmapGetImage(varmap, (void*) branchvar);
-               assert( branchvaridx < nvars );
-               b1[branchvaridx] = TRUE;
+            /* get corresponding branching variable */
+            branchvar = SCIPboundchgGetVar(boundchg);
+
+            /* we only consider binary variables */
+            if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
+            {
+               /* make sure that branching variable is known, since new binary variables may have
+                * been created meanwhile, e.g., by presol_inttobinary */
+               if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
+               {
+                  *success = FALSE;
+                  return SCIP_OKAY;
+               }
+
+               if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
+               {
+                  int branchvaridx;
+
+                  branchvaridx = SCIPhashmapGetImageInt(varmap, (void*) branchvar);
+                  assert( branchvaridx < nvars );
+                  b1[branchvaridx] = TRUE;
+               }
             }
          }
       }
@@ -555,8 +559,6 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
 
-   SCIPfreeBufferArray(scip, &activeperms);
-
    if ( norbits > 0 )
    {
       int nfixedzero = 0;
@@ -573,6 +575,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
+   SCIPfreeBufferArray(scip, &activeperms);
 
    return SCIP_OKAY;
 }

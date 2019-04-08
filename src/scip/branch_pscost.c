@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -536,8 +536,8 @@ SCIP_RETCODE selectBranchVar(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &candssorted);
    SCIPfreeBufferArray(scip, &candsorigidx);
+   SCIPfreeBufferArray(scip, &candssorted);
 
    return SCIP_OKAY;
 }

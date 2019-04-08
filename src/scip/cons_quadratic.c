@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4098,9 +4098,9 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIPdebugMsg(scip, "resulting quadratic constraint: ");
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   SCIPfreeBufferArrayNull(scip, &xvars);
-   SCIPfreeBufferArrayNull(scip, &xcoef);
    SCIPfreeBufferArrayNull(scip, &todelete);
+   SCIPfreeBufferArrayNull(scip, &xcoef);
+   SCIPfreeBufferArrayNull(scip, &xvars);
 
    return SCIP_OKAY;
 }
@@ -4348,12 +4348,12 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
    if( SCIPhashmapExists(var2component, quadvarterm->var) )
    {
       /* if we saw the variable before, then it should have the same component number */
-      assert((int)(size_t)SCIPhashmapGetImage(var2component, quadvarterm->var) == componentnr);
+      assert(SCIPhashmapGetImageInt(var2component, quadvarterm->var) == componentnr);
       return SCIP_OKAY;
    }
 
    /* assign component number to variable */
-   SCIP_CALL( SCIPhashmapInsert(var2component, quadvarterm->var, (void*)(size_t)componentnr) );
+   SCIP_CALL( SCIPhashmapInsertInt(var2component, quadvarterm->var, componentnr) );
    ++*componentsize;
 
    /* assign same component number to all variables this variable is multiplied with */
@@ -4672,7 +4672,7 @@ SCIP_RETCODE presolveDisaggregate(
    {
       assert(SCIPhashmapExists(var2component, consdata->quadvarterms[i].var));
 
-      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->quadvarterms[i].var);
+      comp = SCIPhashmapGetImageInt(var2component, consdata->quadvarterms[i].var);
       assert(comp >= 0);
       assert(comp < ncomponents);
 
@@ -4706,8 +4706,8 @@ SCIP_RETCODE presolveDisaggregate(
       assert(SCIPhashmapExists(var2component, consdata->bilinterms[i].var1));
       assert(SCIPhashmapExists(var2component, consdata->bilinterms[i].var2));
 
-      comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var1);
-      assert(comp == (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var2));
+      comp = SCIPhashmapGetImageInt(var2component, consdata->bilinterms[i].var1);
+      assert(comp == SCIPhashmapGetImageInt(var2component, consdata->bilinterms[i].var2));
       assert(!SCIPisZero(scip, consdata->bilinterms[i].coef));
 
       SCIP_CALL( SCIPaddBilinTermQuadratic(scip, auxconss[comp], 
@@ -5095,7 +5095,7 @@ SCIP_RETCODE checkCurvature(
    {
       if( consdata->quadvarterms[i].nadjbilin > 0 )
       {
-         SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
+         SCIP_CALL( SCIPhashmapInsertInt(var2index, consdata->quadvarterms[i].var, i) );
          matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
       }
       else
@@ -5134,8 +5134,8 @@ SCIP_RETCODE checkCurvature(
       {
          assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
          assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
-         row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
-         col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
+         row = SCIPhashmapGetImageInt(var2index, consdata->bilinterms[i].var1);
+         col = SCIPhashmapGetImageInt(var2index, consdata->bilinterms[i].var2);
          if( row < col )
             matrix[row * n + col] = consdata->bilinterms[i].coef/2;
          else
@@ -5416,8 +5416,8 @@ SCIP_RETCODE checkFactorable(
    }
 
  CLEANUP:
-   SCIPfreeBufferArray(scip, &a);
    SCIPfreeBufferArray(scip, &eigvals);
+   SCIPfreeBufferArray(scip, &a);
 
    return SCIP_OKAY;
 }
@@ -7853,7 +7853,7 @@ SCIP_RETCODE computeED(
 
    for( i = 0; i < n; ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(var2index, consdata->quadvarterms[i].var, i) );
       matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
 #ifdef DEBUG_PROJ
       printf("inserting in position %d, value %g\n", i*n + i, consdata->quadvarterms[i].sqrcoef);
@@ -7864,8 +7864,8 @@ SCIP_RETCODE computeED(
    {
       assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
       assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
-      row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
-      col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
+      row = SCIPhashmapGetImageInt(var2index, consdata->bilinterms[i].var1);
+      col = SCIPhashmapGetImageInt(var2index, consdata->bilinterms[i].var2);
       if( row < col )
       {
          matrix[row * n + col] = consdata->bilinterms[i].coef/2;
@@ -8515,20 +8515,20 @@ SCIP_RETCODE evaluateGauge(
       if( SCIPisLE(scip, aterm, 0.0) )
       {
          printf("For current level, there is no interior point. ");
-         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+         printf("rhs: %g level: %.15g interiorpointval: %.15g\n", consdata->rhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+            printf("var <%s> = %g in [%.15g, %.15g] is linpart\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
       }
       else
       {
          printf("For current level, there is interior point. ");
-         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+         printf("rhs: %g level: %.15g interiorpointval: %.15g\n", consdata->rhs, side, consdata->interiorpointval);
       }
 #endif
       if( !SCIPisPositive(scip, aterm) )
@@ -8549,20 +8549,20 @@ SCIP_RETCODE evaluateGauge(
       if( SCIPisGE(scip, aterm, 0.0) )
       {
          printf("For current level, there is no interior point. ");
-         printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
+         printf("lhs: %g level: %.15g interiorpointval: %.15g\n", consdata->lhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+            printf("var <%s> = %g in [%.15g, %.15g] is linpart\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
       }
       else
       {
          printf("For current level, there is interior point. ");
-         printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
+         printf("lhs: %g level: %.15g interiorpointval: %.15g\n", consdata->lhs, side, consdata->interiorpointval);
       }
 #endif
       if( !SCIPisNegative(scip, aterm) )
@@ -10103,7 +10103,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          val1 = (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
 
-         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.15g, %.15g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          /* if variable is not fixed w.r.t. absolute eps yet, then try to fix it
           * (SCIPfixVar() doesn't allow for small tightenings, so tighten lower and upper bound separately)
@@ -10170,9 +10170,9 @@ SCIP_RETCODE replaceByLinearConstraints(
          else
             rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %.20g <= %g <%s> <= %.20g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %.15g <= %g <%s> <= %.15g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
-         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.15g, %.15g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          if ( coef < 0.0 )
          {
@@ -10182,7 +10182,7 @@ SCIP_RETCODE replaceByLinearConstraints(
             rhs = -lhs;
             lhs = -h;
          }
-         SCIPdebugMsg(scip, "Linear constraint is a bound: %.20g <= <%s> <= %.20g\n", lhs, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %.15g <= <%s> <= %.15g\n", lhs, SCIPvarGetName(var), rhs);
 
          if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
          {
@@ -11279,7 +11279,7 @@ SCIP_RETCODE propagateBoundsCons(
                       */
                      if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
                      {
-                        assert(SCIPisSumRelEQ(scip, rhs2.inf, rhs2.sup));
+                        assert(SCIPrelDiff(rhs2.inf, rhs2.sup) < 1e-6);
                         SCIPswapReals(&rhs2.inf, &rhs2.sup);
                      }
 
@@ -11395,8 +11395,8 @@ void consdataFindUnlockedLinearVar(
    )
 {
    int i;
-   int poslock;
-   int neglock;
+   int downlock;
+   int uplock;
 
    consdata->linvar_maydecrease = -1;
    consdata->linvar_mayincrease = -1;
@@ -11408,16 +11408,16 @@ void consdataFindUnlockedLinearVar(
       assert(consdata->lincoefs[i] != 0.0);
       if( consdata->lincoefs[i] > 0.0 )
       {
-         poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;  /* lhs <= x -> downlock on x */
+         uplock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;    /* x <= rhs -> uplock on x */
       }
       else
       {
-         poslock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
-         neglock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
+         downlock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;  /* -x <= rhs -> downlock on x */
+         uplock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;    /* lhs <= -x -> uplock on x */
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - neglock == 0 )
+      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - downlock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can decrease x without harming other constraints */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -11426,7 +11426,7 @@ void consdataFindUnlockedLinearVar(
             consdata->linvar_maydecrease = i;
       }
 
-      if( SCIPvarGetNLocksDownType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - poslock == 0 )
+      if( SCIPvarGetNLocksUpType(consdata->linvars[i], SCIP_LOCKTYPE_MODEL) - uplock == 0 )
       {
          /* for a*x + q(y) \in [lhs, rhs], we can increase x without harm */
          /* if we have already one candidate, then take the one where the loss in the objective function is less */
@@ -11472,6 +11472,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    SCIP_Real delta;
    SCIP_Real gap;
    SCIP_Bool solviolbounds;
+   SCIP_Bool solchanged;
 
    assert(scip  != NULL);
    assert(conshdlr != NULL);
@@ -11496,6 +11497,8 @@ SCIP_RETCODE proposeFeasibleSolution(
       SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   solchanged = FALSE;
+
    SCIPdebugMsg(scip, "attempt to make solution from <%s> feasible by shifting linear variable\n",
       sol != NULL ? (SCIPsolGetHeur(sol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(sol)) : "tree") : "LP");
 
@@ -11504,22 +11507,17 @@ SCIP_RETCODE proposeFeasibleSolution(
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* recompute violation of solution in case solution has changed
-       * get absolution violation and sign
-       * @todo do this only if solution has changed
-       */
+      /* recompute violation of constraint in case newsol is not identical to sol anymore */
+      if( solchanged )
+      {
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         assert(!solviolbounds);
+      }
+
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->lhs - consdata->activity;
-      }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
-      {
-         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
-         assert(!solviolbounds);
          viol = consdata->rhs - consdata->activity;
-      }
       else
          continue; /* constraint is satisfied */
 
@@ -11547,6 +11545,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
             /*lint --e{613} */
             SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+
+            solchanged = TRUE;
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -11579,6 +11579,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             /*lint --e{613} */
             SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
+            solchanged = TRUE;
+
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
             if( SCIPisZero(scip, viol) )
@@ -11596,6 +11598,7 @@ SCIP_RETCODE proposeFeasibleSolution(
    if( c == nconss && (SCIPisInfinity(scip, SCIPgetUpperbound(scip)) || SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip))) )
    {
       SCIPdebugMsg(scip, "pass solution with objective val %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+      assert(solchanged);
 
       assert(conshdlrdata->trysolheur != NULL);
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
@@ -13520,16 +13523,16 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
 
       SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, monomialexps, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
-      for( j = 0; j < nmonomials; ++j )
+      for( j = nmonomials - 1; j >= 0 ; --j )
       {
-         SCIPfreeBufferArray(scip, &monomialvars[j]);
          SCIPfreeBufferArrayNull(scip, &monomialexps[j]);
+         SCIPfreeBufferArray(scip, &monomialvars[j]);
       }
 
-      SCIPfreeBufferArray(scip, &monomialvars);
-      SCIPfreeBufferArray(scip, &monomialexps);
-      SCIPfreeBufferArray(scip, &monomialcoefs);
       SCIPfreeBufferArray(scip, &monomialnvars);
+      SCIPfreeBufferArray(scip, &monomialcoefs);
+      SCIPfreeBufferArray(scip, &monomialexps);
+      SCIPfreeBufferArray(scip, &monomialvars);
    }
 
    /* print right hand side */
@@ -14348,12 +14351,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          assert(consdata->nquadvars >= 0);
          assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars1[i]);  /*lint !e613*/
 
-         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars1[i], (void*)(size_t)(consdata->nquadvars-1)) );   /*lint !e613*/
+         SCIP_CALL( SCIPhashmapInsertInt(quadvaridxs, quadvars1[i], consdata->nquadvars-1) ); /*lint !e613*/
       }
       else if( !SCIPisZero(scip, sqrcoef) )
       {
          /* if it's there already, but we got a square coefficient, add it to the previous one */
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);   /*lint !e613*/
+         var1pos = SCIPhashmapGetImageInt(quadvaridxs, quadvars1[i]);   /*lint !e613*/
          assert(consdata->quadvarterms[var1pos].var == quadvars1[i]);   /*lint !e613*/
          consdata->quadvarterms[var1pos].sqrcoef += sqrcoef;
       }
@@ -14370,7 +14373,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          assert(consdata->nquadvars >= 0);
          assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars2[i]);  /*lint !e613*/
 
-         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars2[i], (void*)(size_t)(consdata->nquadvars-1)) );  /*lint !e613*/
+         SCIP_CALL( SCIPhashmapInsertInt(quadvaridxs, quadvars2[i], consdata->nquadvars-1) ); /*lint !e613*/
       }
 
       ++nbilinterms;
@@ -14392,8 +14395,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          assert(SCIPhashmapExists(quadvaridxs, quadvars1[i]));  /*lint !e613*/
          assert(SCIPhashmapExists(quadvaridxs, quadvars2[i]));  /*lint !e613*/
 
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);  /*lint !e613*/
-         var2pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars2[i]);  /*lint !e613*/
+         var1pos = SCIPhashmapGetImageInt(quadvaridxs, quadvars1[i]);  /*lint !e613*/
+         var2pos = SCIPhashmapGetImageInt(quadvaridxs, quadvars2[i]);  /*lint !e613*/
 
          SCIP_CALL( addBilinearTerm(scip, *cons, var1pos, var2pos, quadcoefs[i]) );  /*lint !e613*/
       }
@@ -14409,7 +14412,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       /* if it's a linear coefficient for a quadratic variable, add it there, otherwise add as linear variable */
       if( SCIPhashmapExists(quadvaridxs, linvars[i]) )  /*lint !e613*/
       {
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, linvars[i]);  /*lint !e613*/
+         var1pos = SCIPhashmapGetImageInt(quadvaridxs, linvars[i]);  /*lint !e613*/
          assert(consdata->quadvarterms[var1pos].var == linvars[i]);  /*lint !e613*/
          consdata->quadvarterms[var1pos].lincoef += lincoefs[i];  /*lint !e613*/
       }
@@ -15216,7 +15219,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       {
          linvals[j] = consdata->lincoefs[j];
          assert(SCIPhashmapExists(scipvar2nlpivar, consdata->linvars[j]));
-         lininds[j] = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpivar, consdata->linvars[j]);
+         lininds[j] = SCIPhashmapGetImageInt(scipvar2nlpivar, consdata->linvars[j]);
       }
 
       lincnt = consdata->nlinvars;
@@ -15233,11 +15236,12 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    for( j = 0; j < consdata->nquadvars; ++j )
    {
       assert(SCIPhashmapExists(scipvar2nlpivar, consdata->quadvarterms[j].var));
-      idx1 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, consdata->quadvarterms[j].var);
+      idx1 = SCIPhashmapGetImageInt(scipvar2nlpivar, consdata->quadvarterms[j].var);
       if( consdata->quadvarterms[j].lincoef != 0.0 )
       {
          assert(lininds != NULL);
          assert(linvals != NULL);
+         /* coverity[var_deref_op] */
          lininds[lincnt] = idx1;
          linvals[lincnt] = consdata->quadvarterms[j].lincoef;
          ++lincnt;
@@ -15247,6 +15251,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
       {
          assert(quadcnt < nquadelems);
          assert(quadelems != NULL);
+         /* coverity[var_deref_op] */
          quadelems[quadcnt].idx1 = idx1;
          quadelems[quadcnt].idx2 = idx1;
          quadelems[quadcnt].coef = consdata->quadvarterms[j].sqrcoef;
@@ -15263,7 +15268,8 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
          assert(quadcnt < nquadelems);
          assert(quadelems != NULL);
          assert(SCIPhashmapExists(scipvar2nlpivar, othervar));
-         idx2 = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpivar, othervar);
+         idx2 = SCIPhashmapGetImageInt(scipvar2nlpivar, othervar);
+         /* coverity[var_deref_op] */
          quadelems[quadcnt].idx1 = MIN(idx1, idx2);
          quadelems[quadcnt].idx2 = MAX(idx1, idx2);
          quadelems[quadcnt].coef = consdata->bilinterms[consdata->quadvarterms[j].adjbilin[l]].coef;
@@ -16604,7 +16610,7 @@ void rowprepCleanupIntegralCoefs(
          if( !SCIPisInfinity(scip, REALABS(xbnd)) )
          {
             /* if there is a bound, then relax row side so rounding coef will not introduce an error */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.15g, round coefficient to %g and add constant %g\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
             SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
          }
@@ -16614,7 +16620,7 @@ void rowprepCleanupIntegralCoefs(
              * however, SCIP_ROW would do this anyway, but doing this here might eliminate some epsilon coefs (so they don't determine mincoef below)
              * and helps to get a more accurate row violation value
              */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.15g, round coefficient to %g without relaxing side (!)\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
          }
          rowprep->coefs[i] = roundcoef;

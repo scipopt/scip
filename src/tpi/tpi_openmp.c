@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -150,15 +150,14 @@ void executeJob(
    SCIP_CALL_ABORT( SCIPtpiBroadcastCondition(&_jobqueues->jobfinished) );
 
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(&_jobqueues->lock) );
-
 }
 
 
-
-
-/** this is a job that will be executed on to process the job queue */
-/* the job will only be added when the number of active jobs is equal to the number of threads.
- * As such, there will always be number of threads + 1 tasks available for the scheduler to run. */
+/** this is a job that will be executed on to process the job queue
+ *
+ * The job will only be added when the number of active jobs is equal to the number of threads.
+ * As such, there will always be number of threads + 1 tasks available for the scheduler to run.
+ */
 static
 void jobQueueProcessJob(
    void
@@ -203,8 +202,10 @@ void jobQueueProcessJob(
 
 
 /** adding a job to the job queue.
+ *
  * This gives some more flexibility in the handling of new jobs.
- * IMPORTANT: This function MUST be called from within a mutex. */
+ * IMPORTANT: This function MUST be called from within a mutex.
+ */
 static
 SCIP_RETCODE jobQueueAddJob(
    SCIP_JOB*             newjob
@@ -366,8 +367,10 @@ int SCIPtpiGetNewJobID(
    return jobid;
 }
 
-/** submit a job for parallel processing */
-/* the return is a globally defined status */
+/** submit a job for parallel processing
+ *
+ *  the return is a globally defined status
+ */
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the submit status */
@@ -406,7 +409,6 @@ SCIP_Bool isJobWaiting(
    int                   jobid
    )
 {
-
    if( _jobqueues->jobqueue.njobs > 0 )
    {
       SCIP_JOB* currjob;
@@ -457,8 +459,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
          {
             SCIP_JOB* nextjob;
 
-            /** if the job has the right jobid collect its retcode,
-             *  remove it from the finished job list, and free it */
+            /* if the job has the right jobid collect its retcode, remove it from the finished job list, and free it */
             retcode = MIN(retcode, currjob->retcode);
 
             /* removing the finished job from finished jobs list */
@@ -484,7 +485,6 @@ SCIP_RETCODE SCIPtpiCollectJobs(
          }
       }
       while( prevjob != _jobqueues->finishedjobs.lastjob );
-
    }
    else
    {
@@ -509,6 +509,7 @@ SCIP_RETCODE SCIPtpiInit(
    assert(_jobqueues == NULL);
 
    SCIP_CALL( createJobQueue(nthreads, queuesize, blockwhenfull) );
+
    return SCIP_OKAY;
 }
 
@@ -523,5 +524,6 @@ SCIP_RETCODE SCIPtpiExit(
    assert(_jobqueues->ncurrentjobs == 0);
 
    SCIP_CALL( freeJobQueue() );
+
    return SCIP_OKAY;
 }

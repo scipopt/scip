@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3055,11 +3055,13 @@ SCIP_RETCODE treeSwitchPath(
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
+
    while( focusnode != fork )
    {
       assert(focusnode != NULL);
       assert(!focusnode->active);
       assert(!focusnode->cutoff);
+      /* coverity[var_deref_op] */
       tree->path[focusnode->depth] = focusnode;
       focusnode = focusnode->parent;
    }
@@ -4360,6 +4362,7 @@ SCIP_RETCODE SCIPnodeFocus(
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
+   /* coverity[var_compare_op] */
    if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
    {
       SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, oldcutoffdepth);

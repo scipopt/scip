@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,7 +21,7 @@
  *
  * This is an implementation of SCIP's LP interface for SoPlex using the extended and improved interface of SoPlex 2.0
  *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
+ * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_WITH_LPSCHECK is defined. This may
  * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
  */
 
@@ -32,8 +32,15 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 /* in this case the SoPlex results are double checked using CPLEX */
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
 #include <cplex.h>
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
@@ -209,7 +216,7 @@ class SPxSCIP : public SoPlex
    char*                 _probname;
    DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
    DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
    CPXENVptr             _cpxenv;           /**< CPLEX memory environment */
@@ -236,7 +243,7 @@ public:
       setBoolParam(SoPlex::ENSURERAY, true);
 #endif
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
       _doublecheck = false;
@@ -254,7 +261,7 @@ public:
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       (void) CPXfreeprob(_cpxenv, &_cpxlp);
       (void) CPXcloseCPLEX(&_cpxenv);
 #endif
@@ -347,7 +354,7 @@ public:
       }
    }
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    bool getDoubleCheck()
    {
       _checknum++;
@@ -509,7 +516,7 @@ public:
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
          writeStateReal("spxcheck", NULL, NULL);
@@ -521,7 +528,7 @@ public:
       /* for safety reset iteration limit */
 //       setTerminationIter(_itlim);
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       bool minimize = intParam(OBJSENSE) == OBJSENSE_MINIMIZE;
       Real objLimitUpper = realParam(OBJLIMIT_UPPER);
       Real objLimitLower = realParam(OBJLIMIT_LOWER);
@@ -974,7 +981,7 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
    snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
      " - including CPLEX double check"
 #endif
    , getGitHash());
@@ -2338,7 +2345,7 @@ SCIP_RETCODE spxSolve(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
 #endif
 
@@ -2541,7 +2548,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
          SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
@@ -2636,7 +2643,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
             SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
@@ -2993,21 +3000,12 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsPrimalFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basisStatus();
-
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
-   return basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::PRIMAL;
+   return lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->basisStatus() == SPxBasis::PRIMAL;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3076,11 +3074,6 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
    return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL) || lpi->spx->basisStatus() == SPxBasis::DUAL;
 }
 
@@ -3096,10 +3089,7 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
+   return (lpi->spx->status() == SPxSolver::OPTIMAL);
 }
 
 /** returns TRUE iff current LP solution is stable

@@ -21,6 +21,10 @@
 
 echo "This is debug_runs.sh running."
 
+# arguments and defaults
+# Find out what day of week it is: mon-1 .. sun-7
+: ${DAY_OF_WEEK:=$(date +%u)}
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
@@ -50,15 +54,12 @@ export MODE=debug
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
+export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Debug/
 
-export CRITERION_DIR=/optimi/usr/sw/criterion
-export IPOPT_DIR=/optimi/usr/sw/ipopt
-export CPLEX_DIR=/optimi/usr/sw/cplex
-export BLISS_DIR=/optimi/usr/sw/bliss
-
-# Find out what day of week it is: mon-1 .. sun-7
-DAY_OF_WEEK=`date +%u`
+export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
+export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
+export BLISS_DIR=/nfs/optimi/usr/sw/bliss
 
 # create all required directories
 mkdir -p settings
@@ -74,6 +75,7 @@ mkdir -p settings
 #  - To add settings please visit the section 'setup testruns'. This can only happen after compilation.
 #  - Don't add LPS=xxx and LPSOPT=xxx but instead use EXECUTABLE=[scipdbgspx|scipdbgcpx].
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
+#  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
 #    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
@@ -84,6 +86,7 @@ RANDOMSEED=`date +%Y%m%d`
 # declaration
 declare -A JOBS
 
+# for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running on monday
 JOBS[1,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
 JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
@@ -105,7 +108,7 @@ JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTINGS=default"
+JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default"
 
 # jobs running on sunday
 JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
@@ -114,7 +117,7 @@ JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 ### process variables ###
 #########################
 
-# To improve accessibility move todays jobs into seperate array
+# To improve accessibility move todays jobs into separate array
 TODAYS_N_JOBS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
@@ -195,8 +198,8 @@ ${SCIP_BINARY} -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set ra
 ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand ${RANDOMSEED} set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_${RANDOMSEED}.set q"
 
 # create more required symlinks
-ln -fs /optimi/kombadon/IP check/
-ln -fs /optimi/kombadon/MINLP check/
+ln -fs /nfs/optimi/kombadon/IP check/
+ln -fs /nfs/optimi/kombadon/MINLP check/
 
 #######################
 ### Submit Testruns ###
@@ -204,11 +207,13 @@ ln -fs /optimi/kombadon/MINLP check/
 
 for i in `seq 1 ${TODAYS_N_JOBS}`; do
   FLAGS=${TODAYS_JOBS[$i]}
-  for j in "EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
+  for j in "SEEDS EXECUTABLE BINID MEM QUEUE TEST TIME PERMUTE PERFORMANCE EXCLUSIVE SETTINGS OUTPUTDIR"; do
     unset $j
   done
   export ${FLAGS}
+
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done
-

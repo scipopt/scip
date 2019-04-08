@@ -48,6 +48,12 @@ if [ "${PERF}" != "" ]; then
   export PERFORMANCE=${PERF}
 fi
 
+# if SEEDS is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $SEEDS =~ $re ]] ; then
+  SEEDS="0"
+fi
+export SEEDS
 # if PERMUTE is not a number, set it to 0
 re='^[0-9]+$'
 if ! [[ $PERMUTE =~ $re ]] ; then
@@ -75,7 +81,7 @@ echo "To cancel the jobs run"
 echo 'for jobid in `cat '$CANCEL_FILE'`; do scancel $jobid; done'
 echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTINGS and LPS combination!"
 
-env
+env | sort
 
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")

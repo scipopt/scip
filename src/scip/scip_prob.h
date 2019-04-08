@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,7 +93,7 @@ extern "C" {
  *  @post After calling this method, \SCIP reaches the following stage:
  *        - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPcreateProb(
  *  @post After calling this method, \SCIP reaches the following stage:
  *        - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateProbBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< problem name */
@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPcreateProbBasic(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbDelorig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBDELORIG ((*probdelorig))    /**< frees user data of original problem */
@@ -157,7 +157,7 @@ SCIP_RETCODE SCIPsetProbDelorig(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbTrans(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBTRANS   ((*probtrans))      /**< creates user data of transformed problem by transforming original user data */
@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPsetProbTrans(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbDeltrans(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBDELTRANS((*probdeltrans))   /**< frees user data of transformed problem */
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPsetProbDeltrans(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBINITSOL ((*probinitsol))    /**< solving process initialization method of transformed data */
@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPsetProbInitsol(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBEXITSOL ((*probexitsol))    /**< solving process deinitialization method of transformed data */
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPsetProbExitsol(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_PROBCOPY    ((*probcopy))       /**< copies user data if you want to copy it to a subscip, or NULL */
@@ -239,7 +239,7 @@ SCIP_RETCODE SCIPsetProbCopy(
  *       - \ref SCIP_STAGE_INIT if reading failed (usually, when a SCIP_READERROR occurs)
  *       - \ref SCIP_STAGE_PROBLEM if the problem file was successfully read
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< problem file name */
@@ -266,7 +266,7 @@ SCIP_RETCODE SCIPreadProb(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPwriteOrigProblem(
  *  @note If you want the write all constraints (including the once which are redundant for example), you need to set
  *        the parameter <write/allconss> to TRUE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -321,7 +321,7 @@ SCIP_RETCODE SCIPwriteTransProblem(
  *  @post After this method was called, SCIP is in the following stage:
  *       - \ref SCIP_STAGE_INIT
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeProb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -335,7 +335,7 @@ SCIP_RETCODE SCIPfreeProb(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpermuteProb(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          randseed,           /**< seed value for random generator */
@@ -364,7 +364,7 @@ SCIP_RETCODE SCIPpermuteProb(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_PROBDATA* SCIPgetProbData(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -388,7 +388,7 @@ SCIP_PROBDATA* SCIPgetProbData(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< user problem data to use */
@@ -412,7 +412,7 @@ SCIP_RETCODE SCIPsetProbData(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 const char* SCIPgetProbName(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -436,7 +436,7 @@ const char* SCIPgetProbName(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name to be set */
@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPsetProbName(
  *
  *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgReoptObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense,           /**< new objective function */
@@ -483,7 +483,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_OBJSENSE SCIPgetObjsense(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -496,7 +496,7 @@ SCIP_OBJSENSE SCIPgetObjsense(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetObjsense(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense            /**< new objective sense */
@@ -510,7 +510,7 @@ SCIP_RETCODE SCIPsetObjsense(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddObjoffset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             addval              /**< value to add to objective offset */
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPaddObjoffset(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             addval              /**< value to add to objective offset */
@@ -546,7 +546,7 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetOrigObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -567,7 +567,7 @@ SCIP_Real SCIPgetOrigObjoffset(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetOrigObjscale(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -586,7 +586,7 @@ SCIP_Real SCIPgetOrigObjscale(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTransObjoffset(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -605,7 +605,7 @@ SCIP_Real SCIPgetTransObjoffset(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -633,7 +633,7 @@ SCIP_Real SCIPgetTransObjscale(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetObjlimit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             objlimit            /**< new primal objective limit */
@@ -655,7 +655,7 @@ SCIP_RETCODE SCIPsetObjlimit(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetObjlimit(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -678,7 +678,7 @@ SCIP_Real SCIPgetObjlimit(
  *        any case, the user has to make sure that no variable is added during the solving process that destroys this
  *        property.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -701,7 +701,7 @@ SCIP_RETCODE SCIPsetObjIntegral(
  *        SCIPsetObjIntegral() can be used to inform SCIP. However, in any case, the user has to make sure that no
  *        variable is added during the solving process that destroys this property.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisObjIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -721,7 +721,7 @@ SCIP_Bool SCIPisObjIntegral(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetObjNorm(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -740,7 +740,7 @@ SCIP_Real SCIPgetObjNorm(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to add */
@@ -753,7 +753,7 @@ SCIP_RETCODE SCIPaddVar(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddPricedVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to add */
@@ -772,7 +772,7 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to delete */
@@ -799,7 +799,7 @@ SCIP_RETCODE SCIPdelVar(
  *
  *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
@@ -833,7 +833,7 @@ SCIP_RETCODE SCIPgetVarsData(
  *
  *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -854,7 +854,7 @@ SCIP_VAR** SCIPgetVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -875,7 +875,7 @@ int SCIPgetNVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNBinVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -896,7 +896,7 @@ int SCIPgetNBinVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNIntVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -917,7 +917,7 @@ int SCIPgetNIntVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -938,7 +938,7 @@ int SCIPgetNImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -961,7 +961,7 @@ int SCIPgetNContVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNObjVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -983,7 +983,7 @@ int SCIPgetNObjVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetFixedVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1003,7 +1003,7 @@ SCIP_VAR** SCIPgetFixedVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNFixedVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1028,7 +1028,7 @@ int SCIPgetNFixedVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetOrigVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
@@ -1059,7 +1059,7 @@ SCIP_RETCODE SCIPgetOrigVarsData(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetOrigVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1082,7 +1082,7 @@ SCIP_VAR** SCIPgetOrigVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1105,7 +1105,7 @@ int SCIPgetNOrigVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigBinVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1128,7 +1128,7 @@ int SCIPgetNOrigBinVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigIntVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1151,7 +1151,7 @@ int SCIPgetNOrigIntVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1174,7 +1174,7 @@ int SCIPgetNOrigImplVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1199,7 +1199,7 @@ int SCIPgetNOrigContVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNTotalVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1223,7 +1223,7 @@ int SCIPgetNTotalVars(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetSolVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that selects the problem space, NULL for current solution */
@@ -1253,7 +1253,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPfindVar(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable to find */
@@ -1277,7 +1277,7 @@ SCIP_VAR* SCIPfindVar(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallVarsInProb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1299,7 +1299,7 @@ SCIP_Bool SCIPallVarsInProb(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to add */
@@ -1320,7 +1320,7 @@ SCIP_RETCODE SCIPaddCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to delete */
@@ -1342,7 +1342,7 @@ SCIP_RETCODE SCIPdelCons(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS* SCIPfindOrigCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
@@ -1366,7 +1366,7 @@ SCIP_CONS* SCIPfindOrigCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS* SCIPfindCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
@@ -1386,7 +1386,7 @@ SCIP_CONS* SCIPfindCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNUpgrConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1406,7 +1406,7 @@ int SCIPgetNUpgrConss(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1429,7 +1429,7 @@ int SCIPgetNConss(
  *  @warning If your are using the method SCIPaddCons(), it can happen that the internal constraint array (which is
  *           accessed via this method) gets resized. This can invalid the pointer which is returned by this method.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS** SCIPgetConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1452,7 +1452,7 @@ SCIP_CONS** SCIPgetConss(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNOrigConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1475,7 +1475,7 @@ int SCIPgetNOrigConss(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS** SCIPgetOrigConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1494,7 +1494,7 @@ SCIP_CONS** SCIPgetOrigConss(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCheckConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1519,7 +1519,7 @@ int SCIPgetNCheckConss(
  *
  *  @note this method will release the constraint
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
@@ -1538,7 +1538,7 @@ SCIP_RETCODE SCIPaddConflict(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPclearConflictStore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENT*           event               /**< event data */
@@ -1563,7 +1563,7 @@ SCIP_RETCODE SCIPclearConflictStore(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add constraint to */
@@ -1593,7 +1593,7 @@ SCIP_RETCODE SCIPaddConsNode(
  *        the case due internal data structures and performance issues. In such a case you should try to realize your
  *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to add */
@@ -1616,7 +1616,7 @@ SCIP_RETCODE SCIPaddConsLocal(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelConsNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to disable constraint in */
@@ -1642,7 +1642,7 @@ SCIP_RETCODE SCIPdelConsNode(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to locally delete */
@@ -1655,7 +1655,7 @@ SCIP_RETCODE SCIPdelConsLocal(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLocalOrigEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1667,7 +1667,7 @@ SCIP_Real SCIPgetLocalOrigEstimate(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLocalTransEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1679,7 +1679,7 @@ SCIP_Real SCIPgetLocalTransEstimate(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLocalDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1691,7 +1691,7 @@ SCIP_Real SCIPgetLocalDualbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLocalLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1703,7 +1703,7 @@ SCIP_Real SCIPgetLocalLowerbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetNodeDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node to get dual bound for */
@@ -1716,7 +1716,7 @@ SCIP_Real SCIPgetNodeDualbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetNodeLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node to get dual bound for */
@@ -1736,7 +1736,7 @@ SCIP_Real SCIPgetNodeLowerbound(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateLocalDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
@@ -1755,7 +1755,7 @@ SCIP_RETCODE SCIPupdateLocalDualbound(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateLocalLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
@@ -1770,7 +1770,7 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateNodeDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to update dual bound for */
@@ -1786,7 +1786,7 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateNodeLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to update lower bound for */
@@ -1801,7 +1801,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgChildPrio(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            child,              /**< child to update the node selection priority */

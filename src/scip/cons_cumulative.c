@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11335,7 +11335,7 @@ SCIP_RETCODE getNodeIdx(
    {
       if( SCIPhashmapExists(tcliquegraph->varmap, (void*)var) )
       {
-         (*idx) = (int)(size_t) SCIPhashmapGetImage(tcliquegraph->varmap, (void*)var);
+         (*idx) = SCIPhashmapGetImageInt(tcliquegraph->varmap, (void*)var);
       }
       else
       {
@@ -11379,7 +11379,7 @@ SCIP_RETCODE getNodeIdx(
          SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[pos], tcliquegraph->size) ); /*lint !e866*/
          BMSclearMemoryArray(tcliquegraph->demandmatrix[pos], tcliquegraph->nnodes); /*lint !e866*/
 
-         SCIP_CALL( SCIPhashmapInsert(tcliquegraph->varmap, (void*)var, (void*)(size_t)(pos)) );
+         SCIP_CALL( SCIPhashmapInsertInt(tcliquegraph->varmap, (void*)var, pos) );
 
          tcliquegraph->nnodes++;
 
@@ -11394,7 +11394,7 @@ SCIP_RETCODE getNodeIdx(
    }
    else
    {
-      assert(*idx == (int)(size_t)SCIPhashmapGetImage(tcliquegraph->varmap, (void*)var));
+      assert(*idx == SCIPhashmapGetImageInt(tcliquegraph->varmap, (void*)var));
    }
 
    assert(SCIPhashmapExists(tcliquegraph->varmap, (void*)var));
@@ -12134,7 +12134,7 @@ SCIP_RETCODE createTcliqueGraph(
 
       /* insert all active variables into the garph */
       assert(SCIPvarGetProbindex(var) == v);
-      SCIP_CALL( SCIPhashmapInsert(varmap, (void*)var, (void*)(size_t)v) ); /*lint !e571*/
+      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)var, v) );
    }
 
    (*tcliquegraph)->nnodes = nvars;
@@ -12380,6 +12380,7 @@ SCIP_RETCODE removeRedundantConss(
                   initializeLocks(consdata1, TRUE);
                }
 
+               /* coverity[swapped_arguments] */
                SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
@@ -14420,7 +14421,7 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
 
       if( est == impliedest && lct == impliedlct )
       {
-         SCIP_CALL( SCIPhashmapInsert(addedvars, (void*)var, (void*)(size_t)duration) );
+         SCIP_CALL( SCIPhashmapInsertInt(addedvars, (void*)var, duration) );
       }
    }
 

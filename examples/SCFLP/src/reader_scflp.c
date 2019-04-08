@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -237,7 +237,6 @@ SCIP_DECL_READERREAD(readerReadScflp)
    int customer;
    int ncostlines;   /* this is the number of lines that have facility costs */
 
-
    int nread;
    int lineno;
    int i;
@@ -287,7 +286,6 @@ SCIP_DECL_READERREAD(readerReadScflp)
    /* computing the number of customer cost lines */
    ncostlines = SCIPceil(scip, (SCIP_Real)nfacilities/MAXNCOSTS);
 
-
    /* allocate buffer memory for storing the demand and the transport cost temporarily */
    SCIP_CALL( SCIPallocBufferArray(scip, &capacity, nfacilities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedcost, nfacilities) );
@@ -322,7 +320,6 @@ SCIP_DECL_READERREAD(readerReadScflp)
       facility++;
       assert(facility <= nfacilities);
    }
-
 
    /* allocate buffer memory for storing the demand and the transport cost temporarily */
    SCIP_CALL( SCIPallocBufferArray(scip, &detdemands, ncustomers) );

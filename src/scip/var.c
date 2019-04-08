@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11532,6 +11532,7 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
 
    /* temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
+   /* coverity[copy_paste_error] */
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpvars, vars, ntmpvars) );
 
    noldtmpvars = ntmpvars;
@@ -15385,12 +15386,14 @@ SCIP_Real SCIPvarGetVSIDS_rec(
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetVSIDS(var->data.aggregate.var, stat, dir);
       else
+         /* coverity[overrun-local] */
          return SCIPvarGetVSIDS(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
 
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
+      /* coverity[overrun-local] */
       return SCIPvarGetVSIDS(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
 
    default:
@@ -16027,8 +16030,15 @@ SCIP_Real SCIPvarGetLbAtIndex(
 
    varstatus = SCIPvarGetStatus(var);
 
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
+   /* get bounds of attached variables */
+   switch( varstatus )
    {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetLbAtIndex(var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
       if( bdchgidx == NULL )
          return SCIPvarGetLbLocal(var);
       else
@@ -16041,15 +16051,6 @@ SCIP_Real SCIPvarGetLbAtIndex(
          else
             return var->glbdom.lb;
       }
-   }
-
-   /* get bounds of attached variables */
-   switch( varstatus )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.original.transvar != NULL);
-      return SCIPvarGetLbAtIndex(var->data.original.transvar, bdchgidx, after);
-
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.lb;
 
@@ -16125,9 +16126,6 @@ SCIP_Real SCIPvarGetLbAtIndex(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPvarGetUbAtIndex(var->negatedvar, bdchgidx, after);
-
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
@@ -16151,8 +16149,15 @@ SCIP_Real SCIPvarGetUbAtIndex(
 
    varstatus = SCIPvarGetStatus(var);
 
-   if( varstatus == SCIP_VARSTATUS_COLUMN || varstatus == SCIP_VARSTATUS_LOOSE )
+   /* get bounds of attached variables */
+   switch( varstatus )
    {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      return SCIPvarGetUbAtIndex(var->data.original.transvar, bdchgidx, after);
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
       if( bdchgidx == NULL )
          return SCIPvarGetUbLocal(var);
       else
@@ -16165,14 +16170,6 @@ SCIP_Real SCIPvarGetUbAtIndex(
          else
             return var->glbdom.ub;
       }
-   }
-
-   /* get bounds of attached variables */
-   switch( varstatus )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-      assert(var->data.original.transvar != NULL);
-      return SCIPvarGetUbAtIndex(var->data.original.transvar, bdchgidx, after);
 
    case SCIP_VARSTATUS_FIXED:
       return var->glbdom.ub;
@@ -16250,8 +16247,6 @@ SCIP_Real SCIPvarGetUbAtIndex(
       assert(var->negatedvar->negatedvar == var);
       return var->data.negate.constant - SCIPvarGetLbAtIndex(var->negatedvar, bdchgidx, after);
 
-   case SCIP_VARSTATUS_COLUMN: /* for lint */
-   case SCIP_VARSTATUS_LOOSE: /* for lint */
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
