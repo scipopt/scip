@@ -129,21 +129,21 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
    }
 
+   SCIP_CALL( SCIPaddCons(scip, cons) ); /* adds locks */
+
    SCIP_CALL( createSepaData(scip, sepadata) );
 
    cr_expect_eq(sepadata->nbilinvars, 4, "\nExpected 4 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nvarbilinvars[0], 2, "\nExpected 2 bilinear vars for x1, got %d", sepadata->nvarbilinvars[0]);
-   cr_expect_eq(sepadata->nvarbilinvars[1], 2, "\nExpected 2 bilinear vars for x2, got %d", sepadata->nvarbilinvars[1]);
-   cr_expect_eq(sepadata->nvarbilinvars[2], 1, "\nExpected 1 bilinear vars for x3, got %d", sepadata->nvarbilinvars[2]);
-   cr_expect_eq(sepadata->nvarbilinvars[3], 1, "\nExpected 1 bilinear vars for entry [3], got %d", sepadata->nvarbilinvars[3]);
-   cr_expect_eq(sepadata->varbilinvars[0][0], x2, "\nExpected varbilinvars[0][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[0][0]));
-   cr_expect_eq(sepadata->varbilinvars[0][1], x3, "\nExpected varbilinvars[0][1] to be %s, got %s", SCIPvarGetName(x3), SCIPvarGetName(sepadata->varbilinvars[0][1]));
-   cr_expect_eq(sepadata->varbilinvars[1][0], x1, "\nExpected varbilinvars[1][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[1][0]));
-   cr_expect_eq(sepadata->varbilinvars[1][1], x4, "\nExpected varbilinvars[1][1] to be %s, got %s", SCIPvarGetName(x4), SCIPvarGetName(sepadata->varbilinvars[1][1]));
-   cr_expect_eq(sepadata->varbilinvars[2][0], x1, "\nExpected varbilinvars[2][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[2][0]));
-   cr_expect_eq(sepadata->varbilinvars[3][0], x2, "\nExpected varbilinvars[3][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[3][0]));
-
-   /* TODO any special cases? */
+   cr_expect_eq(sepadata->nvarbilinvars[0], 1, "\nExpected 1 bilinear vars for x3, got %d", sepadata->nvarbilinvars[0]);
+   cr_expect_eq(sepadata->nvarbilinvars[1], 1, "\nExpected 1 bilinear vars for x4, got %d", sepadata->nvarbilinvars[1]);
+   cr_expect_eq(sepadata->nvarbilinvars[2], 2, "\nExpected 2 bilinear vars for x1, got %d", sepadata->nvarbilinvars[2]);
+   cr_expect_eq(sepadata->nvarbilinvars[3], 2, "\nExpected 2 bilinear vars for x2, got %d", sepadata->nvarbilinvars[3]);
+   cr_expect_eq(sepadata->varbilinvars[0][0], x1, "\nExpected varbilinvars[2][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[0][0]));
+   cr_expect_eq(sepadata->varbilinvars[1][0], x2, "\nExpected varbilinvars[3][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[1][0]));
+   cr_expect_eq(sepadata->varbilinvars[2][0], x2, "\nExpected varbilinvars[0][0] to be %s, got %s", SCIPvarGetName(x2), SCIPvarGetName(sepadata->varbilinvars[2][0]));
+   cr_expect_eq(sepadata->varbilinvars[2][1], x3, "\nExpected varbilinvars[0][1] to be %s, got %s", SCIPvarGetName(x3), SCIPvarGetName(sepadata->varbilinvars[2][1]));
+   cr_expect_eq(sepadata->varbilinvars[3][0], x1, "\nExpected varbilinvars[1][0] to be %s, got %s", SCIPvarGetName(x1), SCIPvarGetName(sepadata->varbilinvars[3][0]));
+   cr_expect_eq(sepadata->varbilinvars[3][1], x4, "\nExpected varbilinvars[1][1] to be %s, got %s", SCIPvarGetName(x4), SCIPvarGetName(sepadata->varbilinvars[3][1]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
@@ -177,7 +177,7 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
    cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
-   createProjLP(scip, rows, 1, sol, &projlp);
+   createProjLP(scip, rows, 1, sol, &projlp, TRUE);
    printProjLP(scip, projlp, 1, NULL);
 
    /* check results */

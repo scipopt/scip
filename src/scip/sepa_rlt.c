@@ -45,14 +45,14 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXUNKNOWNTERMS       0 /**< default value for parameter maxunknownterms */
+#define DEFAULT_MAXUNKNOWNTERMS       5 /**< default value for parameter maxunknownterms */
 #define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
 #define DEFAULT_MAXNONZEROPROP      0.0 /**< default value for parameter maxnonzeroprop */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
-#define DEFAULT_ONLYEQROWS         TRUE /**< default value for parameter eqrowsfirst */
-#define DEFAULT_ONLYCONTROWS       TRUE /**< default value for parameter eqrowsfirst */
+#define DEFAULT_ONLYEQROWS        FALSE /**< default value for parameter onlyeqrows */
+#define DEFAULT_ONLYCONTROWS       TRUE /**< default value for parameter onlycontrows */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 
@@ -302,7 +302,6 @@ SCIP_RETCODE createSepaData(
                      sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
                      ++sepadata->nvarbilinvars[xpos];
 
-
                      if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
                      {
                         SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
@@ -315,11 +314,14 @@ SCIP_RETCODE createSepaData(
                      {
                         ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
                      }
-                     if( sepadata->nvarbilinvars[ypos] == 0 )
-                        SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], nvars);
-                     sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
-                     ++sepadata->nvarbilinvars[ypos];
 
+                     if( xidx != yidx )
+                     {
+                        if( sepadata->nvarbilinvars[ypos] == 0 )
+                           SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], nvars);
+                        sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
+                        ++sepadata->nvarbilinvars[ypos];
+                     }
 
                      /* insert linearization variable into auxvar hashmap */
                      SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
@@ -381,9 +383,8 @@ SCIP_RETCODE createSepaData(
    }
 
    /* sort maxnumber of variables according to their occurrences */
-   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars, sepadata->nbilinvars);
-   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varbilinvars, sepadata->maxusedvars, sepadata->nbilinvars);
-   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->nvarbilinvars, sepadata->maxusedvars, sepadata->nbilinvars);
+   SCIPselectDownIntIntPtrPtr(sepadata->varpriorities, sepadata->nvarbilinvars, (void**) sepadata->varssorted,
+      (void**) sepadata->varbilinvars, sepadata->maxusedvars, sepadata->nbilinvars);
 
    SCIPexpriteratorFree(&it);
    SCIPhashmapFree(&varmap);
@@ -590,7 +591,7 @@ SCIP_RETCODE addRltTerm(
    if( auxvar != NULL )
    {
       SCIPdebugMsg(scip, "auxvar for %s and %s found, will be added to cut\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
-      assert(!SCIPisInfinity(scip, coefauxvar));
+      assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
       SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
    }
 
@@ -639,7 +640,7 @@ SCIP_RETCODE addRltTerm(
    /* add the linear term for this column */
    if( colvar != var )
    {
-      assert(!SCIPisInfinity(scip, coefcolvar));
+      assert(!SCIPisInfinity(scip, REALABS(coefcolvar)));
       SCIP_CALL( SCIPaddVarToRow(scip, cut, colvar, coefcolvar) );
    }
    else
@@ -742,10 +743,10 @@ SCIP_RETCODE computeRltCuts(
    finalside = boundfactor * (constside - SCIProwGetConstant(row)) - finalside;
 
    /* set the coefficient of var and the constant side */
-   assert(!SCIPisInfinity(scip, coefvar));
+   assert(!SCIPisInfinity(scip, REALABS(coefvar)));
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, coefvar) );
 
-   assert(!SCIPisInfinity(scip, finalside));
+   assert(!SCIPisInfinity(scip, REALABS(finalside)));
    if( uselhs || computeEqCut )
    {
       SCIP_CALL( SCIPchgRowLhs(scip, *cut, finalside) );
@@ -851,10 +852,10 @@ SCIP_RETCODE computeProjRltCut(
    finalside = boundfactor * (constside - projlp->consts[idx]) - finalside;
 
    /* set the coefficient of var and the constant side */
-   assert(!SCIPisInfinity(scip, coefvar));
+   assert(!SCIPisInfinity(scip, REALABS(coefvar)));
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, coefvar) );
 
-   assert(!SCIPisInfinity(scip, finalside));
+   assert(!SCIPisInfinity(scip, REALABS(finalside)));
    if( uselhs || computeEqCut )
    {
       SCIP_CALL( SCIPchgRowLhs(scip, *cut, finalside) );
@@ -925,8 +926,10 @@ SCIP_RETCODE createProjLP(
          if( vlb == val || vub == val )
          {
             /* add var as a constant to row of projlp */
-            (*projlp)->lhss[i] -= SCIProwGetVals(rows[i])[v]*val;
-            (*projlp)->rhss[i] -= SCIProwGetVals(rows[i])[v]*val;
+            if( !SCIPisInfinity(scip, -(*projlp)->lhss[i]) )
+               (*projlp)->lhss[i] -= SCIProwGetVals(rows[i])[v]*val;
+            if( !SCIPisInfinity(scip, (*projlp)->rhss[i]) )
+               (*projlp)->rhss[i] -= SCIProwGetVals(rows[i])[v]*val;
          }
          else
          {
@@ -1037,8 +1040,6 @@ void addRowMark(
       newmark = 1;
    else newmark = 2;
 
-   printf("new mark = %d", newmark);
-
    if( (newmark == 1 && row_marks[pos] == 2) || (newmark == 2 && row_marks[pos] == 1) )
       newmark = 3;
 
@@ -1095,12 +1096,13 @@ SCIP_RETCODE markRowsXj(
       img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
       SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0);
       prod_viol = SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]) - SCIPgetConsExprExprValue(sepadata->bilinterms[img]);
-      SCIPinfoMessage(scip, NULL, "\naux val = %f, prod val = %f, prod viol = %f", SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]), SCIPgetConsExprExprValue(sepadata->bilinterms[img]), prod_viol);
+      SCIPdebugMsg(scip, "\naux val = %f, prod val = %f, prod viol = %f", SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]),
+         SCIPgetConsExprExprValue(sepadata->bilinterms[img]), prod_viol);
 
       /* we are interested only in violated product relations */
       if( SCIPisFeasEQ(scip, prod_viol, 0.0) )
       {
-         SCIPinfoMessage(scip, NULL, "\nthe product for vars %s, %s is not violated", SCIPvarGetName(xj), SCIPvarGetName(xi));
+         SCIPdebugMsg(scip, "\nthe product for vars %s, %s is not violated", SCIPvarGetName(xj), SCIPvarGetName(xi));
          continue;
       }
 
@@ -1109,17 +1111,12 @@ SCIP_RETCODE markRowsXj(
       colvals = SCIPcolGetVals(coli);
       colrows = SCIPcolGetRows(coli);
       ncolrows = SCIPcolGetNNonz(coli);
-      assert(colvals != NULL);
-      assert(colrows != NULL);
 
       SCIPdebugMsg(scip, NULL, "marking rows for xj, xi = %s, %s\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
 
       /* mark the rows */
       for( r = 0; r < ncolrows; ++r )
       {
-         SCIPinfoMessage(scip, NULL, "\n");
-         SCIPprintRow(scip, colrows[r], NULL);
-
          ridx = SCIProwGetIndex(colrows[r]);
 
          if( SCIPhashmapExists(row_to_pos, (void*)(size_t)ridx) )
@@ -1247,7 +1244,7 @@ SCIP_RETCODE separateRltCuts(
             SCIPdebugMsg(scip, "uselb = %d, uselhs = %d\n", uselb[k], uselhs[k]);
 
             /* compute the rlt cut for a projected row first */
-            SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, r, sol, xj, &success, uselb[k], uselhs[k],
+            SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, rpos, sol, xj, &success, uselb[k], uselhs[k],
                                       allowlocal, buildeqcut) );
 
             /* if the projected cut is not violated, set success to FALSE */
