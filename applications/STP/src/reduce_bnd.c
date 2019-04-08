@@ -1369,7 +1369,6 @@ SCIP_RETCODE findDaRoots(
    SCIP_Real             lpobjval,           /**< da lower bound */
    SCIP_Real             bestlpobjval,       /**< best da lower bound */
    SCIP_Real             upperbound,         /**< da upper bound */
-   SCIP_Real             prizesum,           /**< sum of positive prizes */
    SCIP_Bool             rerun,              /**< not the first run? */
    SCIP_Bool             probrooted,         /**< is transgraph a rooted RMW or RPC? */
    PATH*                 vnoi,               /**< SP array */
@@ -4288,7 +4287,7 @@ SCIP_RETCODE reduce_daPcMw(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
 
-      SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, prizesum, FALSE, FALSE,
+      SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, FALSE, FALSE,
             vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots));
 
       /* should prize of terminals be changed? */
@@ -4396,7 +4395,7 @@ SCIP_RETCODE reduce_daPcMw(
       if( markroots )
       {
          const int oldnroots = nroots;
-         SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, cost, lpobjval, lpobjval, upperbound, prizesum, TRUE, TRUE,
+         SCIP_CALL( findDaRoots(scip, graph, transgraph, cost, cost, lpobjval, lpobjval, upperbound, TRUE, TRUE,
                vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots) );
 
          /* should prize of terminals be changed? */

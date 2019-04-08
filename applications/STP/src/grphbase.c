@@ -947,6 +947,46 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
    return (Is_term(g->term[node]) && g->term2edge[node] < 0);
 }
 
+
+/** check whether node is fixed terminal */
+SCIP_Bool graph_pc_knotIsDummyTerm(
+   const GRAPH*          g,                  /**< the graph */
+   int                   node                /**< node to be checked */
+   )
+{
+   assert(g      != NULL);
+   assert(node   >= 0);
+   assert(node   < g->knots);
+   assert(graph_pc_isPcMw(g));
+   assert(g->term2edge);
+   assert(graph_pc_knotIsFixedTerm(g, g->source));
+
+   if( node == g->source && !graph_pc_isRootedPcMw(g) )
+      return TRUE;
+
+   if( g->extended )
+   {
+      if( Is_term(g->term[node]) && !graph_pc_knotIsFixedTerm(g, node) )
+      {
+         assert(g->grad[node] == 2 );
+
+         return TRUE;
+      }
+   }
+   else
+   {
+      if( Is_pterm(g->term[node]) )
+      {
+         assert(g->grad[node] == 2 );
+         assert(!graph_pc_knotIsFixedTerm(g, node));
+
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** check whether terminal is not a leaf in at least one optimal tree */
 void graph_pc_termMarkProper(
    const GRAPH*          g,                  /**< the graph */
@@ -993,31 +1033,17 @@ SCIP_Bool graph_pc_termIsNonLeaf(
       return FALSE;
 
    if( g->extended )
-   {
       assert(Is_pterm(g->term[term]));
-
-      for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
-      {
-         const int neighbor = g->tail[e];
-         if( !Is_term(g->term[neighbor]) && g->cost[e] < g->prize[term] )
-         {
-            assert(neighbor != g->source);
-            break;
-         }
-      }
-   }
    else
-   {
       assert(Is_term(g->term[term]));
 
-      for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+   for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+   {
+      const int neighbor = g->tail[e];
+      if( !graph_pc_knotIsDummyTerm(g, neighbor) && g->cost[e] < g->prize[term] )
       {
-         const int neighbor = g->tail[e];
-         if( g->mark[neighbor] && g->cost[e] < g->prize[term] )
-         {
-            assert(!Is_pterm(g->term[neighbor]));
-            break;
-         }
+         assert(neighbor != g->source || graph_pc_isRootedPcMw(g));
+         break;
       }
    }
 
@@ -1267,10 +1293,10 @@ SCIP_RETCODE graph_pc_getSap(
    SCIP_Real*            offset              /**< offset */
    )
 {
-   SCIP_Real max;
    SCIP_Real prizesum;
    int k;
    int e;
+   int maxpvert;
    int enext;
    int root;
    int head;
@@ -1284,6 +1310,7 @@ SCIP_RETCODE graph_pc_getSap(
    assert(graph->prize != NULL);
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
+   assert(graph->extended);
 
    nnodes = graph->knots;
    nterms = graph->terms;
@@ -1306,17 +1333,36 @@ SCIP_RETCODE graph_pc_getSap(
    pseudoroot = (*newgraph)->knots;
    graph_knot_add((*newgraph), -1);
 
-   max = 0.0;
+   maxpvert = -1;
+
    for( k = 0; k < nnodes; k++ )
+      if( Is_pterm(graph->term[k]) && (maxpvert == -1 || graph->prize[k] > graph->prize[maxpvert]) )
+         maxpvert = k;
+
+   for( k = 0; k < nnodes; k++ )
+   {
       if( Is_pterm(graph->term[k]) )
       {
          prizesum += graph->prize[k];
 
-         if( graph->prize[k] > max )
-            max = graph->prize[k];
-      }
+         if( stp_type == STP_PCSPG && k != maxpvert )
+         {
+            SCIP_Real minin = FARAWAY;
+            for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
+            {
+               if( !graph_pc_knotIsDummyTerm(graph, graph->tail[e]) && graph->cost[e] < minin )
+                  minin = graph->cost[e];
+            }
+            assert(!SCIPisZero(scip, minin));
 
-   prizesum -= max;
+            prizesum -= MIN(minin, graph->prize[k]);
+         }
+      }
+   }
+
+   if( stp_type != STP_PCSPG && maxpvert >= 0 )
+      prizesum -= graph->prize[maxpvert];
+
    *offset -= prizesum;
 
    SCIP_CALL( graph_pc_presolInit(scip, *newgraph) );
@@ -1707,7 +1753,7 @@ SCIP_RETCODE graph_pc_getRsap(
       {
          assert(Is_term(p->term[head]));
 
-         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e], TRUE, TRUE);
+         (void) graph_edge_redirect(scip, p, e, root, head, graph->cost[e], TRUE, FALSE);
          p->cost[flipedge(e)] = FARAWAY;
 
          for( e2 = p->outbeg[head]; e2 != EAT_LAST; e2 = p->oeat[e2] )

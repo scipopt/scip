@@ -262,6 +262,7 @@ extern int    graph_pc_nPotentialTerms(const GRAPH*);
 extern int    graph_pc_getTwinTerm(const GRAPH*, int);
 extern SCIP_Bool graph_valid(const GRAPH*);
 extern SCIP_Bool graph_pc_knotIsFixedTerm(const GRAPH*, int);
+extern SCIP_Bool graph_pc_knotIsDummyTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_termIsNonLeaf(const GRAPH*, int);
 extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
