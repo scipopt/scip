@@ -60,6 +60,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/dbldblarith.h"
 #include <ctype.h>
 #include <string.h>
 
@@ -535,7 +536,7 @@ SCIP_RETCODE resolvePropagation(
 
       if( usebdwidening )
       {
-         SCIP_Real relaxedbd;
+         SCIP_Real QUAD(relaxedbd);
 
          /* For integer variables, we can reduce the inferbound by 1 - z * eps, because this will be adjusted
           * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
@@ -545,28 +546,51 @@ SCIP_RETCODE resolvePropagation(
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2.0* SCIPfeastol(scip))) / vbdcoef;
+         {
+            SCIP_Real QUAD(tmp);
+
+            QUAD_ASSIGN(tmp, 2.0);
+            SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+
+            SCIPquadprecSumDD(relaxedbd, inferbd, -1.0);
+
+            SCIPquadprecSumQQ(relaxedbd, relaxedbd, tmp);
+            SCIPquadprecSumQD(relaxedbd, -relaxedbd, consdata->lhs);
+
+            SCIPquadprecDivQD(relaxedbd, relaxedbd, vbdcoef);
+         }
          else
-            relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
+         {
+            SCIPquadprecSumDD(relaxedbd, consdata->lhs, -inferbd);
+            SCIPquadprecDivQD(relaxedbd, relaxedbd, vbdcoef);
+         }
 
-         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
-         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, consdata->lhs - relaxedbd * vbdcoef)));
+#ifndef NDEBUG
+         {
+            /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+            SCIP_Real QUAD(tmp);
 
+            SCIPquadprecProdQD(tmp, relaxedbd, vbdcoef);
+            SCIPquadprecSumQD(tmp, -tmp, consdata->lhs);
+
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, var, QUAD_TO_DBL(tmp))));
+         }
+#endif
          if( vbdcoef > 0.0 )
          {
             /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual
              * inference bound due to the integrality condition of the variable bound variable
              */
-            relaxedbd -= SCIPfeastol(scip);
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
+            SCIPquadprecSumQD(relaxedbd, relaxedbd, -SCIPfeastol(scip));
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, QUAD_TO_DBL(relaxedbd)) );
          }
          else
          {
             /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference
              * bound due to the integrality condition of the variable bound variable
              */
-            relaxedbd += SCIPfeastol(scip);
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
+            SCIPquadprecSumQD(relaxedbd, relaxedbd, SCIPfeastol(scip));
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, QUAD_TO_DBL(relaxedbd)) );
          }
       }
       else
@@ -591,7 +615,7 @@ SCIP_RETCODE resolvePropagation(
 
       if( usebdwidening )
       {
-         SCIP_Real relaxedub;
+         SCIP_Real QUAD(relaxedub);
 
          /* compute the relaxed upper bound of the variable which would be sufficient to reach one less (greater) than the
           * inference bound
@@ -606,12 +630,36 @@ SCIP_RETCODE resolvePropagation(
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                   && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
-            else
-               relaxedub = consdata->lhs - inferbd * vbdcoef;
+            {
+               SCIP_Real QUAD(tmp);
 
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
+               QUAD_ASSIGN(tmp, 2.0);
+               SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+
+               SCIPquadprecSumDD(relaxedub, inferbd, -1.0);
+
+               SCIPquadprecSumQQ(relaxedub, relaxedub, tmp);
+               SCIPquadprecProdQD(relaxedub, relaxedub, vbdcoef);
+
+               SCIPquadprecSumQD(relaxedub, -relaxedub, consdata->lhs);
+            }
+            else
+            {
+               SCIPquadprecProdDD(relaxedub, inferbd, vbdcoef);
+               SCIPquadprecSumQD(relaxedub, -relaxedub, consdata->lhs);
+            }
+
+#ifndef NDEBUG
+            {
+               /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumQD(tmp, -relaxedub, consdata->lhs);
+               SCIPquadprecDivQD(tmp, tmp, vbdcoef);
+
+               assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, QUAD_TO_DBL(tmp))));
+            }
+#endif
          }
          else
          {
@@ -623,20 +671,43 @@ SCIP_RETCODE resolvePropagation(
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                   && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
-            else
-               relaxedub = consdata->lhs - inferbd * vbdcoef;
+            {
+               SCIP_Real QUAD(tmp);
 
-            /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
+               QUAD_ASSIGN(tmp, 2.0);
+               SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+
+               SCIPquadprecSumDD(relaxedub, inferbd, 1.0);
+
+               SCIPquadprecSumQQ(relaxedub, relaxedub, -tmp);
+               SCIPquadprecProdQD(relaxedub, relaxedub, vbdcoef);
+
+               SCIPquadprecSumQD(relaxedub, -relaxedub, consdata->lhs);
+            }
+            else
+            {
+               SCIPquadprecProdDD(relaxedub, inferbd, vbdcoef);
+               SCIPquadprecSumQD(relaxedub, -relaxedub, consdata->lhs);
+            }
+
+#ifndef NDEBUG
+            {
+               /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumQD(tmp, -relaxedub, consdata->lhs);
+               SCIPquadprecDivQD(tmp, tmp, vbdcoef);
+
+               assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, QUAD_TO_DBL(tmp))));
+            }
+#endif
          }
 
          /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
           * to the integrality condition of the variable bound variable
           */
-         relaxedub -= SCIPfeastol(scip);
-
-         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, relaxedub) );
+         SCIPquadprecSumQD(relaxedub, relaxedub, -SCIPfeastol(scip));
+         SCIP_CALL( SCIPaddConflictRelaxedUb(scip, var, bdchgidx, QUAD_TO_DBL(relaxedub)) );
       }
       else
       {
@@ -653,7 +724,9 @@ SCIP_RETCODE resolvePropagation(
 
       if( usebdwidening )
       {
-         SCIP_Real relaxedbd;
+         SCIP_Real QUAD(relaxedbd);
+
+         QUAD_ASSIGN(relaxedbd, 0.0);
 
          /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
           * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
@@ -663,28 +736,50 @@ SCIP_RETCODE resolvePropagation(
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip))) / vbdcoef;
+         {
+            SCIP_Real QUAD(tmp);
+
+            QUAD_ASSIGN(tmp, 2.0);
+
+            SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+            SCIPquadprecSumDD(relaxedbd, inferbd, 1.0);
+
+            SCIPquadprecSumQQ(relaxedbd, relaxedbd, -tmp);
+            SCIPquadprecSumQD(relaxedbd, relaxedbd, -consdata->rhs);
+
+            SCIPquadprecDivQD(relaxedbd, relaxedbd, -vbdcoef);
+         }
          else
-            relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
+         {
+            SCIPquadprecSumDD(relaxedbd, consdata->rhs, -inferbd);
+            SCIPquadprecDivQD(relaxedbd, relaxedbd, vbdcoef);
+         }
+#ifndef NDEBUG
+         {
+            /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+            SCIP_Real QUAD(tmp);
 
-         /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
-         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+            SCIPquadprecProdQD(tmp, relaxedbd, -vbdcoef);
+            SCIPquadprecSumQD(tmp, tmp, consdata->rhs);
 
+            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, QUAD_TO_DBL(tmp))));
+         }
+#endif
          if( vbdcoef > 0.0 )
          {
             /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
              * to the integrality condition of the variable bound variable
              */
-            relaxedbd += SCIPfeastol(scip);
-            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
+            SCIPquadprecSumQD(relaxedbd, relaxedbd, SCIPfeastol(scip));
+            SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, QUAD_TO_DBL(relaxedbd)) );
          }
          else
          {
             /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
              * to the integrality condition of the variable bound variable
              */
-            relaxedbd -= SCIPfeastol(scip);
-            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
+            SCIPquadprecSumQD(relaxedbd, relaxedbd, -SCIPfeastol(scip));
+            SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, QUAD_TO_DBL(relaxedbd)) );
          }
       }
       else
@@ -709,7 +804,9 @@ SCIP_RETCODE resolvePropagation(
 
       if( usebdwidening )
       {
-         SCIP_Real relaxedlb;
+         SCIP_Real QUAD(relaxedlb);
+
+         QUAD_ASSIGN(relaxedlb, 0.0);
 
          /* compute the relaxed lower bound of the variable which would be sufficient to reach one greater (less) than the
           * inference bound
@@ -724,12 +821,37 @@ SCIP_RETCODE resolvePropagation(
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                   && REALABS(consdata->rhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
-            else
-               relaxedlb = consdata->rhs - inferbd * vbdcoef;
+            {
+               SCIP_Real QUAD(tmp);
 
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
+               QUAD_ASSIGN(tmp, 2.0);
+               SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+
+               SCIPquadprecSumDD(relaxedlb, inferbd, 1.0);
+               SCIPquadprecSumQQ(relaxedlb, relaxedlb, -tmp);
+
+               SCIPquadprecProdQD(relaxedlb, relaxedlb, vbdcoef);
+
+               SCIPquadprecSumQD(relaxedlb, -relaxedlb, consdata->rhs);
+            }
+            else
+            {
+               SCIPquadprecProdDD(relaxedlb, inferbd, vbdcoef);
+               SCIPquadprecSumQD(relaxedlb, -relaxedlb, consdata->rhs);
+            }
+#ifndef NDEBUG
+            {
+               /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+
+               SCIP_Real QUAD(tmp);
+
+               QUAD_ASSIGN(tmp, consdata->rhs);
+               SCIPquadprecSumQQ(tmp, tmp, -relaxedlb);
+               SCIPquadprecDivQD(tmp, tmp, vbdcoef);
+
+               assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, QUAD_TO_DBL(tmp))));
+            }
+#endif
          }
          else
          {
@@ -741,20 +863,47 @@ SCIP_RETCODE resolvePropagation(
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip)
                   && REALABS(consdata->lhs) < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
-            else
-               relaxedlb = consdata->rhs - inferbd * vbdcoef;
+            {
+               SCIP_Real QUAD(tmp);
 
-            /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
-            assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
+               QUAD_ASSIGN(tmp, 2.0);
+               SCIPquadprecProdQD(tmp, tmp, SCIPfeastol(scip));
+
+               SCIPquadprecSumDD(relaxedlb, inferbd, -1.0);
+               SCIPquadprecSumQQ(relaxedlb, relaxedlb, tmp);
+
+               SCIPquadprecProdQD(relaxedlb, relaxedlb, vbdcoef);
+
+               SCIPquadprecSumQD(relaxedlb, relaxedlb, -consdata->rhs);
+               SCIPquadprecProdQD(relaxedlb, relaxedlb, -1.0);
+            }
+            else
+            {
+               SCIPquadprecProdDD(relaxedlb, inferbd, vbdcoef);
+               SCIPquadprecSumQD(relaxedlb, relaxedlb, -consdata->rhs);
+               SCIPquadprecProdQD(relaxedlb, relaxedlb, -1.0);
+            }
+
+#ifndef NDEBUG
+            {
+               /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
+
+               SCIP_Real QUAD(tmp);
+
+               QUAD_ASSIGN(tmp, consdata->rhs);
+               SCIPquadprecSumQQ(tmp, tmp, -relaxedlb);
+               SCIPquadprecDivQD(tmp, tmp, vbdcoef);
+
+               assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, QUAD_TO_DBL(tmp))));
+            }
+#endif
          }
 
          /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
           * to the integrality condition of the variable bound variable
           */
-         relaxedlb += SCIPfeastol(scip);
-
-         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, relaxedlb) );
+         SCIPquadprecSumQD(relaxedlb, relaxedlb, SCIPfeastol(scip));
+         SCIP_CALL( SCIPaddConflictRelaxedLb(scip, var, bdchgidx, QUAD_TO_DBL(relaxedlb)) );
       }
       else
       {
