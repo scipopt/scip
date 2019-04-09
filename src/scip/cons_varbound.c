@@ -726,8 +726,6 @@ SCIP_RETCODE resolvePropagation(
       {
          SCIP_Real QUAD(relaxedbd);
 
-         QUAD_ASSIGN(relaxedbd, 0.0);
-
          /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
           * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
           * too small and too large vbdcoef values.
@@ -805,8 +803,6 @@ SCIP_RETCODE resolvePropagation(
       if( usebdwidening )
       {
          SCIP_Real QUAD(relaxedlb);
-
-         QUAD_ASSIGN(relaxedlb, 0.0);
 
          /* compute the relaxed lower bound of the variable which would be sufficient to reach one greater (less) than the
           * inference bound
