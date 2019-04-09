@@ -171,6 +171,7 @@ Fixed bugs
 ----------
 
 - fix and improve memory handling in symmetry computation
+- improve numerical stability in varbound constraint handler by using double-double arithmetic
 
 Miscellaneous
 -------------
