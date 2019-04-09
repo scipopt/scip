@@ -289,6 +289,8 @@ Build system
 
 ### Cmake
 
+- new target to 'doc' to build documentation
+
 ### Makefile
 
 Fixed bugs
@@ -301,6 +303,8 @@ Fixed bugs
 - aggregate non-artificial integer variable for XOR constraints with two binary variables and delete constraint
 - copy the objective offset when copying the original problem
 - fixed bug in SCIPlpiGetBInvARow in lpi_cpx using wrong size of resulting vector
+- fixed quadratic runtime behavior in sepa_aggregation
+- fixed statistics of separators
 
 Miscellaneous
 -------------
