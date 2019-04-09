@@ -1131,10 +1131,14 @@ SCIP_RETCODE separateCons(
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
          SCIP_Real newlb;
+         SCIP_Real QUAD(tmp);
          SCIP_Bool cutoff;
          SCIP_Bool tightened;
 
-         newlb = consdata->lhs - vbdcoef * SCIPvarGetLbLocal(vbdvar);
+         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar));
+         SCIPquadprecSumQD(tmp, -tmp, consdata->lhs);
+
+         newlb = QUAD_TO_DBL(tmp);
 
          SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, TRUE,
                &cutoff, &tightened) );
@@ -1158,10 +1162,14 @@ SCIP_RETCODE separateCons(
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
          SCIP_Real newub;
+         SCIP_Real QUAD(tmp);
          SCIP_Bool cutoff;
          SCIP_Bool tightened;
 
-         newub = consdata->rhs - vbdcoef * SCIPvarGetLbLocal(vbdvar);
+         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar));
+         SCIPquadprecSumQD(tmp, -tmp, consdata->rhs);
+
+         newub = QUAD_TO_DBL(tmp);
 
          SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_3, TRUE,
                &cutoff, &tightened) );
@@ -1459,16 +1467,34 @@ SCIP_RETCODE propagateCons(
             if( consdata->vbdcoef > 0.0 )
             {
                if( !SCIPisInfinity(scip, yub) )
-                  newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
+               {
+                  SCIP_Real QUAD(tmp);
+
+                  SCIPquadprecProdDD(tmp, consdata->vbdcoef, yub);
+                  SCIPquadprecSumQD(tmp, -tmp, consdata->lhs);
+
+                  newlb = SCIPadjustedVarLb(scip, consdata->var, QUAD_TO_DBL(tmp));
+               }
                else
+               {
                   newlb = -SCIPinfinity(scip);
+               }
             }
             else
             {
                if( !SCIPisInfinity(scip, -ylb) )
-                  newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
+               {
+                  SCIP_Real QUAD(tmp);
+
+                  SCIPquadprecProdDD(tmp, consdata->vbdcoef, ylb);
+                  SCIPquadprecSumQD(tmp, -tmp, consdata->lhs);
+
+                  newlb = SCIPadjustedVarLb(scip, consdata->var, QUAD_TO_DBL(tmp));
+               }
                else
+               {
                   newlb = -SCIPinfinity(scip);
+               }
             }
 
             SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, yub < ylb + 0.5, cutoff, &tightened) );
@@ -1504,7 +1530,12 @@ SCIP_RETCODE propagateCons(
          {
             if( consdata->vbdcoef > 0.0 )
             {
-               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumDD(tmp, consdata->lhs, -xub);
+               SCIPquadprecDivQD(tmp, tmp, consdata->vbdcoef);
+
+               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, QUAD_TO_DBL(tmp));
                if( newlb > ylb + 0.5 )
                {
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2, FALSE, cutoff, &tightened) );
@@ -1530,7 +1561,13 @@ SCIP_RETCODE propagateCons(
             }
             else
             {
-               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumDD(tmp, consdata->lhs, -xub);
+               SCIPquadprecDivQD(tmp, tmp, consdata->vbdcoef);
+
+               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, QUAD_TO_DBL(tmp));
+
                if( newub < yub - 0.5 )
                {
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2, FALSE, cutoff, &tightened) );
@@ -1573,16 +1610,34 @@ SCIP_RETCODE propagateCons(
             if( consdata->vbdcoef > 0.0 )
             {
                if( !SCIPisInfinity(scip, -ylb) )
-                  newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
+               {
+                  SCIP_Real QUAD(tmp);
+
+                  SCIPquadprecProdDD(tmp, consdata->vbdcoef, ylb);
+                  SCIPquadprecSumQD(tmp, -tmp, consdata->rhs);
+
+                  newub = SCIPadjustedVarUb(scip, consdata->var, QUAD_TO_DBL(tmp));
+               }
                else
+               {
                   newub = SCIPinfinity(scip);
+               }
             }
             else
             {
                if( !SCIPisInfinity(scip, yub) )
-                  newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
+               {
+                  SCIP_Real QUAD(tmp);
+
+                  SCIPquadprecProdDD(tmp, consdata->vbdcoef, yub);
+                  SCIPquadprecSumQD(tmp, -tmp, consdata->rhs);
+
+                  newub = SCIPadjustedVarUb(scip, consdata->var, QUAD_TO_DBL(tmp));
+               }
                else
+               {
                   newub = SCIPinfinity(scip);
+               }
             }
 
             SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, yub < ylb + 0.5, cutoff, &tightened) );
@@ -1618,7 +1673,12 @@ SCIP_RETCODE propagateCons(
          {
             if( consdata->vbdcoef > 0.0 )
             {
-               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumDD(tmp, consdata->rhs, -xlb);
+               SCIPquadprecDivQD(tmp, tmp, consdata->vbdcoef);
+
+               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, QUAD_TO_DBL(tmp));
                if( newub < yub - 0.5 )
                {
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4, FALSE, cutoff, &tightened) );
@@ -1647,7 +1707,12 @@ SCIP_RETCODE propagateCons(
             }
             else
             {
-               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
+               SCIP_Real QUAD(tmp);
+
+               SCIPquadprecSumDD(tmp, consdata->rhs, -xlb);
+               SCIPquadprecDivQD(tmp, tmp, consdata->vbdcoef);
+
+               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, QUAD_TO_DBL(tmp));
                if( newlb > ylb + 0.5 )
                {
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4, FALSE, cutoff, &tightened) );
