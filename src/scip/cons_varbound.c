@@ -1131,7 +1131,7 @@ SCIP_RETCODE separateCons(
          SCIP_Bool cutoff;
          SCIP_Bool tightened;
 
-         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar));
+         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar)); /*lint !e666*/
          SCIPquadprecSumQD(tmp, -tmp, consdata->lhs);
 
          newlb = QUAD_TO_DBL(tmp);
@@ -1162,7 +1162,7 @@ SCIP_RETCODE separateCons(
          SCIP_Bool cutoff;
          SCIP_Bool tightened;
 
-         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar));
+         SCIPquadprecProdDD(tmp, vbdcoef, SCIPvarGetLbLocal(vbdvar)); /*lint !e666*/
          SCIPquadprecSumQD(tmp, -tmp, consdata->rhs);
 
          newub = QUAD_TO_DBL(tmp);
