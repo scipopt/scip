@@ -874,14 +874,12 @@ SCIP_RETCODE resolvePropagation(
 
                SCIPquadprecProdQD(relaxedlb, relaxedlb, vbdcoef);
 
-               SCIPquadprecSumQD(relaxedlb, relaxedlb, -consdata->rhs);
-               SCIPquadprecProdQD(relaxedlb, relaxedlb, -1.0);
+               SCIPquadprecSumQD(relaxedlb, -relaxedlb, consdata->rhs);
             }
             else
             {
                SCIPquadprecProdDD(relaxedlb, inferbd, vbdcoef);
-               SCIPquadprecSumQD(relaxedlb, relaxedlb, -consdata->rhs);
-               SCIPquadprecProdQD(relaxedlb, relaxedlb, -1.0);
+               SCIPquadprecSumQD(relaxedlb, -relaxedlb, consdata->rhs);
             }
 
 #ifndef NDEBUG
