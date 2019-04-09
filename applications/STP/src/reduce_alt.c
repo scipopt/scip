@@ -2608,8 +2608,7 @@ SCIP_RETCODE reduce_sdWalk(
          const int i2 = g->head[e];
          const int enext = g->oeat[e];
 
-         /* avoid double checking */
-         if( i2 < i || !g->mark[i2] )
+         if( !g->mark[i2] )
          {
             e = enext;
             continue;
@@ -2623,12 +2622,6 @@ SCIP_RETCODE reduce_sdWalk(
 
          success = graph_sdWalks(scip, g, g->cost, termmark, ecost, i2, i, edgelimit, dist, heap, state, visitlist, &nvisits, visited);
          sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
-
-         if( !success )
-         {
-            success = graph_sdWalks(scip, g, g->cost, termmark, ecost, i, i2, edgelimit, dist, heap, state, visitlist, &nvisits, visited);
-            sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
-         }
 
          if( success )
          {
@@ -2704,7 +2697,7 @@ SCIP_RETCODE reduce_sdWalkExt(
          const int enext = g->oeat[e];
 
          /* avoid double checking */
-         if( i2 < i || !g->mark[i2] )
+         if( !g->mark[i2] )
          {
             e = enext;
             continue;
@@ -2718,12 +2711,6 @@ SCIP_RETCODE reduce_sdWalkExt(
 
          success = graph_sdWalksExt(scip, g, g->cost, ecost, i2, i, edgelimit, MAXNPREVS, dist, prevterms, nprevterms, heap, state, visitlist, &nvisits, visited);
          sdwalk_resetExt(nnodes, nvisits, visitlist, dist, nprevterms, state, visited);
-
-         if( !success )
-         {
-            success = graph_sdWalksExt(scip, g, g->cost, ecost, i, i2, edgelimit, MAXNPREVS, dist, prevterms, nprevterms, heap, state, visitlist, &nvisits, visited);
-            sdwalk_resetExt(nnodes, nvisits, visitlist, dist, nprevterms, state, visited);
-         }
 
          if( success )
          {
@@ -2813,7 +2800,7 @@ SCIP_RETCODE reduce_sdWalkExt2(
          const int enext = g->oeat[e];
 
          /* avoid double checking */
-         if( i2 < i || !g->mark[i2] )
+         if( !g->mark[i2] )
          {
             e = enext;
             continue;
@@ -2828,14 +2815,6 @@ SCIP_RETCODE reduce_sdWalkExt2(
          success = graph_sdWalksExt2(scip, g, g->cost, termmark, ecost, i2, i, edgelimit, MAXNPREVS, dist, prevterms, nprevterms,
                prevNPterms, nprevNPterms, prevedges, nprevedges, heap, state, visitlist, &nvisits, visited);
          sdwalk_resetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
-
-
-         if( !success )
-         {
-            success = graph_sdWalksExt2(scip, g, g->cost, termmark, ecost, i, i2, edgelimit, MAXNPREVS, dist, prevterms, nprevterms,
-               prevNPterms, nprevNPterms, prevedges, nprevedges, heap, state, visitlist, &nvisits, visited);
-            sdwalk_resetExt2(nnodes, nvisits, visitlist, dist, nprevterms, nprevNPterms, nprevedges, state, visited);
-         }
 
          if( success )
          {
