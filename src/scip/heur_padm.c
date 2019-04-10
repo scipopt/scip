@@ -699,8 +699,10 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    conss = SCIPgetOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
+#if 0
    for( i = 0; i < nconss; i++ )
       SCIPdebugPrintCons(scip, conss[i], NULL);
+#endif
 
    /* determine threshold for penalty coefficients via maximum norm */
    slackthreshold = SCIP_REAL_MIN;
@@ -1053,7 +1055,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIPsolve((problem->blocks[b]).subscip);
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
-               if( status  == SCIP_STATUS_OPTIMAL )
+               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT )
                {
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
@@ -1126,13 +1128,13 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
                }
                else
                {
-                  SCIPdebugMsg(scip,"Block solving status not supported\n");
+                  SCIPdebugMsg(scip,"Block solving status %d not supported\n",status);
                   goto TERMINATE;
                }
 
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
 
-            } while( status != SCIP_STATUS_OPTIMAL );
+            } while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT );
 
          }
       }
@@ -1290,6 +1292,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_Bool success;
       SCIP_Real* blocksolvals;
 
+      assert(increasedslacks == 0);
+
       SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPallocBufferArray(scip, &blocksolvals, nvars) );
       SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -1320,7 +1324,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, /*FALSE*/TRUE, /*FALSE*/TRUE, TRUE, TRUE, TRUE, &success) );
       if( !success )
          SCIPdebugMsg(scip,"Solution copy failed\n");
       else
