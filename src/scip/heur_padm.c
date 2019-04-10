@@ -359,6 +359,7 @@ SCIP_RETCODE copyToSubscip(
    SCIP*                 subscip,            /**< target SCIP */
    const char*           name,               /**< name for copied problem */
    SCIP_CONS**           conss,              /**< constraint to copy */
+   SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
    int                   nconss,             /**< number of constraints to copy */
    SCIP_Bool*            success             /**< pointer to store whether copying was successful */
@@ -376,7 +377,7 @@ SCIP_RETCODE copyToSubscip(
    *success = TRUE;
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyProb(scip, subscip, NULL/*varmap*/, consmap, FALSE, name) );
+   SCIP_CALL( SCIPcopyProb(scip, subscip, varmap, consmap, FALSE, name) );
 
    /* copy constraints */
    for( i = 0; i < nconss; ++i )
@@ -384,7 +385,7 @@ SCIP_RETCODE copyToSubscip(
       assert(!SCIPconsIsModifiable(conss[i]));
 
       /* copy the constraint */
-      SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), /*varmap*/NULL, consmap, NULL,
+      SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, NULL,
             SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
             SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE,
             SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]), FALSE, FALSE, success) );
@@ -404,6 +405,7 @@ SCIP_RETCODE copyToSubscip(
 static
 SCIP_RETCODE blockCreateSubscip(
    BLOCK*                block,              /**< block structure */
+   SCIP_HASHMAP*         varmap,             /**< variable hashmap used to improve performance */
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
    SCIP_CONS**           conss,              /**< constraints contained in this block */
    int                   nconss,             /**< number of constraints contained in this block */
@@ -419,6 +421,7 @@ SCIP_RETCODE blockCreateSubscip(
    int i;
 
    assert(block != NULL);
+   assert(varmap != NULL);
    assert(consmap != NULL);
    assert(conss != NULL);
    assert(success != NULL);
@@ -438,11 +441,11 @@ SCIP_RETCODE blockCreateSubscip(
       /* get name of the original problem and add "comp_nr" */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
-      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, consmap, nconss, success) );
+      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, success) );
 
       /* save variables of subscip (without slack variables) */
-      nsubscipvars = SCIPgetNOrigVars(block->subscip);
-      subscipvars = SCIPgetOrigVars(block->subscip);
+      nsubscipvars = SCIPgetNVars(block->subscip);
+      subscipvars = SCIPgetVars(block->subscip);
       SCIP_CALL( SCIPallocBufferArray(scip, &(block->subvars), nsubscipvars ) );
       block->nsubvars = nsubscipvars;
       for( i = 0; i< nsubscipvars; i++ )
@@ -471,6 +474,7 @@ SCIP_RETCODE createAndSplitProblem(
    )
 {
    BLOCK* block;
+   SCIP_HASHMAP* varmap;
    SCIP_HASHMAP* consmap;
    SCIP_CONS** blockconss;
    SCIP_Bool success = TRUE;
@@ -492,12 +496,16 @@ SCIP_RETCODE createAndSplitProblem(
 
       block = &(*problem)->blocks[b];
 
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+
       /* get block constraints */
       blockconss = &(sortedconss[blockstartsconss[b]]);
       nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
 
       /* build subscip for block */
-      SCIP_CALL( blockCreateSubscip(block, consmap, blockconss, nblockconss, &success) );
+      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, &success) );
+
+      SCIPhashmapFree(&varmap);
 
       if( !success )
          break;
@@ -653,6 +661,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real maxslack;
    SCIP_Real slackthreshold;
    SCIP_STATUS status;
+   int blockoffset;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -726,14 +735,21 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip,"No support for linking contraints\n");
       goto TERMINATE;
    }
+   blockoffset = conslabels[0];
+   SCIPdebugMsg(scip,"Block numbering starts from %d\n",blockoffset);
 
    /* determine start indices of blocks in sorted conss array */
    i = 0;
    for( b = 0; b < nblocks + 1; ++b )
    {
-      assert(i == nconss || conslabels[i] >= b);
       blockstartsconss[b] = i;
-      while( i < nconss && conslabels[i] == b )
+      if(i == nconss)
+         break;
+
+      /* request block numbering without holes */
+      assert((conslabels[i]-blockoffset-b)==0 || (conslabels[i]-blockoffset-b)==1);
+
+      while( i < nconss && (conslabels[i]-blockoffset) == b )
          ++i;
    }
 
