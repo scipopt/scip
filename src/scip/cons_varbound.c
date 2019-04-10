@@ -668,7 +668,7 @@ SCIP_RETCODE resolvePropagation(
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
          /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
-         assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
+         assert(SCIPisFeasEQ(scip, inferbd, SCIPadjustedVarUb(scip, var, consdata->rhs - relaxedbd * vbdcoef)));
 
          if( vbdcoef > 0.0 )
          {
