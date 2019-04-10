@@ -1291,6 +1291,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_SOL* newsol;
       SCIP_Bool success;
       SCIP_Real* blocksolvals;
+      SCIP_VAR* origobjconstvar;
 
       assert(increasedslacks == 0);
 
@@ -1324,7 +1325,15 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, /*FALSE*/TRUE, /*FALSE*/TRUE, TRUE, TRUE, TRUE, &success) );
+      /* treat objective constant with name "OBJECTIVE_CONSTANT" */
+      origobjconstvar = SCIPfindVar(scip, "OBJECTIVE_CONSTANT");
+      if( origobjconstvar != NULL )
+      {
+         SCIPdebugMsg(scip,"Fix variable OBJECTIVE_CONSTANT\n");
+         SCIP_CALL( SCIPsetSolVal(scip, newsol, origobjconstvar, 1.0) );
+      }
+
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       if( !success )
          SCIPdebugMsg(scip,"Solution copy failed\n");
       else
