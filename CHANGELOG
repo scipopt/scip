@@ -65,6 +65,7 @@ Fixed bugs
 - fixed bug in SCIPlpiGetBInvARow in lpi_cpx using wrong size of resulting vector
 - fixed quadratic runtime behavior in sepa_aggregation
 - fixed statistics of separators
+- improve numerical stability in varbound constraint handler by using double-double arithmetic
 
 Miscellaneous
 -------------
