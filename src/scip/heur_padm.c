@@ -65,7 +65,7 @@
 
 #define HEUR_NAME             "padm"
 #define HEUR_DESC             "penalty alternating direction method primal heuristic"
-#define HEUR_DISPCHAR         '?'
+#define HEUR_DISPCHAR         '>'
 #define HEUR_PRIORITY         70000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -338,10 +338,9 @@ SCIP_RETCODE createSubscip(
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
-#if 0
+
       /* avoid recursive calls */
-      SCIP_CALL( SCIPsetIntParam(*subscip, "heuristics/" HEUR_NAME "padm/freq", 0) );
-#endif
+      SCIP_CALL( SCIPsetSubscipsOff(*subscip, TRUE) );
    }
    else
    {
@@ -719,13 +718,17 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1) );
 
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+#if 0
    for( i = 0; i < nconss; i++ )
       SCIPdebugMsg(scip,"%s %d\n",SCIPconsGetName(conss[i]), conslabels[i]);
+#endif
 
    SCIPdecompComputeVarsLabels(scip, decomp, conss, nconss);
    SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+#if 0
    for( i = 0; i < nvars; i++ )
       SCIPdebugMsg(scip,"%s %d\n",SCIPvarGetName(vars[i]), varslabels[i]);
+#endif
 
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
@@ -959,7 +962,8 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    assert(nentries == SCIPhashtableGetNElements(htable));
    SCIPdebugMsg(scip,"Hashtable has %d elements\n",SCIPhashtableGetNElements(htable));
 
-#if 1
+#if 0
+   /* write extended submips */
    for( b = 0; b < problem->nblocks; b++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
@@ -1309,7 +1313,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
             solval = blocksolvals[i];
-#if 1
+#if 0
             SCIPdebugMsg(scip,"Fixing: %s = %.2f\n",SCIPvarGetName(origvar),solval);
 #endif
             SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
