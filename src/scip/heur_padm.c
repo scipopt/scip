@@ -721,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecPADM)
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void**)conss, nconss);
-   if(conslabels[0] != 0)
+   if(conslabels[0] == -1)
    {
       SCIPdebugMsg(scip,"No support for linking contraints\n");
       goto TERMINATE;
