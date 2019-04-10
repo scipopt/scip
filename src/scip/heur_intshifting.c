@@ -95,8 +95,56 @@ void updateViolations(
 
    lhs = SCIProwGetLhs(row);
    rhs = SCIProwGetRhs(row);
-   oldviol = (SCIPisFeasLT(scip, oldmaxactivity, lhs) || SCIPisFeasGT(scip, oldminactivity, rhs));
-   newviol = (SCIPisFeasLT(scip, newmaxactivity, lhs) || SCIPisFeasGT(scip, newminactivity, rhs));
+
+   /* case distinctions to make sure infinities are handled properly when calculating oldviol and newviol */
+   if( ! (SCIPisInfinity(scip, oldmaxactivity) || SCIPisInfinity(scip, -oldmaxactivity)
+       || SCIPisInfinity(scip, oldminactivity) || SCIPisInfinity(scip, -oldminactivity)) )
+   {
+      oldviol = (SCIPisFeasLT(scip, oldmaxactivity, lhs) || SCIPisFeasGT(scip, oldminactivity, rhs));
+   }
+   else
+   {
+      oldviol = FALSE;
+      if( SCIPisInfinity(scip, -oldmaxactivity) )
+      {
+         if( ! SCIPisInfinity(scip, -lhs) )
+         {
+            oldviol = TRUE;
+         }
+      }
+      if( SCIPisInfinity(scip, oldminactivity) )
+      {
+         if( ! SCIPisInfinity(scip, rhs) )
+         {
+            oldviol = TRUE;
+         }
+      }
+   }
+
+   if( ! (SCIPisInfinity(scip, newmaxactivity) || SCIPisInfinity(scip, -newmaxactivity)
+       || SCIPisInfinity(scip, newminactivity) || SCIPisInfinity(scip, -newminactivity)) )
+   {
+      newviol = (SCIPisFeasLT(scip, newmaxactivity, lhs) || SCIPisFeasGT(scip, newminactivity, rhs));
+   }
+   else
+   {
+      newviol = FALSE;
+      if( SCIPisInfinity(scip, -newmaxactivity) )
+      {
+         if( ! SCIPisInfinity(scip, -lhs) )
+         {
+            newviol = TRUE;
+         }
+      }
+      if( SCIPisInfinity(scip, newminactivity) )
+      {
+         if( ! SCIPisInfinity(scip, rhs) )
+         {
+            newviol = TRUE;
+         }
+      }
+   }
+
    if( oldviol != newviol )
    {
       int rowpos;
