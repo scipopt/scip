@@ -19,6 +19,7 @@
  *         "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems"
  *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
+ * @author Katrin Halbig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
