@@ -2103,7 +2103,7 @@ SCIP_RETCODE reduce(
    assert(graph->layers == 1);
 
    *offset = 0.0;
-   show = TRUE;
+   show = FALSE;
    stp_type = graph->stp_type;
 
    /* initialize ancestor list for each edge */
