@@ -50,6 +50,9 @@
 #define STP_RMWCSP                   12
 #define STP_BRMWCSP                  13
 
+#define PC_TERM_PROPER 2
+#define PC_TERM_SIMPLE 1
+#define PC_TERM_NONE 0
 
 
 typedef unsigned char STP_Bool;

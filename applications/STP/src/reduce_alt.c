@@ -2850,8 +2850,7 @@ SCIP_RETCODE reduce_sdsp(
    int*                  nelims,
    int                   limit,
    int*                  edgestate
-
-   )
+)
 {
    int* pathmaxnodetail = NULL;
    int* pathmaxnodehead = NULL;

@@ -2492,10 +2492,6 @@ SCIP_RETCODE reduceCheckEdge(
    assert(edge >= 0 && edge < graph->edges);
 
 #ifndef NDEBUG
-   for( int k = 0; k < graph->knots; k++ )
-      if(graph->mark[k] != (graph->grad[k] > 0))
-       graph_knot_printInfo(graph, k);
-
    if( !graph_pc_isPcMw(graph) )
       for( int k = 0; k < graph->knots; k++ )
          assert(graph->mark[k] == (graph->grad[k] > 0));
@@ -4454,6 +4450,7 @@ SCIP_RETCODE reduce_daPcMw(
    }
 
    *nelims = nfixed;
+
 
    /* free memory */
    if( pool != NULL )

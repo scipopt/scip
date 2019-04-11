@@ -36,7 +36,7 @@
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
 #define STP_RED_EXFACTOR   2
-#define STP_RED_EDGELIMIT 1000000
+#define STP_RED_EDGELIMIT 200000
 
 
 #include <stdio.h>
@@ -79,17 +79,19 @@ int getWorkLimits_pc(
       limit = (round > 0) ? STP_RED_SDSPBOUND2 : 0;
       break;
    case pc_bd3:
-      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
+      limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND / 2;
       break;
    default:
       assert(0);
       limit = 0;
    }
 
-   if( nedges >= STP_RED_EDGELIMIT )
-      limit = (int) MAX(limit, limit * sqrt(nedges) / 50.0);
+   if( nedges >= STP_RED_EDGELIMIT && round == 0 )
+      limit = (int) MAX(limit, limit * sqrt(nedges) / 5000.0);
    else
       limit = (int) MAX(limit, limit * sqrt(nedges) / 150.0);
+
+   //printf("limit %d \n", limit);
 
    return limit;
 }
@@ -111,6 +113,8 @@ void reduceStatsPrint(
 #endif
 
 }
+
+
 
 /** iterate NV and SL test while at least minelims many contractions are being performed */
 static
@@ -195,6 +199,163 @@ SCIP_RETCODE nvreduce_sl(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE execPc_SD(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< array to store state of a node during Voronoi computation*/
+   int*                  vbase,              /**< Voronoi base to each node */
+   int*                  nodesid,            /**< array */
+   int*                  nodesorg,           /**< array */
+   int*                  nelims,             /**< pointer to store number of eliminated edges */
+   int                   redbound,           /**< reduction bound */
+   SCIP_Bool             verbose,            /**< be verbose? */
+   SCIP_Bool*            rerun               /**< use again? */
+)
+{
+   SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodesid, nodesorg, nelims) );
+
+   if( verbose )
+      printf("pc_SD eliminations: %d \n", *nelims);
+
+   if( *nelims <= redbound )
+      *rerun = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE execPc_SDSP(
+   SCIP*                 scip,
+   GRAPH*                g,
+   PATH*                 pathtail,
+   PATH*                 pathhead,
+   int*                  heap,
+   int*                  statetail,
+   int*                  statehead,
+   int*                  memlbltail,
+   int*                  memlblhead,
+   int*                  nelims,
+   int                   limit,
+   int*                  edgestate,
+   int                   redbound,          /**< reduction bound */
+   SCIP_Bool             verbose,           /**< be verbose? */
+   SCIP_Bool*            rerun              /**< use again? */
+)
+{
+   SCIP_CALL( reduce_sdsp(scip, g, pathtail, pathhead, heap, statetail, statehead, memlbltail, memlblhead, nelims,
+         limit, edgestate) );
+
+   if( verbose )
+      printf("pc_SDSP eliminations: %d \n", *nelims);
+
+   if( *nelims <= redbound )
+      *rerun = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE execPc_BDk(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   PATH*                 pathtail,           /**< array for internal use */
+   PATH*                 pathhead,           /**< array for internal use */
+   int*                  heap,               /**< array for internal use */
+   int*                  statetail,          /**< array for internal use */
+   int*                  statehead,          /**< array for internal use */
+   int*                  memlbltail,         /**< array for internal use */
+   int*                  memlblhead,         /**< array for internal use */
+   int*                  nelims,             /**< point to return number of eliminations */
+   int                   limit,              /**< limit for edges to consider for each vertex */
+   SCIP_Real*            offset,             /**< offset */
+   int                   redbound,           /**< reduction bound */
+   SCIP_Bool             verbose,            /**< be verbose? */
+   SCIP_Bool*            rerun               /**< use again? */
+)
+{
+   SCIP_CALL( reduce_bd34(scip, g, pathtail, pathhead, heap, statetail, statehead, memlbltail,
+         memlblhead, nelims, limit, offset) );
+
+   if( verbose )
+      printf("pc_BDk eliminations: %d \n", *nelims);
+
+   if( *nelims <= redbound )
+      *rerun = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE execPc_NVSL(
+   SCIP*                 scip,
+   const int*            edgestate,          /**< for propagation or NULL */
+   GRAPH*                g,
+   PATH*                 vnoi,
+   SCIP_Real*            nodearrreal,
+   SCIP_Real*            fixed,
+   int*                  edgearrint,
+   int*                  heap,
+   int*                  state,
+   int*                  vbase,
+   int*                  neighb,
+   int*                  distnode,
+   int*                  solnode,
+   STP_Bool*             visited,
+   int*                  nelims,
+   int                   redbound,           /**< reduction bound */
+   SCIP_Bool             verbose,            /**< be verbose? */
+   SCIP_Bool*            rerun               /**< use again? */
+)
+{
+   SCIP_CALL( nvreduce_sl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, neighb,
+         distnode, solnode, visited, nelims, redbound) );
+
+   if( verbose )
+      printf("pc_NVSL eliminations: %d \n", *nelims);
+
+   if( *nelims <= redbound / 2 )
+      *rerun = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE execPc_BND(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            cost,               /**< edge cost array                    */
+   SCIP_Real*            prize,              /**< prize (nodes) array                */
+   SCIP_Real*            radius,             /**< radius array                       */
+   SCIP_Real*            costrev,            /**< reversed edge cost array           */
+   SCIP_Real*            offset,             /**< pointer to the offset              */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< array to store state of a node during Voronoi computation*/
+   int*                  vbase,              /**< Voronoi base to each node */
+   int*                  nelims,             /**< pointer to store number of eliminated edges */
+   int                   redbound,           /**< reduction bound */
+   SCIP_Bool             verbose,            /**< be verbose? */
+   SCIP_Bool*            rerun               /**< use again? */
+)
+{
+   SCIP_Real ub = -1.0;
+
+   SCIP_CALL( reduce_bound(scip, graph, vnoi, cost, graph->prize, radius,
+         costrev, offset, &ub, heap, state, vbase, nelims) );
+
+   if( verbose )
+      printf("pc_BND eliminations: %d \n", *nelims);
+
+   if( *nelims <= redbound )
+      *rerun = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
 
 /* removes parallel edges */
 SCIP_RETCODE deleteMultiedges(
@@ -275,8 +436,6 @@ SCIP_RETCODE level0(
    }
    return SCIP_OKAY;
 }
-
-
 
 
 
@@ -1431,11 +1590,9 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
    )
 {
-   SCIP_Real ub;
    SCIP_Real fix;
    SCIP_Real timelimit;
    SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
-   int degnelims;
    SCIP_Bool da = dualascent;
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdc = TRUE;
@@ -1445,15 +1602,14 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool rerun = TRUE;
    SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
-   SCIP_Real prizesum;
    SCIP_RANDNUMGEN* randnumgen;
+   SCIP_Real prizesum;
+   const SCIP_Bool verbose = show && dualascent && userec && nodereplacing;
+   int degnelims;
    int ntotalelims;
-   int sdext;
 
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
-
-   SCIP_CALL( SCIPgetIntParam(scip, "stp/sdext", &sdext) );
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
@@ -1468,15 +1624,16 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
-   if( show && dualascent ) printf("initial degnelims: %d \n", ntotalelims);
+   if( verbose ) printf("initial degnelims: %d \n", ntotalelims);
 
    assert(graph_pc_term2edgeConsistent(g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
    assert(prizesum < FARAWAY);
 
-   /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   /* main reduction loop */
    for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
    {
       int nelims;
@@ -1494,107 +1651,65 @@ SCIP_RETCODE redLoopPc(
 
       if( sd || extensive )
       {
-         SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-
-         if( sdnelims <= reductbound )
-            sd = FALSE;
-
-         if( show && dualascent ) printf("SDpc: %d \n", sdnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
+         SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
+               reductbound, verbose, &sd) );
       }
 
       if( sdc || extensive )
       {
-         SCIP_CALL( reduce_sdsp(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
-               getWorkLimits_pc(g, rounds, pc_sdc), NULL) );
-
-         if( sdcnelims <= reductbound )
-            sdc = FALSE;
-
-         if( show && dualascent ) printf("SDsp: %d \n", sdcnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
+         SCIP_CALL( execPc_SDSP(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
+               getWorkLimits_pc(g, rounds, pc_sdc), NULL, reductbound, verbose, &sdc) );
       }
 
       if( sdw || extensive )
       {
-         int sdwnelims2 = 0;
-         int sdwnelims3 = 0;
+         int sdwnelims2 = 0; int sdwnelims3 = 0;
 
          SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+         SCIP_CALL( reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
 
-         if( sdext == 1 || sdext == 3 )
-            SCIP_CALL(reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
-
-         if( sdext == 2 || sdext == 3 )
-            SCIP_CALL(reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
-
-         if( show && dualascent )
-            printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
+         if( verbose )  printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
 
          sdwnelims += sdwnelims2 + sdwnelims3;
 
          if( sdwnelims <= reductbound )
             sdw = FALSE;
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
       }
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+          break;
 
       SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
-      if( show && dualascent ) printf("simple %d \n", nelims);
-
       if( bd3 && dualascent )
       {
-         SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, getWorkLimits_pc(g, rounds, pc_bd3), &fix) );
-         if( bd3nelims <= reductbound )
-         {
-            bd3 = FALSE;
-         }
-         else
-         {
-            SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
-         }
-
-         if( show && dualascent ) printf("bd3: %d \n", bd3nelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
+         SCIP_CALL( execPc_BDk(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2,
+               &bd3nelims, getWorkLimits_pc(g, rounds, pc_bd3), &fix, reductbound, verbose, &bd3) );
       }
 
       if( nvsl || extensive )
       {
-         SCIP_CALL( nvreduce_sl(scip, edgestate, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound) );
-
-         if( nvslnelims <= 0.5 * reductbound )
-            nvsl = FALSE;
-
-         if( show && dualascent ) printf("nvsl: %d \n", nvslnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
+         SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase,
+               nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
       }
 
       if( bred )
       {
-         ub = -1.0;
-         SCIP_CALL( reduce_bound(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2, &fix, &ub, heap, state, vbase, &brednelims) );
-         if( brednelims <= reductbound )
-            bred = FALSE;
-
-         if( show && dualascent ) printf("bndelims %d \n", brednelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
+         SCIP_CALL( execPc_BND(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2,
+               &fix, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
       }
 
-      ub = -1.0;
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
 
       assert(graph_pc_term2edgeConsistent(g));
 
       if( da || (dualascent && extensive) )
       {
+         SCIP_Real ub = -1.0;
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
-         if( show && dualascent ) printf("simple %d \n", nelims);
 
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
@@ -1606,11 +1721,10 @@ SCIP_RETCODE redLoopPc(
          if( danelims <= reductbound )
             da = FALSE;
 
-         if( show && dualascent ) printf("da: %d \n", danelims);
+         if( verbose ) printf("daX: %d \n", danelims);
       }
 
       SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
-      if( show && dualascent ) printf("simple %d \n", nelims);
 
       ntotalelims += (degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims);
 
@@ -1619,12 +1733,12 @@ SCIP_RETCODE redLoopPc(
 
       if( !rerun && advancedrun && g->terms > 2 )
       {
-         rerun = TRUE;
          danelims = 0;
          degnelims = 0;
          advancedrun = FALSE;
          if( rpc )
          {
+            SCIP_Real ub = -1.0;
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
          }
@@ -1635,37 +1749,25 @@ SCIP_RETCODE redLoopPc(
          }
 
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
-         if( show && dualascent ) printf("simple %d \n", degnelims);
 
          ntotalelims += danelims + degnelims;
 
-         if( danelims + degnelims > reductbound || (extensive && (danelims + degnelims > 0)) )
+         if( ntotalelims > reductbound )
          {
+            rerun = TRUE;
             da = dualascent;
             sd = TRUE;
             sdc = TRUE;
             sdw = TRUE;
             nvsl = TRUE;
             bd3 = nodereplacing;
-            if( extensive )
-               advancedrun = TRUE;
-         }
-         else if( ntotalelims > reductbound )
-         {
-            sdc = TRUE;
-            nvsl = TRUE;
-            bd3 = nodereplacing;
-         }
-         else
-         {
-            rerun = FALSE;
          }
       }
 
       if( !rerun || rounds == (STP_RED_MAXNROUNDS - 1) )
       {
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
-         if( show && dualascent ) printf("simple %d \n", degnelims);
+         if( verbose ) printf("simple %d \n", degnelims);
       }
 
       if( (!rerun || rounds == (STP_RED_MAXNROUNDS - 1)) && !rpc && tryrpc && g->terms > 2 )
@@ -1688,13 +1790,12 @@ SCIP_RETCODE redLoopPc(
             nvsl = TRUE;
             bd3 = nodereplacing;
             advancedrun = dualascent;
-            rounds = 0;
-            show = TRUE;
+            rounds = 1;
          }
 
          graph_pc_2org(g);
       }
-   }
+   } /* main loop */
 
    if( dualascent && tryrpc)
    {
@@ -2002,7 +2103,7 @@ SCIP_RETCODE reduce(
    assert(graph->layers == 1);
 
    *offset = 0.0;
-   show = FALSE;
+   show = TRUE;
    stp_type = graph->stp_type;
 
    /* initialize ancestor list for each edge */
@@ -2082,6 +2183,7 @@ SCIP_RETCODE reduce(
    SCIPdebugMessage("offset : %f \n", *offset);
 
    SCIP_CALL( level0(scip, graph) );
+   show = FALSE;
 
    assert(graph_valid(graph));
 
