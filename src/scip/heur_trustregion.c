@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trustregion.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Large neighborhood search heuristic for Benders' decomposition based on trust region methods
  * @author Stephen J. Maher
  *
