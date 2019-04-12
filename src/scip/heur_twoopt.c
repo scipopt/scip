@@ -45,7 +45,7 @@
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
-#define HEUR_DISPCHAR         'B'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20100
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

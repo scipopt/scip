@@ -31,7 +31,6 @@
 
 
 /** includes the scflp file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderScflp(
    SCIP*                 scip                /**< SCIP data structure */
    );

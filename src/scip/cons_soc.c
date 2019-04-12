@@ -1243,7 +1243,7 @@ SCIP_RETCODE separatePoint(
          }
 
          /* cut cuts off solution and efficient enough */
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
          if( SCIPisCutApplicable(scip, row) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
@@ -1338,7 +1338,7 @@ SCIP_RETCODE addLinearizationCuts(
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+            SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
             SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -1351,7 +1351,7 @@ SCIP_RETCODE addLinearizationCuts(
       {
          SCIP_ROW* row;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }

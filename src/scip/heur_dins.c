@@ -52,7 +52,7 @@
 
 #define HEUR_NAME             "dins"
 #define HEUR_DESC             "distance induced neighborhood search by Ghosh"
-#define HEUR_DISPCHAR         'D'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1105000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

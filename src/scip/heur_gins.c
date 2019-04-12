@@ -69,7 +69,7 @@
 
 #define HEUR_NAME             "gins"
 #define HEUR_DESC             "gins works on k-neighborhood in a variable-constraint graph"
-#define HEUR_DISPCHAR         'K'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          8
@@ -1389,6 +1389,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
+      success = FALSE;
       /* check, whether a solution was found */
       if( SCIPgetNSols(subscip) > 0 )
       {
@@ -1400,7 +1401,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
           */
          nsubsols = SCIPgetNSols(subscip);
          subsols = SCIPgetSols(subscip);
-         success = FALSE;
          for( i = 0; i < nsubsols && !success; ++i )
          {
             SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
@@ -1414,7 +1414,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( SCIPfree(&subscip) );
 
       /* check if we want to run another rolling horizon iteration */
-      runagain = (*result == SCIP_FOUNDSOL) && heurdata->userollinghorizon;
+      runagain = success && heurdata->userollinghorizon;
       if( runagain )
       {
          assert(rollinghorizon != NULL);

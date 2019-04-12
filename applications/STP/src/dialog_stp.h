@@ -31,7 +31,6 @@ extern "C" {
 #endif
 
 /** includes or updates the stp dialog menus in SCIP */
-extern
 SCIP_RETCODE SCIPincludeDialogStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

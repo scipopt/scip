@@ -54,7 +54,7 @@
 
 #define HEUR_NAME             "feaspump"
 #define HEUR_DESC             "objective feasibility pump 2.0"
-#define HEUR_DISPCHAR         'F'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_OBJDIVING
 #define HEUR_PRIORITY         -1000000
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0

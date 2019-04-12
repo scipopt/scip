@@ -2170,10 +2170,13 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+         if( weights[k] != 0.0 )
+         {
+            SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
 
-         if( rowtoolong )
-            return SCIP_OKAY;
+            if( rowtoolong )
+               return SCIP_OKAY;
+         }
       }
    }
 

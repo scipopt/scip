@@ -37,7 +37,6 @@ extern "C" {
 #endif
 
 /** includes core SCIP plugins into SCIP */
-extern
 SCIP_RETCODE SCIPincludeCorePlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );

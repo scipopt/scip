@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 /** creates event handler for solve trace event */
-extern
 SCIP_RETCODE SCIPincludeEventHdlrSolveTrace(
    SCIP*                 scip,               /**< SCIP data structure */
    gmoHandle_t           gmo                 /**< GAMS model object */

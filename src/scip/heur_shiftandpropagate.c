@@ -51,7 +51,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -412,7 +412,7 @@ void transformVariable(
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
     */
-   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+   if( SCIPisHugeValue(scip, -lb) && SCIPisHugeValue(scip, ub) )
    {
       if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
@@ -423,14 +423,14 @@ void transformVariable(
    }
    else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
    {
-      assert(!SCIPisInfinity(scip, lb));
+      assert(!SCIPisHugeValue(scip, lb));
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       deltashift = lb;
       matrix->transformshiftvals[colpos] = lb;
    }
    else
    {
-      assert(!SCIPisInfinity(scip, ub));
+      assert(!SCIPisHugeValue(scip, ub));
       if( matrix->transformstatus[colpos] != TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
@@ -439,7 +439,7 @@ void transformVariable(
    }
 
    /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
-   if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
+   if( !SCIPisHugeValue(scip, ub) && !SCIPisHugeValue(scip, lb) )
       matrix->upperbounds[colpos] = ub - lb;
    else
       matrix->upperbounds[colpos] = SCIPinfinity(scip);
@@ -454,7 +454,7 @@ void transformVariable(
       int nrows;
       int i;
 
-      assert(!SCIPisInfinity(scip, deltashift));
+      assert(!SCIPisHugeValue(scip, deltashift));
 
       /* get nonzero values and corresponding rows of column */
       getColumnData(matrix, colpos, &vals, &rows, &nrows);

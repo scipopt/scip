@@ -52,7 +52,7 @@
 
 #define HEUR_NAME             "locks"
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
-#define HEUR_DISPCHAR         'k'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         3000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

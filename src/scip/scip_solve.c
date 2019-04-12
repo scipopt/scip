@@ -1864,14 +1864,14 @@ SCIP_RETCODE freeReoptSolve(
       assert(!cutoff);
    }
 
+   /* switch stage to EXITSOLVE */
+   scip->set->stage = SCIP_STAGE_EXITSOLVE;
+
    /* deinitialize conflict store */
    SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* invalidate the dual bound */
    SCIPprobInvalidateDualbound(scip->transprob);
-
-   /* switch stage to EXITSOLVE */
-   scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, FALSE) );
@@ -2643,7 +2643,7 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          /* reset relaxation solution, so that the objective value is recomputed from scratch next time, using the new
           * fixings which may be produced during the presolving after the restart */
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, NULL) );
 
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
@@ -2936,6 +2936,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
       {
          /* if yes, then presolve the problem */
          SCIP_CALL( SCIPpresolve(scip) );
+         if( SCIPgetStatus(scip) >= SCIP_STATUS_OPTIMAL )
+            return SCIP_OKAY;
       }
       else
       {

@@ -360,7 +360,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
             FALSE, TRUE) );
    }
    else

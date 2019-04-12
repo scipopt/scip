@@ -70,7 +70,7 @@ extern "C" {
  *
  *  @return complete SCIP version
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPversion(
    void
    );
@@ -79,7 +79,7 @@ SCIP_Real SCIPversion(
  *
  *  @return major SCIP version
  */
-EXTERN
+SCIP_EXPORT
 int SCIPmajorVersion(
    void
    );
@@ -88,7 +88,7 @@ int SCIPmajorVersion(
  *
  *  @return minor SCIP version
  */
-EXTERN
+SCIP_EXPORT
 int SCIPminorVersion(
    void
    );
@@ -97,7 +97,7 @@ int SCIPminorVersion(
  *
  *  @return technical SCIP version
  */
-EXTERN
+SCIP_EXPORT
 int SCIPtechVersion(
    void
    );
@@ -106,7 +106,7 @@ int SCIPtechVersion(
  *
  *  @return subversion SCIP version
  */
-EXTERN
+SCIP_EXPORT
 int SCIPsubversion(
    void
    );
@@ -115,7 +115,7 @@ int SCIPsubversion(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintVersion(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -125,14 +125,14 @@ void SCIPprintVersion(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintBuildOptions(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** prints error message for the given SCIP_RETCODE via the error prints method */
-EXTERN
+SCIP_EXPORT
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
@@ -157,7 +157,7 @@ void SCIPprintError(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
    );
@@ -183,7 +183,7 @@ SCIP_RETCODE SCIPcreate(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfree(
    SCIP**                scip                /**< pointer to SCIP data structure */
    );
@@ -194,7 +194,7 @@ SCIP_RETCODE SCIPfree(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_STAGE SCIPgetStage(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -211,7 +211,7 @@ SCIP_STAGE SCIPgetStage(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintStage(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPprintStage(
  *
  *  See \ref SCIP_Status "SCIP_STATUS" for a complete list of all possible solving status.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_STATUS SCIPgetStatus(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -235,7 +235,7 @@ SCIP_STATUS SCIPgetStatus(
  *
  *  See \ref SCIP_Status "SCIP_STATUS" for a complete list of all possible solving status.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintStatus(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -245,7 +245,7 @@ SCIP_RETCODE SCIPprintStatus(
  *
  *  @return Returns TRUE if the \SCIP instance is transformed, otherwise FALSE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -256,7 +256,7 @@ SCIP_Bool SCIPisTransformed(
  *
  *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -273,7 +273,7 @@ SCIP_Bool SCIPisExactSolve(
  *
  *  @return Returns TRUE if presolving is finished if no further reductions are detected
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisPresolveFinished(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -282,7 +282,7 @@ SCIP_Bool SCIPisPresolveFinished(
  *
  *  @return Returns TRUE if presolving was performed during the last solve
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasPerformedPresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -291,7 +291,7 @@ SCIP_Bool SCIPhasPerformedPresolve(
  *
  *  @return Returns TRUE if Ctrl-C was pressed, otherwise FALSE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPpressedCtrlC(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -302,7 +302,7 @@ SCIP_Bool SCIPpressedCtrlC(
  *
  *  @return Returns TRUE if solving process is stopped/interrupted, otherwise FALSE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -317,7 +317,7 @@ SCIP_Bool SCIPisStopped(
 
 
 /** includes information about an external code linked into the SCIP library */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExternalCodeInformation(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of external code */
@@ -325,7 +325,7 @@ SCIP_RETCODE SCIPincludeExternalCodeInformation(
    );
 
 /** returns an array of names of currently included external codes */
-EXTERN
+SCIP_EXPORT
 char** SCIPgetExternalCodeNames(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -334,13 +334,13 @@ char** SCIPgetExternalCodeNames(
  *
  *  @note some descriptions may be NULL
  */
-EXTERN
+SCIP_EXPORT
 char** SCIPgetExternalCodeDescriptions(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently included information on external codes */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNExternalCodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -349,7 +349,7 @@ int SCIPgetNExternalCodes(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
-EXTERN
+SCIP_EXPORT
 void SCIPprintExternalCodes(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */

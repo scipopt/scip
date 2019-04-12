@@ -86,7 +86,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPinProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -104,7 +104,7 @@ SCIP_Bool SCIPinProbing(
  *  @note The collection of variable statistics is turned off during probing. If these statistics should be collected
  *        during probing use the method SCIPenableVarHistory() to turn the collection explicitly on.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPstartProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPnewProbingNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPnewProbingNode(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetProbingDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -149,7 +149,7 @@ int SCIPgetProbingDepth(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbacktrackProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPbacktrackProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPendProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -179,7 +179,7 @@ SCIP_RETCODE SCIPendProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPchgVarLbProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPchgVarUbProbing(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarObjProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
@@ -229,7 +229,7 @@ SCIP_Real SCIPgetVarObjProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfixVarProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPfixVarProbing(
  *
  *  @pre The variable needs to be a column variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarObjProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective for */
@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPchgVarObjProbing(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisObjChangedProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -286,7 +286,7 @@ SCIP_Bool SCIPisObjChangedProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpropagateProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -308,7 +308,7 @@ SCIP_RETCODE SCIPpropagateProbing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpropagateProbingImplications(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
@@ -325,7 +325,7 @@ SCIP_RETCODE SCIPpropagateProbingImplications(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
@@ -343,7 +343,7 @@ SCIP_RETCODE SCIPsolveProbingLP(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetProbingLPState(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPISTATE**       lpistate,           /**< pointer to LP state information (like basis information) */
@@ -389,7 +389,7 @@ SCIP_RETCODE SCIPsetProbingLPState(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddRowProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to be added */
@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPaddRowProbing(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPapplyCutsProbing(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveProbingRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether a relaxation was infeasible or the objective
@@ -428,7 +428,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< general diving settings */
@@ -441,15 +441,16 @@ SCIP_RETCODE SCIPgetDivesetScore(
    );
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateDivesetLPStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** update diveset statistics and global diveset statistics */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateDivesetStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
@@ -458,7 +459,8 @@ void SCIPupdateDivesetStats(
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
+   SCIP_Bool             leavewassol,        /**< was a solution found at the leaf? */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
@@ -484,7 +486,7 @@ void SCIPupdateDivesetStats(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
@@ -504,7 +506,7 @@ SCIP_RETCODE SCIPgetDiveBoundChanges(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddDiveBoundChange(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to apply the bound change to */
@@ -520,7 +522,7 @@ SCIP_RETCODE SCIPaddDiveBoundChange(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetDiveBoundChangeData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
@@ -537,7 +539,7 @@ void SCIPgetDiveBoundChangeData(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPclearDiveBoundChanges(
    SCIP*                 scip                /**< SCIP data structure */
    );

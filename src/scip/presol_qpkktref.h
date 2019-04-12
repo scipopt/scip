@@ -92,7 +92,7 @@ extern "C" {
  *
  * @ingroup PresolverIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolQPKKTref(
    SCIP*                 scip                /**< SCIP data structure */
    );

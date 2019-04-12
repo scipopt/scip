@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates event handler for xyz event */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventHdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

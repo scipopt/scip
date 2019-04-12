@@ -28,7 +28,6 @@
  *
  *  Returns 0 if maxsize is not sufficient and 1 otherwise.
  */
-extern
 int getProblemName(
    const char*           filename,           /**< file name */
    char*                 probname,           /**< name of problem (output) */
@@ -36,7 +35,6 @@ int getProblemName(
    );
 
 /** read comand line arguments */
-extern
 SCIP_RETCODE readArguments(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */

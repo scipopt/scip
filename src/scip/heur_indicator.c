@@ -50,7 +50,7 @@
 
 #define HEUR_NAME             "indicator"
 #define HEUR_DESC             "indicator heuristic to create feasible solutions from values for indicator variables"
-#define HEUR_DISPCHAR         'A'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -20200
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

@@ -46,7 +46,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPincludeHeurLocks(
  *
  *  @note probing mode of SCIP needs to be enabled before
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyLockFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */

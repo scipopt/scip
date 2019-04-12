@@ -48,7 +48,7 @@
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
-#define HEUR_DISPCHAR         'M'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          8

@@ -761,7 +761,6 @@ void SCIPstatPrintDebugMessage(
 }
 
 /** prints a debug message without precode */
-EXTERN
 void SCIPstatDebugMessagePrint(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           formatstr,          /**< format string like in printf() function */

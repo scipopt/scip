@@ -59,8 +59,8 @@
 static
 SCIP_RETCODE addVariableToArray(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_VAR*             addvar,             /**< the variable that will be added to the array */
    SCIP_Real             addval,             /**< the value that will be added to the array */
    int*                  nvars,              /**< the number of variables in the variable array */
@@ -69,7 +69,9 @@ SCIP_RETCODE addVariableToArray(
 {
    assert(masterprob != NULL);
    assert(vars != NULL);
+   assert(*vars != NULL);
    assert(vals != NULL);
+   assert(*vals != NULL);
    assert(addvar != NULL);
    assert(nvars != NULL);
    assert(varssize != NULL);
@@ -77,13 +79,13 @@ SCIP_RETCODE addVariableToArray(
    if( *nvars >= *varssize )
    {
       *varssize = SCIPcalcMemGrowSize(masterprob, *varssize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vars, *varssize) );
-      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vals, *varssize) );
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, vars, *varssize) );
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, vals, *varssize) );
    }
    assert(*nvars < *varssize);
 
-   vars[*nvars] = addvar;
-   vals[*nvars] = addval;
+   (*vars)[*nvars] = addvar;
+   (*vals)[*nvars] = addval;
    (*nvars)++;
 
    return SCIP_OKAY;
@@ -95,8 +97,8 @@ SCIP_RETCODE computeStandardLPFeasibilityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize,           /**< the number of variables in the array */
@@ -216,8 +218,8 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize,           /**< the number of variables in the array */
@@ -368,7 +370,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
    {
       /* computing the coefficients of the feasibility cut from the NLP */
-      SCIP_CALL( computeStandardNLPFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+      SCIP_CALL( computeStandardNLPFeasibilityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &nvars, &varssize,
             &success) );
    }
    else
@@ -380,7 +382,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       }
 
       /* computing the coefficients of the feasibility cut from the LP */
-      SCIP_CALL( computeStandardLPFeasibilityCut(masterprob, subproblem, benders, vars, vals, &lhs, &nvars, &varssize,
+      SCIP_CALL( computeStandardLPFeasibilityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &nvars, &varssize,
             &success) );
    }
 

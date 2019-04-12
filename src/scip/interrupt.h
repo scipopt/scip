@@ -34,49 +34,41 @@ extern "C" {
 #endif
 
 /** creates a CTRL-C interrupt data */
-extern
 SCIP_RETCODE SCIPinterruptCreate(
    SCIP_INTERRUPT**      interrupt           /**< pointer to store the CTRL-C interrupt data */
    );
 
 /** frees a CTRL-C interrupt data */
-extern
 void SCIPinterruptFree(
    SCIP_INTERRUPT**      interrupt           /**< pointer to the CTRL-C interrupt data */
    );
 
 /** captures the CTRL-C interrupt to call the SCIP's own interrupt handler */
-extern
 void SCIPinterruptCapture(
    SCIP_INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    );
 
 /** releases the CTRL-C interrupt and restores the old interrupt handler */
-extern
 void SCIPinterruptRelease(
    SCIP_INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    );
 
 /** returns whether the user interrupted by pressing CTRL-C */
-extern
 SCIP_Bool SCIPinterrupted(
    void
    );
 
 /** returns whether the process has received a SIGTERM */
-extern
 SCIP_Bool SCIPterminated(
    void
    );
 
 /** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
-extern
 void SCIPtryTerminate(
    void
    );
 
 /** resets the number of interrupts to 0 */
-extern
 void SCIPresetInterrupted(
    void
    );

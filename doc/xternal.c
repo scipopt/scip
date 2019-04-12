@@ -95,7 +95,7 @@
  * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
- * `msk`    | Mosek
+ * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  *
@@ -225,7 +225,10 @@
  */
 
 /**@page AUTHORS SCIP Authors
- * <a class="el" href="/index.php#developers">Developers</a>
+ *
+ * A list of all current and former developers as well as contributors can
+ * be found on the
+ * <a class="el" href="http://scip.zib.de/#developers">Main Web Page</a>.
  *
  */
 
@@ -1256,16 +1259,16 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="/index.php#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="/index.php#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
- * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
- * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
+ * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
+ * the <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -1308,7 +1311,7 @@
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
  * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
- * <a href="/doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
+ * \ref reader_sol.h "solution reader of SCIP" for further information.
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
@@ -1386,7 +1389,7 @@
  *
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.php#faq_usingscipasastandalonesolver">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section "Using SCIP as a standalone MIP/MINLP-Solver".
  *
  */
 
@@ -1394,25 +1397,44 @@
 
 /**@page DOC How to search the documentation for interface methods
  *
- * If you are looking for a method in order to perform a specific task, there are usually two places to look at:
- * - The file "scip.h" in the file list.
- *   In this main header file, you find all methods that perform "complex" operations that affect or need data from
- *   different components of \SCIP.
- *   For these methods, you always have to provide the \SCIP pointer that is created by SCIPcreate().
- *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
- *   object.
- *   For example, all methods operating on variables are grouped together.
-
- * - The files \ref PUBLICCOREAPI "pub_<...>.h" contain methods that perform "easy" operations that only
- *   affect the corresponding objects.
- *   Usually, with these methods you can access the data of the object.
- *   For example, in "pub_var.h" you find methods to get information about a variable.
+ * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
+ * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
+ * - Plugins are mostly independent from each other, so to use them it is usually enough to browse the \ref PUBLICCOREAPI "Core API".
+ * - If you want to add your own plugins, see the \ref HOWTOADD pages for exhaustive information for each plugin type.
+ * - If you are learning SCIP with a concrete project in mind, looking at the available \ref EXAMPLES page may help you
+ *   getting started.
+ * - See also \ref START "How to start a new project"
  *
- * The file "pub_misc.h" contains methods for data structures like priority queues, hash tables, and hash maps,
- * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
+ * Header file names of SCIP obey a consistent naming scheme: Type definitions and related objects such as enums are found in headers starting with "type_",
+ * such as \ref type_var.h , which contains enums and type definitions related to \ref PublicVariableMethods "SCIP problem variables".
+ * Definitions of the actual structs can be found in separate header files starting with "struct_".
+ * All method definitions of the public SCIP API are split across header files starting with "pub_" such as \ref pub_cons.h
+ * or headers starting with "scip_" such as \ref scip_cons.h .
+ * The latter headers starting with "scip_" contain more complex methods, which always receive a scip pointer as first argument.
+ * Those methods may affect several individual components controlled by SCIP. Such a method is SCIPbranchVar(), which
+ * affects the search tree, which is controlled by SCIP itself and not meant to be accessed by user plugins.
  *
- * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding \ref TYPEDEFINITIONS "type_<...>.h".
+ * It should be sufficient to include scip/scip.h and scip/scipdefplugins.h for having all
+ * needed functionality available in a project.
+ *
+ * If, for example, you are looking for information on how to create a problem instance, here are some steps you can take:
+ *
+ * 1. Browse the SCIP Core API and follow the path \ref PUBLICAPI > \ref PUBLICCOREAPI > \ref PublicProblemMethods > \ref GlobalProblemMethods > SCIPcreateProb()
+ * 2. Here you can find information on the function's return value, preconditions, postconditions, parameters, as well as related functions.
+ * 3. If you are unsure of how to use some of the parameters, it is worth looking for a basic version of the function.
+ *   This and other related functions may be found by either browsing neighboring functions and groups in the navigation tree to the left, or in the
+ *   'References' and 'Referenced by' section of the function documentation. In this case, you can find `SCIPcreateProbBasic()`.
+ *
+ * The opposite case is that you already know the name of a function as, e.g., SCIPbranchVar().
+ *
+ * 1. Type the name of the function into the search bar to find the function documentation.
+ * 2. In addition, you can find related methods by browsing the neighboring functions of the same group.
+ * 3. In this example, you may now learn about SCIPgetNLPBranchCands() to query all integer
+ *    variables with fractional LP solution value, which are good candidates for classical branching on variables.
+ *
+ * Note that the \ref INTERNALAPI "private SCIP API" contains more complex functions and data structures that fill specialized roles and
+ * is only for developers.
+ * Those functions are **not** exported to the library and are therefore **not available in user projects** using the \ref PUBLICAPI "public SCIP API".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3854,9 +3876,11 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral
  * LP-relaxation.
- * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
- * SCIP interactive shell.
+ * It is recommended to select a lower or upper case letter as display character. The default primal heuristics of
+ * SCIP use characters that describe the class to which the heuristic belongs. As an example all LP rounding heuristics
+ * have an 'r' and all Large Neighborhood Search heuristics use the letter 'L'.
+ * Users find commonly used display characters in type_heur.h.
+ *
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are
@@ -4194,7 +4218,7 @@
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
- * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * the user defined problem data, the LP information, or the integrality conditions), or it must be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
@@ -4222,11 +4246,11 @@
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
  *
- * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
- * These are given as compiler defines.
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties,
+ * which are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class scip::ObjRelax from within your constructor.
- * The properties you have to set have the following meaning:
+ * The properties have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
@@ -7460,7 +7484,7 @@
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP
-  * @brief methods and headers of the public C-API of \SCIP
+  * @brief methods and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
   *
   * \PUBLICAPIDESCRIPTION
   *

@@ -24,7 +24,6 @@
 #include "scip/scip.h"
 
 /** includes event handler for best solution found */
-extern
 SCIP_RETCODE SCIPincludeEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
