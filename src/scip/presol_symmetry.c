@@ -1017,10 +1017,29 @@ SCIP_RETCODE computeSymmetryGroup(
       }
    }
    assert( matrixdata.nrhscoef <= 2 * nactiveconss );
-   assert( matrixdata.nrhscoef > 0 ); /* cannot have empty rows! */
+   assert( matrixdata.nrhscoef >= 0 );
 
    SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
+
+   /* if no active constraint contains active variables */
+   if ( matrixdata.nrhscoef == 0 )
+   {
+      *success = TRUE;
+
+      /* free matrix data */
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
+
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+
+      return SCIP_OKAY;
+   }
 
    /* sort matrix coefficients (leave matrix array intact) */
    SCIPsort(matrixdata.matidx, SYMsortMatCoef, (void*) matrixdata.matcoef, matrixdata.nmatcoef);
