@@ -8275,11 +8275,11 @@
  *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
  */
 
-/** @defgroup DEFPLUGINS Default Plugins
+/** @defgroup DEFPLUGINS SCIP Default Plugins
  *  @ingroup CFILES
- *  @brief implementation files (.c files) of the default plugins of SCIP
+ *  @brief implementation files (.c files) of the SCIP default plugins
  *
- *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ *  The SCIP default plugins provide a mix of public API function and private, static function and callback declarations.
  */
 
 /** @defgroup OTHER_CFILES Other implementation files of SCIP
