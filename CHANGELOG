@@ -66,6 +66,7 @@ Fixed bugs
 - fixed quadratic runtime behavior in sepa_aggregation
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
+- fixed bug in propagation of dual proofs
 
 Miscellaneous
 -------------
