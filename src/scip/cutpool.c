@@ -556,10 +556,14 @@ SCIP_RETCODE cutpoolDelCut(
    /* free the cut */
    SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
 
+   --cutpool->ncuts;
+   cutpool->firstunprocessed = MIN(cutpool->firstunprocessed, cutpool->ncuts);
+   cutpool->firstunprocessedsol = MIN(cutpool->firstunprocessedsol, cutpool->ncuts);
+
    /* move the last cut of the pool to the free position */
-   if( pos < cutpool->ncuts-1 )
+   if( pos < cutpool->ncuts )
    {
-      cutpool->cuts[pos] = cutpool->cuts[cutpool->ncuts-1];
+      cutpool->cuts[pos] = cutpool->cuts[cutpool->ncuts];
       cutpool->cuts[pos]->pos = pos;
       assert(cutpool->cuts[pos]->processedlp <= stat->lpcount);
       assert(cutpool->cuts[pos]->processedlpsol <= stat->lpcount);
@@ -568,13 +572,6 @@ SCIP_RETCODE cutpoolDelCut(
       if( cutpool->cuts[pos]->processedlpsol < stat->lpcount )
          cutpool->firstunprocessedsol = MIN(cutpool->firstunprocessedsol, pos);
    }
-   else
-   {
-      cutpool->firstunprocessed = MIN(cutpool->firstunprocessed, cutpool->ncuts-1);
-      cutpool->firstunprocessedsol = MIN(cutpool->firstunprocessedsol, cutpool->ncuts-1);
-   }
-
-   cutpool->ncuts--;
 
    return SCIP_OKAY;
 }

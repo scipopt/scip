@@ -1397,25 +1397,44 @@
 
 /**@page DOC How to search the documentation for interface methods
  *
- * If you are looking for a method in order to perform a specific task, there are usually two places to look at:
- * - The file "scip.h" in the file list.
- *   In this main header file, you find all methods that perform "complex" operations that affect or need data from
- *   different components of \SCIP.
- *   For these methods, you always have to provide the \SCIP pointer that is created by SCIPcreate().
- *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
- *   object.
- *   For example, all methods operating on variables are grouped together.
-
- * - The files \ref PUBLICCOREAPI "pub_<...>.h" contain methods that perform "easy" operations that only
- *   affect the corresponding objects.
- *   Usually, with these methods you can access the data of the object.
- *   For example, in "pub_var.h" you find methods to get information about a variable.
+ * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
+ * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
+ * - Plugins are mostly independent from each other, so to use them it is usually enough to browse the \ref PUBLICCOREAPI "Core API".
+ * - If you want to add your own plugins, see the \ref HOWTOADD pages for exhaustive information for each plugin type.
+ * - If you are learning SCIP with a concrete project in mind, looking at the available \ref EXAMPLES page may help you
+ *   getting started.
+ * - See also \ref START "How to start a new project"
  *
- * The file "pub_misc.h" contains methods for data structures like priority queues, hash tables, and hash maps,
- * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
+ * Header file names of SCIP obey a consistent naming scheme: Type definitions and related objects such as enums are found in headers starting with "type_",
+ * such as \ref type_var.h , which contains enums and type definitions related to \ref PublicVariableMethods "SCIP problem variables".
+ * Definitions of the actual structs can be found in separate header files starting with "struct_".
+ * All method definitions of the public SCIP API are split across header files starting with "pub_" such as \ref pub_cons.h
+ * or headers starting with "scip_" such as \ref scip_cons.h .
+ * The latter headers starting with "scip_" contain more complex methods, which always receive a scip pointer as first argument.
+ * Those methods may affect several individual components controlled by SCIP. Such a method is SCIPbranchVar(), which
+ * affects the search tree, which is controlled by SCIP itself and not meant to be accessed by user plugins.
  *
- * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding \ref TYPEDEFINITIONS "type_<...>.h".
+ * It should be sufficient to include scip/scip.h and scip/scipdefplugins.h for having all
+ * needed functionality available in a project.
+ *
+ * If, for example, you are looking for information on how to create a problem instance, here are some steps you can take:
+ *
+ * 1. Browse the SCIP Core API and follow the path \ref PUBLICAPI > \ref PUBLICCOREAPI > \ref PublicProblemMethods > \ref GlobalProblemMethods > SCIPcreateProb()
+ * 2. Here you can find information on the function's return value, preconditions, postconditions, parameters, as well as related functions.
+ * 3. If you are unsure of how to use some of the parameters, it is worth looking for a basic version of the function.
+ *   This and other related functions may be found by either browsing neighboring functions and groups in the navigation tree to the left, or in the
+ *   'References' and 'Referenced by' section of the function documentation. In this case, you can find `SCIPcreateProbBasic()`.
+ *
+ * The opposite case is that you already know the name of a function as, e.g., SCIPbranchVar().
+ *
+ * 1. Type the name of the function into the search bar to find the function documentation.
+ * 2. In addition, you can find related methods by browsing the neighboring functions of the same group.
+ * 3. In this example, you may now learn about SCIPgetNLPBranchCands() to query all integer
+ *    variables with fractional LP solution value, which are good candidates for classical branching on variables.
+ *
+ * Note that the \ref INTERNALAPI "private SCIP API" contains more complex functions and data structures that fill specialized roles and
+ * is only for developers.
+ * Those functions are **not** exported to the library and are therefore **not available in user projects** using the \ref PUBLICAPI "public SCIP API".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7465,7 +7484,7 @@
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP
-  * @brief methods and headers of the public C-API of \SCIP
+  * @brief methods and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
   *
   * \PUBLICAPIDESCRIPTION
   *

@@ -634,6 +634,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
    /* set the correct objective sense; necessary if we maximize in the original problem */
    SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
 
+   /* set the objective offset */
+   SCIP_CALL( SCIPaddOrigObjoffset(targetscip, SCIPgetOrigObjoffset(sourcescip)) );
+
    return SCIP_OKAY;
 }
 
