@@ -35,14 +35,14 @@ extern "C" {
 #endif
 
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a sin expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    );
 
 /** helper function to compute the new interval for child in reverse propagation */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTERVAL         parentbounds,       /**< bounds for sine expression */
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
  *  of value at the reference point
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -92,7 +92,7 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
  *
  *  If one of the computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    );
 
 /* helper function that computs the curvature of a sine expression for given bounds and curvature of child */
-EXTERN
+SCIP_EXPORT
 SCIP_EXPRCURV SCIPcomputeCurvatureSin(
    SCIP_EXPRCURV         childcurvature,     /**< curvature of child */
    SCIP_Real             lb,                 /**< lower bound of child */

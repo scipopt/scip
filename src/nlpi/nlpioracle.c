@@ -1870,6 +1870,10 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       {
          /* constraint should not be deleted and is kept on position c */
          delstats[c] = c;
+
+         if( c == lastgood )
+            break;
+
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */

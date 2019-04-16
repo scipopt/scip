@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 /** includes perspective nonlinear handler to consexpr */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */

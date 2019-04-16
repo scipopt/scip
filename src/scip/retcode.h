@@ -33,7 +33,6 @@ extern "C" {
 #endif
 
 /** prints error message for return code */
-extern
 void SCIPretcodePrint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< file stream to write error message */
@@ -41,7 +40,6 @@ void SCIPretcodePrint(
    );
 
 /** prints error message for return code via error message */
-extern
 void SCIPretcodePrintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );

@@ -33,14 +33,14 @@ extern "C" {
 #endif
 
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a sum expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -52,26 +52,26 @@ SCIP_RETCODE SCIPcreateConsExprExprSum(
    );
 
 /** gets the coefficients of a summation expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetConsExprExprSumCoefs(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
 /** gets the constant of a summation expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
 /** sets the constant of a summation expression */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_Real             constant            /**< constant */
    );
 
 /** appends an expression to a sum expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPappendConsExprExprSumExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
@@ -86,7 +86,7 @@ void SCIPmultiplyConsExprExprSumByConstant(
    );
 
 /** reverse propagate a weighted sum of expressions in the given interval */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE
 SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP*                 scip,               /**< SCIP data structure */

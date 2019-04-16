@@ -81,6 +81,7 @@
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
+#include "scip/heur_adaptivediving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
@@ -127,6 +128,7 @@
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
 #include "scip/heur_trivialnegation.h"
+#include "scip/heur_trustregion.h"
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
@@ -224,7 +226,7 @@ extern "C" {
 #endif
 
 /** includes default SCIP plugins into SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );

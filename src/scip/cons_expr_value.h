@@ -32,14 +32,14 @@ extern "C" {
 #endif
 
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates constant value expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPcreateConsExprExprValue(
    );
 
 /** gets the value of a constant value expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprValueValue(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );

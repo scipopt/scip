@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** creates a power expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprPow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -42,14 +42,14 @@ SCIP_RETCODE SCIPcreateConsExprExprPow(
    );
 
 /** creates the handler for power expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** gets the exponent of a power expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPowExponent(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );

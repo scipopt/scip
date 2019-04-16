@@ -33,14 +33,14 @@ extern "C" {
 #endif
 
 /** creates the handler for product expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a product expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -51,13 +51,13 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
    );
 
 /** gets the constant coefficient of a product expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprProductCoef(
    SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
 /** appends an expression to a product expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */

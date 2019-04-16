@@ -44,7 +44,7 @@
 
 #define HEUR_NAME             "objpscostdiving"
 #define HEUR_DESC             "LP diving heuristic that changes variable's objective values instead of bounds, using pseudo costs as guide"
-#define HEUR_DISPCHAR         'o'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_OBJDIVING
 #define HEUR_PRIORITY         -1004000
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          4

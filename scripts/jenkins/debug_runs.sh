@@ -108,7 +108,7 @@ JOBS[5,1]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=MINLP TIME=60 SETTINGS=minlp_default"
 
 # jobs running on saturday
-JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev-solvable TIME=7200 SETTINGS=default"
+JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default"
 
 # jobs running on sunday
 JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=minlpdev-solvable TIME=7200 SETTINGS=minlp_default"
@@ -117,7 +117,7 @@ JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 ### process variables ###
 #########################
 
-# To improve accessibility move todays jobs into seperate array
+# To improve accessibility move todays jobs into separate array
 TODAYS_N_JOBS=0
 
 # NOTE: only check up to 10 runs. If there are more there is something wrong...
@@ -211,6 +211,9 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
+
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh
 done

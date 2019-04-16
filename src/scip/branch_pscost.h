@@ -53,7 +53,7 @@ extern "C" {
  *
  *   @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
 
 /** selects a branching variable, due to pseudo cost, from the given candidate array and returns this variable together
  *  with a branching point */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            branchcands,        /**< branching candidates */

@@ -36,7 +36,7 @@ extern "C" {
  *
  * @ingroup PresolverIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolConvertinttobin(
    SCIP*                 scip                /**< SCIP data structure */
    );

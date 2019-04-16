@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates a logarithmic expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPcreateConsExprExprLog(
    );
 
 /** creates the handler for logarithmic expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */

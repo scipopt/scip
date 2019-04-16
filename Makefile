@@ -571,6 +571,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_globalbnd.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_adaptivediving.o \
 			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
@@ -617,6 +618,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_subnlp.o \
 			scip/heur_trivial.o \
 			scip/heur_trivialnegation.o \
+			scip/heur_trustregion.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
 			scip/heur_undercover.o \
