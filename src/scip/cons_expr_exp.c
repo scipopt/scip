@@ -175,7 +175,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    assert(SCIPgetConsExprExprData(expr) == NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
    SCIPintervalExp(SCIP_INTERVAL_INFINITY, interval, childinterval);
@@ -234,18 +234,18 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropExp)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= 0.0);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= 0.0);
 
    *nreductions = 0;
 
-   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 0.0 )
+   if( SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 0.0 )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
 
    /* f = exp(c0) -> c0 = log(f) */
-   SCIPintervalLog(SCIP_INTERVAL_INFINITY, &childbound, SCIPgetConsExprExprInterval(expr));
+   SCIPintervalLog(SCIP_INTERVAL_INFINITY, &childbound, SCIPgetConsExprExprActivity(scip, expr));
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force, reversepropqueue, infeasible,

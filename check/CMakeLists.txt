@@ -130,6 +130,10 @@ set(settings_Symmetry
     "symresacks-timing2"
     )
 
+set(settings_Symmetry_MINLP
+    "checksym"
+    )
+
 set(settings_sparsify
     "sparsifyaggr"
   )
@@ -317,6 +321,15 @@ set(instances_Symmetry
     )
 
 #
+# Symmetry MINLP instances
+#
+set(instances_Symmetry_MINLP
+    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
+    "instances/MINLP/tln2.osil.gz\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
+    )
+
+#
 # Stochastic programming instances
 #
 set(instances_Stochastic
@@ -416,6 +429,7 @@ add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
+add_instancetests(instances_Symmetry_MINLP settings_Symmetry_MINLP "Symmetry_MINLP")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")

@@ -45,6 +45,7 @@ MINLP/instances/minlplib/osil/autocorr_bern35-04.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern35-09.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern35-18.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern35-26.osil.gz
+MINLP/instances/minlplib/osil/autocorr_bern35-35fix.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern35-35.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern40-05.osil.gz
 MINLP/instances/minlplib/osil/autocorr_bern40-10.osil.gz
@@ -593,6 +594,12 @@ MINLP/instances/minlplib/osil/graphpart_clique-60.osil.gz
 MINLP/instances/minlplib/osil/graphpart_clique-70.osil.gz
 MINLP/instances/minlplib/osil/gsg_0001.osil.gz
 MINLP/instances/minlplib/osil/gtm.osil.gz
+MINLP/instances/minlplib/osil/hadamard_4.osil.gz
+MINLP/instances/minlplib/osil/hadamard_5.osil.gz
+MINLP/instances/minlplib/osil/hadamard_6.osil.gz
+MINLP/instances/minlplib/osil/hadamard_7.osil.gz
+MINLP/instances/minlplib/osil/hadamard_8.osil.gz
+MINLP/instances/minlplib/osil/hadamard_9.osil.gz
 MINLP/instances/minlplib/osil/harker.osil.gz
 MINLP/instances/minlplib/osil/haverly.osil.gz
 MINLP/instances/minlplib/osil/hda.osil.gz

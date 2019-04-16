@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2565,6 +2565,16 @@ SCIP_RETCODE applyObbtBilinear(
 
    /* 6. restore old tolerance */
    (void) SCIPchgRelaxfeastol(scip, oldfeastol);
+
+   if( *result == SCIP_REDUCEDDOM )
+   {
+      /* indicate to consexpr hdlr that the current activity values in expressions may not be best possible
+       * that is, trigger a reevaluation of activities to take newly constructed inequalities into account
+       * @todo this method is marked as unittests-only; maybe we should have a different way to tell the conshdlr
+       * that some nlhdlr may provide better activities now?
+       */
+      SCIPincrementConsExprCurBoundsTag(exprconshdlr, FALSE);
+   }
 
    return SCIP_OKAY;
 }

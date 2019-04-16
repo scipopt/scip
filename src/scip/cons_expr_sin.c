@@ -983,7 +983,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, interval, childinterval);
@@ -995,6 +995,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
+   SCIP_VAR* childvar;
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool success;
@@ -1003,8 +1004,12 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    int i;
 
    *infeasible = FALSE;
-   childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
-   childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
+
+   childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
 
    /* no need for cut if child is fixed */
    if( SCIPisRelEQ(scip, childlb, childub) )
@@ -1110,18 +1115,18 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= -1.0);
-   assert(SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 1.0);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= -1.0);
+   assert(SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 1.0);
 
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   newbounds = SCIPgetConsExprExprInterval(child);
+   newbounds = SCIPgetConsExprExprActivity(scip, child);
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprInterval(expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprActivity(scip, expr), newbounds, &newbounds) );
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newbounds, force, reversepropqueue, infeasible, nreductions) );
@@ -1159,7 +1164,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childinterval = SCIPgetConsExprExprInterval(child);
+   childinterval = SCIPgetConsExprExprActivity(scip, child);
 
    *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf, childinterval.sup);
 
@@ -1181,7 +1186,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   interval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);
