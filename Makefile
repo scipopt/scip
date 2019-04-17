@@ -634,6 +634,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_tworowbnd.o \
 			scip/presol_tworowcomb.o \
 			scip/presol_sparsify.o \
+			scip/presol_dualsparsify.o \
 			scip/presol_stuffing.o \
 			scip/presol_symmetry.o \
 			scip/prop_dualfix.o \
