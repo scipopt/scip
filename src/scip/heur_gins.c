@@ -101,6 +101,7 @@
                                              *   horizon approach */
 #define DEFAULT_USEDECOMP    TRUE           /**< should user decompositions be considered, if available? */
 #define DEFAULT_USEDECOMPROLLHORIZON FALSE  /**< should user decompositions be considered for initial selection in rolling horizon, if available? */
+#define DEFAULT_USESELFALLBACK  TRUE        /**< should random initial variable selection be used if decomposition was not successful? */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #endif
@@ -193,6 +194,7 @@ struct SCIP_HeurData
                                               *   selected variable */
    SCIP_Bool             usedecomp;          /**< should user decompositions be considered, if available? */
    SCIP_Bool             usedecomprollhorizon;/**< should user decompositions be considered for initial selection in rolling horizon, if available? */
+   SCIP_Bool             useselfallback;     /**< should random initial variable selection be used if decomposition was not successful? */
    char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or
                                               *   (p)seudo solution */
    int                   maxseendistance;    /**< maximum of all distances between two variables */
@@ -1625,7 +1627,6 @@ SCIP_RETCODE determineVariableFixings(
    int* distances;
    SCIP_VGRAPH* vargraph;
    SCIP_VAR* selvar;
-   SCIP_DECOMPSTORE* decompstore;
    int nvars;
    int nbinvars;
    int nintvars;
@@ -1642,19 +1643,17 @@ SCIP_RETCODE determineVariableFixings(
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
 
-   decompstore = SCIPgetDecompstore(scip);
-   assert(decompstore != NULL);
-
    /* determine the variable fixings based on latest user decomposition */
    if( decomphorizon != NULL )
    {
       SCIP_CALL( determineVariableFixingsDecomp(scip, decomphorizon, fixedvars, fixedvals, nfixings, heurdata, success) );
 
-      if( *success )
+      /* do not use fallback strategy if user parameter does not allow it */
+      if( *success || ! heurdata->useselfallback )
          return SCIP_OKAY;
    }
 
-   /* get required data of the original problem */
+   /* get required data of the source problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    /* get the saved variable graph, or create a new one */
    if( rollinghorizon != NULL )
@@ -1685,6 +1684,8 @@ SCIP_RETCODE determineVariableFixings(
    /* in the first iteration of the rolling horizon approach, we select an initial variable */
    if( rollinghorizon == NULL || rollinghorizon->niterations == 0 )
    {
+      SCIP_Bool userandomselection = TRUE;
+
       /* choose the initial variable based on a user decomposition, if available */
       if( heurdata->usedecomprollhorizon )
       {
@@ -1693,13 +1694,16 @@ SCIP_RETCODE determineVariableFixings(
          {
             SCIP_CALL( selectInitialVariableDecomposition(scip, heurdata, decomp, vargraph,
                   distances, &selvar, &selvarmaxdistance) );
+
+            userandomselection = (selvar == NULL && heurdata->useselfallback);
          }
       }
 
+      assert(selvar == NULL || !userandomselection);
       /* use random variable selection as fallback strategy, if no user decomposition is available, or the
        * heuristic should not use decomposition
        */
-      if( selvar == NULL )
+      if( userandomselection )
       {
          SCIP_CALL( selectInitialVariableRandomly(scip, heurdata, vargraph, distances, &selvar, &selvarmaxdistance) );
       }
@@ -2412,5 +2416,8 @@ SCIP_RETCODE SCIPincludeHeurGins(
          "should user decompositions be considered for initial selection in rolling horizon, if available?",
          &heurdata->usedecomprollhorizon, TRUE, DEFAULT_USEDECOMPROLLHORIZON, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useselfallback",
+         "should random initial variable selection be used if decomposition was not successful?",
+         &heurdata->useselfallback, TRUE, DEFAULT_USESELFALLBACK, NULL, NULL) );
    return SCIP_OKAY;
 }
