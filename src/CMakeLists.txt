@@ -597,6 +597,7 @@ set(scipheaders
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
+    scip/presol_sparsify.h
     scip/presol_dualsparsify.h
     scip/presol_stuffing.h
     scip/presol_symbreak.h
