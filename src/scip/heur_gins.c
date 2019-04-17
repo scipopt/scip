@@ -1064,7 +1064,10 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       else
          nblockstokeep = 0;
 
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &labelstokeep, tabooListGetLastK(heurdata->taboolist, nblockstokeep), nblockstokeep) );
+      if( nblockstokeep > 0 )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &labelstokeep, tabooListGetLastK(heurdata->taboolist, nblockstokeep), nblockstokeep) );
+      }
 
       SCIPdebugMsg(scip, "Resetting taboo list, keeping %d elements\n", nblockstokeep);
       tabooListReset(heurdata->taboolist);
@@ -1074,7 +1077,9 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       {
          SCIP_CALL( tabooListAdd(scip, heurdata->taboolist, labelstokeep[e]) );
       }
-      SCIPfreeBufferArray(scip, &labelstokeep);
+
+      if( nblockstokeep > 0 )
+         SCIPfreeBufferArray(scip, &labelstokeep);
 
       heurdata->allblocksunsuitable = FALSE;
    }
