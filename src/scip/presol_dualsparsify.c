@@ -1589,8 +1589,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          }
 
          /* sort rows according to decreasingly sparsity */
-         SCIP_CALL( SCIPallocBufferArray(scip, &colidxsorted, ncols) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &colsparsity, ncols) );
+         assert(colidxsorted != NULL);
+         assert(colsparsity != NULL);
          for( c = 0; c < ncols; ++c )
             colidxsorted[c] = c;
          for( c = 0; c < ncols; ++c )
