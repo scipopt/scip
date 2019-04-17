@@ -238,18 +238,12 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       assert(!infeasible);
    }
 
-   /* This avoids dual presolving.
-    *
-    * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
-    * but no variables should be missing because we stop earlier anyway if pricers are present).
-    * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+   /* This avoids dual presolving. It might be the case that a plugin adds new variables but to the LP relaxation only.
+    * These variables have no model locks in the sub-SCIP and dual presolving might lead to wrong deductions.
     */
-   if( ! valid )
+   for( i = 0; i < nvars; i++ )
    {
-      for( i = 0; i < nvars; i++ )
-      {
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
-      }
+      SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
    }
 
    SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
@@ -658,13 +652,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
    SCIP_CALL( SCIPfreeTransform(subscip) );
 
-   if( !valid )
+   /* remove all locks that were added to avoid dual presolving */
+   for( i = 0; i < nvars; i++ )
    {
-      /* remove all locks that were added to avoid dual presolving */
-      for( i = 0; i < nvars; i++ )
-      {
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
-      }
+      SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
    }
 
    /* free subproblem */
