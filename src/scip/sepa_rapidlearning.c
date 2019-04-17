@@ -541,13 +541,22 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
          if( global )
          {
+            SCIP_Real oldbound;
 #ifndef NDEBUG
             assert(SCIPgetEffectiveRootDepth(scip) == SCIPgetDepth(scip));
 #else
             if( SCIPgetEffectiveRootDepth(scip) < SCIPgetDepth(scip) )
                return SCIP_INVALIDCALL;
 #endif
+            tightened = FALSE;
+            oldbound = SCIPvarGetUbGlobal(vars[i]);
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "-> tightened global upper bound of <%s>: %g -> %g  [cutoff: %d]\n",
+                  SCIPvarGetName(vars[i]), oldbound, SCIPvarGetUbGlobal(subvars[i]), cutoff);
+            }
 
             if( cutoff )
                break;
@@ -555,7 +564,15 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
             if( tightened )
                nbdchgs++;
 
+            tightened = FALSE;
+            oldbound = SCIPvarGetLbGlobal(vars[i]);
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "-> tightened global lower bound of <%s>: %g -> %g  [cutoff: %d]\n",
+                  SCIPvarGetName(vars[i]), oldbound, SCIPvarGetLbGlobal(subvars[i]), cutoff);
+            }
 
             if( cutoff )
                break;
@@ -565,7 +582,17 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          }
          else
          {
+            SCIP_Real oldbound;
+
+            tightened = FALSE;
+            oldbound = SCIPvarGetUbLocal(vars[i]);
             SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "-> tightened local upper bound of <%s>: %g -> %g  [cutoff: %d]\n",
+                  SCIPvarGetName(vars[i]), oldbound, SCIPvarGetUbLocal(subvars[i]), cutoff);
+            }
 
             if( cutoff )
                break;
@@ -573,7 +600,15 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
             if( tightened )
                nbdchgs++;
 
+            tightened = FALSE;
+            oldbound = SCIPvarGetLbLocal(vars[i]);
             SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
+
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "-> tightened local lower bound of <%s>: %g -> %g  [cutoff: %d]\n",
+                  SCIPvarGetName(vars[i]), oldbound, SCIPvarGetLbLocal(subvars[i]), cutoff);
+            }
 
             if( cutoff )
                break;
