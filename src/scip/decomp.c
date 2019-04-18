@@ -624,13 +624,9 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    int currlabelidx;
    int varidx;
    int considx;
-   SCIP_Bool benderslabels;
 
    assert(scip != NULL);
    assert(decomp != NULL);
-
-   /* getting the parameter to indicate whether the variable labels are based on Benders' decomposition */
-   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
 
    /* store variable and constraint labels in buffer arrays */
    vars = SCIPgetVars(scip);
@@ -658,11 +654,11 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   SCIPsortInt(conslabels, nconss);
 
 
-
-  if( benderslabels )
-     decomp->labels[0] = SCIP_DECOMP_LINKCONS;
-  else
-     decomp->labels[0] = SCIP_DECOMP_LINKVAR;
+  /* the first label is always LINKVAR, even when Benders' variable labels are used. We can ignore the variables
+   * labelled as LINKCONS since this label is only required when computing the variable labels for Benders'
+   * decomposition.
+   */
+  decomp->labels[0] = SCIP_DECOMP_LINKVAR;
 
   /* treating the master only variables first */
   if( varslabels[0] == SCIP_DECOMP_LINKCONS )
@@ -672,7 +668,7 @@ SCIP_RETCODE SCIPcomputeDecompStats(
      tmpsize = countLabelFromPos(varslabels, 0, nvars);
      /* now treating the border (linking variables) */
      if( varslabels[tmpsize] == SCIP_DECOMP_LINKVAR )
-        tmpsize = countLabelFromPos(varslabels, tmpsize, nvars);
+        tmpsize += countLabelFromPos(varslabels, tmpsize, nvars);
 
      decomp->varssize[0] = tmpsize;
   }
