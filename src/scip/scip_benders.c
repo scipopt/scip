@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPapplyBendersDecomposition(
     * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
     */
    SCIP_CALL( SCIPbendersApplyDecomposition(benders, scip->set, scip->stat,
-         SCIPdecompstoreGetOrigDecomp(scip->decompstore, decompindex)) );
+         SCIPdecompstoreGetOrigDecomps(scip->decompstore)[decompindex]) );
 
    return SCIP_OKAY;
 }
