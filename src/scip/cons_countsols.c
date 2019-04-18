@@ -1843,7 +1843,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    int symcomptiming = 2;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 )
+   if ( usesymmetry == 1 || usesymmetry == 3 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
    }
@@ -1960,7 +1960,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    }
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-   if ( usesymmetry == 1 )
+   if ( usesymmetry == 1 || usesymmetry == 3 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
    }

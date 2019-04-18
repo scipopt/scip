@@ -28,6 +28,9 @@ Features
   heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
   applied to Benders' decomposition.
 
+- Modularity of symmetry handling has been increased. It is now possible to use orbitopes (i.e., polyhedral symmetry
+  handling techniques) and orbital fixing on the same instance.
+
 - cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
   method and Kelly's method. The cut strengthening is enabled by setting the paramemter
   "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
@@ -66,6 +69,7 @@ Performance improvements
   use event handler to catch global fixings;
   speed up orbit computations;
   change handling of restarts;
+  use only permutations that can contribute to a variable's orbit;
 
 - allow rapid learning at local nodes
 
@@ -89,6 +93,8 @@ Interface changes
 - Symmetry:
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
+  + extended method SCIP_RETCODE SCIPgetGeneratorsSymmetry(): It is possible to access both the original and
+    transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -147,6 +153,8 @@ Interface changes
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
 - all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
 - deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
+- changed default value of "presolving/symbreak/detectorbitopes" (new value: TRUE, old value: FALSE)
+- extended range of "misc/usesymmetry" (new range: [0,3], old range: [0,2])
 
 ### New parameters
 
