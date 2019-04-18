@@ -59,14 +59,35 @@
 #define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_RANDOM_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_FAST         0.75
+
+#define EXT_ANCESTORS_MAX  16
 #define EXT_STATE_NONE     0
 #define EXT_STATE_EXPANDED 1
 #define EXT_STATE_MARKED   2
+
+#define EXT_REDCOST_NRECOMP 10
 
 
 #define EXEDGE_FREE 0
 #define EXEDGE_FIXED 1
 #define EXEDGE_KILLED 2
+
+typedef struct extension_data
+{
+   int* const extstack_data;
+   int* const extstack_start;
+   int* const extstack_state;
+   int* const tree_edges;
+   int* const nodetreepos;        /**< array of size nnodes */
+   SCIP_Real tree_redcost;
+   int tree_size;
+   int tree_depth;
+   int extstack_size;
+   const int extstack_maxsize;
+   const int tree_maxdepth;
+
+} EXTDATA;
+
 
 /** mark ancestors of given edge */
 static
@@ -79,7 +100,7 @@ SCIP_Bool markAncestorsConflict(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= STP_DAEX_MAXGRAD; curr = curr->parent, count++ )
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       const unsigned idx = ((unsigned) curr->index) / 2;
 
@@ -185,7 +206,7 @@ void markAncestors(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= STP_DAEX_MAXGRAD; curr = curr->parent, count++ )
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       assert((ancestormark[((unsigned) curr->index) / 2]) == 0);
@@ -205,7 +226,7 @@ void unmarkAncestorsConflict(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= STP_DAEX_MAXGRAD; curr = curr->parent, count++ )
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       ancestormark[((unsigned) curr->index) / 2] = 0;
@@ -223,7 +244,7 @@ void unmarkAncestors(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= STP_DAEX_MAXGRAD; curr = curr->parent, count++ )
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       const unsigned idx = ((unsigned) curr->index) / 2;
 
@@ -674,7 +695,7 @@ SCIP_Bool ruleOutSubtree(
       if( ancestormark != NULL )
       {
          int count = 0;
-         for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= STP_DAEX_MAXGRAD; curr = curr->parent, count++ )
+         for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
          {
             assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
             if( ancestormark[((unsigned) curr->index) / 2] )
@@ -2464,53 +2485,220 @@ int reducePcMwTryBest(
    return 0;
 }
 
+
+/** some updates */
+static
+void extUpdate(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   SCIP_Real             treecostoffset,     /**< offset for reduced costs */
+   EXTDATA*              extdata,            /**< extension data */
+   int*                  nupdatestalls       /**< update stalls counter */
+)
+{
+   assert(graph && redcost && extdata && nupdatestalls);
+
+   if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
+   {
+      SCIP_Real treecost = treecostoffset;
+      const int* const tree_edges = extdata->tree_edges;
+      const int tree_size = extdata->tree_size;
+
+      *nupdatestalls = 0;
+
+      for( int i = 0; i < tree_size; i++ )
+      {
+         assert(tree_edges[i] >= 0 && tree_edges[i] < graph->edges);
+
+         treecost += redcost[tree_edges[i]];
+      }
+
+      assert(SCIPisEQ(scip, treecost, extdata->tree_redcost));
+
+      extdata->tree_redcost = treecost;
+   }
+
+}
+
+/** should we truncate from current component? */
+static
+SCIP_Bool extTruncate(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extdata->extstack_size - 1;
+
+   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
+
+   if( extdata->tree_depth >= extdata->tree_maxdepth )
+      return TRUE;
+
+   /* check all leaves of current component */
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int leaf = graph->head[edge];
+
+      assert(edge >= 0 && edge < graph->edges);
+      assert(extdata->nodetreepos[leaf] == 0);
+
+      if( !isterm[leaf] && graph->grad[leaf] <= STP_DAEX_MAXGRAD )
+         return TRUE;
+   }
+
+   return TRUE;
+}
+
+/** can subtree be peripherally ruled out? */
+static
+SCIP_Bool extRuleOutPeriph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   const int*            ancestormark,       /**< ancestor mark array */
+   SCIP_Real             cutoff,             /**< reduced cost cut-off bound */
+   SCIP_Bool             allowequality,      /**< rule out also in case of equality */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Real tree_redcost = extdata->tree_redcost;
+
+   if( allowequality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
+   {
+      return TRUE;
+   }
+   else
+   {
+#if 0
+      if( ancestormark != NULL )
+      {
+         int count = 0;
+         for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+         {
+            assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
+            if( ancestormark[((unsigned) curr->index) / 2] )
+               return TRUE;
+         }
+      }
+#endif
+   }
+
+   return FALSE;
+}
+
+
+/** top component is rebuilt, and
+ *  if success == TRUE: goes back to first marked component
+ *  if success == FALSE: goes back to first marked or non-expanded component
+ *   */
+static
+void extBacktrack(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   SCIP_Bool             success,            /**< success  */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   int* const extstack_data = extdata->extstack_data;
+   int* const extstack_start = extdata->extstack_start;
+   int* const extstack_state = extdata->extstack_state;
+   int* const nodetreepos = extdata->nodetreepos;
+
+   int stackpos = extdata->extstack_size - 1;
+
+   assert(extstack_state[stackpos] == EXT_STATE_MARKED); // not sure
+
+   /* remove top component */
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+      const int head = graph->head[edge];
+
+      assert(edge >= 0 && edge < graph->edges);
+      assert(nodetreepos[head] >= 1);
+
+      (extdata->tree_redcost) += redcost[edge];
+      (extdata->tree_size)--;
+      nodetreepos[head] = 0;
+   }
+
+   stackpos--;
+
+   /* backtrack */
+   if( success )
+   {
+      while( extstack_state[stackpos] != EXT_STATE_MARKED )
+      {
+         stackpos--;
+         assert(stackpos >= 0);
+      }
+   }
+   else
+   {
+      while( extstack_state[stackpos] == EXT_STATE_EXPANDED  )
+      {
+         stackpos--;
+         assert(stackpos >= 0);
+      }
+
+      assert(extstack_state[stackpos] == EXT_STATE_NONE || extstack_state[stackpos] == EXT_STATE_MARKED);
+   }
+
+   extdata->extstack_size = stackpos + 1;
+}
+
 /** expands top component of stack */
 static
 void extStackExpand(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
-   const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
+   const int*            ancestormark,       /**< ancestor mark array */
    const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
-   int                   extstack_maxsize,   /**< maximum size of stack */
-   int*                  extstack_data,      /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_start,     /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_state,     /**< array of size at least extstack_maxsize for internal computations */
-   int*                  tree_edges,         /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_size,      /**< stack size pointer */
-   int*                  tree_size,          /**< size of the tree */
-   SCIP_Real*            tree_redcosts,      /**< array of size at least extstack_maxsize for internal computations */
+   EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            success             /**< success pointer */
 )
 {
-   const int stackpos = *extstack_size - 1;
-   const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
-   int datasize = extstack_start[stackpos + 1];
    int extedges[STP_DAEX_MAXGRAD];
+   int* const extstack_data = extdata->extstack_data;
+   int* const extstack_start = extdata->extstack_start;
+   int* const extstack_state = extdata->extstack_state;
+   int* const tree_edges = extdata->tree_edges;
+   int* const nodetreepos = extdata->nodetreepos;
+   int stackpos = extdata->extstack_size - 1;
+   int datasize = extstack_start[stackpos + 1];
+   const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
+   const uint32_t powsize = pow(2, setsize);
 
+   assert(extdata && scip && graph && redcost && isterm && success);
    assert(setsize <= STP_DAEX_MAXGRAD);
    assert(setsize > 0 && setsize <= 32);
    assert(*success);
 
-   if( datasize + pow(2, setsize) > extstack_maxsize )
+   /* stack too full? */
+   if( datasize + pow(2, setsize) > extdata->extstack_maxsize )
    {
       *success = FALSE;
       return;
    }
 
+   /* collect edges for new component and find conflicts */
    for( int i = extstack_start[stackpos], j = 0; i < extstack_start[stackpos + 1]; i++, j++ )
    {
       assert(!isterm[graph->head[i]]);
       assert(i >= 0 && i < graph->edges);
 
-      // todo find excluding pairs
+      // todo find excluding pairs, use ancestormark and bottleneck
       extedges[j] = i;
-
    }
 
-   const uint32 powsize = pow(2, setsize);
-
-   for( uint32 counter = 1; counter < powsize; counter++ )
+   /* compute and add components */
+   for( uint32_t counter = 1; counter < powsize; counter++ )
    {
       for( int j = 0; j < setsize; j++ )
       {
@@ -2523,20 +2711,28 @@ void extStackExpand(
       extstack_start[++stackpos] = datasize;
    }
 
-   *extstack_size = stackpos;
+   assert(stackpos >= extdata->extstack_size);
 
-   assert(stackpos >= 2);
-   assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
+   extdata->extstack_size = stackpos;
+   stackpos--;
+
+   assert(stackpos >= 1);
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
 
    /* add top expanded component to tree data */
-   for( int i = extstack_start[stackpos - 1]; i < extstack_start[stackpos]; i++ )
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
    {
       const int edge = extstack_data[i];
-      assert(*tree_size < extstack_maxsize);
 
-      tree_edges[(*tree_size)] += redcost[edge];
-      tree_edges[(*tree_size)++] = edge;
+      assert(extdata->tree_size < extdata->extstack_maxsize);
+      assert(nodetreepos[graph->head[edge]] == 0);
+
+      extdata->tree_redcost += redcost[edge];
+      tree_edges[(extdata->tree_size)++] = edge;
+      nodetreepos[graph->head[edge]] = extdata->tree_size;
    }
+
+   extdata->tree_depth++;
 }
 
 /** extend top component of stack */
@@ -2545,30 +2741,25 @@ void extExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
+   const int*            ancestormark,       /**< ancestor mark array */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
    const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
    const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
-   int                   root,               /**< graph root from dual ascent */
-   int                   extstack_maxsize,   /**< maximum size of stack */
-   SCIP_Real             cutoff,             /**< cutoff value */
+   SCIP_Real             redcostcutoff,      /**< cutoff value */
    SCIP_Bool             equality,           /**< allow equality? */
-  // int*                  backtrack_success,   /**< array of size at least extstack_maxsize for internal computations */
- //  int*                  backtrack_failure,  /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_data,      /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_start,     /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_state,     /**< array of size at least extstack_maxsize for internal computations */
-   int*                  treeedges,          /**< array of size at least extstack_maxsize for internal computations */
-   int*                  extstack_size,      /**< stack size pointer */
-   SCIP_Real*            treecosts,          /**< array of size at least extstack_maxsize for internal computations */
+   EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            success             /**< success pointer */
 )
 {
    int extedges[STP_DAEX_MAXGRAD * STP_DAEX_MAXGRAD];
    int extedgesstart[STP_DAEX_MAXGRAD + 1];
-   const int stackpos = extstack_size - 1;
- //  const int backtrack_successLeaf = backtrack_success[stackpos];
- //  const int backtrack_failureLeaf = backtrack_failure[stackpos];
+   int* const extstack_data = extdata->extstack_data;
+   int* const extstack_start = extdata->extstack_start;
+   int* const extstack_state = extdata->extstack_state;
+   int* const nodetreepos = extdata->nodetreepos;
+   int* const extstack_size = &(extdata->extstack_size);
+   int stackpos = extdata->extstack_size - 1;
    int nfullextensions;
    int nsingleextensions;
 
@@ -2596,7 +2787,7 @@ void extExtend(
       const int leaf = graph->head[extstack_data[i]];
 
       assert(extstack_data[i] >= 0 && extstack_data[i] < graph->edges);
-      assert(leaf != root);
+      assert(nodetreepos[leaf] == 0);
 
       /* extensions from leaf possible? */
       if( isterm[leaf] || graph->grad[leaf] > STP_DAEX_MAXGRAD )
@@ -2608,7 +2799,7 @@ void extExtend(
          const int exthead = graph->head[e];
 
          // todo
-         if( graph->mark[exthead] )//&& todo !extRuleOutSimple(e) )
+         if( nodetreepos[exthead] == 0 && !edgedeleted[e] )//&& todo !extRuleOutSimple(e) )
          {
             assert(nsingleextensions < STP_DAEX_MAXGRAD * STP_DAEX_MAXGRAD);
             extedges[nsingleextensions++] = e;
@@ -2638,7 +2829,7 @@ void extExtend(
       int extindex[STP_DAEX_MAXGRAD];
 
       /* stack too small? */
-      if( datasize + (extedgesstart[nfullextensions] - extedgesstart[0]) > extstack_maxsize )
+      if( datasize + (extedgesstart[nfullextensions] - extedgesstart[0]) > extdata->extstack_maxsize )
       {
          *success = FALSE;
          return;
@@ -2663,14 +2854,15 @@ void extExtend(
             extstack_data[datasize++] = extedges[j];
          }
 
+         // todo exclude empty extensions
          extstack_state[(*extstack_size)] = EXT_STATE_NONE;
          extstack_start[(*extstack_size)++] = datasize;
       }
 
       *success = TRUE;
 
-      /* expand last (smallest) component */
-      extStackExpand(extstack_size);
+      /* try to expand last (smallest) component */
+      extStackExpand(scip, graph, redcost, ancestormark, isterm, extdata, success);
    }
 }
 
@@ -2686,7 +2878,7 @@ SCIP_RETCODE reduceExtCheckArc(
    const PATH*           vnoi,               /**< Voronoi paths  */
    const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
    const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
-   SCIP_Real             cutoff,             /**< cutoff value */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value */
    int                   edge,               /**< directed edge to be checked */
    SCIP_Bool             equality,           /**< allow equality? */
  //  int*                  backtrack_success,   /**< array of size at least nnodes for internal computations */
@@ -2694,8 +2886,7 @@ SCIP_RETCODE reduceExtCheckArc(
    int*                  extstack_data,      /**< array of size at least nnodes for internal computations */
    int*                  extstack_start,     /**< array of size at least nnodes for internal computations */
    int*                  extstack_state,     /**< array of size at least nnodes for internal computations */
-   int*                  treeedges,          /**< array of size at least nnodes for internal computations */
-   SCIP_Real*            treecosts,          /**< array of size at least nnodes for internal computations */
+   int*                  tree_edges,         /**< array of size at least nnodes for internal computations */
    SCIP_Bool*            deletable           /**< is edge deletable? */
 )
 {
@@ -2705,7 +2896,7 @@ SCIP_RETCODE reduceExtCheckArc(
    SCIP_Real edgebound = redcost[edge] + pathdist[tail] + vnoi[head].dist;
 
 #ifndef NDEBUG
-   assert(scip && graph && redcost && pathdist && vnoi && extstack_data, extstack_start && extstack_state && deletable);
+   assert(scip && graph && redcost && pathdist && vnoi && extstack_data && extstack_start && extstack_state && deletable);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
@@ -2722,97 +2913,103 @@ SCIP_RETCODE reduceExtCheckArc(
       return SCIP_OKAY;
    }
 
-
    *deletable = FALSE;
 
    /* can we extend from 'edge'? */
    if( (graph->grad[tail] <= maxgrad && !isterm[tail]) || (graph->grad[head] <= maxgrad && !isterm[head]) )
    {
-      int* nodepos;
+      int* nodepos; /* -1 for forbidden nodes, position (> 0) for nodes in tree, 0 otherwise*/
       int* ancestormark;
       const int nnodes = graph->knots;
-      const int extstack_maxsize = nnodes - 1;
       const int maxdfsdepth = (graph->edges > STP_DAEX_EDGELIMIT) ? STP_DAEX_MINDFSDEPTH : STP_DAEX_MAXDFSDEPTH;
+      EXTDATA extdata = {extstack_data, extstack_start, extstack_state, tree_edges,
+            nodepos, 0.0, 0, 0, 0, nnodes - 1, maxdfsdepth};
 
-      /* allocate clean arrays */
+      /* allocate clean arrays todo nodepos as input parameter...mark terminal nodes for PC as -1 */
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodepos, nnodes) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &ancestormark, (MAX(graph->edges, graph->orgedges) / 2)) );
 
       markAncestors(graph, edge, ancestormark);
 
+      nodepos[root] = -1;
+
       /* check whether to extend from head */
       if( !isterm[head] && graph->grad[head] <= maxgrad )
       {
-         const SCIP_Real treecostoffset = redcost[edge] + pathdist[tail];
-         SCIP_Real treecost = treecostoffset;
-         int rounds = 0;
-         int dfsdepth = 0;
-         int nadded_edges = 0;
+         const SCIP_Real treeredcostoffset = redcost[edge] + pathdist[tail];
          int extstack_size;
+         int nupdatestalls = 0;
          SCIP_Bool success = TRUE;
 
-         /* put arc 'edge' on the stack todo leaf first entry empty? */
-         extstack_size = 1;
+         extdata.tree_redcost = treeredcostoffset;
+         extdata.tree_depth = 0;
+         nodepos[head] = nnodes + 1;
+         nodepos[tail] = nnodes + 2;
+
+         /* put arc 'edge' on the stack todo leave first entry empty? */
+         extdata.extstack_size = 1;
          extstack_start[0] = 0;
          extstack_start[1] = 1;
          extstack_data[0] = edge;
          extstack_state[0] = EXT_STATE_MARKED;
 
-         extExtend(graph, isterm, edgedeleted, root, extstack_maxsize,
-               extstack_data, extstack_start, extstack_state, &extstack_size, &success);
+        extExtend(scip, graph, redcost, ancestormark, pathdist, vnoi, edgedeleted, isterm,
+              cutoff, equality, &extdata, &success);
 
-         assert(success || extstack_size = 1);
+         assert(success || 1 == extstack_size);
 
          /* limited DFS backtracing; stops once back at 'edge' */
-         while( extstack_size > 1 )
+         while( extdata.extstack_size > 1 )
          {
-            const int position = extstack_start[extstack_size];
+            const int stackposition = extstack_start[extstack_size];
 
-            /* extension already used? */
-            if( extstack_state[position] == EXT_STATE_MARKED )
+            /* has current component already been extended? */
+            if( extstack_state[stackposition] == EXT_STATE_MARKED )
             {
-               extBacktrace(success, &extstack_size);
-
+               extBacktrack(graph, redcost, success, &extdata);
                continue;
             }
 
-            /* extension not expanded yet? */
-            if( extstack_state[position] != EXT_STATE_EXPANDED )
+            /* component not expanded yet? */
+            if( extstack_state[stackposition] != EXT_STATE_EXPANDED )
             {
-               assert(extstack_state[position] == EXT_STATE_NONE);
+               assert(extstack_state[stackposition] == EXT_STATE_NONE);
 
-               extStackExpand(&extstack_size);
-
+               extStackExpand(scip, graph, redcost, ancestormark, isterm, &extdata, &success);
                continue;
             }
 
-            assert(extstack_state[position] == EXT_STATE_EXPANDED);
+            assert(extstack_state[stackposition] == EXT_STATE_EXPANDED);
 
-            if( extRuleOutPeriph() )
+            if( extRuleOutPeriph(scip, graph, redcost, ancestormark, cutoff, equality, &extdata) )
             {
                success = TRUE;
-               extBacktrace(success, &extstack_size);
-
+               extBacktrack(graph, redcost, success, &extdata);
                continue;
             }
 
-            if( extTruncate() )
+            if( extTruncate(graph, isterm, &extdata) )
             {
                success = FALSE;
-               extBacktrace(success, &extstack_size);
-
+               extBacktrack(graph, redcost, success, &extdata);
                continue;
             }
 
             /* neither ruled out nor truncated, so extend */
-            extExtend(graph, isterm, edgedeleted, root, extstack_maxsize,
-                  extstack_data, extstack_start, extstack_state, &extstack_size, &success);
+            extExtend(scip, graph, redcost, ancestormark, pathdist, vnoi, edgedeleted, isterm,
+                  cutoff, equality, &extdata, &success);
 
+            extUpdate(scip, graph, redcost, treeredcostoffset, &extdata, &nupdatestalls);
          } /* DFS loop */
 
          *deletable = success;
+         nodepos[head] = 0;
+         nodepos[tail] = 0;
 
       } /* extend from head */
+
+
+      nodepos[root] = 0;
 
 
       unmarkAncestors(graph, edge, ancestormark);
