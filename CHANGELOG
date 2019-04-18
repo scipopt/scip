@@ -34,7 +34,11 @@ Features
 - cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
   method and Kelly's method. The cut strengthening is enabled by setting the paramemter
   "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
-  "corepointperturb" control the behavior of the cut strengthening method.
+  "corepointperturb" control the behavior of the cut strengthening method. Additionally, the parameter
+  "cutstrengthenintpoint" allows the user to specify the solution that is used to initialize the core point. The options
+  are the first LP solution, the first integer feasible solution, a relative interior point, a solution vector of all
+  ones and a solution vector of all zeros. Also, the core point can be reinitialized after each update to the incumbent
+  solution.
 
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
@@ -313,6 +317,7 @@ Fixed bugs
 - fixed quadratic runtime behavior in sepa_aggregation
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
+- fixed bug in propagation of dual proofs
 
 Miscellaneous
 -------------

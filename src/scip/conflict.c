@@ -2605,6 +2605,7 @@ SCIP_RETCODE tightenSingleVar(
 /** calculates the minimal activity of a given aggregation row */
 static
 SCIP_Real aggrRowGetMinActivity(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
@@ -2626,17 +2627,32 @@ SCIP_Real aggrRowGetMinActivity(
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
+      SCIP_Real delta;
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       val = SCIPaggrRowGetProbvarValue(aggrrow, v);
 
-      /* calculate the minimal activity */
       if( val > 0.0 )
-         minact += val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+      /* check whether the variable contributes with an infinite value */
+      if( SCIPsetIsInfinity(set, delta) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -delta) )
+         return -SCIPsetInfinity(set);
+
+      /* update minimal activity */
+      minact += delta;
+
+      /* check whether the minmal activity got infinite */
+      if( SCIPsetIsInfinity(set, minact) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -minact) )
+         return -SCIPsetInfinity(set);
    }
 
    return minact;
@@ -2645,6 +2661,7 @@ SCIP_Real aggrRowGetMinActivity(
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMinActivity(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_Real*            coefs,              /**< coefficients in sparse representation */
    int*                  inds,               /**< non-zero indices */
@@ -2666,17 +2683,32 @@ SCIP_Real getMinActivity(
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
+      SCIP_Real delta;
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       val = coefs[i];
 
-      /* calculate the minimal activity */
       if( val > 0.0 )
-         minact += val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+      /* check whether the variable contributes with an infinite value */
+      if( SCIPsetIsInfinity(set, delta) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -delta) )
+         return -SCIPsetInfinity(set);
+
+      /* update minimal activity */
+      minact += delta;
+
+      /* check whether the minmal activity got infinite */
+      if( SCIPsetIsInfinity(set, minact) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -minact) )
+         return -SCIPsetInfinity(set);
    }
 
    return minact;
@@ -2685,6 +2717,7 @@ SCIP_Real getMinActivity(
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMaxActivity(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_Real*            coefs,              /**< coefficients in sparse representation */
    int*                  inds,               /**< non-zero indices */
@@ -2706,17 +2739,32 @@ SCIP_Real getMaxActivity(
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
+      SCIP_Real delta;
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       val = coefs[i];
 
-      /* calculate the minimal activity */
       if( val < 0.0 )
-         maxact += val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         maxact += val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+      /* check whether the variable contributes with an infinite value */
+      if( SCIPsetIsInfinity(set, delta) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -delta) )
+         return -SCIPsetInfinity(set);
+
+      /* update maximal activity */
+      maxact += delta;
+
+      /* check whether the maximal activity got infinite */
+      if( SCIPsetIsInfinity(set, maxact) )
+         return SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -maxact) )
+         return -SCIPsetInfinity(set);
    }
 
    return maxact;
@@ -2752,7 +2800,11 @@ SCIP_RETCODE propagateLongProof(
    assert(nnz >= 0);
 
    vars = SCIPprobGetVars(transprob);
-   minact = getMinActivity(transprob, coefs, inds, nnz, NULL, NULL);
+   minact = getMinActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
+
+   /* we cannot find global tightenings */
+   if( SCIPsetIsInfinity(set, -minact) )
+      return SCIP_OKAY;
 
    for( i = 0; i < nnz; i++ )
    {
@@ -2813,7 +2865,7 @@ SCIP_RETCODE propagateLongProof(
       /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
        * minimal activity
        */
-      assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, coefs, inds, nnz, NULL, NULL)));
+      assert(SCIPsetIsEQ(set, minact, getMinActivity(set, transprob, coefs, inds, nnz, NULL, NULL)));
    }
 
    return SCIP_OKAY;
@@ -2877,7 +2929,7 @@ SCIP_RETCODE createAndAddProofcons(
 
    if( conflicttype == SCIP_CONFTYPE_ALTINFPROOF || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
    {
-      SCIP_Real globalmaxactivity = getMaxActivity(transprob, coefs, inds, nnz, NULL, NULL);
+      SCIP_Real globalmaxactivity = getMaxActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
 
       /* check whether the alternative proof is redundant */
       if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
@@ -2885,7 +2937,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* check whether the constraint proves global infeasibility */
-   globalminactivity = getMinActivity(transprob, coefs, inds, nnz, NULL, NULL);
+   globalminactivity = getMinActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
    if( SCIPsetIsGT(set, globalminactivity, rhs) )
    {
       SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
@@ -6558,7 +6610,7 @@ SCIP_RETCODE getFarkasProof(
       goto TERMINATE;
 
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
-   *farkasact = aggrRowGetMinActivity(prob, farkasrow, curvarlbs, curvarubs);
+   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs);
 
    SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
 
@@ -6749,7 +6801,7 @@ SCIP_RETCODE getDualProof(
       goto TERMINATE;
 
    /* check validity of the proof */
-   *farkasact = aggrRowGetMinActivity(prob, farkasrow, curvarlbs, curvarubs);
+   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs);
 
    if( SCIPsetIsLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
    {
@@ -6860,7 +6912,7 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = aggrRowGetMinActivity(transprob, proofrow, curvarlbs, curvarubs) - SCIPaggrRowGetRhs(proofrow);
+   proofefficiacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs) - SCIPaggrRowGetRhs(proofrow);
 
    efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
    proofefficiacy /= MAX(1e-6, efficiacynorm);
@@ -7001,7 +7053,7 @@ SCIP_RETCODE tightenDualproof(
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, aggrRowGetMinActivity(transprob, proofrow, curvarlbs, curvarubs), SCIPaggrRowGetRhs(proofrow), NULL);
+   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
    if( set->conf_sepaaltproofs )
@@ -7090,7 +7142,7 @@ SCIP_RETCODE tightenDualproof(
    {
 #ifndef NDEBUG
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
-      assert(proofset->rhs - getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
+      assert(proofset->rhs - getMaxActivity(set, transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
 #endif
       if( initialproof )
       {
@@ -7159,7 +7211,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    *success = FALSE;
 
    /* get minimal activity w.r.t. local bounds */
-   minact = aggrRowGetMinActivity(transprob, proofrow, curvarlbs, curvarubs);
+   minact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs);
 
    /* only run is the proof proves local infeasibility */
    if( SCIPsetIsFeasLE(set, minact, rhs) )
