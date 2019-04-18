@@ -59,6 +59,7 @@
 #define SCIP_DEFAULT_NOIMPROVELIMIT           5  /** the maximum number of cut strengthening without improvement */
 #define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
 #define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
+#define SCIP_DEFAULT_STRENGTHENINTPOINT     'l'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1060,6 +1061,11 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should the core point cut strengthening be employed (only applied to fractional solutions or continuous subproblems)?",
          &(*benders)->strengthenenabled, FALSE, SCIP_DEFAULT_STRENGTHENENABLED, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutstrengthenintpoint", name);
+   SCIP_CALL( SCIPsetAddCharParam(set, messagehdlr, blkmem, paramname,
+         "where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)",
+         &(*benders)->strengthenintpoint, FALSE, SCIP_DEFAULT_STRENGTHENINTPOINT, "lfiroz", NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2299,6 +2305,91 @@ SCIP_RETCODE updateAuxiliaryVarLowerbound(
    return SCIP_OKAY;
 }
 
+/** sets the core point used for cut strengthening. If the strenghtenintpoint is set to 'i', then the core point is
+ *  reinitialised each time the incumbent is updated
+ */
+static
+SCIP_RETCODE setAndUpdateCorePoint(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   SCIP_SOL* bestsol;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   /* if the core point is not NULL and the interior point is not reinitialised, then nothing is done  */
+   if( benders->corepoint != NULL && benders->strengthenintpoint != 'i' )
+      return SCIP_OKAY;
+
+   bestsol = SCIPgetBestSol(scip);
+
+   /* if the core point should be updated, then this only happens if the incumbent solution has been updated */
+   if( benders->strengthenintpoint == 'i' && benders->initcorepoint == bestsol )
+      return SCIP_OKAY;
+
+   /* if a corepoint has been used for cut strengthening, then this needs to be freed */
+   if( benders->corepoint != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &benders->corepoint) );
+   }
+
+   switch( benders->strengthenintpoint )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real timelimit;
+      int nvars;
+      int i;
+
+      case 'l':
+         SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+         break;
+      case 'f':
+      case 'i':
+         SCIP_CALL( SCIPcreateSolCopy(scip, &benders->corepoint, bestsol) );
+         SCIP_CALL( SCIPunlinkSol(scip, benders->corepoint) );
+         benders->initcorepoint = bestsol;
+         break;
+      case 'r':
+         /* prepare time limit */
+         SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+         if ( ! SCIPisInfinity(scip, timelimit) )
+            timelimit -= SCIPgetSolvingTime(scip);
+
+         /* if there is time remaining, then compute the relative interior point. Otherwise, return the LP solution */
+         if ( timelimit > 0.0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (time limit: %g, iter limit: %d) ...\n", timelimit, INT_MAX);
+            SCIP_CALL( SCIPcomputeLPRelIntPoint(scip, TRUE, FALSE, timelimit, INT_MAX, &benders->corepoint) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+         }
+         break;
+      case 'z':
+         SCIP_CALL( SCIPcreateSol(scip, &benders->corepoint, NULL) );
+         break;
+      case 'o':
+         SCIP_CALL( SCIPcreateSol(scip, &benders->corepoint, NULL) );
+
+         /* getting the variable data so that the  */
+         SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+         /* setting all variable values to 1.0 */
+         for( i = 0; i < nvars; i++ )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, benders->corepoint, vars[i], 1.0) );
+         }
+         break;
+      default:
+         SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** performs cut strengthening by using an interior solution to generate cuts */
 static
 SCIP_RETCODE performInteriorSolCutStrengthening(
@@ -2333,8 +2424,10 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
       return SCIP_OKAY;
 
    /* checking if a change to the lower bound has occurred */
-   if( SCIPsetIsGT(set, SCIPgetLowerbound(set->scip), benders->prevlowerbound) )
+   if( SCIPsetIsGT(set, SCIPgetLowerbound(set->scip), benders->prevlowerbound)
+      || SCIPgetCurrentNode(set->scip) != benders->prevnode )
    {
+      benders->prevnode = SCIPgetCurrentNode(set->scip);
       benders->prevlowerbound = SCIPgetLowerbound(set->scip);
       benders->noimprovecount = 0;
    }
@@ -2346,6 +2439,12 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
    if( benders->noimprovecount > 3*benders->noimprovelimit )
       return SCIP_OKAY;
 
+   /* if there is no incumbent solution, then it is not possible to create the core point and hence the strengthening
+    * can not be performed
+    */
+   if( SCIPgetBestSol(set->scip) == NULL )
+      return SCIP_OKAY;
+
    /* if no LP iterations have been performed since the last call of the cut strenghtening, then the strengthening is
     * aborted
     */
@@ -2355,11 +2454,7 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
    benders->prevnlpiter = SCIPgetNLPIterations(set->scip);
 
    /* if the separation point solution is NULL, then we create the solution using the current LP relaxation. */
-   if( benders->corepoint == NULL )
-   {
-      SCIP_CALL( SCIPcreateLPSol(set->scip, &benders->corepoint, NULL) );
-      SCIP_CALL( SCIPunlinkSol(set->scip, benders->corepoint) );
-   }
+   SCIP_CALL( setAndUpdateCorePoint(set->scip, benders) );
 
    /* creating the separation point
     * TODO: This could be a little to memory heavy, it may be better just to create the separation point once and then
