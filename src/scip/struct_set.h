@@ -442,8 +442,9 @@ struct SCIP_Set
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
 
-   /* Decomposition store settings */
-   SCIP_Bool             decomp_applybenders;/**< if a decomposition exists, should Benders' decomposition be applied? */
+   /* Decomposition settings */
+   SCIP_Bool             decomp_benderslabels; /**< should the variables be labelled for the application of Benders'
+                                                *   decomposition */
 
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
