@@ -2411,8 +2411,15 @@ SCIP_RETCODE computeCut(
    assert( cutcoefs != NULL );
    assert( cutrhs != NULL );
    assert( localrowsused != NULL );
+   assert( localboundsused != NULL )
    assert( cutrank != NULL );
    assert( success != NULL );
+
+   /* initialize */
+   *localrowsused = FALSE;
+   *localboundsused = FALSE;
+   *cutrank = 0;
+   *success = TRUE;
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
@@ -2424,11 +2431,6 @@ SCIP_RETCODE computeCut(
    assert( nrows == (int) mipdata->nrows );
    assert( ncols == (int) mipdata->ncols );
 
-   /* initialize */
-   *success = TRUE;
-   *localrowsused = FALSE;
-   *cutrank = 0;
-   *localboundsused = FALSE;
    BMSclearMemoryArray(cutcoefs, nvars);
    *cutrhs = 0.0;
 
@@ -2455,7 +2457,7 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          if ( SCIPisFeasPositive(scip, val) )
             absweight = val;
@@ -2467,7 +2469,7 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, absweight) )
@@ -2491,7 +2493,7 @@ SCIP_RETCODE computeCut(
       if ( mipdata->ylhs[mipdata->nrows] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          if ( SCIPisFeasPositive(scip, val) )
             absweight = val;
@@ -2499,7 +2501,7 @@ SCIP_RETCODE computeCut(
       if ( mipdata->yrhs[mipdata->nrows] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, absweight) )
@@ -2522,7 +2524,7 @@ SCIP_RETCODE computeCut(
       assert( row != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && ! sepadata->allowlocal) )
       {
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
          continue;
@@ -2537,7 +2539,7 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          if ( SCIPisFeasPositive(scip, val) )
          {
@@ -2551,7 +2553,7 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
@@ -2571,8 +2573,8 @@ SCIP_RETCODE computeCut(
          /* add the row coefficients to the sum */
          for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
          {
-            int idx;
             SCIP_VAR* var;
+            int idx;
 
             assert( rowcols[j] != NULL );
             var = SCIPcolGetVar(rowcols[j]);
@@ -2602,7 +2604,7 @@ SCIP_RETCODE computeCut(
             if ( SCIProwIsIntegral(row) )
                val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
          }
-         (*cutrhs) += weight * val;
+         *cutrhs += weight * val;
 
          *localrowsused = *localrowsused || SCIProwIsLocal(row);
 
@@ -2627,7 +2629,7 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
          assert( ! SCIPisFeasNegative(subscip, val) );
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          if ( SCIPisFeasPositive(scip, val) )
          {
@@ -2640,7 +2642,7 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
          assert( ! SCIPisFeasNegative(subscip, val) );
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
@@ -2676,7 +2678,7 @@ SCIP_RETCODE computeCut(
             if ( SCIPisObjIntegral(scip) )
                val = SCIPfeasFloor(scip, val); /* objective is integral: round right hand side down */
          }
-         (*cutrhs) += weight * val;
+         *cutrhs += weight * val;
       }
    }
 
@@ -2692,7 +2694,7 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         val = SCIPfrac(scip, val);  /* take fractional value (relevant if upper bounds are skipped) */
 
          /* if a bound has been used */
          if ( SCIPisSumPositive(subscip, val) )
