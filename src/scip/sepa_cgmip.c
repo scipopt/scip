@@ -2860,7 +2860,7 @@ SCIP_RETCODE computeCut(
          /* check whether all coefficients for continuous or converted variables are nonnegative */
          if ( pos >= 0 )
          {
-            if ( SCIPisNegative(scip, cutcoefs[j]) )
+            if ( SCIPisFeasNegative(scip, cutcoefs[j]) )
             {
                *success = FALSE;
                break;
