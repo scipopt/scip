@@ -2654,13 +2654,19 @@ SCIP_RETCODE computeCut(
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
          SCIP_Real obj = 0.0;
+         int idx;
 
          /* add the objective row coefficients to the sum */
          for (j = 0; j < ncols; ++j)
          {
+            assert( cols[j] != NULL );
+
             obj = SCIPcolGetObj(cols[j]);
             if ( ! SCIPisZero(scip, obj) )
-               cutcoefs[j] += weight * obj;
+            {
+               idx = SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) );
+               cutcoefs[idx] += weight * obj;
+            }
          }
 
          /* compute rhs */
