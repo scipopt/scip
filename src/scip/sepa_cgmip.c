@@ -2351,7 +2351,12 @@ SCIP_RETCODE solveSubscip(
 
 /** Computes cut from the given multipliers
  *
- *  Note that the cut computed here in general will not be the same as the one computed with the
+ *  When computing the cut, we take the fractional part of the multipliers. This is known to produce stronger cuts in
+ *  the pure integer case, since the cut is the sum of the one using fractional parts and integer multiples of the
+ *  original constraints. However, if there are continuous variables, the resulting cut might not be valid. This is
+ *  checked and returned.
+ *
+ *  Moreover, the cut computed here in general will not be the same as the one computed with the
  *  sub-MIP, because of numerical differences. Here, we only combine rows whose corresponding
  *  multiplier is positive w.r.t. the feasibility tolerance. In the sub-MIP, however, the rows are
  *  combined in any case. This makes a difference, if the coefficients in the matrix are large and
@@ -2935,7 +2940,7 @@ SCIP_RETCODE createCGCutDirect(
    SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
    cutislocal = localrowsused || localboundsused;
 
-   /* take next solution if cut was not valid */
+   /* Take next solution if cut was not valid - this can easily happen for mixed-integer problems, see function computeCut(). */
    if ( ! success )
    {
       SCIPdebugMsg(scip, "cut not valid - skipping ...\n");
