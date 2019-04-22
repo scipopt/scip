@@ -277,6 +277,7 @@ SCIP_RETCODE computeCut(
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< current solution for sub-MIP */
+   SCIP_Bool             usefrac,            /**< use fractional value of multipliers */
    SCIP_Real*            cutcoefs,           /**< coefficients of the cut */
    SCIP_Real*            cutrhs,             /**< rhs of the cut */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
@@ -334,7 +335,17 @@ SCIP_RETCODE solCutIsViolated(
          SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
          /* compute coefficients */
-         SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
+         SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, TRUE, cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
+
+         /* try again if cut was not valid */
+         if ( ! success )
+         {
+            SCIP_CALL( computeCut(mipdata->scip, mipdata->sepa, mipdata, mipdata->sepadata, sol, FALSE,
+                  cutcoefs, &rhs, &localrowsused, &localboundsused, &cutrank, &success) );
+
+            if ( ! success )
+               return SCIP_OKAY;
+         }
 
 #ifdef SCIP_MORE_DEBUG
          for (j = 0; j < (unsigned int) nvars; ++j)
@@ -344,10 +355,6 @@ SCIP_RETCODE solCutIsViolated(
          }
          SCIPinfoMessage(scip, NULL, "\n");
 #endif
-
-         /* ignore solution if cut was not valid */
-         if ( ! success )
-            return SCIP_OKAY;
 
          /* compute activity and Euclidean norm (todo: use arbitrary norm) */
          cutsqrnorm = 0.0;
@@ -2389,6 +2396,7 @@ SCIP_RETCODE computeCut(
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< current solution for sub-MIP */
+   SCIP_Bool             usefrac,            /**< use fractional value of multipliers */
    SCIP_Real*            cutcoefs,           /**< coefficients of the cut */
    SCIP_Real*            cutrhs,             /**< rhs of the cut */
    SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
@@ -2459,7 +2467,8 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[i]);
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
             absweight = val;
@@ -2471,7 +2480,8 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[i]);
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, absweight) )
@@ -2495,7 +2505,8 @@ SCIP_RETCODE computeCut(
       if ( mipdata->ylhs[mipdata->nrows] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
             absweight = val;
@@ -2503,7 +2514,8 @@ SCIP_RETCODE computeCut(
       if ( mipdata->yrhs[mipdata->nrows] != NULL )
       {
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, absweight) )
@@ -2541,7 +2553,8 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
          {
@@ -2555,7 +2568,8 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
@@ -2631,7 +2645,8 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->ylhs[mipdata->nrows]);
          assert( ! SCIPisFeasNegative(subscip, val) );
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          if ( SCIPisFeasPositive(scip, val) )
          {
@@ -2644,7 +2659,8 @@ SCIP_RETCODE computeCut(
          val = SCIPgetSolVal(subscip, sol, mipdata->yrhs[mipdata->nrows]);
          assert( ! SCIPisFeasNegative(subscip, val) );
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
@@ -2696,7 +2712,8 @@ SCIP_RETCODE computeCut(
          assert( ! SCIPisFeasNegative(subscip, val) );
 
          assert( sepadata->skipmultbounds || SCIPisFeasLT(subscip, val, 1.0) );
-         val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
+         if ( usefrac )
+            val = SCIPfrac(scip, val);  /* take fractional value if variable has no upper bounds */
 
          /* if a bound has been used */
          if ( SCIPisSumPositive(subscip, val) )
@@ -2928,14 +2945,21 @@ SCIP_RETCODE createCGCutDirect(
    success = TRUE;
 
    /* compute coefficients */
-   SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
+   SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, TRUE, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
    cutislocal = localrowsused || localboundsused;
 
    /* take next solution if cut was not valid */
    if ( ! success )
    {
-      SCIPdebugMsg(scip, "cut not valid - skipping ...\n");
-      return SCIP_OKAY;
+      /* try again without using fractional value */
+      SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, FALSE, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
+      cutislocal = localrowsused || localboundsused;
+
+      if ( ! success )
+      {
+         SCIPdebugMsg(scip, "cut not valid - skipping ...\n");
+         return SCIP_OKAY;
+      }
    }
 
    /* compute activity */

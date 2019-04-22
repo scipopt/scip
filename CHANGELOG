@@ -73,6 +73,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- allow to recompute cut without using fractional values for sepa_cgmip
+
 Examples and applications
 -------------------------
 
