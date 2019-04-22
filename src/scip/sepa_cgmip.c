@@ -2670,6 +2670,7 @@ SCIP_RETCODE computeCut(
             if ( ! SCIPisZero(scip, obj) )
             {
                idx = SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) );
+               assert( 0 <= idx && idx < nvars );
                cutcoefs[idx] += weight * obj;
             }
          }
