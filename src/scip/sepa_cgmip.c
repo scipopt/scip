@@ -2416,7 +2416,7 @@ SCIP_RETCODE computeCut(
    assert( cutcoefs != NULL );
    assert( cutrhs != NULL );
    assert( localrowsused != NULL );
-   assert( localboundsused != NULL )
+   assert( localboundsused != NULL );
    assert( cutrank != NULL );
    assert( success != NULL );
 
