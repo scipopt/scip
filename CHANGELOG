@@ -7,6 +7,9 @@
 Features
 --------
 
+- The abspower constraint handler now passes more accurate convexity
+  information to the NLP relaxation.
+
 Performance improvements
 ------------------------
 
