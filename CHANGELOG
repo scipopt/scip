@@ -7,6 +7,9 @@
 Features
 --------
 
+- The abspower constraint handler now passes more accurate convexity
+  information to the NLP relaxation.
+
 Performance improvements
 ------------------------
 
@@ -66,6 +69,7 @@ Fixed bugs
 - fixed quadratic runtime behavior in sepa_aggregation
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
+- fixed bug in propagation of dual proofs
 
 Miscellaneous
 -------------
