@@ -40,7 +40,6 @@
 #include <string.h>
 #include "probdata_stp.h"
 #include <stdio.h>
-#include "scip/scip.h"
 #include "cons_stp.h"
 #include "grph.h"
 #include "scip/cons_linear.h"

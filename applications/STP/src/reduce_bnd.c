@@ -30,7 +30,6 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "scip/scip.h"
 #include "grph.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
@@ -40,7 +39,6 @@
 #include "prop_stp.h"
 #include "probdata_stp.h"
 #include "heur_rec.h"
-#include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                  /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
@@ -2899,7 +2897,6 @@ void extExtend(
 
 
 /** check (directed) arc */
-static
 SCIP_RETCODE reduceExtCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */

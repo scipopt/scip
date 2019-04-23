@@ -1015,7 +1015,7 @@ void graph_pc_termMarkProper(
    }
 }
 
-/** check whether terminal is not a leaf in at least one optimal tree */
+/** check whether terminal is not a leaf (or not contained) in at least one optimal tree */
 SCIP_Bool graph_pc_termIsNonLeaf(
    const GRAPH*          g,                  /**< the graph */
    int                   term                /**< terminal to be checked */
@@ -4149,6 +4149,33 @@ void graph_get_csr(
 
    *nnewedges = i;
    start[nnodes] = i;
+}
+
+
+/* modifies 'isterm' to mark whether node is a terminal (or proper terminal for PC) */
+void graph_get_isTerm(
+   const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool*            isterm              /**< marks whether node is a terminal (or proper terminal for PC) */
+)
+{
+   const int nnodes = g->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+
+   assert(g && isterm);
+   assert(!pcmw || !g->extended);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      isterm[i] = FALSE;
+
+      if( Is_term(g->term[i]) )
+      {
+         if( pcmw && graph_pc_termIsNonLeaf(g, i) )
+           continue;
+
+         isterm[i] = TRUE;
+      }
+   }
 }
 
 /* gets edge conflicts */

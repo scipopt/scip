@@ -225,6 +225,7 @@ extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern void   graph_pc_deleteTermExtension(SCIP*, GRAPH*, int);
 extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Bool, SCIP_Real*, SCIP_Real*);
 extern void   graph_pc_termMarkProper(const GRAPH*, int*);
+extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
@@ -394,6 +395,14 @@ extern SCIP_RETCODE    reduce_boundHop(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Re
 extern SCIP_RETCODE    reduce_boundHopR(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
 extern int reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, int*, STP_Bool*, SCIP_Bool);
+extern SCIP_RETCODE    reduceExtCheckArc(SCIP*, const GRAPH*, int, const SCIP_Real*,
+    const SCIP_Real*, const PATH*, const STP_Bool*, const SCIP_Bool*,
+      SCIP_Real, int, SCIP_Bool, int*, int*, int*, int*, SCIP_Bool*);
+
+
+/* reduce_ext.c
+ */
+extern SCIP_RETCODE    reduce_extTest1(SCIP*);
 
 /* reduce_simple.c
  */
