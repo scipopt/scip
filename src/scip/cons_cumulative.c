@@ -8951,12 +8951,12 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished,          /**< number of jobs that finished before curtime or at curtime */
-   SCIP_Bool             lower               /**< shall cuts be created due to lower or upper bounds? */
+   SCIP_Bool             lower,              /**< shall cuts be created due to lower or upper bounds? */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was detected */
    )
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
-   SCIP_Bool infeasible;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -8998,8 +8998,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-   assert( ! infeasible );
+   SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -9016,7 +9015,8 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    SCIP_CONS*            cons,               /**< cumulative constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             lower,              /**< shall cuts be created according to lower bounds? */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -9068,7 +9068,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    hmax = consdata->hmax;
 
    /* check each startpoint of a job whether the capacity is kept or not */
-   for( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars && !(*cutoff); ++j )
    {
       curtime = starttimes[j];
 
@@ -9091,7 +9091,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
       if( freecapacity < 0 && curtime >= hmin)
       {
          /* create capacity restriction row for current event point */
-         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower) );
+         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower, cutoff) );
          *separated = TRUE;
       }
    } /*lint --e{850}*/
@@ -12888,8 +12888,8 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
       /* separate cuts containing only integer variables */
       for( c = 0; c < nusefulconss; ++c )
       {
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated) );
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated, &cutoff) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated, &cutoff) );
       }
    }
 
@@ -12948,8 +12948,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
       /* separate cuts containing only integer variables */
       for( c = 0; c < nusefulconss; ++c )
       {
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated) );
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated, &cutoff) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated, &cutoff) );
       }
    }
 

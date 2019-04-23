@@ -1489,7 +1489,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasbile\n");
+         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasible\n");
 
          /* print the infeasibilities to stdout */
          SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
