@@ -164,7 +164,6 @@ SCIP_Real evalSingleTerm(
 
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(sol != NULL);
    assert(k >= 0);
    assert(k < nlhdlrexprdata->nterms);
 
@@ -331,7 +330,7 @@ SCIP_RETCODE generateCutSol(
    if( k < nterms )
    {
       lhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, k);
-      value = SQR(lhsval);
+      value = nlhdlrexprdata->coefs[k] * SQR(lhsval);
    }
    else
    {
@@ -350,14 +349,15 @@ SCIP_RETCODE generateCutSol(
 
       /* create cut */
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, k < nterms? nterms+1 : 2) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, k < nterms ? nterms+1 : 2) );
 
       sideval = 0;
-      termstartidx = nlhdlrexprdata->termbegins[k];
 
       /* add terms for lhs */
       if( k < nterms )
       {
+         termstartidx = nlhdlrexprdata->termbegins[k];
+
          for( i = 0; i < nlhdlrexprdata->nnonzeroes[k]; ++i )
          {
             cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
@@ -369,11 +369,11 @@ SCIP_RETCODE generateCutSol(
          }
       }
 
-      termstartidx = nlhdlrexprdata->termbegins[nterms-1];
-
       /* add terms for rhs */
       if( !SCIPisZero(scip, disvarval) )
       {
+         termstartidx = nlhdlrexprdata->termbegins[nterms-1];
+
          for( i = 0; i < nlhdlrexprdata->nnonzeroes[nterms-1]; ++i )
          {
             cutvar = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[termstartidx + i]];
@@ -733,40 +733,37 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 { /*lint --e{715}*/
-   /*int i;
+   int i;
 
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->exprs != NULL);
+   assert(nlhdlrexprdata->vars != NULL);
    assert(nlhdlrexprdata->coefs != NULL);
-   assert(nlhdlrexprdata->nexprs > 1);
+   assert(nlhdlrexprdata->transcoefs != NULL);
+   assert(nlhdlrexprdata->transcoefsidx != NULL);
+   assert(nlhdlrexprdata->nnonzeroes != NULL);
+   assert(nlhdlrexprdata->nterms > 1);
 
-   *//*
+   /*
     * TODO the following code is valid if the detected expression is of the form || * || <= auxvar; however, it is not
     *      clear to me what needs to be evaluated if the original expression was quadratic
-    *//*
+    */
 
-   *//* compute sum_i coef_i expr_i^2 + constant *//*
-   *auxvalue = nlhdlrexprdata->constant;*/
+   /* compute sum_i coef_i expr_i^2 + constant */
+   *auxvalue = nlhdlrexprdata->constant;
 
-   /*for( i = 0; i < nlhdlrexprdata->nexprs; ++i )
+   for( i = 0; i < nlhdlrexprdata->nterms-1; ++i )
    {
-      SCIP_CONSEXPR_EXPR* child;
-      SCIP_VAR* var;
+      SCIP_Real termval;
 
-      child = nlhdlrexprdata->exprs[i];
-      assert(child != NULL);
-
-      var = SCIPgetConsExprExprAuxVar(child);
-      assert(var != NULL);
-
-      *auxvalue += nlhdlrexprdata->coefs[i] * SQR(SCIPgetSolVal(scip, sol, var));
+      termval = evalSingleTerm(scip, nlhdlrexprdata, sol, i);
+      *auxvalue += nlhdlrexprdata->coefs[i] * SQR(termval);
    }
    assert(*auxvalue >= 0.0);
 
-   *//* compute SQRT(sum_i coef_i expr_i^2 + constant) *//*
+   /* compute SQRT(sum_i coef_i expr_i^2 + constant) */
    *auxvalue = SQRT(*auxvalue);
 
-   return SCIP_OKAY;*/
+   return SCIP_OKAY;
 }
 
 
@@ -808,10 +805,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
 
    *result = SCIP_DIDNOTRUN;
 
-   /*naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nexprs : nlhdlrexprdata->nexprs + 1;
+   naggrs = SCIPisZero(scip, nlhdlrexprdata->constant) ? nlhdlrexprdata->nterms-1 : nlhdlrexprdata->nterms;
 
-   *//* check whether aggregation row is in the LP *//*
-   if( SCIProwIsInLP(nlhdlrexprdata->row) )
+   /* check whether aggregation row is in the LP */
+   if( !SCIProwIsInLP(nlhdlrexprdata->row) )
    {
       SCIP_Bool infeasible;
 
@@ -831,12 +828,12 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
       SCIP_ROW* row;
       SCIP_Bool cutoff;
 
-      *//* compute gradient cut *//*
+      /* compute gradient cut */
       SCIP_CALL( generateCutSol(scip, expr, conshdlr, sol, nlhdlrexprdata, k, mincutviolation, &row) );
 
       if( row != NULL )
       {
-         *//* check whether cut is applicable *//*
+         /* check whether cut is applicable */
          if( SCIPisCutApplicable(scip, row) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &cutoff) );
@@ -850,10 +847,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaSoc)
                *result = SCIP_SUCCESS;
          }
 
-         *//* release row *//*
+         /* release row */
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
-   }*/
+   }
 
    return SCIP_OKAY;
 }
