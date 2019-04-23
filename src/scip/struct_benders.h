@@ -105,6 +105,7 @@ struct SCIP_Benders
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
    SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
+   SCIP_Bool*            subprobisnonlinear; /**< does the subproblem contain non-linear constraints */
    int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/

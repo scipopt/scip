@@ -37,6 +37,8 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_linear.h"
+#include "scip/pub_misc_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -70,6 +72,8 @@
 #define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
+#define SLACKVAR_NAME         "##bendersslackvar"     /** the name for the Benders' slack variables added to each
+                                                          constraints in the subproblems */
 
 /* event handler properties */
 #define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
@@ -1209,6 +1213,164 @@ SCIP_RETCODE SCIPbendersFree(
    return SCIP_OKAY;
 }
 
+/* adds a slack variable to the given constraint */
+static
+SCIP_RETCODE addSlackVars(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to which the slack variable(s) is added to */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* var;
+   SCIP_Real rhs;
+   SCIP_Real lhs;
+   int i;
+   SCIP_Bool linearcons;
+   SCIP_Bool success;
+   char name[SCIP_MAXSTRLEN];
+#define NLINEARCONSHDLRS 5
+   SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
+   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
+   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
+   SCIP_CONSHDLR* conshdlr_abspower = NULL;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   /* get pointers to linear constraints handlers, so can avoid string comparisons */
+   linearconshdlrs[0] = SCIPfindConshdlr(scip, "knapsack");
+   linearconshdlrs[1] = SCIPfindConshdlr(scip, "linear");
+   linearconshdlrs[2] = SCIPfindConshdlr(scip, "logicor");
+   linearconshdlrs[3] = SCIPfindConshdlr(scip, "setppc");
+   linearconshdlrs[4] = SCIPfindConshdlr(scip, "varbound");
+
+   conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
+   conshdlr_quadratic = SCIPfindConshdlr(scip, "quadratic");
+   conshdlr_abspower = SCIPfindConshdlr(scip, "abspower");
+
+   conshdlr = SCIPconsGetHdlr(cons);
+
+   /* assume that the constraint is not linear, then we check whether it is linear */
+   linearcons = FALSE;
+
+   /* checking whether the constraint is a linear constraint. If so, we add a coefficient to the constraint */
+   for( i = 0; i < NLINEARCONSHDLRS; ++i )
+   {
+      if( conshdlr == linearconshdlrs[i] )
+      {
+         linearcons = TRUE;
+         break;
+      }
+   }
+
+   if( !linearcons
+      && (conshdlr != conshdlr_nonlinear && conshdlr != conshdlr_quadratic && conshdlr != conshdlr_abspower) )
+   {
+      SCIPwarningMessage(scip, "The subproblem includes constraint <%s>. "
+         "This is not supported and the slack variable will not be added to the constraint. Feasibility cuts may be invalid.\n",
+         SCIPconshdlrGetName(conshdlr));
+   }
+
+   if( linearcons )
+   {
+      rhs = SCIPconsGetRhs(scip, cons, &success);
+      assert(success);
+      lhs = SCIPconsGetLhs(scip, cons, &success);
+      assert(success);
+   }
+   else
+   {
+      rhs = SCIPconsNonlinearGetRhs(scip, cons, &success);
+      assert(success);
+      lhs = SCIPconsNonlinearGetLhs(scip, cons, &success);
+      assert(success);
+   }
+
+   /* if the right hand side is finite, then we need to add a slack variable with a negative coefficient */
+   if( !SCIPisInfinity(scip, rhs) )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_neg", SLACKVAR_NAME, SCIPconsGetName(cons) );
+
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
+      /* adding the slack variable to the subproblem */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* adds the slack variable to the constraint */
+      if( linearcons )
+      {
+         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, 1.0, &success) );
+         assert(success);
+      }
+      else
+      {
+         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0, &success) );
+         assert(success);
+      }
+   }
+
+   /* if the left hand side if finite, then we need to add a slack variable with a positive coefficient */
+   if( !SCIPisInfinity(scip, lhs) )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_pos", SLACKVAR_NAME, SCIPconsGetName(cons) );
+
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+
+      /* adding the slack variable to the subproblem */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* adds the slack variable to the constraint */
+      if( linearcons )
+      {
+         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, -1.0, &success) );
+         assert(success);
+      }
+      else
+      {
+         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0, &success) );
+         assert(success);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds the slack variables to each of the constraints for the generation of feasibility cuts for the given non-linear
+ * subproblem
+ */
+static
+SCIP_RETCODE addSlackVarsToConstraints(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   SCIP* subproblem;
+   SCIP_CONS* cons;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nimplintvars;
+   int i;
+   int j;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
+   {
+      cons = SCIPgetOrigConss(subproblem)[i];
+
+      /* adding the slack variables to the constraint */
+      SCIP_CALL( addSlackVars(subproblem, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** initialises a MIP subproblem by putting the problem into SCIP_STAGE_SOLVING. This is achieved by calling SCIPsolve
  *  and then interrupting the solve in a node focus event handler.
  *  The LP subproblem is also initialised using this method; however, a different event handler is added. This event
@@ -1288,6 +1450,12 @@ SCIP_RETCODE initialiseLPSubproblem(
    SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersNodefocus) );
    assert(eventhdlr != NULL);
 
+   /* if the problem is convex and nonlinear, then slack variables must be added to each of the constraints */
+   if( benders->subprobisnonlinear[probnumber] )
+   {
+      SCIP_CALL( addSlackVarsToConstraints(benders, set, probnumber) );
+   }
+
    /* calling an initial solve to put the problem into probing mode */
    SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
 
@@ -1322,6 +1490,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    int i;
    int j;
    SCIP_Bool isconvex;
+   SCIP_Bool isnonlinear;
 #define NLINEARCONSHDLRS 5
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
    SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
@@ -1336,6 +1505,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    assert(subproblem != NULL);
 
    isconvex = FALSE;
+   isnonlinear = FALSE;
 
    /* getting the number of integer and binary variables to determine the problem type */
    SCIP_CALL( SCIPgetVarsData(subproblem, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
@@ -1388,6 +1558,8 @@ SCIP_RETCODE checkSubproblemConvexity(
       {
          SCIP_EXPRCURV curvature;
 
+         isnonlinear = TRUE;
+
          SCIP_CALL( SCIPgetCurvatureNonlinear(subproblem, cons, TRUE, &curvature) );
          if( ((SCIPisInfinity(subproblem, -SCIPgetLhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
              ((SCIPisInfinity(subproblem,  SCIPgetRhsNonlinear(subproblem, cons)) || (curvature & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX)) )
@@ -1409,6 +1581,8 @@ SCIP_RETCODE checkSubproblemConvexity(
       /* if cons_quadratic (and conshdlr_quadratic != NULL), then check whether convex */
       if( conshdlr == conshdlr_quadratic )
       {
+         isnonlinear = TRUE;
+
          SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons) );
 
          if( (SCIPisInfinity(subproblem, -SCIPgetLhsQuadratic(subproblem, cons)) || SCIPisConcaveQuadratic(subproblem, cons)) &&
@@ -1431,6 +1605,8 @@ SCIP_RETCODE checkSubproblemConvexity(
       /* if cons_abspower (and conshdlr_abspower != NULL), then check whether convex */
       if( conshdlr == conshdlr_abspower )
       {
+         isnonlinear = TRUE;
+
          if( SCIPisConvexAbspower(subproblem, cons) )
          {
 #ifdef SCIP_MOREDEBUG
@@ -1463,6 +1639,9 @@ SCIP_RETCODE checkSubproblemConvexity(
 TERMINATE:
    /* setting the flag for the convexity of the subproblem */
    SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
+
+   /* setting the non-linear subproblem flag */
+   benders->subprobisnonlinear[probnumber] = isnonlinear;
 
    SCIPdebugMsg(subproblem, "subproblem <%s> has been found %sconvex\n", SCIPgetProbName(subproblem), isconvex ? "" : "not");
 
@@ -3861,6 +4040,19 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
          assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
       }
+      else if( strstr(SCIPvarGetName(vars[i]), SLACKVAR_NAME) != NULL )
+      {
+         /* if the subproblem is non-linear and convex, then slack variables have been added to the subproblem. These
+          * need to be fixed to zero when first solving the subproblem
+          */
+         assert( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) );
+         assert( SCIPisZero(subproblem, SCIPvarGetLbLocal(vars[i])) );
+
+         if( SCIPisLT(subproblem, 0.0, SCIPvarGetUbLocal(vars[i])) )
+         {
+            SCIP_CALL( SCIPchgVarUb(subproblem, vars[i], 0.0) );
+         }
+      }
    }
 
    /* if the subproblem is a MIP, the probing mode is entered after setting up the subproblem */
@@ -4340,8 +4532,9 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    *solvestatus = SCIPgetStatus(subproblem);
 
    if( *solvestatus != SCIP_STATUS_OPTIMAL && *solvestatus != SCIP_STATUS_UNBOUNDED
-      && *solvestatus != SCIP_STATUS_USERINTERRUPT && *solvestatus != SCIP_STATUS_BESTSOLLIMIT
-      && *solvestatus != SCIP_STATUS_TIMELIMIT && *solvestatus != SCIP_STATUS_MEMLIMIT )
+      && *solvestatus != SCIP_STATUS_INFEASIBLE && *solvestatus != SCIP_STATUS_USERINTERRUPT
+      && *solvestatus != SCIP_STATUS_BESTSOLLIMIT && *solvestatus != SCIP_STATUS_TIMELIMIT
+      && *solvestatus != SCIP_STATUS_MEMLIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
          *solvestatus, probnumber);
