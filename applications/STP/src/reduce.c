@@ -2112,6 +2112,9 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
+   SCIP_CALL( reduce_extTest1(scip) );
+
+
    SCIP_CALL( level0(scip, graph) );
 
 #if 0
