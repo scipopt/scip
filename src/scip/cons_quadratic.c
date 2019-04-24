@@ -2441,7 +2441,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
    if( eventhdlr != NULL )
    {
       assert(SCIPconsIsEnabled(cons));
-      
+
       /* catch bound change events of variable */
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, pos) );
    }
@@ -13379,6 +13379,9 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
 
    SCIPdebugMsg(scip, "enable cons <%s>\n", SCIPconsGetName(cons));
 
+   /* catch variable events */
+   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
@@ -13386,9 +13389,6 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
       SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
    }
-
-   /* catch variable events */
-   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
    /* initialize solving data */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
