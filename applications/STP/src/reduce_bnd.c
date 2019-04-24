@@ -25,6 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2484,9 +2485,45 @@ int reducePcMwTryBest(
 }
 
 
+/** adds top component of stack to tree */
+static
+void extAddToTree(
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   int* const tree_edges = extdata->tree_edges;
+   int* const nodetreepos = extdata->nodetreepos;
+   const int stackpos = extdata->extstack_size - 1;
+
+   assert(stackpos >= 1);
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
+   assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
+
+   /* add top expanded component to tree data */
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+
+      assert(extdata->tree_size < extdata->extstack_maxsize);
+      assert(edge >= 0 && edge < graph->edges);
+      assert(nodetreepos[graph->head[edge]] == 0);
+
+      extdata->tree_redcost += redcost[edge];
+      tree_edges[(extdata->tree_size)++] = edge;
+      nodetreepos[graph->head[edge]] = extdata->tree_size;
+   }
+
+   extdata->tree_depth++;
+}
+
+
 /** some updates */
 static
-void extUpdate(
+void extUpdateTreeData(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      redcost,            /**< reduced costs */
@@ -2495,8 +2532,15 @@ void extUpdate(
    int*                  nupdatestalls       /**< update stalls counter */
 )
 {
+   const int stackposition = extdata->extstack_size - 1;
+
    assert(graph && redcost && extdata && nupdatestalls);
 
+   /* is current component expanded? */
+   if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
+      extAddToTree(graph, redcost, extdata); /* add component to tree */
+
+   /* recompute reduced costs? */
    if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
    {
       SCIP_Real treecost = treecostoffset;
@@ -2519,6 +2563,7 @@ void extUpdate(
 
 }
 
+
 /** should we truncate from current component? */
 static
 SCIP_Bool extTruncate(
@@ -2534,7 +2579,10 @@ SCIP_Bool extTruncate(
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
 
    if( extdata->tree_depth >= extdata->tree_maxdepth )
+   {
+      printf("truncate (depth) \n");
       return TRUE;
+   }
 
    /* check all leaves of current component */
    for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
@@ -2549,8 +2597,48 @@ SCIP_Bool extTruncate(
          return FALSE;
    }
 
+   printf("truncate (non-promising) \n");
    return TRUE;
 }
+
+/** should we truncate from current component? */
+static
+void printStack(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+#ifdef SCIP_DEBUG
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extdata->extstack_size - 1;
+
+   for( int j = 0; j <= stackpos; j++ )
+   {
+      if( extdata->extstack_state[j] == EXT_STATE_NONE )
+         printf("pos=%d state=NONE \n", j);
+      else if( extdata->extstack_state[j] == EXT_STATE_EXPANDED )
+         printf("pos=%d state=EXPANDED \n", j);
+      else
+      {
+         assert(extdata->extstack_state[j] == EXT_STATE_MARKED);
+
+         printf("pos=%d state=MARKED \n", j);
+      }
+
+      /* check all leaves of current component */
+      for( int i = extstack_start[j]; i < extstack_start[j + 1]; i++ )
+      {
+         const int edge = extstack_data[i];
+         assert(edge >= 0 && edge < graph->edges);
+
+         printf("  ");
+         graph_edge_printInfo(graph, edge);
+      }
+   }
+#endif
+}
+
 
 /** can subtree be peripherally ruled out? */
 static
@@ -2638,11 +2726,14 @@ void extBacktrack(
    /* backtrack */
    if( success )
    {
-      while( extstack_state[stackpos] != EXT_STATE_MARKED )
+      while( extstack_state[stackpos] == EXT_STATE_NONE )
       {
          stackpos--;
          assert(stackpos >= 0);
       }
+
+      SCIPdebugMessage("backtrack SUCCESS \n");
+      assert(extstack_state[stackpos] == EXT_STATE_EXPANDED || extstack_state[stackpos] == EXT_STATE_MARKED);
    }
    else
    {
@@ -2652,6 +2743,7 @@ void extBacktrack(
          assert(stackpos >= 0);
       }
 
+      SCIPdebugMessage("backtrack FAILURE \n");
       assert(extstack_state[stackpos] == EXT_STATE_NONE || extstack_state[stackpos] == EXT_STATE_MARKED);
    }
 
@@ -2674,10 +2766,9 @@ void extStackExpand(
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
-   int* const tree_edges = extdata->tree_edges;
    int* const nodetreepos = extdata->nodetreepos;
    int stackpos = extdata->extstack_size - 1;
-   int datasize = extstack_start[stackpos + 1];
+   int datasize = extstack_start[stackpos];
    const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
    const uint32_t powsize = pow(2, setsize);
 
@@ -2718,14 +2809,13 @@ void extStackExpand(
          if( counter & (1 << j) )
          {
             extstack_data[datasize++] = extedges[j];
-            printf("  %d \n", graph->head[extedges[j]]);
+            SCIPdebugMessage("  %d \n", graph->head[extedges[j]]);
          }
       }
 
-      printf("... added \n");
+      SCIPdebugMessage("... added \n");
       assert(stackpos < extdata->extstack_maxsize - 1);
 
-      printf("stackpos=%d \n", stackpos);
 
       extstack_state[stackpos] = EXT_STATE_EXPANDED;
       extstack_start[++stackpos] = datasize;
@@ -2736,26 +2826,6 @@ void extStackExpand(
    assert(stackpos >= extdata->extstack_size);
 
    extdata->extstack_size = stackpos;
-   stackpos--;
-
-   assert(stackpos >= 1);
-   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
-
-   /* add top expanded component to tree data */
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-   {
-      const int edge = extstack_data[i];
-
-      assert(extdata->tree_size < extdata->extstack_maxsize);
-      assert(edge >= 0 && edge < graph->edges);
-      assert(nodetreepos[graph->head[edge]] == 0);
-
-      extdata->tree_redcost += redcost[edge];
-      tree_edges[(extdata->tree_size)++] = edge;
-      nodetreepos[graph->head[edge]] = extdata->tree_size;
-   }
-
-   extdata->tree_depth++;
 }
 
 /** extend top component of stack (backtracks if stack is full) */
@@ -2899,9 +2969,8 @@ void extExtend(
          extstack_start[stackpos + 1] = datasize;
       }
 
-//#ifdef SCIP_DEBUG
-#if 1
-      printf("added:  \n");
+#ifdef SCIP_DEBUG
+      printf("added extending edges:  \n");
 
       for( int i = extstack_start[extdata->extstack_size]; i < extstack_start[stackpos + 1]; i++ )
          graph_edge_printInfo(graph, extstack_data[i]);
@@ -3010,6 +3079,10 @@ SCIP_RETCODE reduceExtCheckArc(
          {
             const int stackposition = extdata.extstack_size - 1;
 
+            printStack(graph, &extdata);
+
+            extUpdateTreeData(scip, graph, redcost, treeredcostoffset, &extdata, &nupdatestalls);
+
             /* has current component already been extended? */
             if( extstack_state[stackposition] == EXT_STATE_MARKED )
             {
@@ -3046,7 +3119,6 @@ SCIP_RETCODE reduceExtCheckArc(
             extExtend(scip, graph, redcost, ancestormark, rootdist, termpaths, edgedeleted, isterm,
                   cutoff, equality, &extdata, &success);
 
-            extUpdate(scip, graph, redcost, treeredcostoffset, &extdata, &nupdatestalls);
          } /* DFS loop */
 
          *deletable = success;
