@@ -403,6 +403,8 @@ extern SCIP_RETCODE    reduceExtCheckArc(SCIP*, const GRAPH*, int, const SCIP_Re
 /* reduce_ext.c
  */
 extern SCIP_RETCODE    reduce_extTest1(SCIP*);
+extern SCIP_RETCODE    reduce_extTest2(SCIP*);
+
 
 /* reduce_simple.c
  */

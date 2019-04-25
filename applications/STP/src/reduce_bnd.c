@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +54,8 @@
 #define STP_DAEX_MINDFSDEPTH 4
 #define STP_DAEX_MAXGRAD 8
 #define STP_DAEX_MINGRAD 6
+#define STP_DAEX_MAXEDGES 500
+#define STP_DAEX_MAXTREESIZE 20
 #define STP_DAEX_EDGELIMIT 50000
 #define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_RANDOM_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
@@ -83,36 +85,10 @@ typedef struct extension_data
    int tree_depth;
    int extstack_size;
    const int extstack_maxsize;
+   const int extstack_maxedges;
    const int tree_maxdepth;
-
+   const int tree_maxsize;
 } EXTDATA;
-
-
-/** mark ancestors of given edge */
-static
-SCIP_Bool markAncestorsConflict(
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   edge,               /**< edge to use */
-   int*                  ancestormark        /**< ancestor mark array */
-   )
-{
-   int count = 0;
-   assert(edge >= 0);
-
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
-   {
-      const unsigned idx = ((unsigned) curr->index) / 2;
-
-      assert(curr->index >= 0 && idx < (unsigned) (MAX(graph->edges, graph->orgedges) / 2));
-
-      if( ancestormark[idx] )
-         return TRUE;
-
-      ancestormark[idx] = 1;
-   }
-
-   return FALSE;
-}
 
 
 /* initialize dual-ascent distances */
@@ -192,6 +168,32 @@ void initializeDaDistances(
    }
 
    assert(!rpc || !g->extended);
+}
+
+/** mark ancestors of given edge */
+static
+SCIP_Bool markAncestorsConflict(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge,               /**< edge to use */
+   int*                  ancestormark        /**< ancestor mark array */
+   )
+{
+   int count = 0;
+   assert(edge >= 0);
+
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+   {
+      const unsigned idx = ((unsigned) curr->index) / 2;
+
+      assert(curr->index >= 0 && idx < (unsigned) (MAX(graph->edges, graph->orgedges) / 2));
+
+      if( ancestormark[idx] )
+         return TRUE;
+
+      ancestormark[idx] = 1;
+   }
+
+   return FALSE;
 }
 
 /** mark ancestors of given edge */
@@ -2596,7 +2598,8 @@ void extAddToTree(
    const PATH*           termpaths,          /**< paths to nearest terminals  */
    const SCIP_Real*      redcost,            /**< reduced costs */
    EXTDATA*              extdata,            /**< extension data */
-   int*                  ancestormark        /**< ancestor mark array */
+   int*                  ancestormark,       /**< ancestor mark array */
+   SCIP_Bool*            conflict            /**< conflict found? */
 )
 {
    const int* const extstack_data = extdata->extstack_data;
@@ -2604,6 +2607,8 @@ void extAddToTree(
    int* const tree_edges = extdata->tree_edges;
    int* const tree_deg = extdata->tree_deg;
    const int stackpos = extdata->extstack_size - 1;
+
+   assert(!(*conflict));
 
    assert(stackpos >= 1);
    assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
@@ -2624,7 +2629,9 @@ void extAddToTree(
       tree_deg[head] = 1;
       tree_deg[graph->tail[edge]]++;
 
-      markAncestors(graph, edge, ancestormark);
+      // todo break and use unmark conflict later
+      if( markAncestorsConflict(graph, edge, ancestormark) )
+         *conflict = TRUE;
    }
 
    extdata->tree_depth++;
@@ -2642,18 +2649,21 @@ void extUpdateTreeData(
    SCIP_Real             treecostoffset,     /**< offset for reduced costs */
    EXTDATA*              extdata,            /**< extension data */
    int*                  ancestormark,       /**< ancestor mark array */
-   int*                  nupdatestalls       /**< update stalls counter */
+   int*                  nupdatestalls,      /**< update stalls counter */
+   SCIP_Bool*            conflict            /**< conflict found? */
 )
 {
    const int stackposition = extdata->extstack_size - 1;
 
-   assert(scip && graph && termpaths && redcost && extdata && nupdatestalls);
+   assert(scip && graph && termpaths && redcost && extdata && nupdatestalls && conflict);
 
    printStack(graph, extdata);
 
+   assert(!(*conflict));
+
    /* is current component expanded? */
    if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
-      extAddToTree(scip, graph, termpaths, redcost, extdata, ancestormark); /* add component to tree */
+      extAddToTree(scip, graph, termpaths, redcost, extdata, ancestormark, conflict); /* add component to tree */
 
    /* recompute reduced costs? */
    if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
@@ -2703,6 +2713,18 @@ SCIP_Bool extTruncate(
    if( extdata->tree_depth >= extdata->tree_maxdepth )
    {
       SCIPdebugMessage("truncate (depth) \n");
+      return TRUE;
+   }
+
+   if( extdata->tree_size >= extdata->tree_maxsize )
+   {
+      SCIPdebugMessage("truncate (tree size) \n");
+      return TRUE;
+   }
+
+   if( extstack_start[stackpos] >= extdata->extstack_maxedges )
+   {
+      SCIPdebugMessage("truncate (edges on stack) \n");
       return TRUE;
    }
 
@@ -2787,26 +2809,25 @@ SCIP_Bool extRuleOutPeriph(
 
    if( allowequality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
    {
+      SCIPdebugMessage("Rule-out periph (red. cost) \n");
       return TRUE;
    }
    else
    {
-      if( ancestormark != NULL )
-      {
-         const int stackpos = extdata->extstack_size - 1;
-         int* const extstack_data = extdata->extstack_data;
-         int* const extstack_start = extdata->extstack_start;
+      const int stackpos = extdata->extstack_size - 1;
+      int* const extstack_data = extdata->extstack_data;
+      int* const extstack_start = extdata->extstack_start;
 
-         for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+      // todo
+      for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+      {
+         const int curredge = extstack_data[i];
+         int count = 0;
+         for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
          {
-            const int curredge = extstack_data[i];
-            int count = 0;
-            for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
-            {
-               assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
-               if( ancestormark[((unsigned) curr->index) / 2] )
-                  return TRUE;
-            }
+            assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
+            assert(ancestormark[((unsigned) curr->index) / 2] == 1);
+
          }
       }
    }
@@ -3179,6 +3200,7 @@ SCIP_RETCODE reduceExtCheckArc(
       int* ancestormark;
       const int nnodes = graph->knots;
       const int maxdfsdepth = (graph->edges > STP_DAEX_EDGELIMIT) ? STP_DAEX_MINDFSDEPTH : STP_DAEX_MAXDFSDEPTH;
+      const int maxstackedges = MIN(nnodes / 2, STP_DAEX_MAXEDGES);
 
       /* allocate clean arrays todo tree_deg as input parameter...mark terminal nodes for PC as -1 */
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &tree_deg, nnodes) );
@@ -3195,7 +3217,7 @@ SCIP_RETCODE reduceExtCheckArc(
          int nupdatestalls = 0;
          SCIP_Bool success = TRUE;
          EXTDATA extdata = {extstack_data, extstack_start, extstack_state, tree_edges,
-               tree_deg, 0.0, 0, 0, 0, nnodes - 1, maxdfsdepth};
+               tree_deg, 0.0, 0, 0, 0, nnodes - 1, maxstackedges, maxdfsdepth, STP_DAEX_MAXTREESIZE};
 
          extdata.tree_redcost = treeredcostoffset;
          extdata.tree_depth = 0;
@@ -3218,9 +3240,10 @@ SCIP_RETCODE reduceExtCheckArc(
          /* limited DFS backtracking; stops once back at 'edge' */
          while( extdata.extstack_size > 1 )
          {
+            SCIP_Bool conflict = FALSE;
             const int stackposition = extdata.extstack_size - 1;
 
-            extUpdateTreeData(scip, graph, termpaths, redcost, treeredcostoffset, &extdata, ancestormark, &nupdatestalls);
+            extUpdateTreeData(scip, graph, termpaths, redcost, treeredcostoffset, &extdata, ancestormark, &nupdatestalls, &conflict);
 
             /* has current component already been extended? */
             if( extstack_state[stackposition] == EXT_STATE_MARKED )
@@ -3240,7 +3263,7 @@ SCIP_RETCODE reduceExtCheckArc(
 
             assert(extstack_state[stackposition] == EXT_STATE_EXPANDED);
 
-            if( extRuleOutPeriph(scip, graph, redcost, ancestormark, cutoff, equality, &extdata) )
+            if( conflict || extRuleOutPeriph(scip, graph, redcost, ancestormark, cutoff, equality, &extdata) )
             {
                success = TRUE;
                extBacktrack(graph, termpaths, redcost, success, &extdata, ancestormark);
