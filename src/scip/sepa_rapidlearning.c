@@ -533,6 +533,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       for( i = 0; i < nvars; ++i )
       {
          SCIP_Bool tightened;
+         SCIP_Real __attribute__((unused)) oldbound;
 
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
@@ -541,10 +542,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          /* update the bounds of the original SCIP, if a better bound was proven in the sub-SCIP */
          if( global )
          {
-#ifdef SCIP_DEBUG
-            SCIP_Real oldbound = SCIPvarGetUbGlobal(vars[i]);
-#endif
-
 #ifndef NDEBUG
             assert(SCIPgetEffectiveRootDepth(scip) == SCIPgetDepth(scip));
 #else
@@ -552,6 +549,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                return SCIP_INVALIDCALL;
 #endif
             tightened = FALSE;
+            oldbound = SCIPvarGetUbGlobal(vars[i]);
+
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( tightened )
@@ -567,9 +566,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                nbdchgs++;
 
             tightened = FALSE;
-#ifdef SCIP_DEBUG
             oldbound = SCIPvarGetLbGlobal(vars[i]);
-#endif
+
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( tightened )
@@ -586,11 +584,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          }
          else
          {
-#ifdef SCIP_DEBUG
-            SCIP_Real oldbound = SCIPvarGetUbLocal(vars[i]);
-#endif
-
             tightened = FALSE;
+            oldbound = SCIPvarGetUbLocal(vars[i]);
+
             SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( tightened )
@@ -606,9 +602,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                nbdchgs++;
 
             tightened = FALSE;
-#ifdef SCIP_DEBUG
             oldbound = SCIPvarGetLbLocal(vars[i]);
-#endif
+
             SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( tightened )
