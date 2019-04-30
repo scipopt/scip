@@ -65,15 +65,18 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   /* parameters for controlling the two-phase method for Benders' decomposition */
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
    int                   freq;               /**< the depth frequency of generating LP cuts after the max depth is reached */
+   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
+   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
+   SCIP_Bool             active;             /**< is the constraint handler active? */
+
+   /* variable used to control the behaviour of the two-phase method for Benders' decomposition */
    SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
    SCIP_NODE*            currnode;           /**< the current node */
    SCIP_Real             prevbound;          /**< the previous dual bound */
-   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    int                   stallcount;         /**< the number of nodes processed since the last lower bound increase */
-   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
-   SCIP_Bool             active;             /**< is the constraint handler active? */
 };
 
 
@@ -260,6 +263,8 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
 
    /* create benderslp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   BMSclearMemory(conshdlrdata);
+   conshdlrdata->prevbound = -SCIPinfinity(scip);
 
    conshdlr = NULL;
 
@@ -299,10 +304,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
-
-   conshdlrdata->ncallsnode = 0;
-   conshdlrdata->currnode = NULL;
-   conshdlrdata->prevbound = -SCIPinfinity(scip);
 
    return SCIP_OKAY;
 }
