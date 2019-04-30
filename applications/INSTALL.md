@@ -30,15 +30,14 @@ as SCIP. Assuming that the build directory of SCIP was named "build",
 simply execute
 
 ```
-cd build
-make scip_application
+cmake --build build --target scip_application
 ```
 
 The SCIPApplication application is part of the SCIP applications. To build all
 applications at once, use
 
 ```
-make applications
+cmake --build build --target applications
 ```
 
 It is also possible to build the SCIPApplication application in a stand-alone
@@ -48,10 +47,8 @@ CMake. It might be necessary to specify the SCIP build directory
 or installation directory, if SCIP has not yet been installed systemwide.
 
 ```
-mkdir build
-cd build
-cmake .. [-DSCIP_DIR=../../]
-make
+cmake -Bbuild -H. [-DSCIP_DIR=../../]
+cmake --build build
 ```
 
 Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
