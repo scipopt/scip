@@ -12026,11 +12026,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
    assert(nlhdlr != NULL);
    assert(success != NULL);
 
+   *sucess = FALSE;
+
    if( nlhdlr->branchscore == NULL )
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
 
 #ifndef NDEBUG
    /* check that auxvalue is correct by reevaluating */

@@ -305,6 +305,8 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    assert(nlhdlrexprdata->nvarexprs > 0);
    assert(success != NULL);
 
+   *success = FALSE;
+
    /* we separate only convex functions here, so there should be little use for branching
     * if violations are small or there are numerical issues, then we will not have generated a cut, though
     * in that case, we will still branch, that is, register branchscores for all depending var exprs
