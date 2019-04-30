@@ -12026,7 +12026,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
    assert(nlhdlr != NULL);
    assert(success != NULL);
 
-   *sucess = FALSE;
+   *success = FALSE;
 
    if( nlhdlr->branchscore == NULL )
       return SCIP_OKAY;
