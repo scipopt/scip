@@ -2832,24 +2832,46 @@ SCIP_Bool extTruncate(
    return TRUE;
 }
 
-#if 0
+/** get peripheral reduced cost of current tree including  */
 static
-SCIP_Bool extTreeGetRedcosts(
-   SCIP*                 scip,               /**< SCIP */
+SCIP_Real extTreeGetRedcosts(
    const GRAPH*          graph,              /**< graph data structure */
+   const REDDATA*        reddata,            /**< reduction data */
    const EXTDATA*        extdata,            /**< extension data */
-   const PATH*           termpaths,          /**< paths to terminals */
-   const SCIP_Real*      redcost,            /**< reduced costs */
-   const int*            ancestormark,       /**< ancestor mark array */
-   const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
-   SCIP_Real             cutoff,             /**< reduced cost cut-off bound */
-   SCIP_Bool             allowequality,      /**< rule out also in case of equality */
    int                   extedge             /**< edge for extension or -1 */
 )
 {
+   const int* const tree_leaves = extdata->tree_leaves;
+   const PATH* const termpaths = reddata->termpaths;
+   const int nleaves = extdata->tree_nleaves;
+   SCIP_Real tree_redcost = extdata->tree_redcost; /* includes reduced costs to initial tail */
 
+   assert(graph && reddata && extdata);
+   assert(nleaves > 1);
+
+   for( int i = 1; i < nleaves; i++ )
+   {
+      const int leaf = tree_leaves[i];
+      assert(extdata->tree_deg[leaf] == 1);
+
+      tree_redcost += termpaths[leaf].dist;
+   }
+
+   // todo for the general case we also must consider the case that tail[edge] is the root!
+   if( extedge != -1 )
+   {
+      const int base = graph->tail[extedge];
+      const int extvert = graph->head[extedge];
+      const SCIP_Real* const redcost = reddata->reducedcosts;
+
+      assert(extedge >= 0 && extedge < graph->edges);
+      assert(extdata->tree_deg[base] == 1);
+
+      tree_redcost += redcost[extedge] + termpaths[extvert].dist - termpaths[base].dist;
+   }
+
+   return tree_redcost;
 }
-#endif
 
 /** can any extension via edge be ruled out? */
 static
@@ -2875,10 +2897,7 @@ SCIP_Bool extRuleOutSimple(
       return TRUE;
    else
    {
-      //const int base = graph->tail[edge];
-      int todo;
-     // const SCIP_Real tree_redcost = extdata->tree_redcost + redcost[edge] + termpaths[extvert].dist - termpaths[base].dist; // todo call function
-      const SCIP_Real tree_redcost = 1.0;
+      const SCIP_Real tree_redcost = extTreeGetRedcosts(graph, reddata, extdata, edge);
       const SCIP_Real cutoff = reddata->cutoff;
 
       if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
@@ -2887,7 +2906,7 @@ SCIP_Bool extRuleOutSimple(
       {
          const int* const ancestormark = reddata->ancestormark;
          int count = 0;
-         for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+         for( const IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
          {
             assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
             if( ancestormark[((unsigned) curr->index) / 2] )
@@ -2908,8 +2927,7 @@ SCIP_Bool extRuleOutPeriph(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
-   int todo;
-   const SCIP_Real tree_redcost = extdata->tree_redcost;
+   const SCIP_Real tree_redcost = extTreeGetRedcosts(graph, reddata, extdata, -1);
    const SCIP_Real cutoff = reddata->cutoff;
 
    if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
