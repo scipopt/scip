@@ -102,15 +102,15 @@ SCIP_Real SCIPconsNonlinearGetLhs(
 
    if( strcmp(conshdlrname, "nonlinear") == 0 )
    {
-      lhs = SCIPgetRhsNonlinear(scip, cons);
+      lhs = SCIPgetLhsNonlinear(scip, cons);
    }
    else if( strcmp(conshdlrname, "quadratic") == 0 )
    {
-      lhs = SCIPgetRhsQuadratic(scip, cons);
+      lhs = SCIPgetLhsQuadratic(scip, cons);
    }
    else if( strcmp(conshdlrname, "abspower") == 0 )
    {
-      lhs = SCIPgetRhsAbspower(scip, cons);
+      lhs = SCIPgetLhsAbspower(scip, cons);
    }
    else
    {

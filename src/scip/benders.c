@@ -1,3 +1,5 @@
+//#define SCIP_DEBUG
+//#define SCIP_MOREDEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -65,6 +67,8 @@
 #define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
 #define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
+#define SCIP_DEFAULT_ADDSLACKVARS         FALSE  /** adds slack variables to all constraints to ensure the subproblem is always feasible */
+#define SCIP_DEFAULT_SLACKVARCOEF         10e+6  /** the objective coefficient of the slack variables in the subproblem */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1084,6 +1088,16 @@ SCIP_RETCODE doBendersCreate(
          "where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)",
          &(*benders)->strengthenintpoint, FALSE, SCIP_DEFAULT_STRENGTHENINTPOINT, "lfiroz", NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/addslackvars", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "add slack variables to all constraints to ensure the subproblems are always feasible",
+         &(*benders)->addslackvars, FALSE, SCIP_DEFAULT_ADDSLACKVARS, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/slackvarcoef", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
+         SCIP_DEFAULT_SLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1217,6 +1231,7 @@ SCIP_RETCODE SCIPbendersFree(
 static
 SCIP_RETCODE addSlackVars(
    SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_CONS*            cons                /**< constraint to which the slack variable(s) is added to */
    )
 {
@@ -1224,6 +1239,7 @@ SCIP_RETCODE addSlackVars(
    SCIP_VAR* var;
    SCIP_Real rhs;
    SCIP_Real lhs;
+   SCIP_Real objcoef;
    int i;
    SCIP_Bool linearcons;
    SCIP_Bool success;
@@ -1286,35 +1302,15 @@ SCIP_RETCODE addSlackVars(
       assert(success);
    }
 
+   /* getting the objective coefficient for the slack variables */
+   objcoef = benders->slackvarcoef;
+
    /* if the right hand side is finite, then we need to add a slack variable with a negative coefficient */
    if( !SCIPisInfinity(scip, rhs) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_neg", SLACKVAR_NAME, SCIPconsGetName(cons) );
 
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-
-      /* adding the slack variable to the subproblem */
-      SCIP_CALL( SCIPaddVar(scip, var) );
-
-      /* adds the slack variable to the constraint */
-      if( linearcons )
-      {
-         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, 1.0, &success) );
-         assert(success);
-      }
-      else
-      {
-         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0, &success) );
-         assert(success);
-      }
-   }
-
-   /* if the left hand side if finite, then we need to add a slack variable with a positive coefficient */
-   if( !SCIPisInfinity(scip, lhs) )
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_pos", SLACKVAR_NAME, SCIPconsGetName(cons) );
-
-      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), objcoef, SCIP_VARTYPE_CONTINUOUS) );
 
       /* adding the slack variable to the subproblem */
       SCIP_CALL( SCIPaddVar(scip, var) );
@@ -1330,6 +1326,35 @@ SCIP_RETCODE addSlackVars(
          SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0, &success) );
          assert(success);
       }
+
+      /* releasing the variable */
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+   }
+
+   /* if the left hand side if finite, then we need to add a slack variable with a positive coefficient */
+   if( !SCIPisInfinity(scip, -lhs) )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%s_pos", SLACKVAR_NAME, SCIPconsGetName(cons) );
+
+      SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), objcoef, SCIP_VARTYPE_CONTINUOUS) );
+
+      /* adding the slack variable to the subproblem */
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* adds the slack variable to the constraint */
+      if( linearcons )
+      {
+         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, 1.0, &success) );
+         assert(success);
+      }
+      else
+      {
+         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0, &success) );
+         assert(success);
+      }
+
+      /* releasing the variable */
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
    return SCIP_OKAY;
@@ -1365,7 +1390,7 @@ SCIP_RETCODE addSlackVarsToConstraints(
       cons = SCIPgetOrigConss(subproblem)[i];
 
       /* adding the slack variables to the constraint */
-      SCIP_CALL( addSlackVars(subproblem, cons) );
+      SCIP_CALL( addSlackVars(subproblem, benders, cons) );
    }
 
    return SCIP_OKAY;
@@ -1451,7 +1476,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    assert(eventhdlr != NULL);
 
    /* if the problem is convex and nonlinear, then slack variables must be added to each of the constraints */
-   if( benders->subprobisnonlinear[probnumber] )
+   if( benders->addslackvars || benders->subprobisnonlinear[probnumber] )
    {
       SCIP_CALL( addSlackVarsToConstraints(benders, set, probnumber) );
    }
@@ -2368,6 +2393,7 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblowerbound, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobisconvex, benders->nsubproblems) );
+      SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobisnonlinear, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobsetup, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->indepsubprob, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobenabled, benders->nsubproblems) );
@@ -2444,6 +2470,7 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->subprobenabled);
       BMSfreeMemoryArray(&benders->indepsubprob);
       BMSfreeMemoryArray(&benders->subprobsetup);
+      BMSfreeMemoryArray(&benders->subprobisnonlinear);
       BMSfreeMemoryArray(&benders->subprobisconvex);
       BMSfreeMemoryArray(&benders->subproblowerbound);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
@@ -4040,10 +4067,11 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
          assert(SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])));
       }
-      else if( strstr(SCIPvarGetName(vars[i]), SLACKVAR_NAME) != NULL )
+      else if( !benders->addslackvars && strstr(SCIPvarGetName(vars[i]), SLACKVAR_NAME) != NULL )
       {
          /* if the subproblem is non-linear and convex, then slack variables have been added to the subproblem. These
-          * need to be fixed to zero when first solving the subproblem
+          * need to be fixed to zero when first solving the subproblem. However, if the slack variables have been added
+          * by setting the addslackvars runtime parameter, then they must not get fixed to zero
           */
          assert( !SCIPisEQ(subproblem, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) );
          assert( SCIPisZero(subproblem, SCIPvarGetLbLocal(vars[i])) );
@@ -4354,10 +4382,15 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    {
       SCIP_NLPSOLSTAT nlpsolstat;
       SCIP_NLPTERMSTAT nlptermstat;
-
 #ifdef SCIP_MOREDEBUG
+      SCIP_SOL* nlpsol;
+
       SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
+
+      SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
+
+      SCIP_CALL( SCIPwriteTransProblem(subproblem, "subprob.lp", NULL, FALSE) );
 
       SCIP_CALL( SCIPsolveNLP(subproblem) );
 
@@ -4365,12 +4398,19 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       nlptermstat = SCIPgetNLPTermstat(subproblem);
       SCIPdebugMsg(scip, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
 
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+      SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+      SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+#endif
+
       if( nlptermstat == SCIP_NLPTERMSTAT_OKAY && (nlpsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE) )
       {
          /* trust infeasible only if terminated "okay" */
          (*solvestatus) = SCIP_STATUS_INFEASIBLE;
       }
       else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
+         //|| nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
       {
          (*solvestatus) = SCIP_STATUS_OPTIMAL;
          (*objective) = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
@@ -5187,6 +5227,16 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
     */
    SCIP_CALL( SCIPsetBoolParam(set->scip, "constraints/benders/active", TRUE) );
 
+   /* changing settings that are required for Benders' decomposition */
+   SCIP_CALL( SCIPsetPresolving(set->scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(set->scip, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(set->scip, "propagating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(set->scip, "heuristics/trysol/freq", 1) );
+
+   /* disabling aggregation since it can affect the mapping between the master and subproblem variables */
+   SCIP_CALL( SCIPsetBoolParam(set->scip, "presolving/donotaggr", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(set->scip, "presolving/donotmultaggr", TRUE) );
+
    /* freeing the allocated memory */
    for( i = nblocks - 1; i >= 0; i-- )
    {
@@ -5677,6 +5727,80 @@ SCIP_Real SCIPbendersGetSubproblemObjval(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->subprobobjval[probnumber];
+}
+
+/** returns whether the solution has non-zero slack variables */
+SCIP_Bool SCIPbendersSolSlackVarsActive(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   SCIP* subproblem;
+   SCIP_SOL* sol;
+   SCIP_VAR** vars;
+   int nsubproblems;
+   int nvars;
+   int ncontvars;
+   int i;
+   int j;
+   SCIP_Bool activeslack;
+   SCIP_Bool freesol = FALSE;
+
+   assert(benders != NULL);
+
+   /* if the slack variables have not been added, then we can immediately state that no slack variables are active */
+   if( !benders->addslackvars )
+      return FALSE;
+
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   /* checking all subproblems for active slack variables */
+   activeslack = FALSE;
+   for( i = 0; i < nsubproblems && !activeslack; i++ )
+   {
+      subproblem = SCIPbendersSubproblem(benders, i);
+
+      /* if the subproblem is convex and an NLP, then we need to create the NLP solution. Otherwise, the solution can be
+       * retrieved from the LP or CIP.
+       */
+      if( SCIPbendersSubproblemIsConvex(benders, i) )
+      {
+         if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+         {
+            SCIP_CALL( SCIPcreateNLPSol(subproblem, &sol, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateCurrentSol(subproblem, &sol, NULL) );
+         }
+         freesol = TRUE;
+      }
+      else
+         sol = SCIPgetBestSol(subproblem);
+
+      /* getting the variable data. Only the continuous variables are important. */
+      SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
+
+      /* checking all slack variables for non-zero solution values */
+      for( j = nvars - 1; j >= nvars - ncontvars; j-- )
+      {
+         if( strstr(SCIPvarGetName(vars[j]), SLACKVAR_NAME) != NULL )
+         {
+            if( !SCIPisZero(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
+            {
+               activeslack = TRUE;
+               break;
+            }
+         }
+      }
+
+      /* freeing the LP and NLP solutions */
+      if( freesol )
+      {
+         SCIP_CALL( SCIPfreeSol(subproblem, &sol) );
+      }
+   }
+
+   return activeslack;
 }
 
 /** sets the flag indicating whether a subproblem is convex

@@ -501,6 +501,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       /* if the solution has not been checked before, then we must perform the check */
       if( performcheck && nactivebenders > 0 )
       {
+         SCIP_Bool validsol = TRUE;
          for( i = 0; i < nactivebenders; i++ )
          {
             SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
@@ -510,6 +511,8 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
              * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
             if( (*result) != SCIP_FEASIBLE )
                break;
+
+            validsol = validsol && !SCIPbendersSolSlackVarsActive(benders[i]);
          }
 
          /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
@@ -518,7 +521,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
          {
             if( auxviol )
             {
-               if( !SCIPsolIsOriginal(sol) )
+               if( !SCIPsolIsOriginal(sol) && validsol )
                {
                   SCIP_CALL( constructValidSolution(scip, conshdlr, sol, SCIP_BENDERSENFOTYPE_CHECK) );
                }

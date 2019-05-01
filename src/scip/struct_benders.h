@@ -90,6 +90,8 @@ struct SCIP_Benders
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
+   SCIP_Bool             addslackvars;       /**< adds slack variables to all constraints to ensure the subproblem is always feasible */
+   SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */

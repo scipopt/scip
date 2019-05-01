@@ -295,6 +295,12 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
+/** returns whether the solution has non-zero slack variables */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersSolSlackVarsActive(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** sets the flag indicating whether a subproblem is convex
  *
  *  It is possible that this can change during the solving process. One example is when the three-phase method is

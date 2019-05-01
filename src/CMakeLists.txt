@@ -214,6 +214,7 @@ set(scipsources
     scip/sepa_zerohalf.c
     scip/benders_default.c
     scip/benderscut_feas.c
+    scip/benderscut_feasalt.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
@@ -437,6 +438,7 @@ set(scipheaders
     scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
+    scip/benderscut_feasalt.h
     scip/benderscut_int.h
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
