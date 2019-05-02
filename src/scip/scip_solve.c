@@ -1825,7 +1825,10 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
    if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPsepastoreexClearCuts(scip->sepastoreex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpex) );
       SCIP_CALL( SCIPsepastoreexFree(&scip->sepastoreex, scip->mem->probmem) );
+   }
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
