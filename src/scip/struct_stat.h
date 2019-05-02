@@ -153,6 +153,10 @@ struct SCIP_Stat
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
+   SCIP_CLOCK*           provedfeaslptime;   /**< time spent proving safe bounds using exact lp*/
+   SCIP_CLOCK*           provedinfeaslptime; /**< time spent proving safe infeasibility using exact lp */
+   SCIP_CLOCK*           provedfeasbstime;   /**< time spent proving safe bounds using bound shift*/
+   SCIP_CLOCK*           provedinfeasbstime; /**< time spent proving safe infeasibility using bound shift*/
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
@@ -194,6 +198,16 @@ struct SCIP_Stat
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
+   SCIP_Longint          nexlpinf;           /**< number of LPs proved infeasible */
+   SCIP_Longint          nfailexlpinf;       /**< number of LPs failed to prove infeasible */
+   SCIP_Longint          nexlp;              /**< number of LPs proved feasible */
+   SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
+   SCIP_Longint          nboundshift;        /**< number of boundshift calls */
+   SCIP_Longint          nfailboundshift;    /**< number of boundshift calls */
+   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls */
+   SCIP_Longint          nfailboundshiftinf; /**< number of boundshift calls */
+   SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */ 
+   SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
    SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
    SCIP_Longint          totaldivesetdepth;  /**< the total probing depth over all diveset calls */
