@@ -969,6 +969,7 @@ target_link_libraries(libscip PRIVATE
     ${ZLIB_LIBRARIES}
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
+    ${MPFR_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
     ${SYM_LIBRARIES})
@@ -989,7 +990,7 @@ endif()
 
 target_compile_definitions(scip PRIVATE EXTERN=extern)
 
-target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${MPFR_LIBRARIES} 
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 add_dependencies(libscip scip_update_githash)

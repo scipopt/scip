@@ -74,6 +74,7 @@ SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 option(EXSOLVE "should the program be compiled for exact solving" ON)
+option(DEBUG_ADAPTOR "should rationals be used with a debug adaptor?" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -242,13 +243,24 @@ if(GMP_FOUND)
     include_directories(${GMP_INCLUDE_DIRS})
     set(SCIP_WITH_GMP on)
     set(SCIP_HAVE_GMP 1)
-    if(CMAKE_BUILD_TYPE MATCHES Debug)
+    if((CMAKE_BUILD_TYPE MATCHES Debug) AND DEBUG_ADAPTOR)
+        set(SCIP_WITH_DEBUG_ADAPTOR on)
         set(USE_DEBUG_ADAPTOR 1)
     else()
+        set(SCIP_WITH_DEBUG_ADAPTOR off)
         set(USE_DEBUG_ADAPTOR 0)
     endif()
 else()
     set(GMP_LIBRARIES "")
+endif()
+
+# MPFR
+find_package(MPFR)
+if(MPFR_FOUND)
+    set(SCIP_WITH_MPFR on)
+    include_directories(${MPFR_INCLUDE_DIRS})
+else()
+    set(MPFR_LIBRARIES "")
 endif()
 
 #search the selected LP solver library
