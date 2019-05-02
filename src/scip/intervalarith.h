@@ -116,6 +116,13 @@ void SCIPintervalSet(
    SCIP_Real             value               /**< value to store */
    );
 
+/** stores given value as interval */
+extern
+void SCIPintervalSetRational(
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Rational*        value               /**< value to store */
+   );
+
 /** stores given infimum and supremum as interval */
 extern
 void SCIPintervalSetBounds(

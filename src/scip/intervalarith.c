@@ -32,6 +32,7 @@
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
 #include "scip/misc.h"
+#include "scip/rational.h"
 
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
@@ -353,6 +354,18 @@ void SCIPintervalSet(
 
    resultant->inf = value;
    resultant->sup = value;
+}
+
+/** stores given value as interval */
+void SCIPintervalSetRational(
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Rational*        value               /**< value to store */
+   )
+{
+   assert(resultant != NULL);
+
+   resultant->inf = RgetRealRelax(value, 0);
+   resultant->sup = RgetRealRelax(value, 1);
 }
 
 /** stores given infimum and supremum as interval */
