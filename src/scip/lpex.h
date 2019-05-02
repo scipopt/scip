@@ -53,6 +53,14 @@ extern "C" {
  * Column methods
  */
 
+/** checks if the exact column and its fpcol are consistent */
+extern
+SCIP_Bool colexInSync(
+   SCIP_COLEX*           colex,              /**< exact column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   );
+
 /** creates an LP column */
 extern
 SCIP_RETCODE SCIPcolexCreate(
@@ -209,6 +217,13 @@ SCIP_ROWEX* SCIProwGetExRow(
    SCIP_ROW*             row                 /**< SCIP row */
    );
 
+/** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
+extern
+SCIP_COLEX* SCIPcolGetExCol(
+   SCIP_LPEX*            lpex,               /**< exact lp data structure */
+   SCIP_COL*             col                 /**< SCIP col */
+   );
+
 /** creates and captures an LP row */
 extern
 SCIP_RETCODE SCIProwCreateExact(
@@ -227,10 +242,30 @@ SCIP_RETCODE SCIProwCreateExact(
    void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    );
 
+/** applies all cached changes to the LP solver */
+extern
+SCIP_RETCODE SCIPlpexFlush(
+   SCIP_LPEX*            lp,                 /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
 /*
  * lp methods 
  */
 
+/** returns whether it is possible to use neumair-shcherbina bounding method */
+extern
+SCIP_Bool SCIPlpexBSpossible(
+   SCIP_LPEX*            lp                  /**< pointer to LP data object */
+   );
+
+/** returns whether it is possible to use project and shift bounding method */
+extern
+SCIP_Bool SCIPlpexPSpossible(
+   SCIP_LPEX*            lp                  /**< pointer to LP data object */
+   );
 
 /** checks that lp and fplp are properly synced */
 extern

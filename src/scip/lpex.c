@@ -28,7 +28,7 @@
  *  stored in the LP solver. All LP methods affect the current LP only.
  *  Before solving the current LP with the LP solver or setting an LP state,
  *  the LP solvers data has to be updated to the current LP with a call to
- *  lpFlush().
+ *  lpexFlush().
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,6 +65,69 @@
 #include "scip/var.h"
 #include "scip/varex.h"
 #include <string.h>
+#include <inttypes.h>
+
+static
+SCIP_DECL_HASHKEYVAL(hashValExCol)
+{
+   /*lint --e{715}*/
+   SCIP_COL* col;
+   int i;
+   SCIP_Real scale;
+   SCIP_SET* set;
+   uint64_t hash;
+
+   set = (SCIP_SET*) userptr;
+   col = (SCIP_COL*)key;
+   assert(col != NULL);
+   assert(col->len >= 0);
+
+   hash = (uint64_t) (long) col->index;
+   hash += SCIPhashTwo(col->ub, col->index);
+   hash += SCIPhashTwo(col->lb, col->index);
+
+   for( i = 0; i < col->len; ++i )
+   {
+      SCIP_Real val = col->vals[i];
+
+      hash += SCIPhashTwo(SCIPrealHashCode(val), col->index);
+   }
+
+   return hash;
+}
+
+static
+SCIP_DECL_HASHGETKEY(hashKeyExCol)
+{
+   /*lint --e{715}*/
+   SCIP_COLEX* col;
+
+   col = (SCIP_COLEX*)elem;
+   assert(col != NULL);
+   assert(col->fpcol != NULL);
+
+   /* the key of a cut is the row */
+   return col->fpcol;
+}
+
+static
+SCIP_DECL_HASHKEYEQ(hashEqExCol)
+{
+   /*lint --e{715}*/
+   SCIP_COL* col1;
+   SCIP_COL* col2;
+
+   col1 = (SCIP_COL*)key1;
+   col2 = (SCIP_COL*)key2;
+   assert(col1 != NULL);
+   assert(col2 != NULL);
+
+   /* return true if the COL is the same */
+   if( col1 == col2 )
+      return TRUE;
+   else
+      return FALSE;
+}
 
 static
 SCIP_DECL_HASHKEYVAL(hashValExRow)
@@ -81,18 +144,7 @@ SCIP_DECL_HASHKEYVAL(hashValExRow)
    assert(row != NULL);
    assert(row->len > 0);
 
-   scale = 1.0 / SCIProwGetMaxval(row, set);
-   if( SCIPsetIsInfinity(set, row->rhs) )
-      scale = -scale;
-
-   hash = (uint64_t) (long) row->len;
-
-   for( i = 0; i < row->len; ++i )
-   {
-      SCIP_Real val = scale * row->vals[i];
-
-      hash += SCIPhashTwo(SCIPrealHashCode(val), row->cols_index[i]);
-   }
+   hash = SCIPhashTwo(row->len, row->index);
 
    return hash;
 }
@@ -151,10 +203,7 @@ SCIP_DECL_SORTPTRCOMP(SCIProwexComp)
    }
 }
 
-#ifndef NDEBUG
-
 /** checks if the exact column and its fpcol are consistent */
-static
 SCIP_Bool colexInSync(
    SCIP_COLEX*           colex,              /**< exact column */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -170,18 +219,31 @@ SCIP_Bool colexInSync(
    assert(fpcol != NULL);
 
    assert(colex->len == fpcol->len);
-   assert(colex->size == fpcol->size);
+   //assert(colex->size == fpcol->size);
    assert(colex->var == fpcol->var);
+   assert(colex->lpipos == fpcol->lpipos);
+   assert(colex->index == fpcol->index);
+   assert(colex->nlprows == fpcol->nlprows);
+   assert(colex->lpipos == fpcol->lpipos);
 
-   assert(RisEqualReal(colex->obj, fpcol->obj));
-   assert(RisEqualReal(colex->lb, fpcol->lb)
+
+
+   assert(RApproxEqualReal(colex->obj, fpcol->obj));
+   //assert(RApproxEqualReal(colex->unchangedobj, fpcol->unchangedobj));
+   assert(RApproxEqualReal(colex->flushedobj, fpcol->flushedobj));
+   assert(RApproxEqualReal(colex->lb, fpcol->lb)
          || (RisNegInfinity(colex->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
-   assert(RisEqualReal(colex->ub, fpcol->ub)
+   assert(RApproxEqualReal(colex->ub, fpcol->ub)
          || (RisInfinity(colex->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
-
+   assert(RApproxEqualReal(colex->flushedlb, fpcol->flushedlb)
+         || (RisNegInfinity(colex->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
+   assert(RApproxEqualReal(colex->flushedub, fpcol->flushedub)
+         || (RisInfinity(colex->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
+   
    for( i = 0; i < colex->len; ++i )
    {
-      assert(RisEqualReal(colex->vals[i], fpcol->vals[i]));
+      assert(RApproxEqualReal(colex->vals[i], fpcol->vals[i]));
+      assert(colex->linkpos[i] == fpcol->linkpos[i]);
    }
 
    return TRUE;
@@ -206,12 +268,20 @@ SCIP_Bool rowexInSync(
    assert(fprow != NULL);
 
    assert(rowex->len == fprow->len);
+   //assert(rowex->size == fprow->size);
 
-   synced = RisEqualReal(rowex->lhs, fprow->lhs)
+   assert(rowex->lpipos == fprow->lpipos);
+   assert(rowex->lppos == fprow->lppos);
+
+   synced = RApproxEqualReal(rowex->lhs, fprow->lhs)
             || (RisNegInfinity(rowex->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
-   synced = synced && (RisEqualReal(rowex->rhs, fprow->rhs)
+   synced = synced && (RApproxEqualReal(rowex->rhs, fprow->rhs)
             || (RisInfinity(rowex->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = synced && (RisEqualReal(rowex->constant, fprow->constant) && rowex->origin == fprow->origin);
+   synced = RApproxEqualReal(rowex->flushedlhs, fprow->flushedlhs)
+            || (RisNegInfinity(rowex->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
+   synced = synced && (RApproxEqualReal(rowex->flushedrhs, fprow->flushedrhs)
+            || (RisInfinity(rowex->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
+   synced = synced && (RApproxEqualReal(rowex->constant, fprow->constant) && rowex->origin == fprow->origin);
    if( !synced )
    {
       SCIPdebug(SCIProwPrint(rowex->fprow, msg, NULL));
@@ -221,7 +291,10 @@ SCIP_Bool rowexInSync(
 
    for( i = 0; i < rowex->len; ++i )
    {
-      if( !RisEqualReal(rowex->vals[i], fprow->vals[i]) )
+      assert(rowex->linkpos[i] == fprow->linkpos[i]);
+      assert(rowex->cols_index[i] == fprow->cols_index[i]);
+
+      if( !RApproxEqualReal(rowex->vals[i], fprow->vals[i]) )
       {
             SCIProwPrint(rowex->fprow, msg, NULL);
             SCIProwexPrint(rowex, msg, NULL);
@@ -237,7 +310,7 @@ SCIP_Bool rowexInSync(
          SCIPcolPrint(fprow->cols[i], msg, NULL);
          SCIPABORT();
       }
-   }
+   } 
 
    return TRUE;
 }
@@ -271,7 +344,6 @@ SCIP_Bool lpexInSync(
 
    return TRUE;
 }
-#endif
 
 /** ensures, that rows array can store at least num entries */
 static
@@ -430,6 +502,134 @@ void rowexSortNonLP(
    }
 
    row->nonlpcolssorted = TRUE;
+}
+
+/** ensures, that row array of column can store at least num entries */
+static
+SCIP_RETCODE colexEnsureSize(
+   SCIP_COLEX*           col,                /**< LP column */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(col != NULL);
+   assert(col->len <= col->size);
+
+   if( num > col->size )
+   {
+      int newsize;
+      int i;
+
+      /* realloc fpcol */
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->rows, col->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->vals, col->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->linkpos, col->size, newsize) );
+
+      /* realloc colex */
+      for( i = col->size; i < newsize; ++i )
+      {
+         col->vals[i] = Rcreate(blkmem);
+      }
+
+      col->size = newsize;
+   }
+   assert(num <= col->size);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that cols array can store at least num entries */
+static
+SCIP_RETCODE ensureColexsSize(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->ncols <= lp->colssize);
+
+   if( num > lp->colssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lp->cols, newsize) );
+      lp->colssize = newsize;
+   }
+   assert(num <= lp->colssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that chgcols array can store at least num entries */
+static
+SCIP_RETCODE ensureChgcolsSize(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->nchgcols <= lp->chgcolssize);
+
+   if( num > lp->chgcolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lp->chgcols, newsize) );
+      lp->chgcolssize = newsize;
+   }
+   assert(num <= lp->chgcolssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that lpicols array can store at least num entries */
+static
+SCIP_RETCODE ensureLpiexcolsSize(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->nlpicols <= lp->lpicolssize);
+
+   if( num > lp->lpicolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lp->lpicols, newsize) );
+      lp->lpicolssize = newsize;
+   }
+   assert(num <= lp->lpicolssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that lpirows array can store at least num entries */
+static
+SCIP_RETCODE ensureLpiexrowsSize(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->nlpirows <= lp->lpirowssize);
+
+   if( num > lp->lpirowssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lp->lpirows, newsize) );
+      lp->lpirowssize = newsize;
+   }
+   assert(num <= lp->lpirowssize);
+
+   return SCIP_OKAY;
 }
 
 /** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
@@ -889,61 +1089,6 @@ void rowexSwapCoefs(
       row->nonlpcolssorted = FALSE;
 }
 
-/** ensures, that row array of column can store at least num entries */
-static
-SCIP_RETCODE colexEnsureSize(
-   SCIP_COLEX*           col,                /**< LP column */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(col != NULL);
-   assert(col->len <= col->size);
-
-   if( num > col->size )
-   {
-      int newsize;
-
-      /* realloc fpcol */
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->rows, col->size, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->vals, col->size, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->linkpos, col->size, newsize) );
-
-      /* realloc colex */
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &col->vals, col->size, newsize) );
-
-      col->size = newsize;
-   }
-   assert(num <= col->size);
-
-   return SCIP_OKAY;
-}
-
-/** ensures, that cols array can store at least num entries */
-static
-SCIP_RETCODE ensureColexsSize(
-   SCIP_LPEX*            lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimum number of entries to store */
-   )
-{
-   assert(lp->ncols <= lp->colssize);
-
-   if( num > lp->colssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&lp->cols, newsize) );
-      lp->colssize = newsize;
-   }
-   assert(num <= lp->colssize);
-
-   return SCIP_OKAY;
-}
-
 /* forward declaration for colAddCoef() */
 static
 SCIP_RETCODE rowexAddCoef(
@@ -956,6 +1101,30 @@ SCIP_RETCODE rowexAddCoef(
    SCIP_Rational*        val,                /**< value of coefficient */
    int                   linkpos             /**< position of row in the column's row array, or -1 */
    );
+
+
+/** insert column in the chgcols list (if not already there) */
+static
+SCIP_RETCODE insertColChgcols(
+   SCIP_COLEX*           col,                /**< LP column to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   /** @todo exip: is this correct? we might change multiple times because 
+    * we do not sync after every node, etc. */
+   if( !col->objchanged && !col->lbchanged && !col->ubchanged )
+   {
+      SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
+      lp->chgcols[lp->nchgcols] = col;
+      lp->nchgcols++;
+   }
+
+   /* mark the current LP unflushed */
+   lp->flushed = FALSE;
+
+   return SCIP_OKAY;
+}
 
 /** adds a previously non existing coefficient to an LP column */
 static
@@ -1422,6 +1591,1032 @@ SCIP_RETCODE rowexChgCoefPos(
    return SCIP_OKAY;
 }
 
+#if 0 /* enable this to check links between columns and rows in LP data structure (for debugging, very slow!) */
+
+#ifdef NDEBUG
+#define ASSERT(x) do { if( !(x) ) abort(); } while( FALSE )
+#else
+#define ASSERT(x) assert(x)
+#endif
+
+static SCIP_Bool msgdisp_checklinks = FALSE;
+
+
+static
+void checkLinks(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_COL* col;
+   SCIP_ROW* row;
+   int i;
+   int j;
+
+   ASSERT(lp != NULL);
+
+   if( !msgdisp_checklinks )
+   {
+      printf("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp_checklinks = TRUE;
+   }
+
+   for( i = 0; i < lp->ncols; ++i )
+   {
+      col = lp->cols[i];
+      ASSERT(col != NULL);
+      ASSERT(!lp->flushed || col->lppos >= 0 || col->primsol == 0.0);
+      ASSERT(!lp->flushed || col->lppos >= 0 || col->farkascoef == 0.0);
+      ASSERT(col->nlprows <= col->len);
+      ASSERT(col->lppos == -1 || col->lppos >= lp->lpifirstchgcol || col->nunlinked == 0);
+
+      for( j = 0; j < col->len; ++j )
+      {
+         row = col->rows[j];
+         ASSERT(row != NULL);
+         ASSERT(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
+         ASSERT(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
+         ASSERT(col->linkpos[j] == -1 || EPSEQ(row->vals[col->linkpos[j]], col->vals[j], 1e-6));
+         ASSERT((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
+      }
+   }
+
+   for( i = 0; i < lp->nrows; ++i )
+   {
+      row = lp->rows[i];
+      ASSERT(row != NULL);
+      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualsol == 0.0);
+      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualfarkas == 0.0);
+      ASSERT(row->nlpcols <= row->len);
+      ASSERT(row->lppos == -1 || row->lppos >= lp->lpifirstchgrow || row->nunlinked == 0);
+
+      for( j = 0; j < row->len; ++j )
+      {
+         col = row->cols[j];
+         ASSERT(col != NULL);
+         ASSERT(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
+         ASSERT(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
+         ASSERT(row->linkpos[j] == -1 || EPSEQ(col->vals[row->linkpos[j]], row->vals[j], 1e-6));
+         ASSERT((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
+      }
+   }
+}
+
+#undef ASSERT
+
+#else
+#define checkLinks(lp) /**/
+#endif
+
+
+/*
+ * double linked coefficient matrix methods
+ */
+
+/** insert column coefficients in corresponding rows */
+static
+SCIP_RETCODE colexLink(
+   SCIP_COLEX*           col,                /**< column data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(col != NULL);
+   assert(col->fpcol->var != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   if( col->nunlinked > 0 )
+   {
+      SCIPsetDebugMsg(set, "linking column <%s>\n", SCIPvarGetName(col->var));
+
+      /* unlinked rows can only be in the non-LP/unlinked rows part of the rows array */
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         assert(!RisZero(col->vals[i]));
+         if( col->linkpos[i] == -1 )
+         {
+            /* this call might swap the current row with the first non-LP/not linked row, but this is of no harm */
+            SCIP_CALL( rowexAddCoef(col->rows[i], blkmem, set, eventqueue, lp, col, col->vals[i], i) );
+         }
+         assert(col->rows[i]->cols[col->linkpos[i]] == col);
+         assert(col->rows[i]->linkpos[col->linkpos[i]] == i);
+         assert(col->nlprows == 0 || col->rows[col->nlprows-1]->cols[col->linkpos[col->nlprows-1]] == col);
+         assert(col->nlprows == 0 || col->rows[col->nlprows-1]->linkpos[col->linkpos[col->nlprows-1]] == col->nlprows-1);
+      }
+   }
+   assert(col->nunlinked == 0);
+
+   checkLinks(lp);
+
+   return SCIP_OKAY;
+}
+
+/** removes column coefficients from corresponding rows */
+static
+SCIP_RETCODE colexUnlink(
+   SCIP_COLEX*           col,                /**< column data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(col != NULL);
+   assert(col->fpcol->var != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   if( col->nunlinked < col->len )
+   {
+      SCIPsetDebugMsg(set, "unlinking column <%s>\n", SCIPvarGetName(col->var));
+      for( i = 0; i < col->len; ++i )
+      {
+         if( col->linkpos[i] >= 0 )
+         {
+            assert(col->rows[i]->cols[col->linkpos[i]] == col);
+            SCIP_CALL( rowexDelCoefPos(col->rows[i], blkmem, set, eventqueue, lp, col->linkpos[i]) );
+            col->linkpos[i] = -1;
+            col->nunlinked++;
+         }
+      }
+   }
+   assert(col->nunlinked == col->len);
+
+   checkLinks(lp);
+
+   return SCIP_OKAY;
+}
+
+/** insert row coefficients in corresponding columns */
+static
+SCIP_RETCODE rowexLink(
+   SCIP_ROWEX*           row,                /**< row data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(row != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   if( row->nunlinked > 0 )
+   {
+      SCIPsetDebugMsg(set, "linking row <%s>\n", row->name);
+
+      /* unlinked columns can only be in the non-LP/unlinked columns part of the cols array */
+      for( i = row->nlpcols; i < row->len; ++i )
+      {
+         assert(!RisZero(row->vals[i]));
+         if( row->linkpos[i] == -1 )
+         {
+            /* this call might swap the current column with the first non-LP/not linked column, but this is of no harm */
+            SCIP_CALL( colexAddCoef(row->cols[i], blkmem, set, eventqueue, lp, row, row->vals[i], i) );
+         }
+         assert(row->cols[i]->rows[row->linkpos[i]] == row);
+         assert(row->cols[i]->linkpos[row->linkpos[i]] == i);
+         assert(row->nlpcols == 0 || row->cols[row->nlpcols-1]->rows[row->linkpos[row->nlpcols-1]] == row);
+         assert(row->nlpcols == 0 || row->cols[row->nlpcols-1]->linkpos[row->linkpos[row->nlpcols-1]] == row->nlpcols-1);
+      }
+   }
+   assert(row->nunlinked == 0);
+
+   checkLinks(lp);
+
+   return SCIP_OKAY;
+}
+
+/** removes row coefficients from corresponding columns */
+static
+SCIP_RETCODE rowexUnlink(
+   SCIP_ROWEX*           row,                /**< row data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(row != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   if( row->nunlinked < row->len )
+   {
+      SCIPsetDebugMsg(set, "unlinking row <%s>\n", row->name);
+      for( i = 0; i < row->len; ++i )
+      {
+         if( row->linkpos[i] >= 0 )
+         {
+            assert(row->cols[i]->rows[row->linkpos[i]] == row);
+            SCIP_CALL( colexDelCoefPos(row->cols[i], set, lp, row->linkpos[i]) );
+            row->nunlinked++;
+         }
+      }
+   }
+   assert(row->nunlinked == row->len);
+
+   return SCIP_OKAY;
+}
+
+/** updates link data after addition of column */
+static
+void colexUpdateAddLP(
+   SCIP_COLEX*           col,                /**< LP column */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_ROWEX* row;
+   int i;
+   int pos;
+
+   assert(col != NULL);
+   assert(col->lppos >= 0);
+
+   /* update column arrays of all linked rows */
+   for( i = 0; i < col->len; ++i )
+   {
+      pos = col->linkpos[i];
+      if( pos >= 0 )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->linkpos[pos] == i);
+         assert(row->cols[pos] == col);
+         assert(row->nlpcols <= pos && pos < row->len);
+
+         row->nlpcols++;
+         rowexSwapCoefs(row, set->buffer, pos, row->nlpcols-1);
+         assert(row->cols[row->nlpcols-1] == col);
+
+         /* if no swap was necessary, mark lpcols to be unsorted */
+         if( pos == row->nlpcols-1 )
+            row->lpcolssorted = FALSE;
+
+         /* update norms */
+         //rowAddNorms(row, set, col, row->vals[row->nlpcols-1], FALSE);
+      }
+   }
+}
+
+/** updates link data after addition of row */
+static
+void rowexUpdateAddLP(
+   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_COLEX* col;
+   int i;
+   int pos;
+
+   assert(row != NULL);
+   assert(row->lppos >= 0);
+
+   /* update row arrays of all linked columns */
+   for( i = 0; i < row->len; ++i )
+   {
+      pos = row->linkpos[i];
+      if( pos >= 0 )
+      {
+         col = row->cols[i];
+         assert(col != NULL);
+         assert(col->linkpos[pos] == i);
+         assert(col->rows[pos] == row);
+         assert(col->nlprows <= pos && pos < col->len);
+
+         col->nlprows++;
+         colexSwapCoefs(col, set->buffer, pos, col->nlprows-1);
+
+         /* if no swap was necessary, mark lprows to be unsorted */
+         if( pos == col->nlprows-1 )
+            col->lprowssorted = FALSE;
+      }
+   }
+}
+
+/** updates link data after removal of column */
+static
+void colexUpdateDelLP(
+   SCIP_COLEX*           col,                /**< LP column */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_ROWEX* row;
+   int i;
+   int pos;
+
+   assert(col != NULL);
+   assert(col->lppos == -1);
+
+   /* update column arrays of all linked rows */
+   for( i = 0; i < col->len; ++i )
+   {
+      pos = col->linkpos[i];
+      if( pos >= 0 )
+      {
+         row = col->rows[i];
+         assert(row != NULL);
+         assert(row->linkpos[pos] == i);
+         assert(row->cols[pos] == col);
+         assert(0 <= pos && pos < row->nlpcols);
+
+         /* update norms */
+         //rowDelNorms(row, set, col, row->vals[pos], TRUE, FALSE, FALSE);
+
+         row->nlpcols--;
+         rowexSwapCoefs(row, set->buffer, pos, row->nlpcols);
+
+         /* if no swap was necessary, mark nonlpcols to be unsorted */
+         if( pos == row->nlpcols )
+            row->nonlpcolssorted = FALSE;
+      }
+   }
+}
+
+/** updates link data after removal of row */
+static
+void rowexUpdateDelLP(
+   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_COLEX* col;
+   int i;
+   int pos;
+
+   assert(row != NULL);
+   assert(row->lppos == -1);
+
+   /* update row arrays of all linked columns */
+   for( i = 0; i < row->len; ++i )
+   {
+      pos = row->linkpos[i];
+      if( pos >= 0 )
+      {
+         col = row->cols[i];
+         assert(col != NULL);
+         assert(0 <= pos && pos < col->nlprows);
+         assert(col->linkpos[pos] == i);
+         assert(col->rows[pos] == row);
+
+         col->nlprows--;
+         colexSwapCoefs(col, set->buffer, pos, col->nlprows);
+
+         /* if no swap was necessary, mark lprows to be unsorted */
+         if( pos == col->nlprows )
+            col->nonlprowssorted = FALSE;
+      }
+   }
+}
+
+/** flushing methods */
+
+/** resets column data to represent a column not in the LP solver */
+static
+void markColexDeleted(
+   SCIP_COLEX*           col                 /**< column to be marked deleted */
+   )
+{
+   assert(col != NULL);
+
+   col->lpipos = -1;
+   col->sbdownvalid = FALSE;
+   col->sbupvalid = FALSE;
+   col->validredcostlp = -1;
+   col->validfarkaslp = -1;
+   col->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
+}
+
+/** applies all cached column removals to the LP solver */
+static
+SCIP_RETCODE lpexFlushDelCols(
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->lpifirstchgcol <= lp->nlpicols);
+   assert(lp->lpifirstchgcol <= lp->ncols);
+
+   /* find the first column to change */
+   while( lp->lpifirstchgcol < lp->nlpicols
+      && lp->lpifirstchgcol < lp->ncols
+      && lp->cols[lp->lpifirstchgcol]->lpipos == lp->lpifirstchgcol
+      && !lp->cols[lp->lpifirstchgcol]->coefchanged )
+   {
+      assert(lp->cols[lp->lpifirstchgcol] == lp->lpicols[lp->lpifirstchgcol]);
+      lp->lpifirstchgcol++;
+   }
+
+   /* shrink LP to the part which didn't change */
+   if( lp->lpifirstchgcol < lp->nlpicols )
+   {
+      int i;
+
+      assert(!lp->fplp->diving);
+      SCIPdebugMessage("flushing col deletions: shrink exact LP from %d to %d columns\n", lp->nlpicols, lp->lpifirstchgcol);
+      SCIP_CALL( SCIPlpiexDelCols(lp->lpiex, lp->lpifirstchgcol, lp->nlpicols-1) );
+      for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
+      {
+         markColexDeleted(lp->lpicols[i]);
+      }
+      lp->nlpicols = lp->lpifirstchgcol;
+      lp->flushdeletedcols = TRUE;
+      lp->updateintegrality = TRUE;
+
+      /* mark the LP unsolved */
+      lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+   assert(lp->nlpicols == lp->lpifirstchgcol);
+
+   return SCIP_OKAY;
+}
+
+/** applies all cached column additions to the LP solver */
+static
+SCIP_RETCODE lpexFlushAddCols(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   SCIP_Rational** obj;
+   SCIP_Rational** lb;
+   SCIP_Rational** ub;
+   int* beg;
+   int* ind;
+   SCIP_Rational** val;
+   char** name;
+   SCIP_COLEX* col;
+   int c;
+   int pos;
+   int nnonz;
+   int naddcols;
+   int naddcoefs;
+   int i;
+   int lpipos;
+
+   assert(lp != NULL);
+   assert(lp->lpifirstchgcol == lp->nlpicols);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+
+   /* if there are no columns to add, we are ready */
+   if( lp->ncols == lp->nlpicols )
+      return SCIP_OKAY;
+
+   /* add the additional columns */
+   assert(!lp->fplp->diving);
+   assert(lp->ncols > lp->nlpicols);
+   SCIP_CALL( ensureLpiexcolsSize(lp, set, lp->ncols) );
+
+   /* count the (maximal) number of added coefficients, calculate the number of added columns */
+   naddcols = lp->ncols - lp->nlpicols;
+   naddcoefs = 0;
+   for( c = lp->nlpicols; c < lp->ncols; ++c )
+      naddcoefs += lp->cols[c]->len;
+   assert(naddcols > 0);
+
+   /* get temporary memory for changes */
+   obj = RcreateArrayTemp(set->buffer, naddcols);
+   lb = RcreateArrayTemp(set->buffer, naddcols);
+   ub = RcreateArrayTemp(set->buffer, naddcols);
+   val = RcreateArrayTemp(set->buffer, naddcoefs);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddcols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddcols) );
+
+   /* fill temporary memory with column data */
+   nnonz = 0;
+   for( pos = 0, c = lp->nlpicols; c < lp->ncols; ++pos, ++c )
+   {
+      col = lp->cols[c];
+      assert(col != NULL);
+      assert(col->var != NULL);
+      assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetColExact(col->var) == col);
+      assert(col->lppos == c);
+      assert(nnonz + col->nlprows <= naddcoefs);
+
+      SCIPsetDebugMsg(set, "flushing added column <%s>: ", SCIPvarGetName(col->var));
+
+      /* Because the column becomes a member of the LP solver, it now can take values
+       * different from zero. That means, we have to include the column in the corresponding
+       * row vectors.
+       */
+      SCIP_CALL( colexLink(col, blkmem, set, eventqueue, lp) );
+
+      lp->lpicols[c] = col;
+      col->lpipos = c;
+      col->sbdownvalid = FALSE;
+      col->sbupvalid = FALSE;
+      col->validredcostlp = -1;
+      col->validfarkaslp = -1;
+      col->objchanged = FALSE;
+      col->lbchanged = FALSE;
+      col->ubchanged = FALSE;
+      col->coefchanged = FALSE;
+      Rset(obj[pos], col->obj);
+      Rset(lb[pos], col->lb);
+      Rset(ub[pos], col->ub);
+
+      beg[pos] = nnonz;
+      name[pos] = (char*)SCIPvarGetName(col->fpcol->var);
+
+      Rset(col->flushedobj, obj[pos]);
+      Rset(col->flushedlb, lb[pos]);
+      Rset(col->flushedub, ub[pos]);
+
+      for( i = 0; i < col->nlprows; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         lpipos = col->rows[i]->lpipos;
+         if( lpipos >= 0 )
+         {
+            assert(lpipos < lp->nrows);
+            assert(nnonz < naddcoefs);
+            ind[nnonz] = lpipos;
+            Rset(val[nnonz], col->vals[i]);
+            nnonz++;
+         }
+      }
+#ifndef NDEBUG
+      for( i = col->nlprows; i < col->len; ++i )
+      {
+         assert(col->rows[i] != NULL);
+         assert(col->rows[i]->lpipos == -1); /* because the row deletions are already performed */
+      }
+#endif
+   }
+
+   /* call LP interface */
+   SCIPsetDebugMsg(set, "flushing col additions: enlarge exact LP from %d to %d columns\n", lp->nlpicols, lp->ncols);
+   SCIP_CALL( SCIPlpiexAddCols(lp->lpiex, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
+   lp->nlpicols = lp->ncols;
+   lp->lpifirstchgcol = lp->nlpicols;
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &name);
+   SCIPsetFreeBufferArray(set, &ind);
+   SCIPsetFreeBufferArray(set, &beg);
+   RdeleteArrayTemp(set->buffer, &val, naddcoefs);
+   RdeleteArrayTemp(set->buffer, &ub, naddcols);
+   RdeleteArrayTemp(set->buffer, &lb, naddcols);
+   RdeleteArrayTemp(set->buffer, &obj, naddcols);
+
+   lp->flushaddedcols = TRUE;
+   lp->updateintegrality = TRUE;
+
+   /* mark the LP unsolved */
+   lp->solved = FALSE;
+   lp->dualfeasible = FALSE;
+   lp->dualchecked = FALSE;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+
+   return SCIP_OKAY;
+}
+
+/** resets row data to represent a row not in the LP solver */
+static
+void markRowexDeleted(
+   SCIP_ROWEX*           row                 /**< row to be marked deleted */
+   )
+{
+   assert(row != NULL);
+
+   row->lpipos = -1;
+   row->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
+   row->validactivitylp = -1;
+}
+
+/** applies all cached row removals to the LP solver */
+static
+SCIP_RETCODE lpexFlushDelRows(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->lpifirstchgrow <= lp->nlpirows);
+   assert(lp->lpifirstchgrow <= lp->nrows);
+
+   /* find the first row to change */
+   while( lp->lpifirstchgrow < lp->nlpirows
+      && lp->lpifirstchgrow < lp->nrows
+      && lp->rows[lp->lpifirstchgrow]->lpipos == lp->lpifirstchgrow
+      && !lp->rows[lp->lpifirstchgrow]->coefchanged )
+   {
+      assert(lp->rows[lp->lpifirstchgrow] == lp->lpirows[lp->lpifirstchgrow]);
+      lp->lpifirstchgrow++;
+   }
+
+   /* shrink LP to the part which didn't change */
+   if( lp->lpifirstchgrow < lp->nlpirows )
+   {
+      int i;
+
+      SCIPsetDebugMsg(set, "flushing row deletions: shrink exact LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
+      SCIP_CALL( SCIPlpiexDelRows(lp->lpiex, lp->lpifirstchgrow, lp->nlpirows-1) );
+      for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
+      {
+         markRowexDeleted(lp->lpirows[i]);
+         SCIP_CALL( SCIProwexRelease(&lp->lpirows[i], blkmem, set, lp) );
+      }
+      lp->nlpirows = lp->lpifirstchgrow;
+      lp->flushdeletedrows = TRUE;
+
+      /* mark the LP unsolved */
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+   assert(lp->nlpirows == lp->lpifirstchgrow);
+
+   return SCIP_OKAY;
+}
+
+/** applies all cached row additions and removals to the LP solver */
+static
+SCIP_RETCODE lpexFlushAddRows(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   SCIP_Rational** lhs;
+   SCIP_Rational** rhs;
+   SCIP_Rational** val;
+   int* beg;
+   int* ind;
+   char** name;
+   SCIP_ROWEX* row;
+   int r;
+   int pos;
+   int nnonz;
+   int naddrows;
+   int naddcoefs;
+   int i;
+   int lpipos;
+
+   assert(lp != NULL);
+   assert(lp->lpifirstchgrow == lp->nlpirows);
+   assert(blkmem != NULL);
+
+   /* if there are no rows to add, we are ready */
+   if( lp->nrows == lp->nlpirows )
+      return SCIP_OKAY;
+
+   /* add the additional rows */
+   assert(lp->nrows > lp->nlpirows);
+   SCIP_CALL( ensureLpiexrowsSize(lp, set, lp->nrows) );
+
+   /* count the (maximal) number of added coefficients, calculate the number of added rows */
+   naddrows = lp->nrows - lp->nlpirows;
+   naddcoefs = 0;
+   for( r = lp->nlpirows; r < lp->nrows; ++r )
+      naddcoefs += lp->rows[r]->len;
+   assert(naddrows > 0);
+
+   /* get temporary memory for changes */
+   lhs = RcreateArrayTemp(set->buffer, naddrows);
+   rhs = RcreateArrayTemp(set->buffer, naddrows);
+   val = RcreateArrayTemp(set->buffer, naddcoefs);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddrows) );
+
+   /* fill temporary memory with row data */
+   nnonz = 0;
+   for( pos = 0, r = lp->nlpirows; r < lp->nrows; ++pos, ++r )
+   {
+      row = lp->rows[r];
+      assert(row != NULL);
+      assert(row->lppos == r);
+      assert(nnonz + row->nlpcols <= naddcoefs);
+
+      SCIPsetDebugMsg(set, "flushing added exact row <%s>: ", row->fprow->name);
+
+      /* Because the row becomes a member of the LP solver, its dual variable now can take values
+       * different from zero. That means, we have to include the row in the corresponding
+       * column vectors.
+       */
+      SCIP_CALL( rowexLink(row, blkmem, set, eventqueue, lp) );
+
+      SCIProwexCapture(row);
+      lp->lpirows[r] = row;
+      row->lpipos = r;
+      row->lhschanged = FALSE;
+      row->rhschanged = FALSE;
+      row->coefchanged = FALSE;
+
+      Rdiff(lhs[pos], row->lhs, row->constant);
+      Rdiff(rhs[pos], row->rhs, row->constant);
+      beg[pos] = nnonz;
+      name[pos] = row->fprow->name;
+
+      Rset(row->flushedlhs, lhs[pos]);
+      Rset(row->flushedrhs, rhs[pos]);
+
+      SCIPsetDebugMsg(set, "flushing added row (SCIP_LPI): %+g <=", RgetRealApprox(lhs[pos]));
+      for( i = 0; i < row->nlpcols; ++i )
+      {
+         assert(row->cols[i] != NULL);
+         lpipos = row->cols[i]->lpipos;
+         if( lpipos >= 0 )
+         {
+            assert(lpipos < lp->ncols);
+            assert(nnonz < naddcoefs);
+            SCIPsetDebugMsgPrint(set, " %+gx%d(<%s>)", RgetRealApprox(row->vals[i]), lpipos+1, SCIPvarGetName(row->cols[i]->fpcol->var));
+            ind[nnonz] = lpipos;
+            Rset(val[nnonz], row->vals[i]);
+            nnonz++;
+         }
+      }
+      SCIPsetDebugMsgPrint(set, " <= %+g\n", RgetRealApprox(rhs[pos]));
+#ifndef NDEBUG
+      for( i = row->nlpcols; i < row->len; ++i )
+      {
+         assert(row->cols[i] != NULL);
+         assert(row->cols[i]->lpipos == -1); /* because the column deletions are already performed */
+      }
+#endif
+   }
+
+   /* call LP interface */
+   SCIPsetDebugMsg(set, "flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
+   SCIP_CALL( SCIPlpiexAddRows(lp->lpiex, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
+   lp->nlpirows = lp->nrows;
+   lp->lpifirstchgrow = lp->nlpirows;
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &name);
+   SCIPsetFreeBufferArray(set, &ind);
+   SCIPsetFreeBufferArray(set, &beg);
+   RdeleteArrayTemp(set->buffer, &val, naddcoefs);
+   RdeleteArrayTemp(set->buffer, &rhs, naddrows);
+   RdeleteArrayTemp(set->buffer, &lhs, naddrows);
+
+   lp->flushaddedrows = TRUE;
+
+   /* mark the LP unsolved */
+   lp->solved = FALSE;
+   lp->primalfeasible = FALSE;
+   lp->primalchecked = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** applies all cached column bound and objective changes to the LP */
+static
+SCIP_RETCODE lpexFlushChgCols(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
+   SCIP_COLEX* col;
+   int* objind;
+   int* bdind;
+   SCIP_Rational** obj;
+   SCIP_Rational** lb;
+   SCIP_Rational** ub;
+   int nobjchg;
+   int nbdchg;
+   int i;
+
+   assert(lp != NULL);
+
+   if( lp->nchgcols == 0 )
+      return SCIP_OKAY;
+
+   /* get temporary memory for changes */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &objind, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &bdind, lp->ncols) );
+   obj = RcreateArrayTemp(set->buffer, lp->ncols);
+   lb = RcreateArrayTemp(set->buffer, lp->ncols);
+   ub = RcreateArrayTemp(set->buffer, lp->ncols);
+
+   /* collect all cached bound and objective changes */
+   nobjchg = 0;
+   nbdchg = 0;
+   for( i = 0; i < lp->nchgcols; ++i )
+   {
+      col = lp->chgcols[i];
+      assert(col != NULL);
+      assert(col->var != NULL);
+      assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetColExact(col->var) == col);
+
+      if( col->lpipos >= 0 )
+      {
+#ifndef NDEBUG
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if( !lpinone )
+         {
+            SCIP_Rational* lpiobj = RcreateTemp(set->buffer);
+            SCIP_Rational* lpilb = RcreateTemp(set->buffer);
+            SCIP_Rational* lpiub = RcreateTemp(set->buffer);
+
+            SCIP_CALL( SCIPlpiexGetObj(lp->lpiex, col->lpipos, col->lpipos, &lpiobj) );
+            SCIP_CALL( SCIPlpiexGetBounds(lp->lpiex, col->lpipos, col->lpipos, &lpilb, &lpiub) );
+            assert(RisEqual(lpiobj, col->flushedobj));
+            /* assert((SCIPsetIsInfinity(set, -lpilb) && SCIPsetIsInfinity(set, -col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, -lpilb) && !SCIPsetIsInfinity(set, -col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
+                  || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub))); */
+            RdeleteTemp(set->buffer, &lpiub);
+            RdeleteTemp(set->buffer, &lpilb);
+            RdeleteTemp(set->buffer, &lpiobj);
+         }
+#endif
+
+         if( col->objchanged )
+         {
+            if( RisEqual(col->flushedobj, col->obj) ) /*lint !e777*/
+            {
+               assert(nobjchg < lp->ncols);
+               objind[nobjchg] = col->lpipos;
+               Rset(obj[nobjchg], col->obj);
+               nobjchg++;
+               Rset(col->flushedobj, col->obj);
+            }
+            col->objchanged = FALSE;
+         }
+
+         if( col->lbchanged || col->ubchanged )
+         {
+            if( !RisEqual(col->flushedlb, col->lb) || !RisEqual(col->flushedub, col->ub) ) /*lint !e777*/
+            {
+               assert(nbdchg < lp->ncols);
+               bdind[nbdchg] = col->lpipos;
+               Rset(lb[nbdchg], col->lb);
+               Rset(ub[nbdchg], col->ub);
+               nbdchg++;
+               Rset(col->flushedlb, col->lb);
+               Rset(col->flushedub, col->ub);
+            }
+            col->lbchanged = FALSE;
+            col->ubchanged = FALSE;
+         }
+      }
+      /* maybe lb/ub/objchanged should all be set to false when lpipos is -1 */
+   }
+
+   /* change objective values in LP */
+   if( nobjchg > 0 )
+   {
+      SCIPsetDebugMsg(set, "flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
+      SCIP_CALL( SCIPlpiexChgObj(lp->lpiex, nobjchg, objind, obj) );
+
+      /* mark the LP unsolved */
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
+   }
+
+   /* change bounds in LP */
+   if( nbdchg > 0 )
+   {
+      SCIPsetDebugMsg(set, "flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
+      SCIP_CALL( SCIPlpiexChgBounds(lp->lpiex, nbdchg, bdind, lb, ub) );
+
+      /* mark the LP unsolved */
+      lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
+   }
+
+   lp->nchgcols = 0;
+
+   /* free temporary memory */
+   RdeleteArrayTemp(set->buffer, &ub, lp->ncols);
+   RdeleteArrayTemp(set->buffer, &lb, lp->ncols);
+   RdeleteArrayTemp(set->buffer, &obj, lp->ncols);
+   SCIPsetFreeBufferArray(set, &bdind);
+   SCIPsetFreeBufferArray(set, &objind);
+
+   return SCIP_OKAY;
+}
+
+/** applies all cached row side changes to the LP */
+static
+SCIP_RETCODE lpexFlushChgRows(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+#ifndef NDEBUG
+   SCIP_Bool lpinone = (strcmp( SCIPlpiGetSolverName(), "NONE") == 0);
+#endif
+   SCIP_ROWEX* row;
+   int* ind;
+   SCIP_Rational** lhs;
+   SCIP_Rational** rhs;
+   int i;
+   int nchg;
+
+   assert(lp != NULL);
+
+   if( lp->nchgrows == 0 )
+      return SCIP_OKAY;
+
+   /* get temporary memory for changes */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, lp->nrows) );
+   lhs = RcreateArrayTemp(set->buffer, lp->nrows);
+   rhs = RcreateArrayTemp(set->buffer, lp->nrows);
+
+   /* collect all cached left and right hand side changes */
+   nchg = 0;
+   for( i = 0; i < lp->nchgrows; ++i )
+   {
+      row = lp->chgrows[i];
+      assert(row != NULL);
+
+      if( row->lpipos >= 0 )
+      {
+#ifndef NDEBUG
+         /* do not check consistency of data with LPI in case of LPI=none */
+         if( !lpinone )
+         {
+            SCIP_Rational* lpilhs = RcreateTemp(set->buffer);
+            SCIP_Rational* lpirhs = RcreateTemp(set->buffer);
+
+            SCIP_CALL( SCIPlpiexGetSides(lp->lpiex, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
+            assert(RisEqual(lpilhs, row->flushedlhs));
+            assert(RisEqual(lpirhs, row->flushedrhs));
+
+            RdeleteTemp(set->buffer, &lpirhs);
+            RdeleteTemp(set->buffer, &lpilhs);
+         }
+#endif
+         if( row->lhschanged || row->rhschanged )
+         {
+            SCIP_Rational* newlhs = RcreateTemp(set->buffer);
+            SCIP_Rational* newrhs = RcreateTemp(set->buffer);
+
+            Rdiff(newlhs, row->lhs, row->constant);
+            Rdiff(newrhs, row->rhs, row->constant);
+            if( RisEqual(row->flushedlhs, newlhs) || RisEqual(row->flushedrhs, newrhs) ) /*lint !e777*/
+            {
+               assert(nchg < lp->nrows);
+               ind[nchg] = row->lpipos;
+               Rset(lhs[nchg], newlhs);
+               Rset(rhs[nchg], newrhs);
+               nchg++;
+               Rset(row->flushedlhs, newlhs);
+               Rset(row->flushedrhs, newrhs);
+            }
+            row->lhschanged = FALSE;
+            row->rhschanged = FALSE;
+
+            RdeleteTemp(set->buffer, &newrhs);
+            RdeleteTemp(set->buffer, &newlhs);
+         }
+      }
+   }
+
+   /* change left and right hand sides in LP */
+   if( nchg > 0 )
+   {
+      SCIPsetDebugMsg(set, "flushing side changes: change %d sides of %d exact rows\n", nchg, lp->nchgrows);
+      SCIP_CALL( SCIPlpiexChgSides(lp->lpiex, nchg, ind, lhs, rhs) );
+
+      /* mark the LP unsolved */
+      lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
+   }
+
+   lp->nchgrows = 0;
+
+   /* free temporary memory */
+   RdeleteArrayTemp(set->buffer, &rhs, lp->nrows);
+   RdeleteArrayTemp(set->buffer, &lhs, lp->nrows);
+   SCIPsetFreeBufferArray(set, &ind);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Column methods
  */
@@ -1506,7 +2701,8 @@ SCIP_RETCODE SCIPcolexCreate(
    (*col)->nunlinked = len;
    (*col)->lppos = -1;
    (*col)->lpipos = -1;
-   
+   (*col)->validredcostlp = -1;
+   (*col)->validfarkaslp = -1;
 
    return SCIP_OKAY;
 }
@@ -1527,7 +2723,11 @@ SCIP_RETCODE SCIPcolexFree(
    assert((*col)->fpcol != NULL);
 
    if( (*col)->size > 0 )
+   {
       RdeleteArray(blkmem, &(*col)->vals, (*col)->size);
+      BMSfreeBlockMemoryArray(blkmem, &(*col)->linkpos, (*col)->size);
+      BMSfreeBlockMemoryArray(blkmem, &(*col)->rows, (*col)->size);
+   }
    else
       assert((*col)->vals == NULL);
 
@@ -1761,7 +2961,6 @@ SCIP_RETCODE SCIPcolexIncCoef(
    return SCIP_OKAY;
 }
 
-#if 0
 /** changes objective value of column */
 extern
 SCIP_RETCODE SCIPcolexChgObj(
@@ -1773,14 +2972,14 @@ SCIP_RETCODE SCIPcolexChgObj(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetCol(col->var) == col);
+   assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetColExact(col->var) == col);
    assert(lp != NULL);
 
    SCIPsetDebugMsg(set, "changing objective value of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    /* only add actual changes */
-   if( !SCIPsetIsEQ(set, col->obj, newobj) )
+   if( !RisEqual(col->obj, newobj) )
    {
       /* only variables with a real position in the LPI can be inserted */
       if( col->lpipos >= 0 )
@@ -1796,8 +2995,8 @@ SCIP_RETCODE SCIPcolexChgObj(
       /* in any case, when the sign of the objective (and thereby the best bound) changes, the variable has to enter the
        * LP and the LP has to be flushed
        */
-      else if( (col->obj < 0.0 && newobj >= 0.0 && SCIPsetIsZero(set, col->ub))
-         || (col->obj >= 0.0 && newobj < 0.0 && SCIPsetIsZero(set, col->lb)) )
+      else if( (RisNegative(col->obj) && RisPositive(newobj) && RisZero(col->ub))
+         || (RisPositive(col->obj) && RisNegative(newobj) && RisZero(col->lb)) )
       {
          /* mark the LP unflushed */
          lp->flushed = FALSE;
@@ -1805,10 +3004,10 @@ SCIP_RETCODE SCIPcolexChgObj(
    }
 
    /* store new objective function value */
-   col->obj = newobj;
+   Rset(col->obj, newobj);
 
    /* update original objective value, as long as we are not in diving or probing and changed objective values */
-   if( !lp->divingobjchg )
+   /* if( !lp->divingobjchg )
    {
 
       SCIP_Real oldobj = col->unchangedobj;
@@ -1816,9 +3015,9 @@ SCIP_RETCODE SCIPcolexChgObj(
       assert(SCIPsetIsEQ(set, newobj, SCIPvarGetUnchangedObj(col->var)));
       col->unchangedobj = newobj;
 
-      /* update the objective function vector norms */
+      /* update the objective function vector norms /
       lpUpdateObjNorms(lp, set, oldobj, newobj);
-   }
+   } */
 
    return SCIP_OKAY;
 }
@@ -1830,7 +3029,48 @@ SCIP_RETCODE SCIPcolexChgLb(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_Rational*        newlb               /**< new lower bound value */
-   );
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetColExact(col->var) == col);
+   assert(lp != NULL);
+
+   SCIPsetDebugMsg(set, "changing lower bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
+
+   /* only add actual changes */
+   if( !RisEqual(col->lb, newlb) )
+   {
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->lbchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( !RisNegative(col->obj) && RisZero(col->lb) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+      if( RisNegInfinity(col->lb) && !RisNegInfinity(newlb) && !RisInfinity(col->ub) )
+         lp->ninfiniteboundcols--;
+      if( RisNegInfinity(newlb) && !RisInfinity(col->ub) )
+         lp->ninfiniteboundcols++;
+   }
+
+   Rset(col->lb, newlb);
+
+   return SCIP_OKAY;
+}
 
 /** changes upper bound of column */
 extern
@@ -1839,8 +3079,49 @@ SCIP_RETCODE SCIPcolexChgUb(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_Rational*        newub               /**< new upper bound value */
-   );
-#endif
+   )
+{
+   assert(col != NULL);
+   assert(col->var != NULL);
+   assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetColExact(col->var) == col);
+   assert(lp != NULL);
+
+   SCIPsetDebugMsg(set, "changing upper bound of column <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
+
+   /* only add actual changes */
+   if( !RisEqual(col->ub, newub) )
+   {
+      /* only variables with a real position in the LPI can be inserted */
+      if( col->lpipos >= 0 )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->ubchanged = TRUE;
+
+         assert(lp->nchgcols > 0);
+      }
+      /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
+       * flushed
+       */
+      else if( RisNegative(col->obj) && RisZero(col->ub) )
+      {
+         /* mark the LP unflushed */
+         lp->flushed = FALSE;
+      }
+      if( RisInfinity(col->ub) && !RisInfinity(newub) && !RisNegInfinity(col->lb) )
+         lp->ninfiniteboundcols--;
+      if( RisInfinity(newub) && !RisNegInfinity(col->lb) )
+         lp->ninfiniteboundcols++;
+   }
+
+   Rset(col->ub, newub);
+
+   return SCIP_OKAY;
+}
+
 
 /** creates and captures an LP row */
 SCIP_RETCODE SCIProwCreateExact(
@@ -1962,84 +3243,91 @@ SCIP_RETCODE SCIProwCreateExact(
    return SCIP_OKAY;
 } /*lint !e715*/
 
+/** applies all cached changes to the LP solver */
+SCIP_RETCODE SCIPlpexFlush(
+   SCIP_LPEX*            lp,                 /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   assert(lp != NULL);
+   assert(blkmem != NULL);
+
+   SCIPsetDebugMsg(set, "flushing exact LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
+      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+
+   if( !lp->flushed )
+   {
+      lp->flushdeletedcols = FALSE;
+      lp->flushaddedcols = FALSE;
+      lp->flushdeletedrows = FALSE;
+      lp->flushaddedrows = FALSE;
+
+      SCIP_CALL( lpexFlushDelCols(lp) );
+      SCIP_CALL( lpexFlushDelRows(lp, blkmem, set) );
+      SCIP_CALL( lpexFlushChgCols(lp, set) );
+      SCIP_CALL( lpexFlushChgRows(lp, set) );
+      SCIP_CALL( lpexFlushAddCols(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( lpexFlushAddRows(lp, blkmem, set, eventqueue) );
+
+      lp->flushed = TRUE;
+
+      //checkLinks(lp);
+   }
+
+   /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
+   /* if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   } */
+
+   assert(lp->nlpicols == lp->ncols);
+   assert(lp->lpifirstchgcol == lp->nlpicols);
+   assert(lp->nlpirows == lp->nrows);
+   assert(lp->lpifirstchgrow == lp->nlpirows);
+   assert(lp->nchgcols == 0);
+   assert(lp->nchgrows == 0);
+#ifndef NDEBUG
+   {
+      int ncols;
+      int nrows;
+
+      SCIP_CALL( SCIPlpiexGetNCols(lp->lpiex, &ncols) );
+      SCIP_CALL( SCIPlpiexGetNRows(lp->lpiex, &nrows) );
+      assert(ncols == lp->ncols);
+      assert(nrows == lp->nrows);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
 /*
  * lp methods
  */
 
-/** updates link data after addition of row */
-static
-void rowexUpdateAddLP(
-   SCIP_ROWEX*           row,                /**< LP row */
-   BMS_BUFMEM*           buffer              /**< buffer for rationals */
+/** returns whether it is possible to use neumair-shcherbina bounding method */
+extern
+SCIP_Bool SCIPlpexBSpossible(
+   SCIP_LPEX*            lp                  /**< pointer to LP data object */
    )
 {
-   SCIP_COLEX* col;
-   int i;
-   int pos;
+   assert(lp != NULL);
 
-   assert(row != NULL);
-   assert(row->lppos >= 0);
-
-   /* update row arrays of all linked columns */
-   for( i = 0; i < row->len; ++i )
-   {
-      pos = row->linkpos[i];
-      if( pos >= 0 )
-      {
-         col = row->cols[i];
-         assert(col != NULL);
-         assert(col->linkpos[pos] == i);
-         assert(col->rows[pos] == row);
-         assert(col->nlprows <= pos && pos < col->len);
-
-         col->nlprows++;
-         colexSwapCoefs(col, buffer, pos, col->nlprows - 1);
-
-         /* if no swap was necessary, mark lprows to be unsorted */
-         if( pos == col->nlprows-1 )
-            col->lprowssorted = FALSE;
-      }
-   }
+   return lp->ninfiniteboundcols == 0;
 }
 
-/** updates link data after addition of column */
-static
-void colexUpdateAddLP(
-   SCIP_COLEX*           col,                /**< LP column */
-   SCIP_SET*             set                 /**< global SCIP settings */
+/** returns whether it is possible to use project and shift bounding method */
+extern
+SCIP_Bool SCIPlpexPSpossible(
+   SCIP_LPEX*            lp                  /**< pointer to LP data object */
    )
 {
-   SCIP_ROWEX* row;
-   int i;
-   int pos;
+   assert(lp != NULL);
 
-   assert(col != NULL);
-   assert(col->lppos >= 0);
-
-   /* update column arrays of all linked rows */
-   for( i = 0; i < col->len; ++i )
-   {
-      pos = col->linkpos[i];
-      if( pos >= 0 )
-      {
-         row = col->rows[i];
-         assert(row != NULL);
-         assert(row->linkpos[pos] == i);
-         assert(row->cols[pos] == col);
-         assert(row->nlpcols <= pos && pos < row->len);
-
-         row->nlpcols++;
-         rowexSwapCoefs(row, set->buffer, pos, row->nlpcols-1);
-         assert(row->cols[row->nlpcols-1] == col);
-
-         /* if no swap was necessary, mark lpcols to be unsorted */
-         if( pos == row->nlpcols-1 )
-            row->lpcolssorted = FALSE;
-
-         /* update norms */
-         //rowAddNorms(row, set, col, row->vals[row->nlpcols-1], FALSE);
-      }
-   }
+   return lp->projshiftpossible;
 }
 
 /** checks that lp and fplp are properly synced */
@@ -2111,6 +3399,7 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->installing = FALSE;
    (*lp)->resolvelperror = FALSE;
    (*lp)->adjustlpval = FALSE;
+   (*lp)->projshiftpossible = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
@@ -2145,6 +3434,8 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->looseobjvalinf = 0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
+   (*lp)->interleavedbfreq = 0;
+   (*lp)->ninfiniteboundcols = 0;
    (*lp)->lpobjval = Rcreate(blkmem);
    (*lp)->pseudoobjval = Rcreate(blkmem);
    (*lp)->glbpseudoobjval = Rcreate(blkmem);
@@ -2164,6 +3455,9 @@ SCIP_RETCODE SCIPlpexCreate(
 
    SCIPhashtableCreate(&(*lp)->exrowhash, blkmem, (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
                      hashKeyExRow, hashEqExRow, hashValExRow, (void*) set );
+
+   SCIPhashtableCreate(&(*lp)->excolhash, blkmem, (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
+                     hashKeyExCol, hashEqExCol, hashValExCol, (void*) set );
 
    /** todo: exip: set the right defaults in lp solver */
    return SCIP_OKAY;
@@ -2186,6 +3480,7 @@ SCIP_RETCODE SCIPlpexFree(
    SCIP_CALL( SCIPlpexClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
    SCIPhashtableFree(&(*lp)->exrowhash);
+   SCIPhashtableFree(&(*lp)->excolhash);
    //freeDiveChgSideArrays(*lp);
 
    /* release LPI rows */
@@ -2224,9 +3519,6 @@ SCIP_RETCODE SCIPlpexFree(
 
    return SCIP_OKAY;
 }
-
-
-
 
 /** adds a column to the LP and captures the variable */
 SCIP_RETCODE SCIPlpexAddCol(
@@ -2282,6 +3574,10 @@ SCIP_RETCODE SCIPlpexAddCol(
 
    //checkLinks(lp);
 
+   /* update bound-shift status */
+   if( RisInfinity(col->ub) || RisNegInfinity(col->lb) )
+      lp->ninfiniteboundcols++;
+
    return SCIP_OKAY;
 }
 
@@ -2328,7 +3624,7 @@ SCIP_RETCODE SCIPlpexAddRow(
    lpex->flushed = FALSE;
 
    /* update row arrays of all linked columns */
-   rowexUpdateAddLP(rowex, set->buffer);
+   rowexUpdateAddLP(rowex, set);
 
    //rowCalcNorms(rowex, set);
 
@@ -2442,6 +3738,18 @@ SCIP_ROWEX* SCIProwGetExRow(
    assert(lpex->exrowhash != NULL);
 
    return SCIPhashtableRetrieve(lpex->exrowhash, row);
+}
+
+/** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
+SCIP_COLEX* SCIPcolGetExCol(
+   SCIP_LPEX*            lpex,               /**< exact lp data structure */
+   SCIP_COL*             col                 /**< SCIP col */
+   )
+{
+   assert(col != NULL);
+   assert(lpex != NULL);
+
+   return col->var->exactdata->excol;
 }
 
 /** adds a previously non existing coefficient to an LP row */
@@ -2725,8 +4033,8 @@ void SCIProwexGetSolFeasibility(
    Rdiff(temp2, result, row->lhs);
    Rmin(result, temp1, temp2);
 
-   RdeleteTemp(set->buffer, &temp1);
    RdeleteTemp(set->buffer, &temp2);
+   RdeleteTemp(set->buffer, &temp1);
 }
 
 /** returns the activity of a row for a given solution */
@@ -2865,8 +4173,8 @@ void SCIProwexGetLPFeasibility(
    Rdiff(actrhs, activity, row->lhs);
    Rmin(result, actrhs, actlhs);
 
-   RdeleteTemp(set->buffer, &actrhs);
    RdeleteTemp(set->buffer, &actlhs);
+   RdeleteTemp(set->buffer, &actrhs);
 }
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
@@ -2889,8 +4197,8 @@ void SCIProwexGetPseudoFeasibility(
    Rdiff(actrhs, pseudoactivity, row->lhs);
    Rmin(result, actrhs, actlhs);
 
-   RdeleteTemp(set->buffer, &actrhs);
    RdeleteTemp(set->buffer, &actlhs);
+   RdeleteTemp(set->buffer, &actrhs);
 }
 
 /** returns the activity of a row in the current LP solution */
@@ -3887,6 +5195,7 @@ SCIP_RETCODE SCIPlpexShrinkCols(
    )
 {
    SCIP_COLEX* col;
+   SCIP_Bool recompbs = FALSE;
    int c;
 
    assert(lp != NULL);
@@ -3918,9 +5227,11 @@ SCIP_RETCODE SCIPlpexShrinkCols(
             lp->nremovablecols--;
 
          /* update column arrays of all linked rows */
-         /* colUpdateDelLP(col, set); */
-      }
+         colexUpdateDelLP(col, set);
 
+         if( RisInfinity(col->ub) || RisNegInfinity(col->lb) )
+            lp->ninfiniteboundcols--;
+      }
    }
 
    return SCIP_OKAY;
@@ -3961,12 +5272,20 @@ SCIP_RETCODE SCIPlpexShrinkRows(
          if( row->removable )
             lp->nremovablerows--;
 
-         /* rowexUpdateDelLP(row);
+         rowexUpdateDelLP(row, set);
 
-         SCIProwexUnlocK(row); */
+         //SCIProwexUnlocK(row); 
          SCIP_CALL( SCIProwexRelease(&lp->rows[r], blkmem, set, lp) );
       }
+      assert(lp->nrows == newnrows);
+      lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
+
+      /* mark the current LP unflushed */
+      lp->flushed = FALSE;
+
+      checkLinks(lp);
    }
+   assert(lp->nremovablerows <= lp->nrows);
 
    return SCIP_OKAY;
 }
