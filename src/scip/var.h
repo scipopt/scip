@@ -33,6 +33,7 @@
 #include "scip/type_history.h"
 #include "scip/type_implics.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpex.h"
 #include "scip/type_message.h"
 #include "scip/type_misc.h"
 #include "scip/type_primal.h"
