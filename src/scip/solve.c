@@ -1150,9 +1150,6 @@ SCIP_RETCODE SCIPinitConssLP(
       /* apply cuts */
       SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
             eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
-      if( root )
-         SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, transprob, origprob, tree, lp->lpex, branchcand,
-            eventqueue, eventfilter, cliquetable, root, cutoff) );
    }
    else
    {
@@ -1506,12 +1503,6 @@ SCIP_RETCODE solveNodeInitialLP(
    if ( stat->nnodelps == 0 && focusnode->depth == 0 )
    {
       stat->firstlptime = SCIPclockGetTime(stat->solvingtime) - starttime;
-   }
-
-   if( !(*lperror) )
-   {
-      SCIP_CALL( computeSafeBound(lp, NULL, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-            set->lp_iterlim, lperror, NULL) );
    }
 
    /* remove previous primal ray, store new one if LP is unbounded */
@@ -2689,11 +2680,6 @@ SCIP_RETCODE priceAndCutLoop(
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
-                  if( !(*lperror) )
-                  {
-                     SCIP_CALL( computeSafeBound(lp, NULL, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                           transprob, set->lp_iterlim, lperror, NULL) );
-                  }
                   /* remove previous primal ray, store new one if LP is unbounded */
                   SCIP_CALL( updatePrimalRay(blkmem, set, stat, transprob, primal, tree, lp, *lperror) );
 
@@ -2888,8 +2874,8 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      if( (set->misc_exactsolve_old && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
-         || (!set->misc_exactsolve_old && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
+      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
       {
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -3143,7 +3129,8 @@ SCIP_RETCODE solveNodeLP(
       assert(primal->primalray == NULL);
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
-         *cutoff = TRUE;
+         if( !set->misc_exactsolve || lp->hasprovedbound )
+            *cutoff = TRUE;
       }
    }
 
@@ -5132,7 +5119,7 @@ SCIP_RETCODE SCIPsolveCIP(
          {
             SCIP_RESULT result;
 
-            assert(set->misc_exactsolve_old);
+            assert(set->misc_exactsolve);
 
             do
             {
