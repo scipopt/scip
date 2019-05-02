@@ -92,16 +92,9 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEX*            lp,                 /**< LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_Bool             root,               /**< are we at the root node? */
-   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** clears the separation storage without adding the cuts to the LP */

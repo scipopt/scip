@@ -210,20 +210,13 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
 /** adds cuts to the LP and clears separation storage */
 extern
 SCIP_RETCODE SCIPsepastoreexApplyCuts(
-   SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
+   SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEX*            lpex,               /**< LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_Bool             root,               /**< are we at the root node? */
-   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_LP* fplp;
@@ -254,17 +247,18 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
    /** this method should sync the fp-lp withe the exact lp */
 
    /** remove all rows from exact lp that are not in the floating point lp */
-   for( i = 0; i < nrowsex; ++i )
+   for( i = nrowsex - 1; i >= 0; --i )
    {
       SCIP_ROW* fprow =lpex->rows[i]->fprow;
       assert(fprow != NULL);
 
       if( !SCIProwIsInLP(fprow) )
       {
-         SCIProwexRelease(&lpex->rows[i], blkmem, set, lpex);
          nreleases++;
+         assert(i == nrowsex - nreleases);
       }
    }
+   SCIPlpexShrinkRows(lpex, blkmem, set, eventqueue, eventfilter, lpex->nrows - nreleases);
 
    for( i = 0; i < nrowsfp; ++i )
    {
@@ -286,7 +280,7 @@ SCIP_RETCODE SCIPsepastoreexApplyCuts(
       }
    }
 
-   assert(SCIPlpexIsSynced(lpex, set, SCIPgetMessagehdlr(set->scip)));
+   //assert(SCIPlpexIsSynced(lpex, set, SCIPgetMessagehdlr(set->scip)));
 
    SCIP_CALL( SCIPsepastoreexClearCuts(sepastoreex, blkmem, set, eventqueue, eventfilter, lpex) );
 
