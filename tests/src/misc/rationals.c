@@ -19,8 +19,12 @@
  */
 
 #include "scip/rational.h"
+#include "scip/type_clock.h"
+#include "scip/scip_randnumgen.h"
+#include <time.h>
 #include <gmp.h>
 #include "include/scip_test.h"
+
 
 /** GLOBAL VARIABLES **/
 
@@ -69,6 +73,13 @@ Test(rationals, creation, .description = "tests all the different methods to cre
    cr_assert_eq(RgetRealApprox(rno), testreal, "setting from and converting back to real did not give same result");
    cr_assert(RisFpRepresentable(rno), "fp-rep number not detected as representable");
 
+
+   /* set to string rep */
+   RsetReal(rno, 0.1246912);
+   Rprint(rno);
+   printf("%.17e \n", RgetRealApprox(rno));
+   cr_assert(RisFpRepresentable(rno), "fp number 0.124691234 not fp representable, approximation is %e");
+
    /* set to string rep */
    RsetString(rno, "1/3");
    cr_assert(!RisFpRepresentable(rno), "non-fp-rep number not detected as non-representable");
@@ -96,7 +107,97 @@ Test(rationals, creation, .description = "tests all the different methods to cre
    Rdelete(blkmem, &rinte);
    Rdelete(blkmem, &rgmp);
    RdeleteArray(blkmem, &rarray, 10);
+}
 
+Test(rationals, rounding, .description = "tests rational rounding speed")
+{
+   clock_t startt, endt;
+   int niterations = 1000000;
+   int i;
+   int nrep = 0;
+   double runtime = 0;
+   double addval;
+
+   srand((unsigned int)time(NULL));
+
+   SCIP_Rational* r =  RcreateNoMem();
+   SCIP_Rational* r2 =  RcreateNoMem();
+
+   printf("Testing time for performing tasks %d times\n", niterations);
+
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+   }
+   endt = clock();
+   printf(" cpu time used for setting: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+
+   runtime = 0;
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      startt = clock();
+      nrep += RisFpRepresentable(r) ? 1 : 0;
+      endt = clock();
+      runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   }
+   endt = clock();
+   printf(" cpu time used for checking fp-rep: %e \n", runtime);
+   cr_assert(nrep == niterations, "error");
+
+   runtime = 0;
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      startt = clock();
+      addval += RgetRealRelax(r, SCIP_ROUND_DOWNWARDS);
+      addval += RgetRealRelax(r, SCIP_ROUND_UPWARDS);
+      endt = clock();
+      runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   }
+   printf(" cpu time used for rounding: %e, addval %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC, addval);
+
+
+   runtime = 0;
+   addval = 0;
+
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      startt = clock();
+      addval += RgetRealApprox(r);
+      endt = clock();
+      runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   }
+   printf(" cpu time used for apporx: %e, addval %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC, addval);
+
+   runtime = 0;
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      RsetReal(r2, ((float)rand())/RAND_MAX);
+      startt = clock();
+      Radd(r, r, r2);
+      endt = clock();
+      runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   }
+   printf(" cpu time used for adding: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+
+   runtime = 0;
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      RsetReal(r2, ((float)rand())/RAND_MAX);
+      startt = clock();
+      Rmult(r, r, r2);
+      endt = clock();
+      runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   }
+   printf(" cpu time used for multiplication: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+
+   RdeleteNoMem(&r);
+   RdeleteNoMem(&r2);
 }
 
 Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
