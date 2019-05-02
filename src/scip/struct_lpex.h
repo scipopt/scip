@@ -148,6 +148,8 @@ struct SCIP_ColEx
    SCIP_Rational*        sblpobjval;         /**< LP objective value at last strong branching call on the column */
    SCIP_VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    SCIP_Rational**       vals;               /**< coefficients of column entries */
+   SCIP_Longint          validredcostlp;     /**< LP number for which reduced cost value is valid */
+   SCIP_Longint          validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
    int*                  linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    int                   index;              /**< consecutively numbered column identifier */
    int                   size;               /**< size of the row- and val-arrays */
@@ -242,6 +244,7 @@ struct SCIP_LpEx
 {
    SCIP_LP*              fplp;               /**< pointer to the fp lp */
    SCIP_HASHTABLE*       exrowhash;          /**< hashes fprows as keys onto exact rows */
+   SCIP_HASHTABLE*       excolhash;          /**< hashes fprows as keys onto exact rows */
    SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Rational*        looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
@@ -297,7 +300,10 @@ struct SCIP_LpEx
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
-   int                   lpirefactorinterval;/**< current refactorization interval */SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
+   int                   interleavedbfreq;   /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
+   int                   ninfiniteboundcols; /**< number of columns with infinity upper or lower bounds (important for safe bounding) */
+   SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    SCIP_Bool             lpisolutionpolishing;/**< LP solution polishing method (0: disabled, 1: enabled) */
@@ -321,6 +327,7 @@ struct SCIP_LpEx
    SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
+   SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
 };
 
 #ifdef __cplusplus
