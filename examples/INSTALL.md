@@ -35,7 +35,7 @@ as SCIP. Assuming that the build directory of SCIP was named "build",
 simply execute
 
 ```
-cmake --build build --target scip_example_binary
+cmake --build build --target <scip_example_binary>
 ```
 
 To build all examples at once, use
@@ -51,7 +51,7 @@ CMake. It might be necessary to specify the SCIP build directory
 or installation directory, if SCIP has not yet been installed systemwide.
 
 ```
-cmake -Bbuild -H. [-DSCIP_DIR=../../]
+cmake -Bbuild -H. [-DCMAKE_PREFIX_PATH=../../]
 cmake --build build
 ```
 
