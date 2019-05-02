@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
-/*         SCIP --- Solving Constraint Integer Programs                      */
+/*         SCIP --- Solving raint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
@@ -31,9 +31,12 @@
 #include "scip/type_misc.h"
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
+#endif
 #ifdef SCIP_WITH_ZIMPL
 #include "zimpl/numb.h"
 #endif
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
 #endif
 
 #ifdef __cplusplus
@@ -79,14 +82,14 @@ SCIP_Rational* RcreateInt(
 EXTERN
 SCIP_Rational* RcreateReal(
    BMS_BLKMEM*           mem,
-   const SCIP_Real       num                 /**< the scip_real */
+    SCIP_Real       num                 /**< the scip_real */
    );
 
 /** Allocate and create a rational from a string in the format, e.g. "12/35" */
 EXTERN
 SCIP_Rational* RcreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
-   const char*           desc                /**< the String describing the rational */
+    char*           desc                /**< the String describing the rational */
    );
 
 /** create an array of rationals */
@@ -136,12 +139,12 @@ SCIP_Rational* Rcreate(
 EXTERN
 SCIP_Rational* RcreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
-   const mpq_t           numb                /**< the mpq_rational */
+    mpq_t           numb                /**< the mpq_rational */
    );
 
 /** get the underlying mpq_t* */
 EXTERN mpq_t* RgetGMP(
-   SCIP_Rational*  r                   /**< the rational */
+    SCIP_Rational*  r                   /**< the rational */
    );
 
 EXTERN
@@ -190,7 +193,7 @@ void RdeleteArrayTemp(
 EXTERN
 void Rset(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*   src                 /**< the src */
+    SCIP_Rational*   src                 /**< the src */
    );
 
 /** set a rational to a nom/denom value */
@@ -205,7 +208,7 @@ void RsetInt(
 EXTERN
 void RsetString(
    SCIP_Rational*        res,                /**< the result */
-   const char*           desc                /**< the string describing the rational */
+    char*           desc                /**< the string describing the rational */
    );
 
 /** set a rational to the value of another a real */
@@ -223,15 +226,15 @@ void RsetReal(
 EXTERN
 void Radd(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+    SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op2                 /**< second operand */
    );
 
 /** add a rational and a real and save the result in res*/
 EXTERN
 void RaddReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  rat,                /**< rational number */
+    SCIP_Rational*  rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    );
 
@@ -239,15 +242,15 @@ void RaddReal(
 EXTERN
 void Rdiff(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+    SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op2                 /**< second operand */
    );
 
 /** subtract a rational and a real and save the result in res*/
 EXTERN
 void RdiffReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  rat,                /**< rational number */
+    SCIP_Rational*  rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    );
 
@@ -255,23 +258,23 @@ void RdiffReal(
 EXTERN
 void RrelDiff(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  val1,               /**< first value to be compared */
-   const SCIP_Rational*  val2                /**< second value to be compared */
+    SCIP_Rational*  val1,               /**< first value to be compared */
+    SCIP_Rational*  val2                /**< second value to be compared */
    );
 
 /** multiply two rationals and save the result in res*/
 EXTERN
 void Rmult(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+    SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op2                 /**< second operand */
    );
 
 /** multiply a rational and a real and save the result in res*/
 EXTERN
 void RmultReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    );
 
@@ -279,15 +282,15 @@ void RmultReal(
 EXTERN
 void Rdiv(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+    SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op2                 /**< second operand */
    );
 
 /** divide a rational and a real and save the result in res*/
 EXTERN
 void RdivReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
+    SCIP_Rational*  op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    );
 
@@ -295,37 +298,37 @@ void RdivReal(
 EXTERN
 void Rneg(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+    SCIP_Rational*  op                  /**< operand */
    );
 
 /** set res to Abs(op) */
 EXTERN
 void Rabs(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+    SCIP_Rational*  op                  /**< operand */
    );
 
 /** set res to 1/op */
 EXTERN
 void Rinv(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+    SCIP_Rational*  op                  /**< operand */
    );
 
 /** compute the minimum of two rationals */
 EXTERN
 void Rmin(
    SCIP_Rational*        ret,                /**< the result */
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** compute the maximum of two rationals */
 EXTERN
 void Rmax(
    SCIP_Rational*        ret,                /**< the result */
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /*
@@ -335,90 +338,97 @@ void Rmax(
 /** check if two rationals are equal */
 EXTERN
 SCIP_Bool RisEqual(
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** check if a rational and a real are equal */
 EXTERN
 SCIP_Bool RisEqualReal(
-   const SCIP_Rational*  r1,                 /**< the rational */
+    SCIP_Rational*  r1,                 /**< the rational */
+   SCIP_Real             r2                  /**< the real */
+   );
+
+/** check if real approx of rational and a real are equal */
+EXTERN
+SCIP_Bool RApproxEqualReal(
+   SCIP_Rational*        r1,                 /**< the rational */
    SCIP_Real             r2                  /**< the real */
    );
 
 /** check if the first rational is greater than the second*/
 EXTERN
 SCIP_Bool RisGT(
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** check if the first rational is smaller than the second*/
 EXTERN
 SCIP_Bool RisLT(
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** check if the first rational is smaller or equal than the second*/
 EXTERN
 SCIP_Bool RisLE(
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** check if the first rational is greater or equal than the second*/
 EXTERN
 SCIP_Bool RisGE(
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
    );
 
 /** check if the rational is zero */
 EXTERN
 SCIP_Bool RisZero(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is positive */
 EXTERN
 SCIP_Bool RisPositive(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is negative */
 EXTERN
 SCIP_Bool RisNegative(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is positive infinity */
 EXTERN
 SCIP_Bool RisInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is negative infinity */
 EXTERN
 SCIP_Bool RisNegInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is of infinite value */
 EXTERN
 SCIP_Bool RisAbsInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 /** check if the rational is of infinite value */
 EXTERN
 SCIP_Bool RisIntegral(
-   const SCIP_Rational*  r                   /**< the rational to check */
+    SCIP_Rational*  r                   /**< the rational to check */
    );
 
 EXTERN
 SCIP_Bool RisFpRepresentable(
-   const SCIP_Rational*    r
+    SCIP_Rational*    r
    );
 
 /*
@@ -427,26 +437,26 @@ SCIP_Bool RisFpRepresentable(
 
 /** print a Rational to std out */
 void RtoString(
-   const SCIP_Rational*  r,                  /**< the rational to print */
+    SCIP_Rational*  r,                  /**< the rational to print */
    char*                 str
    );
 
 /** print a rational to command line (for debugging) */
 void Rprint(
-   const SCIP_Rational*  r                   /**< the rational to print */
+    SCIP_Rational*  r                   /**< the rational to print */
    );
 
 /** return approximation of Rational as SCIP_Real */
 EXTERN
 SCIP_Real RgetRealRelax(
-   const SCIP_Rational*  r,                  /**< the rational to convert */
+   SCIP_Rational*  r,                  /**< the rational to convert */
    SCIP_ROUNDMODE        roundmode           /**< rounding direction (not really working yet) */
    );
 
 /** return approximation of Rational as SCIP_Real */
 EXTERN
 SCIP_Real RgetRealApprox(
-   const SCIP_Rational*  r                   /**< the rational to convert */
+    SCIP_Rational*  r                   /**< the rational to convert */
    );
 
 /*
@@ -505,7 +515,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    int                   arraygrowinit,      /**< initial size of array */
    SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
-   const SCIP_Rational*  val                 /**< value to set array index to */
+    SCIP_Rational*  val                 /**< value to set array index to */
    );
 
 /** increases value of entry in dynamic array */
@@ -515,7 +525,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
    int                   arraygrowinit,      /**< initial size of array */
    SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
-   const SCIP_Rational*  incval              /**< value to increase array index */
+    SCIP_Rational*  incval              /**< value to increase array index */
    );
 
 /** returns the minimal index of all stored non-zero elements */
@@ -528,6 +538,10 @@ int SCIPrationalarrayGetMinIdx(
 extern
 int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
+   );
+
+extern
+void testRuntimesRational(
    );
 
 #ifdef __cplusplus

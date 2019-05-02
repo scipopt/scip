@@ -32,6 +32,8 @@
 #include "scip/pub_misc.h"
 #include "scip/intervalarith.h"
 #include <iostream>
+#include <time.h>
+#include <stdlib.h>
 
 #ifdef WITH_GMP
 #include <gmp.h>
@@ -46,12 +48,36 @@ using std::vector;
 struct SCIP_Rational{
    Rational r;
    SCIP_Bool isinf = FALSE;
+   SCIP_Bool fpexact;
 };
 
 /*
  * Creation methods
  */
 
+static
+int Rnumerator(
+    SCIP_Rational*        r
+   )
+{
+#ifdef SCIP_WITH_DEBUG_ADAPTOR
+   return mpz_get_si(&(r->r.backend().value().data())->_mp_num);
+#else
+   return (boost::multiprecision::numerator(r->r)).convert_to<int>();
+#endif
+}
+
+static
+int Rdenominator(
+    SCIP_Rational*        r
+   )
+{
+#ifdef SCIP_WITH_DEBUG_ADAPTOR
+   return mpz_get_si(&(r->r.backend().value().data())->_mp_den);
+#else
+   return boost::multiprecision::denominator(r->r).convert_to<int>();
+#endif
+}
 
 /** allocate and create a rational from nominator and denominator */
 SCIP_Rational* RcreateNoMem(void)
@@ -62,7 +88,8 @@ SCIP_Rational* RcreateNoMem(void)
    //retrat.r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
    retrat->isinf = FALSE;
-   retrat->r = 0;
+   retrat->fpexact = TRUE;
+   new (&retrat->r) Rational(0);
 
    return retrat;
 }
@@ -78,6 +105,7 @@ SCIP_Rational* Rcreate(
    BMSallocBlockMemory(mem, &retrat);
 
    retrat->isinf = FALSE;
+   retrat->fpexact = TRUE;
    new (&retrat->r) Rational(0);
 
    return retrat;
@@ -93,6 +121,7 @@ SCIP_Rational* RcreateTemp(
    BMSallocBufferMemory(mem, &retrat);
 
    retrat->isinf = FALSE;
+   retrat->fpexact = TRUE;
    new (&retrat->r) Rational(0);
 
    return retrat;
@@ -110,6 +139,7 @@ SCIP_Rational* RcreateInt(
    BMSallocBlockMemory(mem, &retrat);
 
    retrat->isinf = FALSE;
+   retrat->fpexact = FALSE;
    new (&retrat->r) Rational(nom, denom);
 
    return retrat;
@@ -118,7 +148,7 @@ SCIP_Rational* RcreateInt(
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
 SCIP_Rational* RcreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
-   const char*           desc                /**< the String describing the rational */
+    char*                desc                /**< the String describing the rational */
    )
 {
    SCIP_Rational* retrat;
@@ -139,14 +169,14 @@ SCIP_Rational* RcreateString(
       new (&retrat->r) Rational(desc);
       retrat->isinf = FALSE;
    }
-
+   retrat->fpexact = FALSE;
    return retrat;
 }
 
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
 SCIP_Rational* RcreateReal(
    BMS_BLKMEM*           mem,                /**< block memory */
-   const SCIP_Real       dbl                 /**< the string describing the rational */
+   SCIP_Real             dbl                 /**< the string describing the rational */
    )
 {
    SCIP_Rational* retrat;
@@ -154,6 +184,7 @@ SCIP_Rational* RcreateReal(
    BMSallocBlockMemory(mem, &retrat);
    retrat->isinf = FALSE;
    new (&retrat->r) Rational(dbl);
+   retrat->fpexact = TRUE;
 
    return retrat;
 }
@@ -171,6 +202,7 @@ SCIP_Rational** RcreateArray(
    for( int i = 0; i < size; ++i )
    {
       retrat[i] = Rcreate(mem);
+      retrat[i]->fpexact = TRUE;
    }
 
    return retrat;
@@ -189,6 +221,7 @@ SCIP_Rational** RcreateArrayTemp(
    for( int i = 0; i < size; ++i )
    {
       retrat[i] = RcreateTemp(mem);
+      retrat[i]->fpexact = TRUE;
    }
 
    return retrat;
@@ -235,7 +268,7 @@ SCIP_Rational* Rcopy(
 #ifdef SCIP_WITH_GMP
 SCIP_Rational* RcreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
-   const mpq_t           numb                /**< the gmp rational */
+   mpq_t                 numb                /**< the gmp rational */
    )
 {
    SCIP_Rational* retrat;
@@ -244,6 +277,7 @@ SCIP_Rational* RcreateGMP(
 
    retrat->isinf = FALSE;
    new (&retrat->r) Rational(numb);
+   retrat->fpexact = FALSE;
 
    assert(retrat != NULL);
 
@@ -251,11 +285,16 @@ SCIP_Rational* RcreateGMP(
 }
 
 /** get the underlying mpq_t* */
-mpq_t* RgetGMP(
-   SCIP_Rational*  r                   /**< the rational */
+ mpq_t* RgetGMP(
+   SCIP_Rational*        r                   /**< the rational */
    )
 {
-#ifndef NDEBUG
+   if( r->isinf )
+   {
+      /** @todo exip: get proper inf value in here */
+      RsetReal(r, 1e20 * r->r.sign());
+   }
+#ifdef SCIP_WITH_DEBUG_ADAPTOR
    return &(r->r.backend().value().data());
 #else
    return &(r->r.backend().data());
@@ -269,6 +308,7 @@ void RsetGMP(
 {
    r->r = numb;
    r->isinf = FALSE;
+   r->fpexact = FALSE;
 }
 #endif
 
@@ -347,13 +387,14 @@ void RdeleteTemp(
 /** set a rational to the value of another rational */
 void Rset(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  src                 /**< the src */
+   SCIP_Rational*        src                 /**< the src */
    )
 {
    assert(res != NULL);
 
    (res->r) = (src->r);
    res->isinf = src->isinf;
+   res->fpexact = src->fpexact;
 }
 
 /** set a rational to a nom/denom value */
@@ -368,13 +409,14 @@ void RsetInt(
 
    (res->r) = (nom/denom);
    res->isinf = FALSE;
+   res->fpexact = FALSE;
 
 }
 
 /** set a rational to the value described by a string */
 void RsetString(
    SCIP_Rational*        res,                /**< the result */
-   const char*           desc                /**< the String describing the rational */
+   char*                 desc                /**< the String describing the rational */
    )
 {
    assert(res != NULL);
@@ -394,6 +436,7 @@ void RsetString(
       (res->r) = Rational(desc);
       res->isinf = FALSE;
    }
+   res->fpexact = FALSE;
 }
 
 /** set a rational to the value of another a real */
@@ -406,6 +449,7 @@ void RsetReal(
 
    r->isinf = FALSE;
    (r->r) = real;
+   r->fpexact = TRUE;
 }
 
 /*
@@ -415,8 +459,8 @@ void RsetReal(
 /** add two rationals and save the result in res*/
 void Radd(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    )
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
@@ -439,12 +483,13 @@ void Radd(
       res->isinf = FALSE;
       (res->r) = (op1->r) + (op2->r);
    }
+   res->fpexact = FALSE;
 }
 
 /** add a rational and a real and save the result in res*/
 void RaddReal(
    SCIP_Rational*        res,                /**< The result */
-   const SCIP_Rational*  rat,                /**< rational number */
+   SCIP_Rational*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
 {
@@ -459,13 +504,14 @@ void RaddReal(
       res->isinf = FALSE;
       (res->r) = (rat->r) + real;
    }
+   res->fpexact = FALSE;
 }
 
 /** subtract two rationals and save the result in res*/
 void Rdiff(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    )
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
@@ -488,12 +534,13 @@ void Rdiff(
       res->isinf = FALSE;
       res->r = op1->r - op2->r;
    }
+   res->fpexact = FALSE;
 }
 
 /** subtract a rational and a real and save the result in res*/
 void RdiffReal(
    SCIP_Rational*        res,                /**< The result */
-   const SCIP_Rational*  rat,                /**< rational number */
+   SCIP_Rational*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
 {
@@ -509,13 +556,14 @@ void RdiffReal(
       res->isinf = FALSE;
       res->r = rat->r - real;
    }
+   res->fpexact = FALSE;
 }
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
 void RrelDiff(
    SCIP_Rational*        res,
-   const SCIP_Rational*  val1,               /**< first value to be compared */
-   const SCIP_Rational*  val2                /**< second value to be compared */
+   SCIP_Rational*        val1,               /**< first value to be compared */
+   SCIP_Rational*        val2                /**< second value to be compared */
    )
 {
    Rational absval1;
@@ -532,13 +580,14 @@ void RrelDiff(
       quot = 1.0;
 
    res->r = ((val1->r)-(val2->r))/quot;
+   res->fpexact = FALSE;
 }
 
 /** multiply two rationals and save the result in res*/
 void Rmult(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    )
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
@@ -562,12 +611,13 @@ void Rmult(
       res->r = op1->r * op2->r;
       res->isinf = FALSE;
    }
+   res->fpexact = FALSE;
 }
 
 /** multiply a rational and a real and save the result in res*/
 void RmultReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
+   SCIP_Rational*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -591,14 +641,15 @@ void RmultReal(
        res->r = op1->r * op2;
        res->isinf = FALSE;
     }
+    res->fpexact = FALSE;
 }
 
 
 /** divide two rationals and save the result in res*/
 void Rdiv(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
-   const SCIP_Rational*  op2                 /**< second operand */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
    )
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
@@ -606,12 +657,13 @@ void Rdiv(
    assert(op1->isinf && op2->isinf);
 
    res->r = op1->r / op2->r;
+   res->fpexact = FALSE;
 }
 
 /** divide a rational and a real and save the result in res*/
 void RdivReal(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op1,                /**< first operand */
+   SCIP_Rational*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -625,33 +677,35 @@ void RdivReal(
 /** set res to -op */
 void Rneg(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    )
 {
    assert(res != NULL && op != NULL);
 
    res->r = -(op->r);
    res->isinf = op->isinf;
+   res->fpexact = op->fpexact;
 }
 
 
 /** set res to Abs(op) */
 void Rabs(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    )
 {
    assert(res != NULL && op != NULL);
 
    res->r = abs(op->r);
    res->isinf = op->isinf;
+   res->fpexact = op->fpexact;
 }
 
 
 /** set res to 1/op */
 void Rinv(
    SCIP_Rational*        res,                /**< the result */
-   const SCIP_Rational*  op                  /**< operand */
+   SCIP_Rational*        op                  /**< operand */
    )
 {
    assert(res != NULL && op != NULL);
@@ -660,6 +714,7 @@ void Rinv(
 
    res->r = 1 / op->r;
    res->isinf = FALSE;
+   res->fpexact = FALSE;
 }
 
 /*
@@ -669,8 +724,8 @@ void Rinv(
 /** compute the minimum of two rationals */
 void Rmin(
    SCIP_Rational*        ret,                /**< the result */
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -681,13 +736,14 @@ void Rmin(
       ret->r = r1->r > 0 ? r2->r : r1->r;
    else
       ret->r = min(r1->r, r2->r);
+   ret->fpexact = FALSE;
 }
 
 /** compute the minimum of two rationals */
 void Rmax(
    SCIP_Rational*        ret,                /**< the result */
-   const SCIP_Rational*  r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -707,12 +763,13 @@ void Rmax(
       ret->r = max(r1->r, r2->r);
       ret->isinf = FALSE;
    }
+   ret->fpexact = FALSE;
 }
 
 /** check if two rationals are equal */
 SCIP_Bool RisEqual(
-   const SCIP_Rational*        r1,                 /**< the first rational */
-   const SCIP_Rational*  r2                  /**< the second rational */
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -732,7 +789,7 @@ SCIP_Bool RisEqual(
 
 /** check if a rational and a real are equal */
 SCIP_Bool RisEqualReal(
-   const SCIP_Rational*        r1,                 /**< the rational */
+   SCIP_Rational*        r1,                 /**< the rational */
    SCIP_Real             r2                  /**< the real */
    )
 {
@@ -743,13 +800,29 @@ SCIP_Bool RisEqualReal(
       return FALSE;
    }
    else
-      return REALABS(RgetRealApprox(r1) - r2) < 1e-15;
+      return r1->r == r2;
+}
+
+/** check if real approx of rational and a real are equal */
+SCIP_Bool RApproxEqualReal(
+   SCIP_Rational*        r1,                 /**< the rational */
+   SCIP_Real             r2                  /**< the real */
+   )
+{
+   assert(r1 != NULL);
+
+   if( r1->isinf )
+   {
+      return FALSE;
+   }
+   else
+      return RgetRealApprox(r1) == r2;
 }
 
 /** check if the first rational is greater than the second*/
 SCIP_Bool RisGT(
-   const SCIP_Rational*  r1,                 /**< The first rational */
-   const SCIP_Rational*  r2                  /**< The second rational */
+   SCIP_Rational*        r1,                 /**< The first rational */
+   SCIP_Rational*        r2                  /**< The second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -778,8 +851,8 @@ SCIP_Bool RisGT(
 
 /** check if the first rational is smaller than the second*/
 SCIP_Bool RisLT(
-   const SCIP_Rational*  r1,                 /**< The first rational */
-   const SCIP_Rational*  r2                  /**< The second rational */
+   SCIP_Rational*        r1,                 /**< The first rational */
+   SCIP_Rational*        r2                  /**< The second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -790,8 +863,8 @@ SCIP_Bool RisLT(
 /** check if the first rational is greater or equal than the second*/
 EXTERN
 SCIP_Bool RisGE(
-   const SCIP_Rational*  r1,                 /**< The first rational */
-   const SCIP_Rational*  r2                  /**< The second rational */
+   SCIP_Rational*        r1,                 /**< The first rational */
+   SCIP_Rational*        r2                  /**< The second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -821,8 +894,8 @@ SCIP_Bool RisGE(
 /** check if the first rational is less or equal than the second*/
 EXTERN
 SCIP_Bool RisLE(
-   const SCIP_Rational*  r1,                 /**< The first rational */
-   const SCIP_Rational*  r2                  /**< The second rational */
+   SCIP_Rational*        r1,                 /**< The first rational */
+   SCIP_Rational*        r2                  /**< The second rational */
    )
 {
    assert(r1 != NULL && r2 != NULL);
@@ -833,7 +906,7 @@ SCIP_Bool RisLE(
 
 /** check if the rational is zero */
 SCIP_Bool RisZero(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -843,7 +916,7 @@ SCIP_Bool RisZero(
 
 /** check if the rational is positive */
 SCIP_Bool RisPositive(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -853,7 +926,7 @@ SCIP_Bool RisPositive(
 
 /** check if the rational is negative */
 SCIP_Bool RisNegative(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -863,7 +936,7 @@ SCIP_Bool RisNegative(
 
 /** check if the rational is positive infinity */
 SCIP_Bool RisInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -873,7 +946,7 @@ SCIP_Bool RisInfinity(
 
 /** check if the rational is negative infinity */
 SCIP_Bool RisNegInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -883,7 +956,7 @@ SCIP_Bool RisNegInfinity(
 
 /** check if the rational is negative infinity */
 SCIP_Bool RisAbsInfinity(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
@@ -894,25 +967,32 @@ SCIP_Bool RisAbsInfinity(
 
 /** check if the rational is negative infinity */
 SCIP_Bool RisIntegral(
-   const SCIP_Rational*  r                   /**< the rational to check */
+   SCIP_Rational*        r                   /**< the rational to check */
    )
 {
    assert(r != NULL);
 
-#ifndef NDEBUG
+#ifdef SCIP_WITH_DEBUG_ADAPTOR
    return !(r->isinf) && (mpz_cmp_ui(&r->r.backend().value().data()->_mp_den, 1) == 0);
 #else
-   return !(r->isinf) && (denominator(*r->r) == 1);
+   return !(r->isinf) && (mpz_cmp_ui(&r->r.backend().data()->_mp_den, 1) == 0);
 #endif
 }
 
 SCIP_Bool RisFpRepresentable(
-   const SCIP_Rational*  r
+   SCIP_Rational*        r
    )
 {
    assert(r != NULL);
+   if( r->fpexact )
+   {
+      assert(RgetRealRelax(r, SCIP_ROUND_DOWNWARDS) == RgetRealRelax(r, SCIP_ROUND_UPWARDS));
+      return TRUE;
+   }
 
-   return (!r->isinf) && (static_cast<SCIP_Real>(r->r) == (r->r));
+   r->fpexact = RgetRealRelax(r, SCIP_ROUND_DOWNWARDS) == RgetRealRelax(r, SCIP_ROUND_UPWARDS);
+
+   return r->fpexact;
 }
 
 /*
@@ -921,7 +1001,7 @@ SCIP_Bool RisFpRepresentable(
 
 /** convert a Rational to a string for printing */
 void RtoString(
-   const SCIP_Rational*  r,                  /**< the rational to print */
+   SCIP_Rational*        r,                  /**< the rational to print */
    char*                 str                 /**< the string to save the rational in */
    )
 {
@@ -943,7 +1023,7 @@ void RtoString(
 
 /** print a rational to command line (for debugging) */
 void Rprint(
-   const SCIP_Rational*  r                   /**< the rational to print */
+   SCIP_Rational*        r                   /**< the rational to print */
    )
 {
    assert(r != NULL);
@@ -955,7 +1035,7 @@ void Rprint(
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
 SCIP_Real RgetRealRelax(
-   const SCIP_Rational*  r,                  /**< the rational */
+   SCIP_Rational*        r,                  /**< the rational */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
 {
@@ -968,11 +1048,32 @@ SCIP_Real RgetRealRelax(
    if( r->isinf )
       return (r->r.sign() * SCIP_DEFAULT_INFINITY);
 
-   SCIPerrorMessage("real relaxation not implemented yet, returning approximation instead \n");
+#ifdef SCIP_WITH_MPFR
+   {
+      mpfr_t valmpfr;
+      mpq_t* val;
 
-   return RgetRealApprox(r);
+      val = RgetGMP(r);
+      switch(roundmode)
+      {
+         case SCIP_ROUND_DOWNWARDS:
+            mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
+            break;
+         case SCIP_ROUND_UPWARDS:
+            mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
+            break;
+         case SCIP_ROUND_NEAREST:
+            mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
+            break;
+         default:
+            break;
+      }
+      realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
+      mpfr_clear(valmpfr);
+   }
+#else
 
-   /* current = SCIPintervalGetRoundingMode();
+   current = SCIPintervalGetRoundingMode();
    if( current != roundmode )
    {
       switch(roundmode)
@@ -990,25 +1091,25 @@ SCIP_Real RgetRealRelax(
          break;
       }
    }
-   nom = mpz_get_d(numerator(*r->r).backend().data());
-   denom = mpz_get_d(denominator(*r->r).backend().data()); */
-   //printf("computing %f/%f \n", nom, denom);
 
-   //printf("compare with mpq value: %.*e \n", __DBL_DECIMAL_DIG__, mpq_get_d(r->r.backend().data()));
+   nom = Rnumerator(r);
+   denom = Rdenominator(r);
 
-   /* realapprox = nom/denom;
+   SCIPdebugMessage("computing %f/%f \n", nom, denom);
+
+   realapprox = nom/denom;
 
    if( current != roundmode )
       SCIPintervalSetRoundingMode(current);
+#endif
+   SCIPdebugMessage("%.*e , Roundmode %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode );
 
-   // printf("%.*e , Roundmode %d \n",__DBL_DECIMAL_DIG__, realapprox, roundmode );
-
-   return realapprox; */
+   return realapprox;
 }
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
 SCIP_Real RgetRealApprox(
-   const SCIP_Rational*  r                   /**< the rational */
+   SCIP_Rational*        r                   /**< the rational */
    )
 {
    assert(r != NULL);
@@ -1040,6 +1141,114 @@ void testNumericsRational(
       std::cout << "type rational is signed " << std::endl;
    }
    std::cout << "rounding style is " << std::numeric_limits<double>::round_style << std::endl;
+}
+
+void testRuntimesRational(
+   )
+{
+   SCIP_Rational* r = RcreateNoMem();
+   SCIP_Rational* r2 = RcreateNoMem();
+
+   clock_t startt, endt;
+   int niterations = 1000000;
+   int i;
+   int nrep = 0;
+   double runtime = 0;
+   double runtime2 = 0;
+   double addval;
+
+   srand((unsigned int)time(NULL));
+
+   printf("Testing time for performing tasks %d times\n", niterations);
+
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+   }
+   endt = clock();
+   printf(" cpu time used for setting: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+
+   runtime = 0;
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      double val = ((float)rand())/RAND_MAX;
+      RsetReal(r, val);
+      nrep += RisFpRepresentable(r) ? 1 : 0;
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for checking fp-rep: %e \n", runtime);
+   if( nrep != niterations )
+   {
+      printf(" error! fprep, %d iterations but only %d are representable \n", niterations, nrep);
+   }
+
+   runtime = 0;
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      addval += RgetRealRelax(r, SCIP_ROUND_DOWNWARDS);
+      addval += RgetRealRelax(r, SCIP_ROUND_UPWARDS);
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for rounding: %.17e, addval %e \n", runtime, addval);
+
+   runtime = 0;
+   addval = 0;
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      addval += RgetRealApprox(r);
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for apporx: %e, addval %e \n", runtime, addval);
+
+   runtime = 0;
+         startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      RsetReal(r2, ((float)rand())/RAND_MAX);
+      Radd(r, r, r2);
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for adding: %e \n", runtime);
+
+   {
+   SCIP_Real reals[niterations];
+   runtime = 0;
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      reals[i] = ((float)rand())/RAND_MAX;
+      reals[i] += ((float)rand())/RAND_MAX;
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for adding reals: %e \n", runtime);
+   }
+
+   runtime = 0;
+   startt = clock();
+   for( i = 0; i < niterations; ++i )
+   {
+      RsetReal(r, ((float)rand())/RAND_MAX);
+      RsetReal(r2, ((float)rand())/RAND_MAX);
+      Rmult(r, r, r2);
+   }
+   endt = clock();
+   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
+   printf(" cpu time used for multiplication: %e \n", runtime);
+
+   RdeleteNoMem(&r);
+   RdeleteNoMem(&r2);
 }
 
 /*
@@ -1368,7 +1577,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    int                   arraygrowinit,      /**< initial size of array */
    SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
-   const SCIP_Rational*  val                 /**< value to set array index to */
+    SCIP_Rational*  val                 /**< value to set array index to */
    )
 {
    assert(rationalarray != NULL);
@@ -1439,7 +1648,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
    int                   arraygrowinit,      /**< initial size of array */
    SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
-   const SCIP_Rational*  incval              /**< value to increase array index */
+    SCIP_Rational*  incval              /**< value to increase array index */
    )
 {
    assert(incval != NULL);
@@ -1460,7 +1669,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
       rationalarray->minusedidx = MIN(rationalarray->minusedidx, idx);
       rationalarray->maxusedidx = MAX(rationalarray->maxusedidx, idx);
    }
-   
+
    return SCIP_OKAY;
 }
 
