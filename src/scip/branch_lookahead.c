@@ -1855,6 +1855,8 @@ void statusFree(
 typedef struct
 {
    SCIP_Real*            scores;             /**< the scores for each problem variable */
+   SCIP_Real*            downgains;          /**< the downgains for each problem variable */
+   SCIP_Real*            upgains;            /**< the upgains for each problem variable */
    CANDIDATE**           bestsortedcands;    /**< array containing the best sorted variable indices w.r.t. their score */
    int                   nbestsortedindices; /**< number of elements in bestsortedindices */
 } SCORECONTAINER;
@@ -1893,6 +1895,8 @@ SCIP_RETCODE scoreContainerCreate(
 
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->downgains, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->upgains, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, ncands) );
 
    (*scorecontainer)->nbestsortedindices = ncands;
@@ -1901,7 +1905,11 @@ SCIP_RETCODE scoreContainerCreate(
 
    /* init the scores to something negative, as scores are always non negative */
    for( i = 0; i < ntotalvars; i++ )
+   {
       (*scorecontainer)->scores[i] = -1.0;
+      (*scorecontainer)->downgains[i] = -1.0;
+      (*scorecontainer)->upgains[i] = -1.0;
+   }
 
    return SCIP_OKAY;
 }
@@ -1985,7 +1993,9 @@ SCIP_RETCODE scoreContainerSetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCORECONTAINER*       scorecontainer,     /**< the container to write into */
    CANDIDATE*            cand,               /**< candidate to add the score for */
-   SCIP_Real             score               /**< score to add */
+   SCIP_Real             score,              /**< score to add */
+   SCIP_Real             downgain,           /**< LP gain in down child */
+   SCIP_Real             upgain              /**< LP gain in up child */
    )
 {
    CANDIDATE* droppedcandidate;
@@ -2001,6 +2011,8 @@ SCIP_RETCODE scoreContainerSetScore(
    assert(probindex >= 0);
 
    scorecontainer->scores[probindex] = score;
+   scorecontainer->downgains[probindex] = downgain;
+   scorecontainer->upgains[probindex] = upgain;
 
    /* find the point in the sorted array where the new score should be inserted */
    insertpoint =  findInsertionPoint(scip, scorecontainer, score, scorecontainer->bestsortedcands,
@@ -2034,6 +2046,8 @@ SCIP_RETCODE scoreContainerFree(
 
    /* don't free the candidates inside the cands array, as those are handled by the candidate list */
    SCIPfreeBufferArray(scip, &(*scorecontainer)->bestsortedcands);
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->upgains);
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->downgains);
    SCIPfreeBufferArray(scip, &(*scorecontainer)->scores);
    SCIPfreeBuffer(scip, scorecontainer);
 
@@ -3567,8 +3581,8 @@ SCIP_Real calculateScoreFromDeeperscore(
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
 
-   assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff);
-   assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff);
+   assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
 
    downscore = sqrt(downbranchingresult->deeperscore);
    upscore = sqrt(upbranchingresult->deeperscore);
@@ -4073,7 +4087,7 @@ SCIP_RETCODE ensureScoresPresent(
          else
          {
             SCIP_Real score = calculateScoreFromPseudocosts(scip, lpcand);
-            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score) );
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score, 0, 0) );
          }
       }
       else
@@ -4136,7 +4150,7 @@ SCIP_RETCODE ensureScoresPresent(
       /* reset the best sorted indices, as those are only valid on the FSB run already completed */
       scoreContainterResetBestSortedIndices(scorecontainer);
 
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for theremaining candidates\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for the remaining candidates\n");
 
       SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
    }
@@ -4513,7 +4527,8 @@ SCIP_RETCODE executeBranchingRecursive(
                      &branchingresult->ndeepestnodes) );
 #endif
 
-               assert(deeperstatus->cutoff || deeperstatus->lperror || branchingresult->ndeepestnodes == 8
+               assert(deeperstatus->cutoff || deeperstatus->domred || deeperstatus->lperror
+                  || branchingresult->ndeepestnodes == 8
                   || branchingresult->ndeepestnodes == 2 * candidatelist->ncandidates
                   || SCIPisStopped(scip));
 
@@ -4848,7 +4863,7 @@ SCIP_RETCODE selectVarRecursive(
             assert(ntotalgains != NULL);
             assert(ndeepestnodes != NULL);
 
-            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
+            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, baselpobjval);
             *bestgain = MAX(*bestgain, weightedgain);
 
             if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
@@ -5084,7 +5099,8 @@ SCIP_RETCODE selectVarRecursive(
                 * variable and the warm starting basis to reuse it in the subsequent lookahead evaluation of the best
                 * candidates
                 */
-               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
+               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score,
+                     downbranchingresult->dualbound - scoringlpobjval, upbranchingresult->dualbound - scoringlpobjval) );
             }
          }
 
@@ -5490,11 +5506,19 @@ SCIP_RETCODE selectVarStart(
                //    bestscore, firstscore);
 
                if( candidatelist->ncandidates > 1 )
-                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
+                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n",
+                     SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
                      scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                      scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
                      scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
-                     bestscore, firstscore, SCIPgetCutoffbound(scip) - lpobjval);
+                     bestscore, firstscore, SCIPgetCutoffbound(scip) - lpobjval, lpobjval, SCIPgetFirstLPLowerboundRoot(scip),
+                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)]
+                     );
             }
             else
                assert(!performedlab);
