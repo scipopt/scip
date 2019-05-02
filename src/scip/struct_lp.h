@@ -387,6 +387,7 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
+   SCIP_Bool             hasprovedbound;      /**< is the bound of the lp proved to be exactly dual feasible */
    SCIP_LPEX*            lpex;                /**< pointer to exact rational lp, or null if in normal fp soliving mode */
 };
 
