@@ -71,7 +71,6 @@ extern "C" {
 #endif
 
 /** creates the initial primal heuristic for coloring and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeHeurInit(
    SCIP*                 scip                /**< SCIP data structure */
    );

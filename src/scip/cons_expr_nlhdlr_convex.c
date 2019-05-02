@@ -34,6 +34,8 @@
 #define NLHDLR_DESC         "convex handler for expressions"
 #define NLHDLR_PRIORITY     50
 
+#define DETECTSUM    FALSE
+
 /*
  * Data structures
  */
@@ -139,6 +141,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    /* we currently cannot contribute in presolve */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* ignore sums */
+   if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
    curvature = SCIPgetConsExprExprCurvature(expr);
@@ -298,6 +304,8 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    assert(nlhdlrexprdata->varexprs != NULL);
    assert(nlhdlrexprdata->nvarexprs > 0);
    assert(success != NULL);
+
+   *success = FALSE;
 
    /* we separate only convex functions here, so there should be little use for branching
     * if violations are small or there are numerical issues, then we will not have generated a cut, though

@@ -244,6 +244,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreXyz)
 { /*lint --e{715}*/
+   *success = FALSE;
+
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 

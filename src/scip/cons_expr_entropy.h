@@ -33,14 +33,14 @@ extern "C" {
 #endif
 
 /** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates an x*log(x) expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */

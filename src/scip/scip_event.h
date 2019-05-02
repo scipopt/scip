@@ -73,7 +73,7 @@ extern "C" {
  *        callback is added in future releases; consider using SCIPincludeEventhdlrBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeEventhdlr() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventhdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR**      eventhdlrptr,       /**< reference to an event handler, or NULL */
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPincludeEventhdlrBasic(
    );
 
 /** sets copy callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrCopy(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPsetEventhdlrCopy(
    );
 
 /** sets deinitialization callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrFree(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPsetEventhdlrFree(
    );
 
 /** sets initialization callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrInit(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPsetEventhdlrInit(
    );
 
 /** sets deinitialization callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrExit(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPsetEventhdlrExit(
    );
 
 /** sets solving process initialization callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrInitsol(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPsetEventhdlrInitsol(
    );
 
 /** sets solving process deinitialization callback of the event handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrExitsol(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPsetEventhdlrExitsol(
    );
 
 /** sets callback of the event handler to free specific event data */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEventhdlrDelete(
    SCIP*                 scip,               /**< scip instance */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
@@ -163,20 +163,20 @@ SCIP_RETCODE SCIPsetEventhdlrDelete(
    );
 
 /** returns the event handler of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_EVENTHDLR* SCIPfindEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of event handler */
    );
 
 /** returns the array of currently available event handlers */
-EXTERN
+SCIP_EXPORT
 SCIP_EVENTHDLR** SCIPgetEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available event handlers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -206,7 +206,7 @@ int SCIPgetNEventhdlrs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPcatchEvent(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdropEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
@@ -260,7 +260,7 @@ SCIP_RETCODE SCIPdropEvent(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcatchVarEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< transformed variable to catch event for */
@@ -288,7 +288,7 @@ SCIP_RETCODE SCIPcatchVarEvent(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdropVarEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< transformed variable to drop event for */
@@ -316,7 +316,7 @@ SCIP_RETCODE SCIPdropVarEvent(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcatchRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to catch event for */
@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPcatchRowEvent(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdropRowEvent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< linear row to drop event for */

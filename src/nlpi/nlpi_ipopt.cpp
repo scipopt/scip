@@ -2231,7 +2231,7 @@ bool ScipNLP::get_starting_point(
       {
          SCIP_Real lb, ub;
 
-         SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+         SCIPdebugMessage("Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
          for( int i = 0; i < n; ++i )
          {

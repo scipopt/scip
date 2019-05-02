@@ -32,13 +32,11 @@ extern "C" {
 #endif
 
 /** creates the list scheduling primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeHeurListScheduling(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** initialize heuristic */
-extern
 SCIP_RETCODE SCIPinitializeHeurListScheduling(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIGRAPH*         precedencegraph,    /**< precedence graph */

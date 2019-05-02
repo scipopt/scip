@@ -36,7 +36,6 @@ extern "C" {
  */
 
 /** create solver interface for Xyz solver */
-extern
 SCIP_RETCODE SCIPcreateNlpSolverXyz(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */

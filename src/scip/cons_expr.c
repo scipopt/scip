@@ -44,6 +44,7 @@
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr_nlhdlr_quadratic.h"
+#include "scip/cons_expr_nlhdlr_perspective.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
@@ -4985,7 +4986,7 @@ SCIP_RETCODE enforceConstraints(
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
-   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %d\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
@@ -11115,6 +11116,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include nonlinear handler for bilinear expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrBilinear(scip, conshdlr) );
 
+   /* include nonlinear handler for perspective reformulations */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrPerspective(scip, conshdlr) );
+
    return SCIP_OKAY;
 }
 
@@ -12022,11 +12026,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
    assert(nlhdlr != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
    if( nlhdlr->branchscore == NULL )
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
 
 #ifndef NDEBUG
    /* check that auxvalue is correct by reevaluating */

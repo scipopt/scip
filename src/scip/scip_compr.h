@@ -71,7 +71,7 @@ extern "C" {
  *        callback is added in future releases; consider using SCIPincludeComprBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeCompr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of tree compression */
@@ -96,7 +96,7 @@ SCIP_RETCODE SCIPincludeCompr(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeCompr() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeComprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR**          compr,              /**< pointer to tree compression */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPincludeComprBasic(
    );
 
 /** sets copy method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -117,7 +117,7 @@ SCIP_RETCODE SCIPsetComprCopy(
    );
 
 /** sets destructor method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPsetComprFree(
    );
 
 /** sets initialization method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPsetComprInit(
    );
 
 /** sets deinitialization method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPsetComprExit(
    );
 
 /** sets solving process initialization method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPsetComprInitsol(
    );
 
 /** sets solving process deinitialization method of tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetComprExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
@@ -157,20 +157,20 @@ SCIP_RETCODE SCIPsetComprExitsol(
    );
 
 /** returns the tree compression of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_COMPR* SCIPfindCompr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of tree compression */
    );
 
 /** returns the array of currently available tree compression */
-EXTERN
+SCIP_EXPORT
 SCIP_COMPR** SCIPgetComprs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available tree compression */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCompr(
    SCIP*                 scip                /**< SCIP data structure */
    );

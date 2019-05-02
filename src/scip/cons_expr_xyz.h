@@ -32,14 +32,14 @@ extern "C" {
 #endif
 
 /** creates the handler for xyz expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a xyz expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */

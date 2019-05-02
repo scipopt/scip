@@ -32,14 +32,14 @@ extern "C" {
 #endif
 
 /** creates the handler for cos expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a cos expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprCos(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */

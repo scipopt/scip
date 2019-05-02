@@ -623,6 +623,10 @@ SCIP_INTERVAL intevalBilinear(
    }
    assert(inf <= sup);
 
+   /* adjust infinite values */
+   inf = MAX(inf, -SCIP_INTERVAL_INFINITY);
+   sup = MIN(sup, SCIP_INTERVAL_INFINITY);
+
    /* multiply resulting interval with coefficient of the product expression */
    SCIPintervalSetBounds(&interval, inf, sup);
    if( SCIPgetConsExprExprProductCoef(expr) != 1.0 )

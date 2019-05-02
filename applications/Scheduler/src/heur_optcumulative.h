@@ -31,13 +31,11 @@ extern "C" {
 #endif
 
 /** creates the clique primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeHeurOptcumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** initialize the heuristics data structure */
-extern
 SCIP_RETCODE SCIPinitHeurOptcumulative(
    SCIP*                 scip,               /**< original SCIP data structure */
    int                   nmachines,          /**< number of machines */

@@ -32,14 +32,14 @@ extern "C" {
 #endif
 
 /** creates the handler for variable expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a variable expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    );
 
 /** gets the variable of a variable expression */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetConsExprExprVarVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    );
