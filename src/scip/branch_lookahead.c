@@ -3535,7 +3535,7 @@ SCIP_Real calculateScoreFromResult2(
 
    lpscore = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
 
-      /* the gain is the difference of the dualbound of a child and the reference objective value;
+   /* the gain is the difference of the dualbound of a child and the reference objective value;
     * by bounding it by zero we are safe from numerical troubles
     */
    if( !downbranchingresult->cutoff )
@@ -3604,6 +3604,7 @@ SCIP_Real calculateScoreFromDeeperscore(
 /** calculates the combined gain, weighted with parameters given by the user configuration */
 static
 SCIP_Real calculateWeightedGain(
+   SCIP*                 scip,               /**< SCIP data structure */
    CONFIGURATION*        config,             /**< LAB configuration */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
    BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
@@ -3625,14 +3626,24 @@ SCIP_Real calculateWeightedGain(
    if( !upbranchingresult->cutoff )
       upgain = MAX(0, upbranchingresult->dualbound - lpobjval);
 
-   /* in case a child is infeasible and therefore cutoff we take the gain of the other child to receive a somewhat
-    * realistic gain for the infeasible child;
-    * if both children are infeasible we just reset the initial zero values again
-    */
-   if( downbranchingresult->cutoff )
-      downgain = upgain;
-   if( upbranchingresult->cutoff )
-      upgain = downgain;
+   if( config->scoringfunction == 's' )
+   {
+      if( downbranchingresult->cutoff )
+         downgain = SCIPinfinity(scip);
+      if( upbranchingresult->cutoff )
+         upgain = SCIPinfinity(scip);
+   }
+   else
+   {
+      /* in case a child is infeasible and therefore cutoff we take the gain of the other child to receive a somewhat
+       * realistic gain for the infeasible child;
+       * if both children are infeasible we just reset the initial zero values again
+       */
+      if( downbranchingresult->cutoff )
+         downgain = upgain;
+      if( upbranchingresult->cutoff )
+         upgain = downgain;
+   }
 
    return config->minweight*MIN(downgain, upgain) + (1.0 - config->minweight)*MAX(downgain, upgain);
 }
@@ -3859,7 +3870,7 @@ SCIP_Real calculateScore(
       score = calculateWeightedCutoffScore(config, downbranchingresult, upbranchingresult);
       break;
    case 'f':
-      score = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
+      score = calculateWeightedGain(scip, config, downbranchingresult, upbranchingresult, lpobjval);
       break;
    case 'p':
       score = calculateScoreFromDeeperscore(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
@@ -4863,7 +4874,7 @@ SCIP_RETCODE selectVarRecursive(
             assert(ntotalgains != NULL);
             assert(ndeepestnodes != NULL);
 
-            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, baselpobjval);
+            weightedgain = calculateWeightedGain(scip, config, downbranchingresult, upbranchingresult, baselpobjval);
             *bestgain = MAX(*bestgain, weightedgain);
 
             if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
