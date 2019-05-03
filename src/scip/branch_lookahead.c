@@ -3595,8 +3595,65 @@ SCIP_Real calculateScoreFromDeeperscore(
    if( upbranchingresult->cutoff )
       upscore = 2 * downscore;
 
+   score = SCIPgetBranchScore(scip, branchvar, downscore, upscore);
+
+   return score;
+}
+
+/** calculates the score based on the down and up branching scores */
+static
+SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             branchvar,          /**< variable to get the score for */
+   BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
+   BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
+   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
+   )
+{
+   SCIP_Real score;
+   SCIP_Real downscore;
+   SCIP_Real upscore;
+   SCIP_Real totaldowngains;
+   SCIP_Real totalupgains;
+   SCIP_Real nlowestlevelcutoffs;
+   int ntotaldowngains;
+   int ntotalupgains;
+
+   assert(scip != NULL);
+   assert(branchvar != NULL);
+   assert(downbranchingresult != NULL);
+   assert(upbranchingresult != NULL);
+
+   assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
+
+   nlowestlevelcutoffs = 2 * (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
+   totaldowngains = downbranchingresult->totalgains;
+   totalupgains = upbranchingresult->totalgains;
+   ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
+   ntotalupgains = MAX(1, upbranchingresult->ntotalgains);
+
+   downscore = sqrt(downbranchingresult->deeperscore);
+   upscore = sqrt(upbranchingresult->deeperscore);
+
+   downscore = MAX(downscore, SCIPsumepsilon(scip));
+   upscore = MAX(upscore, SCIPsumepsilon(scip));
+
+   if( downbranchingresult->cutoff )
+      downscore = 2 * upscore;
+   if( upbranchingresult->cutoff )
+      upscore = 2 * downscore;
 
    score = SCIPgetBranchScore(scip, branchvar, downscore, upscore);
+
+   downscore = sqrt(totaldowngains/ntotaldowngains);
+   upscore = sqrt(totalupgains/ntotalupgains);
+
+   downscore = MAX(downscore, SCIPsumepsilon(scip));
+   upscore = MAX(upscore, SCIPsumepsilon(scip));
+
+
+   score += SCIPgetBranchScore(scip, branchvar, downscore, upscore)*nlowestlevelcutoffs;
 
    return score;
 }
@@ -3874,6 +3931,9 @@ SCIP_Real calculateScore(
       break;
    case 'p':
       score = calculateScoreFromDeeperscore(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
+      break;
+   case 'a':
+      score = calculateScoreFromDeeperscoreAndCutoffs(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
       break;
    case 'l':
       score = calculateScoreFromResult2(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval, config->dbfactor);
@@ -4866,24 +4926,6 @@ SCIP_RETCODE selectVarRecursive(
          if( niterations != NULL )
             *niterations += downbranchingresult->niterations + upbranchingresult->niterations;
 
-         if( bestgain != NULL && !config->inscoring && SCIPgetProbingDepth(scip) == 1 )
-         {
-            SCIP_Real weightedgain;
-
-            assert(totalgains != NULL);
-            assert(ntotalgains != NULL);
-            assert(ndeepestnodes != NULL);
-
-            weightedgain = calculateWeightedGain(scip, config, downbranchingresult, upbranchingresult, baselpobjval);
-            *bestgain = MAX(*bestgain, weightedgain);
-
-            if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
-            {
-               (*totalgains) += weightedgain;
-               (*ntotalgains)++;
-            }
-         }
-
          /* store results of branching call */
          if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff && (config->inscoring || probingdepth == 0) )
          {
@@ -4907,6 +4949,21 @@ SCIP_RETCODE selectVarRecursive(
 
          if( i == 0 && firstscoreptr != NULL )
             *firstscoreptr = score;
+
+         if( bestgain != NULL && !config->inscoring && SCIPgetProbingDepth(scip) == 1 && !useoldbranching )
+         {
+            assert(totalgains != NULL);
+            assert(ntotalgains != NULL);
+
+            *bestgain = MAX(*bestgain, score);
+
+            if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
+            {
+               (*totalgains) += score;
+               (*ntotalgains)++;
+            }
+         }
+
 
          /* both child nodes are infeasible -> the current node is infeasible */
          if( SCIPallColsInLP(scip) && upbranchingresult->cutoff && downbranchingresult->cutoff )
@@ -6233,15 +6290,15 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringfunction",
          "scoring function to be used at the base level",
-         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfswplcr", NULL, NULL) );
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfswplcra", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/deeperscoringfunction",
          "scoring function to be used at deeper levels",
-         &branchruledata->config->deeperscoringfunction, TRUE, DEFAULT_DEEPERSCORINGFUNCTION, "dfswplcrx", NULL, NULL) );
+         &branchruledata->config->deeperscoringfunction, TRUE, DEFAULT_DEEPERSCORINGFUNCTION, "dfswlcrx", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringscoringfunction",
          "scoring function to be used during FSB scoring",
-         &branchruledata->config->scoringscoringfunction, TRUE, DEFAULT_SCORINGSCORINGFUNCTION, "dfswplcr", NULL, NULL) );
+         &branchruledata->config->scoringscoringfunction, TRUE, DEFAULT_SCORINGSCORINGFUNCTION, "dfswlcr", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
          "if scoringfunction is 's', this value is used to weight the min of the gains of two child problems in the convex combination",
