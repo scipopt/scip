@@ -47,7 +47,7 @@ CMake. It might be necessary to specify the SCIP build directory
 or installation directory, if SCIP has not yet been installed systemwide.
 
 ```
-cmake -Bbuild -H. [-DCMAKE_PREFIX_PATH=../../]
+cmake -Bbuild -H. [-DSCIP_DIR=../../build]
 cmake --build build
 ```
 
