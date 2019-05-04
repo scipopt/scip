@@ -3927,7 +3927,7 @@ SCIP_Real calculateScore(
       score = calculateWeightedCutoffScore(config, downbranchingresult, upbranchingresult);
       break;
    case 'f':
-      score = calculateWeightedGain(scip, config, downbranchingresult, upbranchingresult, lpobjval);
+      score = calculateWeightedGain(scip, config, downbranchingresult, upbranchingresult, baselpobjval);
       break;
    case 'p':
       score = calculateScoreFromDeeperscore(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
