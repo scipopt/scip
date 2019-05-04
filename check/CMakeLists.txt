@@ -59,7 +59,7 @@ set(settings_MIP
     "setppclifting_leastinf"
     #branching and propagation
 
-    "pscost_proporbitope"
+    #"pscost_proporbitope" <- please enable if #2640 is fixed
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
