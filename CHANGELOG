@@ -70,6 +70,7 @@ Fixed bugs
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
 - fixed bug in propagation of dual proofs
+- fixed bugs that arise for multiaggregated indicator variables by disallowing multiaggregation for them
 
 Miscellaneous
 -------------
