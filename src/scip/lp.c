@@ -35,6 +35,7 @@
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/event.h"
+#include "scip/bounding_exact.h"
 #include "scip/intervalarith.h"
 #include "scip/lp.h"
 #include "scip/misc.h"
@@ -815,6 +816,7 @@ void recomputePseudoObjectiveValue(
    assert(set != NULL);
    assert(prob != NULL);
    assert(!lp->pseudoobjvalid);
+   assert(!set->misc_exactsolve);
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -2652,7 +2654,7 @@ SCIP_RETCODE lpSetObjlim(
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
     * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( lpCutoffDisabled(set) || set->misc_exactsolve_old )
+   if( lpCutoffDisabled(set) || set->misc_exactsolve )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -9145,6 +9147,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divelpwasprimchecked = TRUE;
    (*lp)->divelpwasdualfeas = TRUE;
    (*lp)->divelpwasdualchecked = TRUE;
+   (*lp)->hasprovedbound = FALSE;
    (*lp)->divechgsides = NULL;
    (*lp)->divechgsidetypes = NULL;
    (*lp)->divechgrows = NULL;
@@ -12002,9 +12005,10 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+      assert(lpCutoffDisabled(set) || set->misc_exactsolve || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
+
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
       assert(!lpCutoffDisabled(set));
@@ -12125,6 +12129,7 @@ SCIP_RETCODE lpFlushAndSolve(
    /* select LP algorithm to apply */
    resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible) && !fromscratch;
    algo = resolve ? set->lp_resolvealgorithm : set->lp_initalgorithm;
+   lp->hasprovedbound = FALSE;
 
    switch( algo )
    {
@@ -12325,7 +12330,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve_old
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
       || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
@@ -12423,6 +12428,12 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
+         if( set->misc_exactsolve && !lp->diving )
+         {
+            SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                     prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
+         }
+
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
@@ -12492,11 +12503,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve_old || set->lp_alwaysgetduals )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
          {
             if( SCIPlpiHasDualRay(lp->lpi) )
             {
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+
+               if( set->misc_exactsolve && !lp->diving )
+                  SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                     prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
              * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -12567,6 +12582,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         /** todo: exip: do we have to correct here?, maybe let enfolp resolve exact lp if ray not feasible? */
          if( set->lp_checkprimfeas )
          {
             /* get unbounded LP solution and check the solution's feasibility again */
@@ -12638,6 +12654,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
+         /** @todo: exip. objlimit disabled for now (see setobjlimit)
          assert(!lpCutoffDisabled(set));
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
@@ -12645,7 +12662,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve_old )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12658,6 +12675,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
              */
             assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiobjlim));
 
+            /** @todo exip: take care here */
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
@@ -12807,11 +12825,17 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve_old )
+                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+
+                        if( set->misc_exactsolve && !lp->diving )
+                        {
+                           SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                                 prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
+                        }
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
                       * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -13595,7 +13619,8 @@ SCIP_RETCODE lpUpdateVarProved(
    SCIP_Real             oldub,              /**< old objective value of variable */
    SCIP_Real             newobj,             /**< new objective value of variable */
    SCIP_Real             newlb,              /**< new objective value of variable */
-   SCIP_Real             newub               /**< new objective value of variable */
+   SCIP_Real             newub,              /**< new objective value of variable */
+   SCIP_Bool             global              /**< is the change global? */
    )
 {
    SCIP_INTERVAL deltaval;
@@ -13680,20 +13705,30 @@ SCIP_RETCODE lpUpdateVarProved(
    }
 
    /* update the pseudo and loose objective values */
-   SCIPintervalSet(&psval, lp->pseudoobjval);
-   SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
-   lp->pseudoobjval = SCIPintervalGetInf(psval);
-   lp->pseudoobjvalinf += deltainf;
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( global )
    {
-      SCIPintervalSet(&psval, lp->looseobjval);
+      SCIPintervalSet(&psval, lp->glbpseudoobjval);
       SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
-      lp->looseobjval = SCIPintervalGetInf(psval);
-      lp->looseobjvalinf += deltainf;
+      lp->glbpseudoobjval = SCIPintervalGetInf(psval);
+      lp->glbpseudoobjvalinf += deltainf;
    }
+   else
+   {
+      SCIPintervalSet(&psval, lp->pseudoobjval);
+      SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
+      lp->pseudoobjval = SCIPintervalGetInf(psval);
+      lp->pseudoobjvalinf += deltainf;
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      {
+         SCIPintervalSet(&psval, lp->looseobjval);
+         SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
+         lp->looseobjval = SCIPintervalGetInf(psval);
+         lp->looseobjvalinf += deltainf;
+      }
 
-   assert(lp->pseudoobjvalinf >= 0);
-   assert(lp->looseobjvalinf >= 0);
+      assert(lp->pseudoobjvalinf >= 0);
+      assert(lp->looseobjvalinf >= 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -13710,13 +13745,16 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve_old )
+   if( set->misc_exactsolve )
    {
       if( oldobj != newobj ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), FALSE) );
          /* the global ps objval can be set directly because the global and local bounds have to be the same here (see below) */
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
+
          lp->glbpseudoobjval = lp->pseudoobjval;
       }
    }
@@ -13766,16 +13804,27 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+   if( set->misc_exactsolve )
    {
-      SCIP_Real deltaval;
-      int deltainf;
+      if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbGlobal(var),
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbGlobal(var), TRUE) );
+      }
+   }
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+      {
+         SCIP_Real deltaval;
+         int deltainf;
 
-      /* compute the pseudo objective delta due the new lower bound */
-      getObjvalDeltaLb(set, SCIPvarGetObj(var), oldlb, newlb, &deltaval, &deltainf);
+         /* compute the pseudo objective delta due the new lower bound */
+         getObjvalDeltaLb(set, SCIPvarGetObj(var), oldlb, newlb, &deltaval, &deltainf);
 
-      /* update the root pseudo objective values */
-      lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+         /* update the root pseudo objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      }
    }
 
    return SCIP_OKAY;
@@ -13793,12 +13842,12 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve_old )
+   if( set->misc_exactsolve )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var),
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var), FALSE) );
       }
    }
    else
@@ -13834,16 +13883,27 @@ SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+   if( set->misc_exactsolve )
    {
-      SCIP_Real deltaval;
-      int deltainf;
+      if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), oldub,
+               SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), newub, TRUE) );
+      }
+   }
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+      {
+         SCIP_Real deltaval;
+         int deltainf;
 
-      /* compute the pseudo objective delta due the new upper bound */
-      getObjvalDeltaUb(set, SCIPvarGetObj(var), oldub, newub, &deltaval, &deltainf);
+         /* compute the pseudo objective delta due the new upper bound */
+         getObjvalDeltaUb(set, SCIPvarGetObj(var), oldub, newub, &deltaval, &deltainf);
 
-      /* update the root pseudo objective values */
-      lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+         /* update the root pseudo objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      }
    }
 
    return SCIP_OKAY;
@@ -13861,12 +13921,12 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve_old )
+   if( set->misc_exactsolve )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub,
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub, FALSE) );
       }
    }
    else
