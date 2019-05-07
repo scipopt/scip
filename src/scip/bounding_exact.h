@@ -49,7 +49,7 @@ extern "C" {
 #endif
 
 extern
-SCIP_RETCODE computeSafeBound(
+SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEX*            lpex,               /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -61,6 +61,7 @@ SCIP_RETCODE computeSafeBound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool             dualfarkas,
    SCIP_Real*            safebound
    );
 
