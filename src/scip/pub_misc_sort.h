@@ -28,6 +28,7 @@
 
 #include "scip/def.h"
 #include "type_misc.h"
+#include "intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -527,6 +528,17 @@ void SCIPsortIntIntPtrPtr(
    int*                  intarray2,          /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    void**                ptrarray2,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of five joint arrays of ints/ints/pointers/pointers/pointers sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortIntIntPtrPtrInterval(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< int array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_INTERVAL*        intervalarray,      /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
