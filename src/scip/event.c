@@ -27,16 +27,19 @@
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/primal.h"
 #include "scip/pub_event.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/rational.h"
 #include "scip/set.h"
 #include "scip/struct_event.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
 #include "scip/var.h"
+#include "scip/varex.h"
 
 /* timing the execution methods for event handling takes a lot of time, so it is disabled */
 /* #define TIMEEVENTEXEC */
@@ -60,6 +63,58 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
    {
       SCIPsetDebugMsg(set, "including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), (void*)set->scip);
       SCIP_CALL( eventhdlr->eventcopy(set->scip, eventhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE updateLpexBdChg(
+   SCIP_VAR*             var,
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENT*           event,              /**< event */
+   SCIP_Bool             isUb,               /**< is it an upper bound */
+   SCIP_Bool             isGlb               /**< is it a global or local bound */
+   )
+{
+   if( !set->misc_exactsolve )
+    return SCIP_OKAY;
+
+   assert(var != NULL);
+   assert(lp != NULL);
+
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
+         SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      SCIP_Rational* newbound = RcreateTemp(set->buffer);
+      SCIP_Rational* oldbound = RcreateTemp(set->buffer);
+
+      RsetReal(newbound, event->data.eventbdchg.newbound);
+      RsetReal(oldbound, event->data.eventbdchg.oldbound);
+
+      if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+      {
+         if( isUb )
+         {
+            SCIP_CALL( SCIPcolexChgUb(SCIPvarGetColExact(var), set, lp, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcolexChgLb(SCIPvarGetColExact(var), set, lp, newbound) );
+         }
+      }
+      if( isUb )
+      {
+         SCIP_CALL( SCIPlpexUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPlpexUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+      }
+
+      RdeleteTemp(set->buffer, &oldbound);
+      RdeleteTemp(set->buffer, &newbound);
    }
 
    return SCIP_OKAY;
@@ -1577,6 +1632,25 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarObj(lp, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
 
+      /* if in exact solving mode, adjust rational lp data */
+      if( set->misc_exactsolve )
+      {
+         SCIP_Rational* newobj = RcreateTemp(set->buffer);
+         SCIP_Rational* oldobj = RcreateTemp(set->buffer);
+
+         RsetReal(newobj, event->data.eventobjchg.newobj);
+         RsetReal(oldobj, event->data.eventobjchg.oldobj);
+
+         if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+         {
+            SCIP_CALL( SCIPcolexChgObj(SCIPvarGetColExact(var), set, lp->lpex, newobj) );
+         }
+         SCIP_CALL( SCIPlpexUpdateVarObj(lp->lpex, set, var, oldobj, newobj) );
+
+         RdeleteTemp(set->buffer, &oldobj);
+         RdeleteTemp(set->buffer, &newobj);
+      }
+
       /* inform all existing primal solutions about the objective change (only if this is not a temporary change in
        * probing mode)
        */
@@ -1637,6 +1711,7 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
+         SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, FALSE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -1660,6 +1735,7 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound, 
                event->data.eventbdchg.newbound) );
+         SCIP_CALL( updateLpexBdChg(var, lp->lpex, set, event, TRUE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
