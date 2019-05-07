@@ -2360,12 +2360,13 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
-   if( set->misc_exactsolve_old )
+   if( set->misc_exactsolve && !lp->hasprovedbound )
    {
-      SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
+      SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
+      SCIPABORT();
    }
-   else
-      lpobjval = SCIPlpGetObjval(lp, set, transprob);
+
+   lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
    SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
@@ -6875,7 +6876,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
          }
-         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp))
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp) )
          {
             SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
