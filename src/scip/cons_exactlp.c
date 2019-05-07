@@ -19,6 +19,7 @@
  *
  */
 
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
@@ -63,6 +64,9 @@
 #include "scip/struct_scip.h"
 #include <ctype.h>
 #include <string.h>
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
+#endif
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h> /*lint --e{766}*/
@@ -149,6 +153,7 @@
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+#define DEFAULT_INTERLEAVEDBFREQ      0 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
@@ -15493,6 +15498,7 @@ static
 SCIP_DECL_CONSINITLP(consInitlpExactLinear)
 {  /*lint --e{715}*/
    int c;
+   int freq;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -15505,6 +15511,8 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
       /* add both the relaxation to the fp-lp as well as the correct constraint to the exact lp */
       SCIP_CALL( addRelaxation(scip, conss[c], infeasible) );
    }
+
+   SCIPgetIntParam(scip, "constraints/exactlp/interleavedbfreq", &freq);
 
    return SCIP_OKAY;
 }
@@ -17071,6 +17079,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CONSHDLR* conshdlr;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONFLICTHDLR* conflicthdlr;
+   char version[20];
 
    assert(scip != NULL);
 
@@ -17225,6 +17234,16 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/exactlp/interleavedbfreq",
+         "frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node)",
+         NULL, TRUE, DEFAULT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
+#ifdef SCIP_WITH_MPFR
+   /* add info about using MPFR to external codes information */
+   (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, version,
+         "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+#endif
 
    return SCIP_OKAY;
 }
