@@ -293,6 +293,7 @@ SCIP_Bool rowexInSync(
    {
       assert(rowex->linkpos[i] == fprow->linkpos[i]);
       assert(rowex->cols_index[i] == fprow->cols_index[i]);
+      assert(rowex->valsinterval[i].inf <= fprow->vals[i] && fprow->vals[i] <= rowex->valsinterval[i].sup);
 
       if( !RApproxEqualReal(rowex->vals[i], fprow->vals[i]) )
       {
@@ -452,8 +453,8 @@ void rowexSortLP(
    /* sort coefficients */
 
    /** todo exip: add correct sorting methods so this works in one go */
-   SCIPsortIntIntPtrPtr(row->cols_index, row->linkpos, (void**)row->cols,
-                        (void**)row->vals, row->nlpcols);
+   SCIPsortIntIntPtrPtrInterval(row->cols_index, row->linkpos, (void**)row->cols,
+                        (void**)row->vals, row->valsinterval, row->nlpcols);
 
    /* update links */
    for( i = 0; i < row->nlpcols; ++i )
@@ -486,8 +487,8 @@ void rowexSortNonLP(
 
 /** todo exip: add correct sorting methods so this works in one go */
    /* sort coefficients */
-   SCIPsortIntIntPtrPtr(&(row->cols_index[row->nlpcols]), &(row->linkpos[row->nlpcols]),
-                        (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]),
+   SCIPsortIntIntPtrPtrInterval(&(row->cols_index[row->nlpcols]), &(row->linkpos[row->nlpcols]),
+                        (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
                         row->len - row->nlpcols);
 
    /* update links */
@@ -1002,6 +1003,7 @@ void rowexMoveCoef(
    row->cols[newpos] = row->cols[oldpos];
    row->cols_index[newpos] = row->cols_index[oldpos];
    Rset(row->vals[newpos], row->vals[oldpos]);
+   row->valsinterval[newpos] = row->valsinterval[oldpos];
    row->linkpos[newpos] = row->linkpos[oldpos];
 
    /* update link position in column */
@@ -1031,6 +1033,7 @@ void rowexSwapCoefs(
 {
    SCIP_COLEX* tmpcol;
    SCIP_Rational* tmpval;
+   SCIP_INTERVAL tmp;
    int tmpindex;
    int tmplinkpos;
 
@@ -1048,16 +1051,19 @@ void rowexSwapCoefs(
    tmpcol = row->cols[pos2];
    tmpindex = row->cols_index[pos2];
    Rset(tmpval, row->vals[pos2]);
+   tmp = row->valsinterval[pos2];
    tmplinkpos = row->linkpos[pos2];
 
    row->cols[pos2] = row->cols[pos1];
    row->cols_index[pos2] = row->cols_index[pos1];
    Rset(row->vals[pos2], row->vals[pos1]);
+   row->valsinterval[pos2] = row->valsinterval[pos1];
    row->linkpos[pos2] = row->linkpos[pos1];
 
    row->cols[pos1] = tmpcol;
    row->cols_index[pos1] = tmpindex;
    Rset(row->vals[pos1], tmpval);
+   row->valsinterval[pos1] = tmp;
    row->linkpos[pos1] = tmplinkpos;
 
    RdeleteTemp(buffer, &tmpval);
@@ -1393,6 +1399,7 @@ SCIP_RETCODE rowexAddCoef(
    else
       Rset(row->vals[pos], val);
 
+   SCIPintervalSetRational(&row->valsinterval[pos], row->vals[pos]);
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col->fpcol) && RisIntegral(val);
    if( linkpos == -1 )
@@ -1580,6 +1587,7 @@ SCIP_RETCODE rowexChgCoefPos(
       /* change existing coefficient */
       //rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       Rset(row->vals[pos], val);
+      SCIPintervalSetRational(&row->valsinterval[pos], val);
       row->integral = row->integral && SCIPcolIsIntegral(col->fpcol) && RisIntegral(val);
       //rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChangedExact(row, col, lp);
@@ -3166,6 +3174,7 @@ SCIP_RETCODE SCIProwCreateExact(
       //SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*row)->vals, vals, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->cols_index, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->linkpos, len) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->valsinterval, len) );
       SCIP_ALLOC( RcopyArray(blkmem, &(*row)->vals, vals, len) );
 
       for( i = 0; i < len; ++i )
@@ -3189,6 +3198,7 @@ SCIP_RETCODE SCIProwCreateExact(
    {
       (*row)->cols = NULL;
       (*row)->vals = NULL;
+      (*row)->valsinterval = NULL;
       (*row)->linkpos = NULL;
       (*row)->cols_index = NULL;
    }
@@ -4142,8 +4152,9 @@ SCIP_RETCODE SCIProwexFree(
    Rdelete(blkmem, &(*row)->pseudoactivity);
    Rdelete(blkmem, &(*row)->minactivity);
    Rdelete(blkmem, &(*row)->maxactivity);
-   
+
    RdeleteArray(blkmem, &(*row)->vals, (*row)->size);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->valsinterval, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols_index, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->linkpos, (*row)->size);
@@ -4462,6 +4473,7 @@ SCIP_RETCODE SCIProwexEnsureSize(
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->cols, row->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->cols_index, row->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->vals, row->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->valsinterval, row->size, newsize) );
       for( i = row->size; i < newsize; ++i )
          row->vals[i] = Rcreate(blkmem);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->linkpos, row->size, newsize) );

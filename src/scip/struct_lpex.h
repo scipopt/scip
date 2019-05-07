@@ -198,6 +198,7 @@ struct SCIP_RowEx
    SCIP_Rational*        minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    SCIP_Rational*        maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
    SCIP_Rational**       vals;               /**< coefficients of row entries */
+   SCIP_INTERVAL*        valsinterval;       /**< interval-array of coefficients rounded up and down, respectively */
    void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    char*                 name;               /**< name of the row */
    SCIP_COLEX**          cols;               /**< columns of row entries, that may have a nonzero primal solution value */
