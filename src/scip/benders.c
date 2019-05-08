@@ -2526,7 +2526,7 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
       benders->noimprovecount, (*result));
 
    /* if constraints were added, then the main Benders' solving loop is skipped. */
-   if( !infeasible && ((*result) == SCIP_CONSADDED || (*result) == SCIP_SEPARATED) )
+   if( !(*infeasible) && ((*result) == SCIP_CONSADDED || (*result) == SCIP_SEPARATED) )
       (*skipsolve) = TRUE;
 
    /* capturing cut strengthening statistics */
