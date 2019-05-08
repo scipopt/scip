@@ -77,7 +77,9 @@ struct SCIP_ConshdlrData
    SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
    SCIP_NODE*            currnode;           /**< the current node */
    SCIP_Real             prevbound;          /**< the previous dual bound */
+   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    int                   stallcount;         /**< the number of nodes processed since the last lower bound increase */
+   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
 };
 
 
