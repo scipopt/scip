@@ -51,8 +51,8 @@
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
-#define DEFAULT_ONLYEQROWS         TRUE /**< default value for parameter eqrowsfirst */
-#define DEFAULT_ONLYCONTROWS       TRUE /**< default value for parameter eqrowsfirst */
+#define DEFAULT_ONLYEQROWS        FALSE /**< default value for parameter eqrowsfirst */
+#define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 
