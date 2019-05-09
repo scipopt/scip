@@ -495,6 +495,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
       goto TERMINATE;
    }
 
+   /* TODO it should not be necessary to reevaluate in sol, cons_expr should have done that already */
    /* get f(sol) */
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
    fval = SCIPgetConsExprExprValue(expr);
@@ -831,6 +832,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    assert(nlhdlrdata != NULL);
 
    *success = TRUE;
+
+   /* do not run in presolve, as we only do separation */
+   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
