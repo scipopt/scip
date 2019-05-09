@@ -59,7 +59,7 @@ set(settings_MIP
     "setppclifting_leastinf"
     #branching and propagation
 
-    "pscost_proporbitope"
+    #"pscost_proporbitope" <- please enable if #2640 is fixed
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
@@ -70,7 +70,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-    "intobj"
+#     "intobj" <- please delete at all or enable if #2637 is closed
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"

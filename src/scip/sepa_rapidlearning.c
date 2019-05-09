@@ -34,7 +34,7 @@
 #define SEPA_NAME              "rapidlearning"
 #define SEPA_DESC               "rapid learning heuristic and separator"
 #define SEPA_PRIORITY          -1200000
-#define SEPA_FREQ                    -1
+#define SEPA_FREQ                     5
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -55,7 +55,7 @@
                                          *   cutoff bound be checked? */
 #define DEFAULT_CHECKOBJ          FALSE /**< should the local objection function be checked? */
 #define DEFAULT_CHECKNSOLS         TRUE /**< should the number of solutions found so far be checked? */
-#define DEFAULT_MINDEGENERACY       0.8 /**< minimal degeneracy threshold to allow local rapid learning */
+#define DEFAULT_MINDEGENERACY       0.7 /**< minimal degeneracy threshold to allow local rapid learning */
 #define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
 #define DEFAULT_MINVARCONSRATIO     2.0 /**< minimal ratio of unfixed variables in relation to basis size to
                                          *   allow local rapid learning */
@@ -553,6 +553,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
             if( SCIPgetEffectiveRootDepth(scip) < SCIPgetDepth(scip) )
                return SCIP_INVALIDCALL;
 #endif
+            tightened = FALSE;
+
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( cutoff )
@@ -560,6 +562,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
             if( tightened )
                nbdchgs++;
+
+            tightened = FALSE;
 
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
@@ -571,6 +575,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          }
          else
          {
+            tightened = FALSE;
+
             SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( cutoff )
@@ -578,6 +584,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
             if( tightened )
                nbdchgs++;
+
+            tightened = FALSE;
 
             SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
