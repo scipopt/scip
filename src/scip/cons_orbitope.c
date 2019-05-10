@@ -3186,7 +3186,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbitope)
 {  /*lint --e{715}*/
    int c;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_ORBITOPETYPE orbitopetype;
    SCIP_Bool feasible;
@@ -3197,9 +3196,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
 
    /* loop through constraints */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
