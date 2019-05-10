@@ -46,6 +46,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -1015,6 +1016,22 @@ SCIP_RETCODE separateInequalities(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbisack)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrOrbisack(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbisack)
@@ -1727,6 +1744,87 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 }
 
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyOrbisack)
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR** sourcevars1;
+   SCIP_VAR** sourcevars2;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int nrows;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+   assert( valid != NULL );
+
+   *valid = TRUE;
+
+   SCIPdebugMsg(scip, "Copying method for orbisack constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->vars1 != NULL );
+   assert( sourcedata->vars2 != NULL );
+   assert( sourcedata->nrows > 0 );
+
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+      return SCIP_OKAY;
+
+   sourcevars1 = sourcedata->vars1;
+   sourcevars2 = sourcedata->vars2;
+   nrows = sourcedata->nrows;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nrows) );
+
+   for (i = 0; i < nrows && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars1[i], &(vars1[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars1[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( !(*valid) )
+   {
+      SCIPfreeBufferArray(scip, &vars1);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nrows) );
+
+   for (i = 0; i < nrows && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars2[i], &(vars2[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars2[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( *valid )
+   {
+      /* create copied constraint */
+      if ( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE, sourcedata->ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars2);
+   SCIPfreeBufferArray(scip, &vars1);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -1894,6 +1992,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbisack, consCopyOrbisack) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );

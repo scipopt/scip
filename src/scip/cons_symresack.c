@@ -53,6 +53,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -1365,6 +1366,23 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopySymresack)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSymresack(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteSymresack)
@@ -2178,6 +2196,67 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 }
 
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopySymresack)
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+   assert( valid != NULL );
+
+   *valid = TRUE;
+
+   SCIPdebugMsg(scip, "Copying method for symresack constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->vars != NULL );
+   assert( sourcedata->perm != NULL );
+   assert( sourcedata->nvars > 0 );
+
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+      return SCIP_OKAY;
+
+   sourcevars = sourcedata->vars;
+   nvars = sourcedata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+   for (i = 0; i < nvars && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i], &(vars[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( *valid )
+   {
+      /* create copied constraint */
+      if ( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, sourcedata->perm, vars, nvars, sourcedata->ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -2318,6 +2397,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySymresack, consCopySymresack) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
