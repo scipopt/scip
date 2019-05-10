@@ -88,7 +88,6 @@
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
 #define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
-#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
@@ -103,7 +102,6 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
-   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnvars;           /**< maximal number of variables in a symresack constraint */
 };
 
@@ -1755,6 +1753,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          /* get solution */
          assert( consdata->nvars <= maxnvars );
@@ -1785,6 +1788,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    int c;
 
    assert( scip != NULL );
@@ -1802,6 +1806,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* do not enforce non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( checkSymresackSolution(scip, conss[c], NULL, result, FALSE) );
 
       if ( *result == SCIP_INFEASIBLE )
@@ -1860,6 +1871,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
           /* get solution */
          assert( consdata->nvars <= maxnvars );
@@ -1888,8 +1904,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 static
 SCIP_DECL_CONSCHECK(consCheckSymresack)
 {   /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    int c;
-   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1898,15 +1914,16 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
 
    *result = SCIP_FEASIBLE;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->checkalwaysfeas )
-      return SCIP_OKAY;
-
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* do not check non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( checkSymresackSolution(scip, conss[c], sol, result, printreason) );
 
       if ( *result == SCIP_INFEASIBLE )
@@ -2416,10 +2433,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
-         "Whether check routine returns always SCIP_FEASIBLE.",
-         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

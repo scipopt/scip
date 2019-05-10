@@ -87,7 +87,6 @@
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
 
 #define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
-#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 
 /*
@@ -101,7 +100,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             orbiseparation;     /**< whether orbisack as well as cover inequalities should be separated */
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
-   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
 };
 
@@ -1352,6 +1350,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
          /* get data of constraint */
          assert( conss[c] != 0 );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          /* get solution */
          assert( consdata->nrows <= nvals );
@@ -1416,6 +1419,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       assert( consdata->vars1 != NULL );
       assert( consdata->vars2 != NULL );
 
+      /* do not enforce non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( SCIPcheckSolutionOrbisack(scip, NULL, consdata->vars1, consdata->vars2, consdata->nrows, FALSE, &feasible) );
 
       if ( ! feasible )
@@ -1472,6 +1479,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
          /* get data of constraint */
          assert( conss[c] != 0 );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          /* get solution */
          assert( consdata->nrows <= nvals );
@@ -1510,7 +1522,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbisack)
 {  /*lint --e{715}*/
    SCIP_Bool feasible = TRUE;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
 
@@ -1520,12 +1531,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->checkalwaysfeas )
-      return SCIP_OKAY;
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1539,6 +1544,10 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
       assert( consdata->vars2 != NULL );
 
       SCIPdebugMsg(scip, "Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
+
+      /* do not check non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
 
       SCIP_CALL( SCIPcheckSolutionOrbisack(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
 
@@ -2024,10 +2033,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkpporbisack",
          "Upgrade orbisack constraints to packing/partioning orbisacks?",
          &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
-         "Whether check routine returns always SCIP_FEASIBLE.",
-         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
