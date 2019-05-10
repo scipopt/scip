@@ -115,6 +115,7 @@ struct SCIP_ConsData
    int*                  perm;               /**< permutation associated to the symresack */
    int*                  invperm;            /**< inverse permutation */
    SCIP_Bool             ppupgrade;          /**< whether constraint is upgraded to packing/partitioning symresack */
+   SCIP_Bool             ismodelcons;        /**< whether the symresack is a model constraint */
 #ifdef SCIP_DEBUG
    int                   debugcnt;           /**< counter to store number of added cover inequalities */
 #endif
@@ -415,7 +416,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       inputvars,          /**< input variables of the constraint handler */
    int                   inputnvars,         /**< input number of variables of the constraint handler*/
-   int*                  inputperm           /**< input permutation of the constraint handler */
+   int*                  inputperm,          /**< input permutation of the constraint handler */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -492,6 +494,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
+   (*consdata)->ismodelcons = ismodelcons;
 
    for (i = 0; i < naffectedvariables; ++i)
    {
@@ -1207,6 +1210,7 @@ SCIP_RETCODE orbisackUpgrade(
    SCIP_VAR**            inputvars,          /**< permuted variables array */
    int                   nvars,              /**< size of perm array */
    SCIP_Bool*            upgrade,            /**< whether constraint was upgraded */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1287,7 +1291,7 @@ SCIP_RETCODE orbisackUpgrade(
       *upgrade = FALSE;
    else if ( *upgrade )
    {
-      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE,
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE, ismodelcons,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -1310,6 +1314,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the added constraint is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1343,12 +1348,12 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    assert( vars != NULL );
    assert( nvars > 0 );
 
-   SCIP_CALL( orbisackUpgrade(scip, cons, name, perm, vars, nvars, &upgrade,
+   SCIP_CALL( orbisackUpgrade(scip, cons, name, perm, vars, nvars, &upgrade, ismodelcons,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    if ( ! upgrade )
    {
-      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
+      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars, ismodelcons,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -1440,6 +1445,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    consdata->debugcnt = sourcedata->debugcnt;
 #endif
    consdata->nvars = nvars;
+   consdata->ismodelcons = sourcedata->ismodelcons;
 
    if ( nvars > 0 )
    {
@@ -2357,6 +2363,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2397,7 +2404,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
@@ -2420,10 +2427,11 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in vars array */
+   int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
+   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars, ismodelcons,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

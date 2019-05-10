@@ -110,6 +110,7 @@ struct SCIP_ConsData
    SCIP_VAR**            vars1;              /**< first column of variable matrix */
    SCIP_VAR**            vars2;              /**< second column of variable matrix */
    int                   nrows;              /**< number of rows of variable matrix */
+   SCIP_Bool             ismodelcons;        /**< whether the orbisack is a model constraint */
 };
 
 
@@ -146,7 +147,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       vars1,              /**< first column of variable matrix */
    SCIP_VAR*const*       vars2,              /**< second column of variable matrix */
-   int                   nrows               /**< number of rows in variable matrix */
+   int                   nrows,              /**< number of rows in variable matrix */
+   SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    )
 {
    int i;
@@ -169,6 +171,7 @@ SCIP_RETCODE consdataCreate(
 #endif
 
    (*consdata)->nrows = nrows;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -1069,12 +1072,16 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcedata->vars1 != NULL );
    assert( sourcedata->vars2 != NULL );
 
+   if ( !sourcedata->ismodelcons )
+      return SCIP_OKAY;
+
    /* create transformed constraint data (copy data where necessary) */
    nrows = sourcedata->nrows;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
    consdata->nrows = nrows;
+   consdata->ismodelcons = sourcedata->ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars1, nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars2, nrows) );
@@ -1944,6 +1951,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    int                   nrows,              /**< number of rows in variable matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
    SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons,        /**< whether the orbisack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2014,8 +2022,8 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
       else
          orbitopetype = SCIP_ORBITOPETYPE_PACKING;
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, stickingatnode) );
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows, 2, TRUE, ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)
          SCIPfreeBufferArray(scip, &vars[i]);
@@ -2024,7 +2032,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    else
    {
       /* create constraint data */
-      SCIP_CALL( consdataCreate(scip, &consdata, vars1, vars2, nrows) );
+      SCIP_CALL( consdataCreate(scip, &consdata, vars1, vars2, nrows, ismodelcons) );
 
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
@@ -2048,10 +2056,11 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in constraint matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
-   SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype,
+   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, ismodelcons,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
