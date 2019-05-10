@@ -765,43 +765,43 @@ void computeBilinEnvelope2(
       SCIPquadprecSumQD(xiq, xiq, x);
       SCIPquadprecSumQD(xiq, xiq, -qi);
       SCIPquadprecDivQD(xiq, xiq, 2.0 * mi);
-      assert(SCIPisRelEQ(scip, (x + mi * y - qi) / (2.0*mi), QUAD_TO_DBL(xiq)));
+      assert(EPSEQ((x + mi * y - qi) / (2.0*mi), QUAD_TO_DBL(xiq), 1e-3));
 
       /* yi = mi*(*xi) + qi */
       SCIPquadprecProdQD(yiq, xiq, mi);
       SCIPquadprecSumQD(yiq, yiq, qi);
-      assert(SCIPisRelEQ(scip, mi*QUAD_TO_DBL(xiq) + qi, QUAD_TO_DBL(yiq)));
+      assert(EPSEQ(mi*QUAD_TO_DBL(xiq) + qi, QUAD_TO_DBL(yiq), 1e-3));
 
       /* xj = (*xi) + (qi - qj)/ (2.0*mi) */
       SCIPquadprecSumDD(xjq, qi, -qj);
       SCIPquadprecDivQD(xjq, xjq, 2.0 * mi);
       SCIPquadprecSumQQ(xjq, xjq, xiq);
-      assert(SCIPisRelEQ(scip, QUAD_TO_DBL(xiq) + (qi - qj)/ (2.0*mi), QUAD_TO_DBL(xjq)));
+      assert(EPSEQ(QUAD_TO_DBL(xiq) + (qi - qj)/ (2.0*mi), QUAD_TO_DBL(xjq), 1e-3));
 
       /* yj = mj * (*xj) + qj */
       SCIPquadprecProdQD(yjq, xjq, mj);
       SCIPquadprecSumQD(yjq, yjq, qj);
-      assert(SCIPisRelEQ(scip, mj * QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq)));
+      assert(EPSEQ(mj * QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq), 1e-3));
 
       /* ycoef = (*xi) + (qi - qj) / (4.0*mi) note that this is wrong in Locatelli 2016 */
       SCIPquadprecSumDD(ycoefq, qi, -qj);
       SCIPquadprecDivQD(ycoefq, ycoefq, 4.0 * mi);
       SCIPquadprecSumQQ(ycoefq, ycoefq, xiq);
-      assert(SCIPisRelEQ(scip, QUAD_TO_DBL(xiq) + (qi - qj) / (4.0*mi), QUAD_TO_DBL(ycoefq)));
+      assert(EPSEQ(QUAD_TO_DBL(xiq) + (qi - qj) / (4.0*mi), QUAD_TO_DBL(ycoefq), 1e-3));
 
       /* xcoef = 2.0*mi*(*xi) - mi * (*ycoef) + qi */
       SCIPquadprecProdQD(xcoefq, xiq, 2.0 * mi);
       SCIPquadprecProdQD(tmpq, ycoefq, -mi);
       SCIPquadprecSumQQ(xcoefq, xcoefq, tmpq);
       SCIPquadprecSumQD(xcoefq, xcoefq, qi);
-      assert(SCIPisRelEQ(scip, 2.0*mi*QUAD_TO_DBL(xiq) - mi * QUAD_TO_DBL(ycoefq) + qi, QUAD_TO_DBL(xcoefq)));
+      assert(EPSEQ(2.0*mi*QUAD_TO_DBL(xiq) - mi * QUAD_TO_DBL(ycoefq) + qi, QUAD_TO_DBL(xcoefq), 1e-3));
 
       /* constant = -mj*SQR(*xj) - (*ycoef) * qj */
       SCIPquadprecSquareQ(constantq, xjq);
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(SCIPisRelEQ(scip, -mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq)));
+      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);
@@ -825,12 +825,12 @@ void computeBilinEnvelope2(
       SCIPquadprecSqrtQ(tmpq, tmpq);
       SCIPquadprecSumQD(tmpq, tmpq, REALABS(mi)); /* REALABS(mi) + SQRT(mi*mj) */
       SCIPquadprecDivQQ(xiq, xiq, tmpq);
-      assert(SCIPisRelEQ(scip, (y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)), QUAD_TO_DBL(xiq)));
+      assert(EPSEQ((y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)), QUAD_TO_DBL(xiq), 1e-3));
 
       /* yi = mi*(*xi) + qi */
       SCIPquadprecProdQD(yiq, xiq, mi);
       SCIPquadprecSumQD(yiq, yiq, qi);
-      assert(SCIPisRelEQ(scip, mi*(QUAD_TO_DBL(xiq)) + qi, QUAD_TO_DBL(yiq)));
+      assert(EPSEQ(mi*(QUAD_TO_DBL(xiq)) + qi, QUAD_TO_DBL(yiq), 1e-3));
 
       /* xj = (y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)) */
       SCIPquadprecProdDD(xjq, mi, mj);
@@ -842,12 +842,12 @@ void computeBilinEnvelope2(
       SCIPquadprecSqrtQ(tmpq, tmpq);
       SCIPquadprecSumQD(tmpq, tmpq, REALABS(mj)); /* REALABS(mj) + SQRT(mi*mj) */
       SCIPquadprecDivQQ(xjq, xjq, tmpq);
-      assert(SCIPisRelEQ(scip, (y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)), QUAD_TO_DBL(xjq)));
+      assert(EPSEQ((y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)), QUAD_TO_DBL(xjq), 1e-3));
 
       /* yj = mj*(*xj) + qj */
       SCIPquadprecProdQD(yjq, xjq, mj);
       SCIPquadprecSumQD(yjq, yjq, qj);
-      assert(SCIPisRelEQ(scip, mj*QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq)));
+      assert(EPSEQ(mj*QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq), 1e-3));
 
       /* ycoef = (2.0*mj*(*xj) + qj - 2.0*mi*(*xi) - qi) / (mj - mi) */
       SCIPquadprecProdQD(ycoefq, xjq, 2.0 * mj);
@@ -857,21 +857,21 @@ void computeBilinEnvelope2(
       SCIPquadprecSumQD(ycoefq, ycoefq, -qi);
       SCIPquadprecSumDD(tmpq, mj, -mi);
       SCIPquadprecDivQQ(ycoefq, ycoefq, tmpq);
-      assert(SCIPisRelEQ(scip, (2.0*mj*QUAD_TO_DBL(xjq) + qj - 2.0*mi*QUAD_TO_DBL(xiq) - qi) / (mj - mi), QUAD_TO_DBL(ycoefq)));
+      assert(EPSEQ((2.0*mj*QUAD_TO_DBL(xjq) + qj - 2.0*mi*QUAD_TO_DBL(xiq) - qi) / (mj - mi), QUAD_TO_DBL(ycoefq), 1e-3));
 
       /* xcoef = 2.0*mj*(*xj) + qj - mj*(*ycoef) */
       SCIPquadprecProdQD(xcoefq, xjq, 2.0 * mj);
       SCIPquadprecSumQD(xcoefq, xcoefq, qj);
       SCIPquadprecProdQD(tmpq, ycoefq, -mj);
       SCIPquadprecSumQQ(xcoefq, xcoefq, tmpq);
-      assert(SCIPisRelEQ(scip, 2.0*mj*QUAD_TO_DBL(xjq) + qj - mj*QUAD_TO_DBL(ycoefq), QUAD_TO_DBL(xcoefq)));
+      assert(EPSEQ(2.0*mj*QUAD_TO_DBL(xjq) + qj - mj*QUAD_TO_DBL(ycoefq), QUAD_TO_DBL(xcoefq), 1e-3));
 
       /* constant = -mj*SQR(*xj) - (*ycoef) * qj */
       SCIPquadprecSquareQ(constantq, xjq);
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(SCIPisRelEQ(scip, -mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq)));
+      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);
