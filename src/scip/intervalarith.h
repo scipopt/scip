@@ -591,7 +591,7 @@ void SCIPintervalSign(
    );
 
 /** stores entropy of operand in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalEntropy(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
