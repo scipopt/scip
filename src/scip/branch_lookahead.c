@@ -3625,7 +3625,7 @@ SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
    assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
    assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
 
-   nlowestlevelcutoffs = 2 * (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
+   nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
    totaldowngains = downbranchingresult->totalgains;
    totalupgains = upbranchingresult->totalgains;
    ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
