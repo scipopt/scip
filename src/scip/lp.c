@@ -13756,6 +13756,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
          assert(SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
 
          lp->glbpseudoobjval = lp->pseudoobjval;
+         lp->glbpseudoobjvalinf = lp->pseudoobjvalinf;
       }
    }
    else
