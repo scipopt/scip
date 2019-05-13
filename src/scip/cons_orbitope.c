@@ -3499,7 +3499,11 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
    /* do not copy non-model constraints */
    if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+      
       return SCIP_OKAY;
+   }
 
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;

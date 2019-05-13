@@ -2244,7 +2244,11 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
 
    /* do not copy non-model constraints */
    if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+      
       return SCIP_OKAY;
+   }
 
    sourcevars = sourcedata->vars;
    nvars = sourcedata->nvars;
