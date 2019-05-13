@@ -76,6 +76,7 @@
 #include "lpi/type_lpi.h"
 #include "lpi/type_lpiex.h"
 #include "scip/rational.h"
+#include "rectlu/rectlu.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -240,10 +241,35 @@ struct SCIP_RowEx
    unsigned int          origintype:3;       /**< origin of row (0: unkown, 1: constraint handler, 2: constraint, 3: separator, 4: reoptimization) */
 };
 
+struct SCIP_Psdata
+{
+   SCIP_Rational**       interiorpt;         /**< stores S-interior point for root node dual problem */
+   SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
+   int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
+   int*                  psbasis;            /**< mapping for basis used in factorization */
+   qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
+   SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
+   int                   npsbasis;           /**< length of psbasis */
+   int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
+   unsigned int          psdatacon:1;        /**< was project-and-shift data structure constructed? */
+   unsigned int          psdatafail:1;       /**< did the construction of the project-and-shift root node data fail? */
+   unsigned int          pshaspoint:1;       /**< has an S-interior point successfully been constructed? */
+   unsigned int          pshasray:1;         /**< has an S-interior ray successfully been constructed? */
+   unsigned int          psobjweight:1;      /**< weight of the original objective function in lp to compute interior point */
+   unsigned int          psreduceauxlp:1;    /**< should the number of constraints in lp to compute interior point be reduced? */
+   unsigned int          scaleobj:1;         /**< should the objective be scaled to be integral if possible? */
+   unsigned int          psuseintpoint:1;    /**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
+   unsigned int          psdualcolselection:2;/**< strategy to select which dual columns to use for lp to compute interior point
+                                              *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
+   unsigned int          psintpointselection:3;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
+                                              *   'A'rbitrary interior point in dual form, 't'wo stage optimized interior point) */
+};
+
 /** current LP data */
 struct SCIP_LpEx
 {
    SCIP_LP*              fplp;               /**< pointer to the fp lp */
+   SCIP_PSDATA*          psdata;             /**< data stored for usage in project+shift, NULL if ps not used */
    SCIP_HASHTABLE*       exrowhash;          /**< hashes fprows as keys onto exact rows */
    SCIP_HASHTABLE*       excolhash;          /**< hashes fprows as keys onto exact rows */
    SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
