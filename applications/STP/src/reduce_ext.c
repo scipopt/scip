@@ -235,6 +235,9 @@ SCIP_RETCODE reduce_extTest2(
    for( int i = 0; i < nedges; i++ )
       redcost[i] = 1.0 + (double) i / 20;
 
+  // termpaths[11].dist = 99.2;
+
+
    cutoff = 100.0;
    edge = 0;
 
@@ -243,6 +246,8 @@ SCIP_RETCODE reduce_extTest2(
    SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
 
    assert(!deletable);
+assert(0);
+
 
    graph_knot_del(scip, graph, 12, TRUE);
    graph->mark[12] = FALSE;

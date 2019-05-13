@@ -2933,6 +2933,8 @@ SCIP_Bool extRuleOutPeriph(
    if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
    {
       SCIPdebugMessage("Rule-out periph (red. cost) \n");
+      assert(0);
+
       return TRUE;
    }
    else
@@ -3189,6 +3191,13 @@ void extExtend(
             assert(nsingleextensions < STP_DAEX_MAXGRAD * STP_DAEX_MAXGRAD);
             extedges[nsingleextensions++] = e;
          }
+#ifdef SCIP_DEBUG
+         else
+         {
+            printf("simple rule out: ");
+            graph_edge_printInfo(graph, e);
+         }
+#endif
       }
 
       extedgesstart[++nfullextensions] = nsingleextensions;

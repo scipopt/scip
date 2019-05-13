@@ -326,7 +326,7 @@ SCIP_RETCODE cut_add(
 
    for( i = 0; i < nedges; i++ )
    {
-      if( gmark[gtail[i]] && !gmark[ghead[i]] ) // todo bool array?
+      if( !gmark[ghead[i]] && gmark[gtail[i]] )
       {
          if( updatecapa )
          {

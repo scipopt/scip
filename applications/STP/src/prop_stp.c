@@ -188,8 +188,8 @@ SCIP_RETCODE globalfixing(
    return SCIP_OKAY;
 }
 
-static
-SCIP_Bool redcostAvailable(
+/** reduced costs available? */
+SCIP_Bool SCIPStpRedcostAvailable(
    SCIP*                 scip                /**< SCIP structure */
 )
 {
@@ -216,9 +216,8 @@ SCIP_Bool redcostAvailable(
    return TRUE;
 }
 
-/* initialize reduced costs*/
-static
-void setRedcosts(
+/** initialize reduced costs*/
+void SCIPStpSetRedcosts(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
    int                   nedges,             /**< nedges */
@@ -425,7 +424,7 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
 
    /* initialize reduced costs*/
-   setRedcosts(scip, vars, nedges, cost);
+   SCIPStpSetRedcosts(scip, vars, nedges, cost);
 
    /* initialize Voronoi structures */
    setVnoiDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase, state);
@@ -513,7 +512,7 @@ SCIP_RETCODE reduceRedcostExtended(
           marked[e] = FALSE;
 
    /* initialize reduced costs*/
-   setRedcosts(scip, vars, nedges, redcost);
+   SCIPStpSetRedcosts(scip, vars, nedges, redcost);
 
    /* initialize Voronoi structures */
    setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
@@ -1004,7 +1003,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   if( !redcostAvailable(scip) )
+   if( !SCIPStpRedcostAvailable(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
