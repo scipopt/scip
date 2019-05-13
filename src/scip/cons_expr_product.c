@@ -1670,6 +1670,9 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childauxvar;
    SCIP_Bool havewideinteger;
+   SCIP_Real auxvarval;
+   SCIP_Real auxvarlb;
+   SCIP_Real auxvarub;
    int c;
 
    assert(scip != NULL);
@@ -1726,7 +1729,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
    if( !havewideinteger )
       return SCIP_OKAY;
 
-   /* pass branching score to all unfixed discrete children (could be all children, in which case it is like the nlhdlr's default) */
+   /* pass branching score to all unfixed discrete children not at their bound (could be all children, in which case it is like the nlhdlr's default) */
    /* TODO should this move to nlhdlr_default? */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -1735,6 +1738,17 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
       if( childauxvar == NULL )
          continue;
       if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      auxvarval = SCIPgetSolVal(scip, sol, childauxvar);
+      auxvarlb = SCIPvarGetLbLocal(childauxvar);
+      auxvarub = SCIPvarGetUbLocal(childauxvar);
+
+      /* if at lower bound, then skip */
+      if( !SCIPisInfinity(scip, -auxvarlb) && SCIPisFeasEQ(scip, auxvarval, auxvarlb) )
+         continue;
+      /* if at upper bound, then skip */
+      if( !SCIPisInfinity(scip,  auxvarub) && SCIPisFeasEQ(scip, auxvarval, auxvarub) )
          continue;
 
       SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
