@@ -72,6 +72,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeasbstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeasbstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaspstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaspstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->relaxsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -136,6 +138,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->provedinfeaslptime);
    SCIPclockFree(&(*stat)->provedfeasbstime);
    SCIPclockFree(&(*stat)->provedinfeasbstime);
+   SCIPclockFree(&(*stat)->provedfeaspstime);
+   SCIPclockFree(&(*stat)->provedinfeaspstime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->relaxsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
@@ -216,6 +220,8 @@ void SCIPstatReset(
    SCIPclockReset(stat->provedinfeaslptime);
    SCIPclockReset(stat->provedfeasbstime);
    SCIPclockReset(stat->provedinfeasbstime);
+   SCIPclockReset(stat->provedfeaspstime);
+   SCIPclockReset(stat->provedinfeaspstime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->relaxsoltime);
    SCIPclockReset(stat->pseudosoltime);
@@ -309,6 +315,10 @@ void SCIPstatReset(
    stat->nfailboundshift = 0;
    stat->nboundshiftinf = 0;
    stat->nfailboundshiftinf = 0;
+   stat->nprojshift = 0;
+   stat->nfailprojshift = 0;
+   stat->nprojshiftinf = 0;
+   stat->nfailprojshiftinf = 0;
    stat->niterationsexlp = 0;
    stat->niterationsexlpinf = 0;
    stat->nexlpinf = 0;
@@ -685,6 +695,8 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->provedinfeaslptime, enable);
    SCIPclockEnableOrDisable(stat->provedfeasbstime, enable);
    SCIPclockEnableOrDisable(stat->provedinfeasbstime, enable);
+   SCIPclockEnableOrDisable(stat->provedfeaspstime, enable);
+   SCIPclockEnableOrDisable(stat->provedinfeaspstime, enable);
    SCIPclockEnableOrDisable(stat->lpsoltime, enable);
    SCIPclockEnableOrDisable(stat->relaxsoltime, enable);
    SCIPclockEnableOrDisable(stat->pseudosoltime, enable);

@@ -3273,6 +3273,16 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeasbstime),
          scip->stat->nboundshiftinf,
          scip->stat->nfailboundshiftinf);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPclockGetTime(scip->stat->provedfeaspstime),
+         scip->stat->nprojshift,
+         scip->stat->nfailprojshift);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  infeas: %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPclockGetTime(scip->stat->provedinfeaspstime),
+         scip->stat->nprojshiftinf,
+         scip->stat->nfailprojshiftinf);
    }
 }
 

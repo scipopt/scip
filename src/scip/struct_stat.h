@@ -157,6 +157,8 @@ struct SCIP_Stat
    SCIP_CLOCK*           provedinfeaslptime; /**< time spent proving safe infeasibility using exact lp */
    SCIP_CLOCK*           provedfeasbstime;   /**< time spent proving safe bounds using bound shift*/
    SCIP_CLOCK*           provedinfeasbstime; /**< time spent proving safe infeasibility using bound shift*/
+   SCIP_CLOCK*           provedfeaspstime;   /**< time spent proving safe bounds using bound project and shift*/
+   SCIP_CLOCK*           provedinfeaspstime; /**< time spent proving safe infeasibility using project and shift*/
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
@@ -206,6 +208,10 @@ struct SCIP_Stat
    SCIP_Longint          nfailboundshift;    /**< number of boundshift calls */
    SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls */
    SCIP_Longint          nfailboundshiftinf; /**< number of boundshift calls */
+   SCIP_Longint          nprojshift;         /**< number of boundshift calls */
+   SCIP_Longint          nfailprojshift;     /**< number of boundshift calls */
+   SCIP_Longint          nprojshiftinf;      /**< number of boundshift calls */
+   SCIP_Longint          nfailprojshiftinf;  /**< number of boundshift calls */
    SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */ 
    SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
