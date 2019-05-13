@@ -10134,6 +10134,59 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    return SCIP_OKAY;
 }
 
+/** mark constraints that include this expression to be propagated again
+ *
+ * This can be used by, e.g., nlhdlrs, to trigger a new propagation of constraints without
+ * a change of variable bounds, e.g., because new information on the expression is available
+ * that could potentially lead to tighter expression activity values.
+ *
+ * Note, that this call marks also constraints for propagation which only share some variable
+ * with this expression.
+ */
+SCIP_RETCODE SCIPmarkConsExprExprPropagate(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to propagate again */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   {
+      if( !SCIPisConsExprExprVar(expr) )
+         continue;
+
+      conss = SCIPgetConsExprExprVarConss(expr);
+      nconss = SCIPgetConsExprExprVarNConss(expr);
+
+      for( c = 0; c < nconss; ++c )
+      {
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+         consdata->ispropagated = FALSE;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+
+   return SCIP_OKAY;
+}
+
 /** increments the curboundstag and resets lastboundrelax in constraint handler data
  *
  * @note This method is not intended for normal use.

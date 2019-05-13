@@ -1472,6 +1472,16 @@ SCIP_RETCODE SCIPaddConsExprNlhdlrBilinearIneq(
       }
    }
 
+   if( *success )
+   {
+      /* With the added inequalities, we can potentially compute tighter activities for the expression,
+       * so constraints that contain this expression should be propagated again.
+       * We don't have a direct expression to constraint mapping, though. This call marks all expr-constraints
+       * which include any of the variables that this expression depends on for propagation.
+       */
+      SCIP_CALL( SCIPmarkConsExprExprPropagate(scip, expr) );
+   }
+
    return SCIP_OKAY;
 }
 
