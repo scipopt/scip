@@ -152,6 +152,25 @@ void RsetGMP(
    SCIP_Rational*        r,
    const mpq_t           numb
    );
+
+EXTERN
+void RsetGMPArray(
+   mpq_t*                res,
+   SCIP_Rational**       src,
+   int                   len 
+   );
+
+void RsetArrayGMP(
+   SCIP_Rational**       res,
+   mpq_t*                src,
+   int                   len
+   );
+
+EXTERN
+void RclearGMPArray(
+   mpq_t*                ar,
+   int                   len
+   );
 #endif
 
 /** delete a rational and free the allocated memory */

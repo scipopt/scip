@@ -321,6 +321,46 @@ void RsetGMP(
    r->isinf = FALSE;
    r->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
+
+
+void RsetGMPArray(
+   mpq_t*                res,
+   SCIP_Rational**       src,
+   int                   len
+   )
+{
+   int i;
+   for( int i = 0; i < len; i++ )
+   {
+      mpq_init(res[i]);
+      mpq_set(res[i], *RgetGMP(src[i]));
+   }
+}
+
+void RsetArrayGMP(
+   SCIP_Rational**       res,
+   mpq_t*                src,
+   int                   len
+   )
+{
+   int i;
+   for( int i = 0; i < len; i++ )
+   {
+      RsetGMP(res[i], src[i]);
+   }
+}
+
+void RclearGMPArray(
+   mpq_t*                ar,
+   int                   len
+   )
+{
+   int i;
+   for( int i = 0; i < len; i++ )
+   {
+      mpq_clear(ar[i]);
+   }
+}
 #endif
 
 /** free an array of rationals */
@@ -337,7 +377,7 @@ void RdeleteArray(
       Rdelete(mem, &((*array)[i]));
    }
 
-   BMSfreeBlockMemoryArray(mem, array, size);
+   BMSfreeBlockMemoryArrayNull(mem, array, size);
 }
 
 /** free an array of rationals */
@@ -349,12 +389,12 @@ void RdeleteArrayTemp(
 {
    assert(array != NULL);
 
-   for( int i = 0; i < size; ++i )
+   for( int i = size - 1; i >= 0; --i )
    {
       RdeleteTemp(mem, &((*array)[i]));
    }
 
-   BMSfreeBufferMemoryArray(mem, array);
+   BMSfreeBufferMemoryArrayNull(mem, array);
 }
 
 /** delete a rational and free the allocated memory */
@@ -605,7 +645,6 @@ void Rmult(
 
    if( op1->isinf || op2->isinf )
    {
-      SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
       if( op1->r.is_zero() || op2->r.is_zero() )
       {
          res->r = 0;
@@ -613,6 +652,7 @@ void Rmult(
       }
       else
       {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->r = op1->r.sign() * op2->r.sign();
          res->isinf = TRUE;
       }
@@ -665,7 +705,7 @@ void Rdiv(
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
    assert(!RisZero(op2));
-   assert(op1->isinf && op2->isinf);
+   assert(!op1->isinf && !op2->isinf);
 
    res->r = op1->r / op2->r;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
