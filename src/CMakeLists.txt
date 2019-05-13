@@ -378,6 +378,10 @@ set(symsources
    ${sym}
    )
 
+set(rectlusources
+   rectlu/rectlu_factor.c
+   )
+
 set(blockmemshellheader
     blockmemshell/memory.h
 )
@@ -388,6 +392,11 @@ set(lpiheaders
     lpi/type_lpi.h
     lpi/type_lpiex.h
 )
+
+set(rectluheaders
+    rectlu/rectlu.h
+    rectlu/rectlu_num.h
+    rectlu/rectlu_factor.h)
 
 set(dijkstraheaders
     dijkstra/dijkstra.h
@@ -926,7 +935,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -961,7 +970,14 @@ add_library(liblpiex EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpiex "lpiex")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources})
+add_library(librectlu EXCLUDE_FROM_ALL
+    ${rectlusources}
+    scip/bitencode.c
+    blockmemshell/memory.c
+    scip/message.c)
+setLibProperties(librectlu "rectlu")
+
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources})
 
 setLibProperties(libscip "scip")
 
@@ -976,7 +992,7 @@ target_link_libraries(libscip PRIVATE
 
 if(SHARED)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${lpiexsources} ${rectlusources} ${tpisources} ${symsources})
 else()
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
@@ -1017,6 +1033,7 @@ install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
 install(FILES ${xmlheaders} DESTINATION include/xml)
 install(FILES ${symheaders} DESTINATION include/symmetry)
+install(FILES ${rectluheaders} DESTINATION include/rectlu)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
