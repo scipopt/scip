@@ -239,7 +239,7 @@ SCIP_Bool colexInSync(
          || (RisNegInfinity(colex->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
    assert(RApproxEqualReal(colex->flushedub, fpcol->flushedub)
          || (RisInfinity(colex->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
-   
+
    for( i = 0; i < colex->len; ++i )
    {
       assert(RApproxEqualReal(colex->vals[i], fpcol->vals[i]));
@@ -311,7 +311,7 @@ SCIP_Bool rowexInSync(
          SCIPcolPrint(fprow->cols[i], msg, NULL);
          SCIPABORT();
       }
-   } 
+   }
 
    return TRUE;
 }
@@ -1117,7 +1117,7 @@ SCIP_RETCODE insertColChgcols(
    SCIP_LPEX*            lp                  /**< current LP data */
    )
 {
-   /** @todo exip: is this correct? we might change multiple times because 
+   /** @todo exip: is this correct? we might change multiple times because
     * we do not sync after every node, etc. */
    if( !col->objchanged && !col->lbchanged && !col->ubchanged )
    {
@@ -2706,6 +2706,7 @@ SCIP_RETCODE SCIPcolexCreate(
    (*col)->size = len;
    (*col)->len = len;
    (*col)->nlprows = 0;
+   (*col)->lprowssorted = 0;
    (*col)->nunlinked = len;
    (*col)->lppos = -1;
    (*col)->lpipos = -1;
@@ -3318,6 +3319,82 @@ SCIP_RETCODE SCIPlpexFlush(
  * lp methods
  */
 
+static
+SCIP_RETCODE SCIPlpPsdataCreate(
+   SCIP_LPEX*            lp,                 /**< pointer to LP data object */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory buffers */
+   )
+{
+   SCIP_PSDATA* psdata;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &lp->psdata) );
+
+   psdata = lp->psdata;
+
+   psdata->interiorpt = NULL;
+   psdata->interiorray = NULL;
+   psdata->includedrows = NULL;
+   psdata->psbasis = NULL;
+   psdata->rectfactor = NULL;
+   psdata->commonslack = NULL;
+
+   psdata->nextendedrows = 0;
+   psdata->npsbasis = 0;
+
+   psdata->psdatacon = FALSE;
+   psdata->psdatafail = FALSE;
+   psdata->pshaspoint = FALSE;
+   psdata->pshasray = FALSE;
+   psdata->psobjweight = FALSE;
+   psdata->psreduceauxlp = FALSE;
+   psdata->scaleobj = FALSE;
+   psdata->psuseintpoint = TRUE;
+   psdata->psdualcolselection = PS_DUALCOSTSEL_ACTIVE_FPLP;
+   psdata->psintpointselection = PS_INTPOINTSEL_OPT;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE SCIPlpPsdataFree(
+   SCIP_LPEX*            lp,                 /**< pointer to LP data object */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*          blkmem              /**< block memory buffers */
+   )
+{
+   SCIP_PSDATA* psdata;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   psdata = lp->psdata;
+
+   RdeleteArray(blkmem, &psdata->interiorpt, psdata->nextendedrows);
+   RdeleteArray(blkmem, &psdata->interiorray, psdata->nextendedrows);
+   Rdelete(blkmem, &psdata->commonslack);
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
+   BMSfreeBlockMemoryArrayNull(blkmem, &psdata->psbasis, psdata->nextendedrows);
+   RECTLUfreeFactorization(psdata->rectfactor);
+
+   assert(psdata->interiorpt == NULL);
+   assert(psdata->interiorray == NULL);
+   assert(psdata->includedrows == NULL);
+   assert(psdata->psbasis == NULL);
+   assert(psdata->commonslack == NULL);
+
+   BMSfreeBlockMemory(blkmem, &lp->psdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** returns whether it is possible to use neumair-shcherbina bounding method */
 extern
 SCIP_Bool SCIPlpexBSpossible(
@@ -3336,8 +3413,9 @@ SCIP_Bool SCIPlpexPSpossible(
    )
 {
    assert(lp != NULL);
+   assert(lp->psdata != NULL);
 
-   return lp->projshiftpossible;
+   return !(lp->psdata->psdatafail);
 }
 
 /** checks that lp and fplp are properly synced */
@@ -3378,6 +3456,7 @@ SCIP_RETCODE SCIPlpexCreate(
 
    /* open LP Solver interface */
    SCIP_CALL( SCIPlpiexCreate(&(*lp)->lpiex, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpPsdataCreate(*lp, set, blkmem) );
 
    (*lp)->fplp = fplp;
    fplp->lpex = *lp;
@@ -3488,6 +3567,7 @@ SCIP_RETCODE SCIPlpexFree(
    assert(*lp != NULL);
 
    SCIP_CALL( SCIPlpexClear(*lp, blkmem, set, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpPsdataFree(*lp, set, blkmem) );
 
    SCIPhashtableFree(&(*lp)->exrowhash);
    SCIPhashtableFree(&(*lp)->excolhash);
@@ -5286,7 +5366,7 @@ SCIP_RETCODE SCIPlpexShrinkRows(
 
          rowexUpdateDelLP(row, set);
 
-         //SCIProwexUnlocK(row); 
+         //SCIProwexUnlocK(row);
          SCIP_CALL( SCIProwexRelease(&lp->rows[r], blkmem, set, lp) );
       }
       assert(lp->nrows == newnrows);
@@ -5316,7 +5396,7 @@ SCIP_RETCODE SCIPlpexReset(
 {
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
-      
+
    assert(stat != NULL);
 
    SCIP_CALL( SCIPlpexClear(lp, blkmem, set, eventqueue, eventfilter) );
