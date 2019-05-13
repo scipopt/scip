@@ -1250,13 +1250,13 @@ void statisticsPrint(
    {
       int i;
 
-      SCIPinfoMessage(scip, NULL, "Lookahead Branching was called <%i> times.\n", statistics->ntotalresults);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Lookahead Branching was called <%i> times.\n", statistics->ntotalresults);
 
       for( i = 1; i <= MAXRESULT; i++ )
       {
          SCIP_RESULT currentresult = (SCIP_RESULT)i;
          /* see type_result.h for the id <-> enum mapping */
-         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(currentresult),
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(currentresult),
             statistics->nresults[i]);
       }
 
@@ -1264,50 +1264,48 @@ void statisticsPrint(
       {
          if( statistics->chosenfsbcand[i] > 0 )
          {
-            SCIPinfoMessage(scip, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
                i+1, statistics->chosenfsbcand[i]);
          }
       }
 
       for( i = 0; i < statistics->recursiondepth; i++ )
       {
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, branching was stopped after the scoring FSB %i times. That was:\n",
-            i, statistics->stopafterfsb[i]);
-         SCIPinfoMessage(scip, NULL, "   %i times because of a cutoff.\n", statistics->cutoffafterfsb[i]);
-         SCIPinfoMessage(scip, NULL, "   %i times because of a domain reduction.\n", statistics->domredafterfsb[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, branching was stopped after the scoring FSB %i times, %i times because of a cutoff and %i times because of a domain reduction\n",
+            i, statistics->stopafterfsb[i], statistics->cutoffafterfsb[i], statistics->domredafterfsb[i]);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n",
             i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score, <%i> were saved for duplicate grandchildren.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score, <%i> were saved for duplicate grandchildren.\n",
             i, statistics->nlpssolved[i], statistics->nlpssolvedfsb[i], statistics->nduplicatelps[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%" SCIP_LONGINT_FORMAT "> iterations were needed to solve the LPs, <%"
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, <%" SCIP_LONGINT_FORMAT "> iterations were needed to solve the LPs, <%"
             SCIP_LONGINT_FORMAT "> of them to calculate the FSB score.\n", i, statistics->nlpiterations[i],
             statistics->nlpiterationsfsb[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of"
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of"
             " propagation.\n", i, statistics->npropdomred[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, old LAB branching results were used in <%i> cases, old FSB scores in <%d> cases.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "In depth <%i>, old LAB branching results were used in <%i> cases, old FSB scores in <%d> cases.\n",
             i, statistics->noldbranchused[i], statistics->noldbranchusedfsb[i]);
       }
 
-      SCIPinfoMessage(scip, NULL, "One single branching candidate was given <%i> times.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "One single branching candidate was given <%i> times.\n",
          statistics->nsinglecandidate);
-      SCIPinfoMessage(scip, NULL, "The old branching candidate was used <%i> times.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "The old branching candidate was used <%i> times.\n",
          statistics->noldcandidate);
-      SCIPinfoMessage(scip, NULL, "An LP error led to branching before all candidates were evaluated <%i> times.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "An LP error led to branching before all candidates were evaluated <%i> times.\n",
          statistics->nlperrorcalls);
-      SCIPinfoMessage(scip, NULL, "A reached (time) limit led to branching before all candidates were evaluated <%i> times.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "A reached (time) limit led to branching before all candidates were evaluated <%i> times.\n",
          statistics->nlimitcalls);
-      SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
-      SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n",
          statistics->ndomredcons);
-      SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n",
          statistics->nbinconst, statistics->nbinconstvio);
-      SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n",
          statistics->ndomred, statistics->ndomredvio);
-      SCIPinfoMessage(scip, NULL, "Added <%i> cliques found as binary constraint in the root node\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Added <%i> cliques found as binary constraint in the root node\n",
          statistics->ncliquesadded);
-      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to prove the cutoffs of base nodes\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Needed <%i> additional nodes to prove the cutoffs of base nodes\n",
          statistics->ncutoffproofnodes);
-      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to prove the domain reductions\n",
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Needed <%i> additional nodes to prove the domain reductions\n",
          statistics->ndomredproofnodes);
    }
 }
