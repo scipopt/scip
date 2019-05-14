@@ -3131,7 +3131,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
       SCIP_VAR* w = NULL;
       char name[SCIP_MAXSTRLEN];
 
-      printf("  product expression %p has been considered for the first time\n", (void*)prodexpr);
+      SCIPdebugMsg(scip, "  product expression %p has been considered for the first time\n", (void*)prodexpr);
 
       if( nchildren == 2 )
       {
@@ -3148,7 +3148,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
          assert(x != y);
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPvarGetName(x), SCIPvarGetName(y));
-         printf("  create auxiliary variable %s\n", name);
+         SCIPdebugMsg(scip, "  create auxiliary variable %s\n", name);
 
          /* create variable */
          SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
@@ -3206,7 +3206,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
             (void) strcat(name, SCIPvarGetName(vars[i]));
          }
 
-         printf("  create auxiliary variable %s\n", name);
+         SCIPdebugMsg(scip, "  create auxiliary variable %s\n", name);
 
          /* create variable */
          SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
@@ -3216,7 +3216,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
          SCIP_CALL( SCIPcreateConsBasicAnd(scip, &cons, name, w, nchildren, vars) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-         printf("  create AND constraint\n");
+         SCIPdebugMsg(scip, "  create AND constraint\n");
 
          SCIPfreeBufferArray(scip, &vars);
 
