@@ -3032,7 +3032,7 @@ void SCIPselectDownIntIntPtr(
 /** partial sort of three joint arrays of ints/ints/pointers/pointers, sorted by first array in non-increasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPselectDownIntIntPtrPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */

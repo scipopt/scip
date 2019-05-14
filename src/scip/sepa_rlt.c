@@ -38,9 +38,10 @@
 
 #define SEPA_NAME              "rlt"
 #define SEPA_DESC              "rlt separator"
-#define SEPA_PRIORITY                10
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           1.0
+#define SEPA_PRIORITY                10 /**< priority for separation */
+#define SEPA_FREQ                     0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define SEPA_MAXBOUNDDIST           1.0 /**< maximal relative distance from the current node's dual bound to primal bound
++                                        *   compared to best node's dual bound for applying separation.*/
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
