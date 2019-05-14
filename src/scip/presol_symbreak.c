@@ -624,7 +624,8 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
-         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent + 1, TRUE,
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
+               ntwocyclescomp, npermsincomponent + 1, TRUE, FALSE,
                presoldata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -710,7 +711,7 @@ SCIP_RETCODE addSymresackConss(
             char name[SCIP_MAXSTRLEN];
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars,
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -733,7 +734,7 @@ SCIP_RETCODE addSymresackConss(
          char name[SCIP_MAXSTRLEN];
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
-         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars,
+         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
