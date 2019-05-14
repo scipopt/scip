@@ -27,6 +27,7 @@
 #include <ctype.h>
 
 #include "scip/cons_expr.h"
+#include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
@@ -3043,6 +3044,258 @@ SCIP_RETCODE scaleConsSides(
    return SCIP_OKAY;
 }
 
+/** helper method to decide whether a given expression is product of at least two binary variables */
+static
+SCIP_Bool isBinaryProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
+   )
+{
+   int nchildren;
+
+   assert(expr != NULL);
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   /* don't consider products with a coefficient != 1; simplification will take care of this coefficient later */
+   if( SCIPgetConsExprExprProductCoef(expr) != 1.0 )
+      return FALSE;
+
+   if( nchildren >= 2 && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+   {
+      int i;
+
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CONSEXPR_EXPR* child;
+         SCIP_VAR* var;
+         SCIP_Real ub;
+         SCIP_Real lb;
+
+         child = SCIPgetConsExprExprChildren(expr)[i];
+         assert(child != NULL);
+
+         if( !SCIPisConsExprExprVar(child) )
+            return FALSE;
+
+         var = SCIPgetConsExprExprVarVar(child);
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+
+         /* check whether variable is integer and has [0,1] as variable bounds */
+         if( !SCIPvarIsIntegral(var) || !SCIPisEQ(scip, lb, 0.0) || !SCIPisEQ(scip, ub, 1.0) )
+            return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+/** reformulates products of binary variables during presolving */
+static
+SCIP_RETCODE presolveBinaryProducts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< expression constraints */
+   int                   nconss,             /**< total number of expression constraints */
+   int*                  naddconss           /**< pointer to store the total number of added constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_HASHMAP* exprmap;
+   SCIP_CONSEXPR_ITERATOR* it;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(naddconss != NULL);
+
+   /* no expression constraints or binary variables -> skip */
+   if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* create expression hash map */
+   SCIP_CALL( SCIPhashmapCreate(&exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+
+   /* create expression iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
+
+   printf("call presolveBinaryProducts()\n");
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSDATA* consdata;
+
+      assert(conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      printf("  check constraint %s\n", SCIPconsGetName(conss[c]));
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_CONSEXPR_EXPR* prodchild;
+         int prodchildidx;
+         int nchildren;
+
+         prodchildidx = SCIPexpriteratorGetChildIdxDFS(it);
+         assert(prodchildidx >= 0 && prodchildidx <= SCIPgetConsExprExprNChildren(expr));
+         prodchild = SCIPexpriteratorGetChildExprDFS(it);
+         assert(prodchild != NULL);
+
+         /* only consider products of binary variables */
+         if( !isBinaryProduct(scip, conshdlr, prodchild) )
+            continue;
+
+         nchildren = SCIPgetConsExprExprNChildren(prodchild);
+         assert(nchildren >= 2);
+
+         printf("  found a binary product (%p) with %d children\n", (void*)prodchild, nchildren);
+
+         /* check whether there is already a variable representing the product */
+         if( SCIPhashmapExists(exprmap, (void*)prodchild) )
+         {
+            SCIP_CONSEXPR_EXPR* varexpr;
+            int idx;
+
+            varexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodchild);
+            assert(varexpr != NULL);
+
+            printf("  product expression %p has been replaced by %s\n", (void*)prodchild, SCIPvarGetName(SCIPgetConsExprExprVarVar(varexpr)));
+
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodchildidx, varexpr) );
+         }
+         else
+         {
+            SCIP_CONSEXPR_EXPR* varexpr;
+            SCIP_VAR* w;
+            char name[SCIP_MAXSTRLEN];
+
+            printf("  product expression %p has been considered for the first time\n", (void*)prodchild);
+
+            if( nchildren == 2 )
+            {
+               SCIP_CONS* cons;
+               SCIP_VAR* vars[3];
+               SCIP_Real coefs[3];
+               SCIP_VAR* x;
+               SCIP_VAR* y;
+
+               x = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodchild)[0]);
+               assert(x != NULL);
+               y = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodchild)[1]);
+               assert(y != NULL);
+               assert(x != y);
+
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPvarGetName(x), SCIPvarGetName(y));
+               printf("  create auxiliary variable %s\n", name);
+
+               /* create variable */
+               SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+               SCIP_CALL( SCIPaddVar(scip, w) );
+
+               /* create and add w - x <= 0 */
+               vars[0] = w;
+               coefs[0] = 1.0;
+               vars[1] = x;
+               coefs[1] = -1.0;
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
+               SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 2, vars, coefs, -SCIPinfinity(scip), 0.0) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+               /* create and add w - y <= 0 */
+               vars[0] = w;
+               coefs[0] = 1.0;
+               vars[1] = y;
+               coefs[1] = -1.0;
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPvarGetName(x), SCIPvarGetName(y));
+               SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 2, vars, coefs, -SCIPinfinity(scip), 0.0) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+               /* create and add x + y - w <= 1 */
+               vars[0] = x;
+               coefs[0] = 1.0;
+               vars[1] = y;
+               coefs[1] = 1.0;
+               vars[2] = w;
+               coefs[2] = -1.0;
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPvarGetName(x), SCIPvarGetName(y));
+               SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 3, vars, coefs, -SCIPinfinity(scip), 1.0) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+               *naddconss += 3;
+            }
+            else
+            {
+               SCIP_VAR** vars;
+               SCIP_CONS* cons;
+               int i;
+
+               /* create AND constraint */
+               SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
+
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
+               for( i = 0; i < nchildren; ++i )
+               {
+                  vars[i] = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodchild)[i]);
+                  assert(vars[i] != NULL);
+                  (void) strcat(name, "_");
+                  (void) strcat(name, SCIPvarGetName(vars[i]));
+               }
+               printf("  create auxiliary variable %s\n", name);
+
+               /* create variable */
+               SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+               SCIP_CALL( SCIPaddVar(scip, w) );
+
+               /* create constraint */
+               SCIP_CALL( SCIPcreateConsBasicAnd(scip, &cons, name, w, nchildren, vars) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               printf("  create AND constraint\n");
+
+               SCIPfreeBufferArray(scip, &vars);
+
+               ++(*naddconss);
+            }
+
+            /* create variable expression */
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexpr, w) );
+
+            /* hash variable expression */
+            SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)prodchild, varexpr) );
+
+            /* replace product expression */
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodchildidx, varexpr) );
+
+            /* variable expression has been captured after calling SCIPreplaceConsExprExprChild() thus we can release it here */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+
+            /* release variable */
+            SCIP_CALL( SCIPreleaseVar(scip, &w) );
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPhashmapFree(&exprmap);
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /** simplifies expressions and replaces common subexpressions for a set of constraints
  * @todo put the constant to the constraint sides
  */
@@ -3052,8 +3305,10 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< total number of constraints */
+   SCIP_PRESOLTIMING     presoltiming,       /**< presolve timing (SCIP_PRESOLTIMING_ALWAYS if not in presolving) */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
-   int*                  ndelconss           /**< counter to add number of deleted constraints, or NULL */
+   int*                  ndelconss,          /**< counter to add number of deleted constraints, or NULL */
+   int*                  naddconss           /**< counter to add number of added constraints, or NULL */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3259,6 +3514,12 @@ SCIP_RETCODE canonicalizeConstraints(
          if( *infeasible )
             break;
       }
+   }
+
+   /* reformulate products of binary variables */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss) );
    }
 
    /* replace common subexpressions */
@@ -6140,7 +6401,6 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    return SCIP_OKAY;
 }
 
-
 /** @} */
 
 /*
@@ -6607,7 +6867,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       return SCIP_OKAY;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL) );
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
@@ -7127,7 +7387,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
@@ -7169,7 +7429,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
