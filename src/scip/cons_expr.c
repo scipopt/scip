@@ -3099,7 +3099,7 @@ SCIP_RETCODE presolveBinaryProducts(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< expression constraints */
    int                   nconss,             /**< total number of expression constraints */
-   int*                  naddconss           /**< pointer to store the total number of added constraints */
+   int*                  naddconss           /**< pointer to store the total number of added constraints (might be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3109,7 +3109,6 @@ SCIP_RETCODE presolveBinaryProducts(
 
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-   assert(naddconss != NULL);
 
    /* no expression constraints or binary variables -> skip */
    if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
@@ -3235,7 +3234,8 @@ SCIP_RETCODE presolveBinaryProducts(
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-               *naddconss += 3;
+               if( naddconss != NULL )
+                  *naddconss += 3;
             }
             else
             {
@@ -3268,7 +3268,8 @@ SCIP_RETCODE presolveBinaryProducts(
 
                SCIPfreeBufferArray(scip, &vars);
 
-               ++(*naddconss);
+               if( naddconss != NULL )
+                  ++(*naddconss);
             }
 
             /* create variable expression */
@@ -3517,7 +3518,7 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 
    /* reformulate products of binary variables */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss) );
    }
