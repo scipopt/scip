@@ -99,13 +99,6 @@ SCIP_Rational** RcreateArray(
    int                   size                /**< the size of the array */
    );
 
-/** create an array of rationals */
-EXTERN
-SCIP_Rational** RcreateArrayTemp(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   int                   size                /** the size of the array */
-   );
-
 /** copy an array of rationals */
 void* RcopyArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -197,14 +190,6 @@ EXTERN
 void RdeleteArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      array,              /**< address of rational array */
-   int                   size                /**< size of the array */
-   );
-
-/** free an array of rationals */
-EXTERN
-void RdeleteArrayTemp(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational***      array,              /**< pointer to the array */
    int                   size                /**< size of the array */
    );
 
