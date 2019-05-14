@@ -139,10 +139,10 @@ SCIP_RETCODE varIsSemicontinuous(
     */
    for( c = 0; c < nvlbs; ++c )
    {
-      SCIPdebugMsg(scip, "\nvar %s lower bound: lbvar = %s, coef = %f, const = %f", SCIPvarGetName(var), SCIPvarGetName(vlbvars[c]), vlbcoefs[c], vlbconstants[c]);
-
       if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY )
          continue;
+
+      SCIPdebugMsg(scip, "var <%s>[%f, %f] lower bound: %f <%s> %+f", SCIPvarGetName(var), glb, gub, vlbcoefs[c], SCIPvarGetName(vlbvars[c]), vlbconstants[c]);
 
       bvar = vlbvars[c];
 
@@ -156,6 +156,8 @@ SCIP_RETCODE varIsSemicontinuous(
          exists = FALSE;
       if( exists )
       {/*lint --e{644}*/
+         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]);
+
          /* save the upper bounds */
          ub0 = MIN(vubconstants[pos], gub);
          ub1 = MIN(vubconstants[pos] + vubcoefs[pos], gub);
@@ -168,7 +170,7 @@ SCIP_RETCODE varIsSemicontinuous(
       }
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
-      SCIPdebugMsg(scip, "\nbnds for this var are: %f, %f, %f, %f", lb0, lb1, ub0, ub1);
+      SCIPdebugMsgPrint(scip, " -> <%s> in [%f, %f] (off), [%f, %f] (on)\n", SCIPvarGetName(var), lb0, ub0, lb1, ub1);
       if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
          if( scvdata == NULL )
@@ -195,9 +197,6 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
-      SCIPdebugMsg(scip, "\nvar %s upper bound: ubvar = %s, coef = %f, const = %f",
-         SCIPvarGetName(var), SCIPvarGetName(vubvars[c]), vubcoefs[c], vubconstants[c]);  /*lint !e613*/
-
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)  /*lint !e613*/
          continue;
 
@@ -207,12 +206,16 @@ SCIP_RETCODE varIsSemicontinuous(
       if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
          continue;
 
+      SCIPdebugMsg(scip, "var <%s>[%f, %f] upper bound: %f <%s> %+f",
+         SCIPvarGetName(var), glb, gub, vubcoefs[c], SCIPvarGetName(vubvars[c]), vubconstants[c]);  /*lint !e613*/
+
       lb0 = glb;
       lb1 = glb;
       ub0 = MIN(vubconstants[c], gub);
       ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
+      SCIPdebugMsgPrint(scip, " -> <%s> in [%f, %f] (off), [%f, %f] (on)\n", SCIPvarGetName(var), lb0, ub0, lb1, ub1);
       if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
       {
          if( scvdata == NULL )
@@ -235,16 +238,14 @@ SCIP_RETCODE varIsSemicontinuous(
       }
    }
 
-   SCIPdebugMsg(scip, "\nvar %s has bounds %f, %f", SCIPvarGetName(var), glb, gub);
-
    if( scvdata != NULL )
    {
       /* sort bvars and vals0 */
       SCIPsortPtrReal((void**)scvdata->bvars, scvdata->vals0, SCIPvarComp, scvdata->nbnds);
-      SCIPdebugMsg(scip, " and the following on/off bounds:");
+      SCIPdebugMsg(scip, "var <%s> has global bounds [%f, %f] and the following on/off bounds:\n", SCIPvarGetName(var), glb, gub);
       for( c = 0; c < scvdata->nbnds; ++c )
       {
-         SCIPdebugMsg(scip, "\nc = %d, bvar %s: val0 = %f", c, SCIPvarGetName(scvdata->bvars[c]), scvdata->vals0[c]);
+         SCIPdebugMsg(scip, " c = %d, bvar <%s>: val0 = %f\n", c, SCIPvarGetName(scvdata->bvars[c]), scvdata->vals0[c]);
       }
       SCIP_CALL( SCIPhashmapInsert(scvars, var, scvdata) );
       *result = TRUE;
@@ -494,6 +495,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
       goto TERMINATE;
    }
 
+   /* TODO it should not be necessary to reevaluate in sol, cons_expr should have done that already */
    /* get f(sol) */
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
    fval = SCIPgetConsExprExprValue(expr);
@@ -665,14 +667,7 @@ SCIP_RETCODE addCut(
       SCIP_Bool infeasible;
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "Separating sol point\n");
-      for( int v = 0; v < nlhdlrexprdata->nvarexprs; ++v )
-      {
-         SCIP_VAR* var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[v]);
-         SCIPwriteVarName(scip, NULL, var, TRUE);
-         SCIPinfoMessage(scip, NULL, ": %f\n",  SCIPgetSolVal(scip, sol, var));
-      }
-      SCIPinfoMessage(scip, NULL, "by perspective cut ");
+      SCIPinfoMessage(scip, NULL, "Separating sol point by perspective cut ");
       SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
 
@@ -838,9 +833,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    *success = TRUE;
 
+   /* do not run in presolve, as we only do separation */
+   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "Called perspective detect, expr = %p: \n", expr);
+   SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPdebugMsgPrint(scip, "\n");
 #endif
 
    /* ignore sums */
@@ -852,7 +855,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_UNKNOWN || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR )
    {
-      SCIPdebugMsg(scip, "curvature of expr %p is %s\n", expr, SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR ? "linear" : "unknown");
+      SCIPdebugMsg(scip, "curvature of expr %p is %s\n", expr, SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(expr)));
       *success = FALSE;
       return SCIP_OKAY;
    }

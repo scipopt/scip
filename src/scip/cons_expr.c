@@ -1113,7 +1113,7 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_INTERVAL exprhdlrinterval = interval;
 
                /* for node without enforcement (no auxvar, maybe in presolve), call the callback of the exprhdlr directly */
-               /* TODO always do this?, or only if non of the nlhdlr implemented inteval? */
+               /* TODO always do this?, or only if none of the nlhdlr implemented inteval? */
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG

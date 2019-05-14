@@ -77,14 +77,14 @@ BRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
 fi
-#if [ "${DAY_OF_WEEK}" == "6" ]; then
-#  git checkout ${BRANCHNAME}
-#  git pull
-#  git checkout performance-${GITBRANCH}
-#  git merge ${BRANCHNAME} --ff-only
-#  git push
-#  git checkout ${BRANCHNAME}
-#fi
+if [ "${DAY_OF_WEEK}" == "6" ]; then
+  git checkout ${BRANCHNAME}
+  git pull
+  git checkout performance-${GITBRANCH}
+  git merge ${BRANCHNAME} --ff-only
+  git push
+  git checkout ${BRANCHNAME}
+fi
 
 ####################################
 ### jobs configuration variables ###
@@ -239,6 +239,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   done
 fi
 
+set +e
 if [ "${TODAYS_N_TRIGGERS}" != "0" ]; then
   # NOTE: only check up to 10 triggers. If there are more there is something wrong...
   echo "Will trigger the following jobs:"
@@ -246,3 +247,4 @@ if [ "${TODAYS_N_TRIGGERS}" != "0" ]; then
     curl -f -I "${TRIGGER[${DAY_OF_WEEK},$i]}"
   done
 fi
+set -e
