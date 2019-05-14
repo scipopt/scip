@@ -59,7 +59,7 @@ void blisshook(
    assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
 
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit is bliss is not available */
+   /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
       return;
 
