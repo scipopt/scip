@@ -1670,9 +1670,6 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childauxvar;
    SCIP_Bool havewideinteger;
-   SCIP_Real auxvarval;
-   SCIP_Real auxvarlb;
-   SCIP_Real auxvarub;
    int c;
 
    assert(scip != NULL);
@@ -1730,9 +1727,12 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
       return SCIP_OKAY;
 
    /* pass branching score to all unfixed discrete children not at their bound (could be all children, in which case it is like the nlhdlr's default) */
-   /* TODO should this move to nlhdlr_default? */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
+      SCIP_Real auxvarval;
+      SCIP_Real auxvarlb;
+      SCIP_Real auxvarub;
+
       child = SCIPgetConsExprExprChildren(expr)[c];
       childauxvar = SCIPgetConsExprExprAuxVar(child);
       if( childauxvar == NULL )
