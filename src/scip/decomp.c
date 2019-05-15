@@ -41,13 +41,18 @@
 
 /** create a decomposition */
 SCIP_RETCODE SCIPdecompCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nblocks,            /**< the number of blocks (without the linking block) */
    SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
    )
 {
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
    assert(decomp != NULL);
+
+   blkmem = SCIPblkmem(scip);
    assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, decomp) );
@@ -66,6 +71,9 @@ SCIP_RETCODE SCIPdecompCreate(
    (*decomp)->idxlargestblock = 0;
    (*decomp)->haschanges = FALSE;
    (*decomp)->original = original;
+
+   /* retrieving the Benders' variable labels setting */
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &(*decomp)->benderslabels) );
 
    return SCIP_OKAY;
 }
@@ -233,6 +241,29 @@ SCIP_Bool SCIPdecompIsOriginal(
    return decomp->original;
 }
 
+/** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
+ * decomposition
+ */
+void SCIPdecompSetUseBendersLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             benderslabels       /**< whether Benders' variable labels should be used */
+   )
+{
+   assert(decomp != NULL);
+
+   decomp->benderslabels = benderslabels;
+}
+
+/** returns TRUE if the variables must be labeled for the application of Benders' decomposition */
+SCIP_Bool SCIPdecompUseBendersLabels(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->benderslabels;
+}
+
 /** gets number of blocks of this decomposition */
 int SCIPdecompGetNBlocks(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
@@ -374,7 +405,6 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    int* conslabels;
    SCIP_VAR** varbuffer;
    int twicenvars;
-   SCIP_Bool benderslabels;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -386,9 +416,6 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    /* allocate buffer to store constraint variables and labels */
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, twicenvars) );
-
-   /* retrieving the Benders' variable labels setting */
-   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
 
    /* query constraint labels */
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
@@ -405,7 +432,7 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       /* skip linking constraints */
       conslabel = conslabels[c];
 
-      if( conslabel == SCIP_DECOMP_LINKCONS && !benderslabels )
+      if( conslabel == SCIP_DECOMP_LINKCONS && !SCIPdecompUseBendersLabels(decomp) )
          continue;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
@@ -1056,7 +1083,7 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 1. query the decomposition labels of the original variables and set them for the transformed variables
        * that have original counterparts
        */
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), SCIPdecompGetNBlocks(origdecomp), original) );
+      SCIP_CALL( SCIPdecompCreate(scip, &decomp, SCIPdecompGetNBlocks(origdecomp), original) );
 
       SCIPdecompGetVarsLabels(origdecomp, origvars, varslabels, nvarsoriginal);
 

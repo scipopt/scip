@@ -37,8 +37,8 @@ extern "C" {
 /** create a decomposition */
 EXTERN
 SCIP_RETCODE SCIPdecompCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nblocks,            /**< the number of blocks (without the linking block) */
    SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
    );
@@ -53,6 +53,21 @@ void SCIPdecompFree(
 /** returns TRUE if decomposition is in the original space */
 EXTERN
 SCIP_Bool SCIPdecompIsOriginal(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
+ * decomposition
+ */
+EXTERN
+void SCIPdecompSetUseBendersLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             benderslabels       /**< whether Benders' variable labels should be used */
+   );
+
+/** returns TRUE if the variables must be labeled for the application of Benders' decomposition */
+EXTERN
+SCIP_Bool SCIPdecompUseBendersLabels(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 

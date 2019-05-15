@@ -82,7 +82,7 @@ void setup(void)
 
 
    SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
-   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE) );
+   SCIP_CALL( SCIPdecompCreate(scip, &decomp, nblocks, TRUE) );
 
    setupData();
 }
@@ -107,7 +107,7 @@ Test(decomptest, create_and_free)
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
    SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), 1, TRUE) );
+   SCIP_CALL( SCIPdecompCreate(scip, &newdecomp, 1, TRUE) );
 
    SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
 }
@@ -208,7 +208,7 @@ Test(decomptest, test_var_labeling, .description="check variable label computati
 
 Test(decomptest, test_benders_var_labeling, .description="check variable labelling for Benders' decomposition")
 {
-   SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/benderslabels", TRUE) );
+   SCIPdecompSetUseBendersLabels(decomp, TRUE);
 
    SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels_conss, NCONSS) );
 

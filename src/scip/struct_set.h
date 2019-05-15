@@ -438,7 +438,7 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
 
    /* Decomposition settings */
-   SCIP_Bool             decomp_benderslabels; /**< should the variables be labelled for the application of Benders'
+   SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
                                                 *   decomposition */
 
    /* Benders' decomposition settings */

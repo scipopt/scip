@@ -46,6 +46,7 @@ struct SCIP_Decomp
    int                   nblocks;            /**< the number of variable blocks without the linking block */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
    SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             benderslabels;      /**< should the variables be labeled for the application of Benders' decomposition */
 };
 
 /** data structure to manage decompositions */

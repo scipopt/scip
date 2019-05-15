@@ -277,7 +277,7 @@ SCIP_RETCODE readDecomposition(
    {
       char strbuf[SCIP_MAXSTRLEN];
 
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE) );
+      SCIP_CALL( SCIPdecompCreate(scip, &decomp, nblocks, TRUE) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
       SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);
