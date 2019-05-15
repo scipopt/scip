@@ -3097,7 +3097,7 @@ SCIP_Bool isBinaryProduct(
    return TRUE;
 }
 
-/** helper mehtod to generate variable for a product of binary variables; note that the method capture the variable expression */
+/** helper method to generate variable for a product of binary variables; note that the method capture the variable expression */
 static
 SCIP_RETCODE getBinaryProductVarexpr(
    SCIP*                 scip,               /**< SCIP data structure */
