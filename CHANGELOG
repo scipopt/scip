@@ -333,6 +333,8 @@ Fixed bugs
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
 - fixed bug in propagation of dual proofs
+- improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
+- fixed bug related to releasing pending bound changes in tree.c
 
 Miscellaneous
 -------------
