@@ -29,6 +29,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_varbound.h"
 #include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
@@ -3159,23 +3160,15 @@ SCIP_RETCODE getBinaryProductVarexpr(
          SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
          SCIP_CALL( SCIPaddVar(scip, w) );
 
-         /* create and add w - x <= 0 */
-         vars[0] = w;
-         coefs[0] = 1.0;
-         vars[1] = x;
-         coefs[1] = -1.0;
+         /* create and add x - w >= 0 */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 2, vars, coefs, -SCIPinfinity(scip), 0.0) );
+         SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, x, w, -1.0, 0.0, SCIPinfinity(scip)) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-         /* create and add w - y <= 0 */
-         vars[0] = w;
-         coefs[0] = 1.0;
-         vars[1] = y;
-         coefs[1] = -1.0;
+         /* create and add y - w >= 0 */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 2, vars, coefs, -SCIPinfinity(scip), 0.0) );
+         SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, y, w, -1.0, 0.0, SCIPinfinity(scip)) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
