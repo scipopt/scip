@@ -39,6 +39,7 @@ set(scipsources
     scip/branch_pscost.c
     scip/branch_random.c
     scip/branch_relpscost.c
+    scip/certificate.c
     scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
@@ -477,6 +478,7 @@ set(scipheaders
     scip/branch_pscost.h
     scip/branch_random.h
     scip/branch_relpscost.h
+    scip/certificate.h
     scip/clock.h
     scip/compr.h
     scip/compr_largestrepr.h
