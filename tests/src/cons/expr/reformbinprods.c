@@ -69,11 +69,10 @@ void teardown(void)
 
 TestSuite(reformbinprods, .init = setup, .fini = teardown);
 
-/** tests the reformulation of binary products during presolve */
-Test(reformbinprods, presolve)
+/** tests the reformulation for a single product of two binary variables */
+Test(reformbinprods, presolve_single_2)
 {
    SCIP_CONSEXPR_EXPR* expr;
-   const char* input = "[expr] <test1>: <x0>[B] * <x1>[B] * <x2>[B] + <x0>[B] * <x1>[B] + <x0>[B] * <x1>[B] + <x0>[B] * <x1>[B] * <x2>[B] <= 1;";
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    int naddconss = 0;
@@ -92,10 +91,50 @@ Test(reformbinprods, presolve)
    cons = SCIPgetConss(scip)[0];
    assert(cons != NULL);
 
-   /* we need to call canonicalize here because of the expression locks */
+   /* call canonizalize() to replace binary products */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
    cr_expect(naddconss == 3, "expect 3 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 4, "expect 4 got %d", SCIPgetNConss(scip));
 
-   /* SCIPwriteTransProblem(scip, "trans.cip", NULL, FALSE); */
+   /* SCIPwriteTransProblem(scip, "reform.cip", NULL, FALSE); */
+}
+
+/** tests the reformulation for a single product of five binary variables */
+Test(reformbinprods, presolve_two)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* conss[2];
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   int naddconss = 0;
+
+   /* create constraint x0 x1 + x2 x3 + sin(x0 x1) <= 1 */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x2>[B] * <x3>[B] * <x4>[B] + sin(<x0>[B] * <x1>[B])", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* create constraint x0 x1 + x2 x3 <= 1 */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x2>[B] * <x3>[B] * <x4>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c2", expr, 0.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* go to presolving stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+   assert(SCIPgetNConss(scip) == 2);
+
+   /* note that we cannot use SCIPgetConss() directly because canonicalize() adds additional constraints */
+   conss[0] = SCIPgetConss(scip)[0];
+   conss[1] = SCIPgetConss(scip)[1];
+
+   /* call canonizalize() to replace binary products; note that cannonizalize is called once in presolving to replace common subexpressions */
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
+   cr_expect(naddconss == 4, "expect 4 got %d", naddconss);
+   cr_expect(SCIPgetNConss(scip) == 6, "expect 6 got %d", SCIPgetNConss(scip));
+
+   /* SCIPwriteTransProblem(scip, "reform.cip", NULL, FALSE); */
 }
