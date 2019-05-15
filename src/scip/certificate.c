@@ -33,16 +33,6 @@
 #include "scip/struct_certificate.h"
 #include "scip/solex.h"
 
-
-/** checks, if value is integral */
-static
-SCIP_Bool mpqIsIntegral(
-   const mpq_t           val                  /**< value to process */
-   )
-{
-   return (mpz_cmp_ui(mpq_denref(val), 1) == 0);
-}
-
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyVarbound)
@@ -64,7 +54,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqVarbound)
    if( ((SCIP_CERTIFICATEBOUND*)key1)->varindex != ((SCIP_CERTIFICATEBOUND*)key2)->varindex )
       return FALSE;
 
-   if( mpq_cmp(((SCIP_CERTIFICATEBOUND*)key1)->boundval, ((SCIP_CERTIFICATEBOUND*)key2)->boundval) != 0 )
+   if( !RisEqual(((SCIP_CERTIFICATEBOUND*)key1)->boundval, ((SCIP_CERTIFICATEBOUND*)key2)->boundval) )
       return FALSE;
 
    return TRUE;
@@ -78,7 +68,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVarbound)
 
    bound = (SCIP_CERTIFICATEBOUND*)key;
 
-   return ((((unsigned int)(10*mpq_get_d(bound->boundval))) << 22) + (bound->varindex << 2) + (unsigned int)bound->isupper);
+   return ((((unsigned int)(10*RgetRealApprox(bound->boundval))) << 22) + (bound->varindex << 2) + (unsigned int)bound->isupper);
 }
 
 /** updates file size */
@@ -240,7 +230,7 @@ void SCIPcertificateExit(
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
-      } 
+      }
       SCIPfclose(certificate->file);
       certificate->file = NULL;
 
@@ -252,7 +242,7 @@ void SCIPcertificateExit(
       }
       if( certificate->workbound != NULL )
       {
-         mpq_clear(certificate->workbound->boundval);
+         Rdelete(certificate->blkmem, &certificate->workbound->boundval);
          BMSfreeBlockMemory(certificate->blkmem, &certificate->workbound);
       }
       BMSfreeMemoryArrayNull(&certificate->objstring);
@@ -282,17 +272,19 @@ SCIP_Real SCIPcertificateGetFilesize(
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const mpq_t*          coefs,              /**< objective function coefficients */
+   SCIP_Rational**       coefs,              /**< objective function coefficients */
    int                   nvars               /**< number of variables */
    )
 {
    char obj[SCIP_MAXSTRLEN - 2];
-   int hashtablesize;
+   char* objstring;
    int printlen;
    int nnonz;
    int buffpos;
    int i;
    int buflength;
+   int allocsize;
+   int leftsize;
 
    assert(coefs != NULL);
 
@@ -301,19 +293,18 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
       return SCIP_OKAY;
 
    /* create a hash table for the variable bounds */
-   hashtablesize = SCIPcalcHashtableSize(1024 * nvars);
-   SCIP_CALL( SCIPhashtableCreate(&certificate->varboundtable, blkmem, hashtablesize,
+   SCIP_CALL( SCIPhashtableCreate(&certificate->varboundtable, blkmem, nvars,
          hashGetKeyVarbound, hashKeyEqVarbound, hashKeyValVarbound, NULL) );
 
    /* create working memory for bound struct */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->workbound) );
-   mpq_init(certificate->workbound->boundval);
+   certificate->workbound->boundval = Rcreate(blkmem);
 
    nnonz = 0;
    buflength = SCIP_MAXSTRLEN - 2;
    for( i = 0; i < nvars; i++ )
    {
-      if( mpq_sgn(coefs[i]) != 0 )
+      if( !RisZero(coefs[i]) )
          nnonz++;
    }
 
@@ -327,8 +318,12 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
       SCIP_ALLOC( BMSreallocMemoryArray(&certificate->objstring, allocsize) );
    }
 
+   certificate->objstring[0] = '\0';
+   objstring = certificate->objstring;
+   leftsize = allocsize;
+
    buffpos = 0;
-   printlen = gmp_snprintf(obj, SCIP_MAXSTRLEN - 2, "%d ", nnonz);
+   printlen = SCIPsnprintf(obj, SCIP_MAXSTRLEN - 2, "%d ", nnonz);
    if( printlen >= leftsize )
    {
       SCIPerrorMessage("Objective function string exceeds %d characters: currently not implemented.\n",
@@ -342,9 +337,9 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 
    for( i = 0; i < nvars; i++ )
    {
-      if( mpq_sgn(coefs[i]) != 0 )
+      if( !RisZero(coefs[i]) )
       {
-         printlen = gmp_snprintf(&obj[buffpos], SCIP_MAXSTRLEN - buffpos, "%s%d %Qd", (i > 0 ? " " : ""), i, coefs[i]);
+         printlen = gmp_snprintf(&obj[buffpos], SCIP_MAXSTRLEN - buffpos, "%s%d %Qd", (i > 0 ? " " : ""), i, *RgetGMP(coefs[i]));
          if( printlen >= SCIP_MAXSTRLEN - buffpos )
          {
             obj[buffpos] = '\0';
@@ -408,7 +403,7 @@ void SCIPcertificatePrintProofMessage(
 /** prints a rational number to the problem section of the certificate file */
 void SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpq_t           val,                /**< Rational to print to the problem*/
+   SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    )
 {
@@ -416,7 +411,7 @@ void SCIPcertificatePrintProblemRational(
    /* check if certificate output should be created */
    if( certificate->file == NULL )
      return;
-   mpq_get_str(formatstr, base, val);
+   RtoString(val, formatstr);
    SCIPcertificatePrintProblemMessage(certificate, "%s", formatstr);
 }
 
@@ -424,7 +419,7 @@ void SCIPcertificatePrintProblemRational(
 /** prints a rational number to the proof section of the certificate file */
 void SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpq_t           val,                /**< Rational to print to the problem*/
+   SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    )
 {
@@ -432,37 +427,7 @@ void SCIPcertificatePrintProofRational(
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
      return;
-   mpq_get_str(formatstr, base, val);
-   SCIPcertificatePrintProofMessage(certificate, "%s", formatstr);
-}
-
-/** prints an integer to the problem section of the certificate file */
-void SCIPcertificatePrintProblemInteger(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpz_t           val,                /**< Integer to print to the problem*/
-   int                   base                /**< The base representation*/
-   )
-{
-   char* formatstr;
-   /* check if certificate output should be created */
-   if( certificate->file == NULL )
-     return;
-   formatstr = mpz_get_str(NULL, base, val);
-   SCIPcertificatePrintProblemMessage(certificate, "%s", formatstr);
-}
-
-/** prints an integer to the proof section of the certificate file */
-void SCIPcertificatePrintProofInteger(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpz_t           val,                /**< Integer to print to the problem*/
-   int                   base                /**< The base representation*/
-   )
-{
-  char* formatstr;
-   /* check if certificate output should be created */
-   if( certificate->derivationfile == NULL )
-     return;
-   formatstr = mpz_get_str(NULL, base, val);
+   RtoString(val, formatstr);
    SCIPcertificatePrintProofMessage(certificate, "%s", formatstr);
 }
 
@@ -478,7 +443,6 @@ void SCIPcertificatePrintProblemComment(
    /* check if certificate output should be created */
    if( certificate->file == NULL )
       return;
-   
    
    SCIPfprintf(certificate->file, "# ");
 
@@ -597,10 +561,10 @@ void SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           consname,           /**< name of the constraint */
    const char            sense,              /**< sense of the constraint, i.e., G, L, or E */
-   const mpq_t           side,               /**< left/right-hand side */
+   SCIP_Rational*        side,               /**< left/right-hand side */
    int                   len,                /**< number of nonzeros */
    int*                  ind,                /**< index array */
-   mpq_t*                val                 /**< coefficient array */
+   SCIP_Rational**       val                 /**< coefficient array */
    )
 {
    int i;
@@ -635,7 +599,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           boundname,          /**< name of the bound constraint */
    int                   varindex,           /**< index of the variable */
-   const mpq_t           boundval,           /**< value of the bound */
+   SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
@@ -648,11 +612,11 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    /* install bound information in working struct */
    certificate->workbound->fileindex = certificate->indexcounter;
    certificate->workbound->varindex = varindex;
-   mpq_set(certificate->workbound->boundval, boundval);
+   Rset(certificate->workbound->boundval, boundval);
    certificate->workbound->isupper = isupper;
 
    SCIPdebugMessage("Printing bound at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-      certificate->indexcounter, varindex, (isupper ? "<=" : ">="), mpq_get_d(boundval));
+      certificate->indexcounter, varindex, (isupper ? "<=" : ">="), RgetRealApprox(boundval));
 
    /* bounds in the problem should be created only once */
    image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
@@ -661,8 +625,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
       SCIP_CERTIFICATEBOUND* insertbound;
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      mpq_init(insertbound->boundval);
-      mpq_set(insertbound->boundval, boundval);
+      insertbound->boundval = Rcopy(certificate->blkmem, boundval);
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
       certificate->indexcounter++;
       certificate->conscounter++;
@@ -689,7 +652,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           assumptionname,     /**< name of the bound constraint */
    int                   varindex,           /**< index of the variable */
-   const mpq_t           boundval,           /**< value of the bound */
+   SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
@@ -702,7 +665,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
    /* install bound information in working struct */
    certificate->workbound->fileindex = certificate->indexcounter;
    certificate->workbound->varindex = varindex;
-   mpq_set(certificate->workbound->boundval, boundval);
+   Rset(certificate->workbound->boundval, boundval);
    certificate->workbound->isupper = isupper;
 
    image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
@@ -713,11 +676,11 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
       foundbound = (SCIP_CERTIFICATEBOUND*)image;
 
       SCIPdebugMessage("Found bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         foundbound->fileindex, varindex, (isupper ? "<=" : ">="), mpq_get_d(boundval));
+         foundbound->fileindex, varindex, (isupper ? "<=" : ">="), RgetRealApprox(boundval));
 
       assert(foundbound->fileindex >= 0);
       assert(foundbound->varindex == varindex);
-      assert(mpq_cmp(foundbound->boundval, boundval) == 0);
+      assert(RisEqual(foundbound->boundval, boundval));
       assert(foundbound->isupper == isupper);
       return foundbound->fileindex;
    }
@@ -726,11 +689,10 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
       SCIP_CERTIFICATEBOUND* insertbound;
 
       SCIPdebugMessage("Print bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->workbound->fileindex, varindex, (isupper ? "<=" : ">="), mpq_get_d(boundval));
+         certificate->workbound->fileindex, varindex, (isupper ? "<=" : ">="), RgetRealApprox(boundval));
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      mpq_init(insertbound->boundval);
-      mpq_set(insertbound->boundval, boundval);
+      insertbound->boundval = Rcopy(certificate->blkmem, boundval);
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
       certificate->indexcounter++;
 
@@ -751,10 +713,10 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   len,                /**< number of dual multipiers */
    int*                  ind,                /**< index array */
-   const mpq_t*          val                 /**< array of dual multipliers */
+   SCIP_Rational**       val                 /**< array of dual multipliers */
    )
 {
    /* check if certificate output should be created */
@@ -779,7 +741,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    else
    {
       SCIPcertificatePrintProofMessage(certificate, "G ");
-      SCIPcertificatePrintProofRational(certificate, *lowerbound, 10);
+      SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");
    }
@@ -802,19 +764,21 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    }
 
    /* print rounding derivation */
-   if( lowerbound != NULL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisObjIntegral(scip) && !mpqIsIntegral(*lowerbound) )
+   if( lowerbound != NULL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisObjIntegral(scip) && !RisIntegral(lowerbound) )
    {
-      mpz_t ceilint;
+      long int ceilint;
 
       certificate->indexcounter++;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
 
-      mpz_init(ceilint);
-      mpz_cdiv_q(ceilint, mpq_numref(*lowerbound), mpq_denref(*lowerbound));
-      SCIPcertificatePrintProofInteger(certificate, ceilint, 10);
-      mpz_clear(ceilint);
+      if( !RroundInteger(&ceilint, lowerbound, SCIP_ROUND_UPWARDS) )
+      {
+         SCIPerrorMessage("too large to be represented as long long \n");
+         SCIPABORT();
+      }
+      SCIPcertificatePrintProofMessage(certificate, "%ld", ceilint);
 
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");
@@ -828,13 +792,13 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 int SCIPcertificatePrintUnsplitting(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   derindex_left,      /**< index of the first derivation */
    int                   assumptionindex_left,/**< index of the first unsplitting assumption */
    int                   derindex_right,     /**< index of the second derivation */
    int                   assumptionindex_right/**< index of the second unsplitting assumption */
    )
-{ 
+{
    /* check if certificate output should be created */
    if( certificate->file == NULL )
       return 0;
@@ -857,7 +821,7 @@ int SCIPcertificatePrintUnsplitting(
    else
    {
       SCIPcertificatePrintProofMessage(certificate, "G ");
-      SCIPcertificatePrintProofRational(certificate, *lowerbound, 10);
+      SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");
    }
@@ -873,8 +837,8 @@ int SCIPcertificatePrintUnsplitting(
 /** prints RTP section with lowerbound and upperbound range */
 void SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL if negative infinity */
-   const mpq_t*          upperbound          /**< pointer to upper bound on the objective, NULL if positive infinity */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
+   SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
    )
 {
    /* check if certificate output should be created */
@@ -882,25 +846,25 @@ void SCIPcertificatePrintRtpRange(
       return;
 
    SCIPcertificatePrintProblemMessage(certificate, "RTP range ");
-   if( lowerbound == NULL )
+   if( RisNegInfinity(lowerbound) )
    {
       SCIPcertificatePrintProblemMessage(certificate, "-inf");
    }
    else
    {
-      SCIPcertificatePrintProblemRational(certificate, *lowerbound, 10);
+      SCIPcertificatePrintProblemRational(certificate, lowerbound, 10);
    }
 
    SCIPcertificatePrintProblemMessage(certificate, " ");
-   if( upperbound == NULL )
+   if( RisInfinity(upperbound) )
    {
       SCIPcertificatePrintProblemMessage(certificate, "inf");
-    }
+   }
    else
    {
-      SCIPcertificatePrintProblemRational(certificate, *upperbound, 10);
-    }
-    SCIPcertificatePrintProblemMessage(certificate, "\n");
+      SCIPcertificatePrintProblemRational(certificate, upperbound, 10);
+   }
+   SCIPcertificatePrintProblemMessage(certificate, "\n");
  }
 
 /** prints RTP section for infeasibility */
@@ -923,7 +887,7 @@ void SCIPcertificatePrintSolex(
    )
 {
    SCIP_VAR** vars;
-   mpq_t solval;
+   SCIP_Rational* solval;
    int nvars;
    int nnonz;
    int i;
@@ -943,12 +907,12 @@ void SCIPcertificatePrintSolex(
 
    SCIP_CALL_ABORT( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   mpq_init(solval);
+   solval = RcreateTemp(SCIPbuffer(scip));
    nnonz = 0;
    for( i = 0; i < nvars; i ++)
    {
       SCIPsolexGetVal(sol, vars[i], solval);
-      if( mpq_sgn(solval) != 0 )
+      if( !RisZero(solval) )
          nnonz++;
    }
 
@@ -957,7 +921,7 @@ void SCIPcertificatePrintSolex(
    for( i = 0; i < nvars; i ++)
    {
       SCIPsolexGetVal(sol, vars[i], solval);
-      if( mpq_sgn(solval) != 0 )
+      if( !RisZero(solval) )
       {
          SCIPcertificatePrintProblemMessage(certificate, " %d ", i);
          SCIPcertificatePrintProblemRational(certificate, solval, 10);

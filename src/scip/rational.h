@@ -478,6 +478,14 @@ SCIP_Real RgetRealApprox(
     SCIP_Rational*  r                   /**< the rational to convert */
    );
 
+/** round rational to next integer in direction of roundmode */
+EXTERN
+SCIP_Bool RroundInteger(
+   long int*                 retval,             /**< the resulting rounded lon int */
+   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   );
+
 /*
  * Dynamic Arrays todo: use stl to do this
  */

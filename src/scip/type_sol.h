@@ -47,8 +47,6 @@ typedef enum SCIP_SolOrigin SCIP_SOLORIGIN;
 
 typedef struct SCIP_Sol SCIP_SOL;                 /**< primal CIP solution */
 
-typedef struct SCIP_SolEx SCIP_SOLEX;
-
 typedef struct SCIP_Viol SCIP_VIOL;               /**< maximum violations of problem constraints */
 
 #ifdef __cplusplus

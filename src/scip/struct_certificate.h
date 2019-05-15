@@ -39,7 +39,7 @@ struct SCIP_CertificateBound
 {
    SCIP_Longint          fileindex;          /**< index of this bound in the certificate file */
    int                   varindex;           /**< index of the variable */
-   mpq_t                 boundval;           /**< value of the bound */
+   SCIP_Rational*        boundval;           /**< value of the bound */
    SCIP_Bool             isupper;            /**< is it the upper bound? */
 };
 

@@ -84,7 +84,7 @@ extern
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const mpq_t*          coefs,              /**< objective function coefficients */
+   SCIP_Rational**       coefs,              /**< objective function coefficients */
    int                   nvars               /**< number of variables */
    );
 
@@ -108,7 +108,7 @@ void SCIPcertificatePrintProofMessage(
 extern
 void SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpq_t           val,                /**< Rational to print to the problem*/
+   SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    );
 
@@ -116,23 +116,7 @@ void SCIPcertificatePrintProblemRational(
 extern
 void SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpq_t           val,                /**< Rational to print to the problem*/
-   int                   base                /**< The base representation*/
-   );
-
-/** prints an integer to the problem section of the certificate file */
-extern
-void SCIPcertificatePrintProblemInteger(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpz_t           val,                /**< Integer to print to the problem*/
-   int                   base                /**< The base representation*/
-   );
-
-/** prints an integer to the proof section of the certificate file */
-extern
-void SCIPcertificatePrintProofInteger(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const mpz_t           val,                /**< Integer to print to the problem*/
+   SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    );
 
@@ -192,10 +176,10 @@ void SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           consname,           /**< name of the constraint */
    const char            sense,              /**< sense of the constraint, i.e., G, L, or E */
-   const mpq_t           side,               /**< left/right-hand side */
+   SCIP_Rational*        side,               /**< left/right-hand side */
    int                   len,                /**< number of nonzeros */
    int*                  ind,                /**< index array */
-   mpq_t*                val                 /**< coefficient array */
+   SCIP_Rational**       val                 /**< coefficient array */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */
@@ -204,7 +188,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           boundname,          /**< name of the bound constraint */
    int                   varindex,           /**< index of the variable */
-   const mpq_t           boundval,           /**< value of the bound */
+   SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
 
@@ -214,7 +198,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           assumptionname,     /**< name of the bound constraint */
    int                   varindex,           /**< index of the variable */
-   const mpq_t           boundval,           /**< value of the bound */
+   SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
 
@@ -224,10 +208,10 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   len,                /**< number of dual multipiers */
    int*                  ind,                /**< index array */
-   const mpq_t*          val                 /**< array of dual multipliers */
+   SCIP_Rational**       val                 /**< array of dual multipliers */
    );
 
 /** prints unsplitting information to proof section */
@@ -235,7 +219,7 @@ extern
 int SCIPcertificatePrintUnsplitting(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   derindex_left,      /**< index of the first derivation */
    int                   assumptionindex_left,/**< index of the first unsplitting assumption */
    int                   derindex_right,     /**< index of the second derivation */
@@ -246,8 +230,8 @@ int SCIPcertificatePrintUnsplitting(
 extern
 void SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const mpq_t*          lowerbound,         /**< pointer to lower bound on the objective, NULL if negative infinity */
-   const mpq_t*          upperbound          /**< pointer to upper bound on the objective, NULL if positive infinity */
+   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
+   SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
    );
 
 

@@ -1181,6 +1181,44 @@ SCIP_Real RgetRealRelax(
    return realapprox;
 }
 
+/** round rational to next integer in direction of roundmode */
+SCIP_Bool RroundInteger(
+   long int*                 retval,             /**< the resulting rounded lon int */
+   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   )
+{
+   SCIP_Bool success = FALSE;
+   mpz_t roundint;
+
+   assert(src != NULL);
+   assert(retval != NULL);
+
+   mpz_init(roundint);
+   switch (roundmode)
+   {
+   case SCIP_ROUND_DOWNWARDS:
+      mpz_fdiv_q(roundint, mpq_numref(*RgetGMP(src)), mpq_denref(*RgetGMP(src)));
+      break;
+   case SCIP_ROUND_UPWARDS:
+      mpz_cdiv_q(roundint, mpq_numref(*RgetGMP(src)), mpq_denref(*RgetGMP(src)));
+      break;
+   case SCIP_ROUND_NEAREST:
+   default:
+      SCIPerrorMessage("roundmode not supported for integer-rounding \n");
+      SCIPABORT();
+      break;
+   }
+
+   if( mpz_fits_slong_p(roundint) )
+   {
+      *retval = mpz_get_si(roundint);
+      success = TRUE;
+   }
+
+   return success;
+}
+
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
 SCIP_Real RgetRealApprox(
    SCIP_Rational*        r                   /**< the rational */
