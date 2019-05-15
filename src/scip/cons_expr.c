@@ -3056,6 +3056,10 @@ SCIP_Bool isBinaryProduct(
 
    assert(expr != NULL);
 
+   /* check whether the expression is a product */
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      return FALSE;
+
    nchildren = SCIPgetConsExprExprNChildren(expr);
 
    /* don't consider products with a coefficient != 1; simplification will take care of this coefficient later */
