@@ -481,6 +481,10 @@
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
 
+/* certificate output */
+#define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
+#define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE 1e+3 /**< limit for uncompressed certificate file size in MB */
+
 /* Reading */
 
 #define SCIP_DEFAULT_READ_INITIALCONSS     TRUE /**< should model constraints be marked as initial? */
@@ -1169,6 +1173,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->extcodessize = 0;
    (*set)->visual_vbcfilename = NULL;
    (*set)->visual_bakfilename = NULL;
+   (*set)->certificate_filename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->num_relaxfeastol = SCIP_INVALID;
@@ -2582,6 +2587,18 @@ SCIP_RETCODE SCIPsetCreate(
          "visual/objextern",
          "should be output the external value of the objective?",
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
+         NULL, NULL) );
+
+   /* CERTIFICATE tool parameters */
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "certificate/filename",
+         "name of the CERTIFICATE Tool output file, or - if no CERTIFICATE Tool output should be created",
+         &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "certificate/maxfilesize",
+         "limit for certificate file size in KB",
+         &(*set)->certificate_maxfilesize, FALSE, SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
 
    /* Reading parameters */

@@ -575,6 +575,10 @@ struct SCIP_Set
    SCIP_Bool             visual_displb;      /**< should lower bound information be visualized? */
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
+   /* CERTIFICATE tool settings */
+   char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */
+   SCIP_Real             certificate_maxfilesize; /**< limit for uncompressed certificate file size in MB */
+
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */
    SCIP_Bool             read_dynamicconss;  /**< should model constraints be subject to aging? */

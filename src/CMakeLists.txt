@@ -850,6 +850,7 @@ set(scipheaders
     scip/type_benders.h
     scip/type_benderscut.h
     scip/type_branch.h
+    scip/type_certificate.h
     scip/type_clock.h
     scip/type_compr.h
     scip/type_concsolver.h
@@ -891,6 +892,7 @@ set(scipheaders
     scip/type_sepastore.h
     scip/type_set.h
     scip/type_sol.h
+    scip/type_solex.h
     scip/type_stat.h
     scip/type_syncstore.h
     scip/type_table.h
