@@ -227,6 +227,7 @@ struct SCIP_ConshdlrData
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
    SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
+   SCIP_Longint             ncanonicalizecalls; /**< number of times we called canonicalization */
 
    /* facets of envelops of vertex-polyhedral functions */
    SCIP_RANDNUMGEN*         vp_randnumgen;   /**< random number generator used to perturb reference point */
@@ -3356,6 +3357,9 @@ SCIP_RETCODE canonicalizeConstraints(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* update number of canonizalize calls */
+   ++(conshdlrdata->ncanonicalizecalls);
+
    SCIP_CALL( SCIPstartClock(scip, conshdlrdata->canonicalizetime) );
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -3372,7 +3376,8 @@ SCIP_RETCODE canonicalizeConstraints(
       }
    }
 
-   havechange = FALSE;
+   /* set havechange to TRUE in the first call of canonicalize; otherwise we might not replace common subexpressions */
+   havechange = conshdlrdata->ncanonicalizecalls == 1;
 
    /* free nonlinear handlers information from expressions */  /* TODO can skip this in first presolve round */
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -3482,6 +3487,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
          /* scale constraint sides */
          SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
+
+         if( changed )
+            havechange = TRUE;
 
          /* handle constant root expression; either the problem is infeasible or the constraint is redundant */
          if( consdata->expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
