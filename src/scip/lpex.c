@@ -203,6 +203,82 @@ SCIP_DECL_SORTPTRCOMP(SCIProwexComp)
    }
 }
 
+#if 0 /* enable this to check links between columns and rows in LP data structure (for debugging, very slow!) */
+
+#ifdef NDEBUG
+#define ASSERT(x) do { if( !(x) ) abort(); } while( FALSE )
+#else
+#define ASSERT(x) assert(x)
+#endif
+
+static SCIP_Bool msgdisp_checklinks = FALSE;
+
+
+static
+void checkLinks(
+   SCIP_LPEX*            lp                  /**< current LP data */
+   )
+{
+   SCIP_COLEX* col;
+   SCIP_ROWEX* row;
+   int i;
+   int j;
+
+   ASSERT(lp != NULL);
+
+   if( !msgdisp_checklinks )
+   {
+      printf("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
+      msgdisp_checklinks = TRUE;
+   }
+
+   for( i = 0; i < lp->ncols; ++i )
+   {
+      col = lp->cols[i];
+      ASSERT(col != NULL);
+      ASSERT(!lp->flushed || col->lppos >= 0);
+      ASSERT(!lp->flushed || col->lppos >= 0);
+      ASSERT(col->nlprows <= col->len);
+      ASSERT(col->lppos == -1 || col->lppos >= lp->lpifirstchgcol || col->nunlinked == 0);
+
+      for( j = 0; j < col->len; ++j )
+      {
+         row = col->rows[j];
+         ASSERT(row != NULL);
+         ASSERT(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
+         ASSERT(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
+         ASSERT(col->linkpos[j] == -1 || RisEqual(row->vals[col->linkpos[j]], col->vals[j]));
+         ASSERT((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
+      }
+   }
+
+   for( i = 0; i < lp->nrows; ++i )
+   {
+      row = lp->rows[i];
+      ASSERT(row != NULL);
+      ASSERT(!lp->flushed || row->lppos >= 0);
+      ASSERT(!lp->flushed || row->lppos >= 0);
+      ASSERT(row->nlpcols <= row->len);
+      ASSERT(row->lppos == -1 || row->lppos >= lp->lpifirstchgrow || row->nunlinked == 0);
+
+      for( j = 0; j < row->len; ++j )
+      {
+         col = row->cols[j];
+         ASSERT(col != NULL);
+         ASSERT(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
+         ASSERT(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
+         ASSERT(row->linkpos[j] == -1 || RisEqual(col->vals[row->linkpos[j]], row->vals[j]));
+         ASSERT((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
+      }
+   }
+}
+
+#undef ASSERT
+
+#else
+#define checkLinks(lp) /**/
+#endif
+
 /** checks if the exact column and its fpcol are consistent */
 SCIP_Bool colexInSync(
    SCIP_COLEX*           colex,              /**< exact column */
@@ -876,7 +952,6 @@ void coefChangedExact(
    RsetString(row->maxactivity, "inf");
    RsetString(row->minactivity, "inf");
    RsetString(row->pseudoactivity, "inf");
-
 }
 
 /*
@@ -901,7 +976,7 @@ void colexMoveCoef(
 
    Rset(col->vals[newpos], col->vals[oldpos]);
    col->rows[newpos] = col->rows[oldpos];
-   col->vals[newpos] = col->vals[oldpos];
+   Rset(col->vals[newpos], col->vals[oldpos]);
    col->linkpos[newpos] = col->linkpos[oldpos];
 
    /* update link position in row */
@@ -1599,83 +1674,6 @@ SCIP_RETCODE rowexChgCoefPos(
    return SCIP_OKAY;
 }
 
-#if 0 /* enable this to check links between columns and rows in LP data structure (for debugging, very slow!) */
-
-#ifdef NDEBUG
-#define ASSERT(x) do { if( !(x) ) abort(); } while( FALSE )
-#else
-#define ASSERT(x) assert(x)
-#endif
-
-static SCIP_Bool msgdisp_checklinks = FALSE;
-
-
-static
-void checkLinks(
-   SCIP_LP*              lp                  /**< current LP data */
-   )
-{
-   SCIP_COL* col;
-   SCIP_ROW* row;
-   int i;
-   int j;
-
-   ASSERT(lp != NULL);
-
-   if( !msgdisp_checklinks )
-   {
-      printf("LP LINK CHECKING ACTIVATED! THIS IS VERY SLOW!\n");
-      msgdisp_checklinks = TRUE;
-   }
-
-   for( i = 0; i < lp->ncols; ++i )
-   {
-      col = lp->cols[i];
-      ASSERT(col != NULL);
-      ASSERT(!lp->flushed || col->lppos >= 0 || col->primsol == 0.0);
-      ASSERT(!lp->flushed || col->lppos >= 0 || col->farkascoef == 0.0);
-      ASSERT(col->nlprows <= col->len);
-      ASSERT(col->lppos == -1 || col->lppos >= lp->lpifirstchgcol || col->nunlinked == 0);
-
-      for( j = 0; j < col->len; ++j )
-      {
-         row = col->rows[j];
-         ASSERT(row != NULL);
-         ASSERT(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
-         ASSERT(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
-         ASSERT(col->linkpos[j] == -1 || EPSEQ(row->vals[col->linkpos[j]], col->vals[j], 1e-6));
-         ASSERT((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
-      }
-   }
-
-   for( i = 0; i < lp->nrows; ++i )
-   {
-      row = lp->rows[i];
-      ASSERT(row != NULL);
-      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualsol == 0.0);
-      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualfarkas == 0.0);
-      ASSERT(row->nlpcols <= row->len);
-      ASSERT(row->lppos == -1 || row->lppos >= lp->lpifirstchgrow || row->nunlinked == 0);
-
-      for( j = 0; j < row->len; ++j )
-      {
-         col = row->cols[j];
-         ASSERT(col != NULL);
-         ASSERT(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
-         ASSERT(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
-         ASSERT(row->linkpos[j] == -1 || EPSEQ(col->vals[row->linkpos[j]], row->vals[j], 1e-6));
-         ASSERT((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
-      }
-   }
-}
-
-#undef ASSERT
-
-#else
-#define checkLinks(lp) /**/
-#endif
-
-
 /*
  * double linked coefficient matrix methods
  */
@@ -2124,7 +2122,7 @@ SCIP_RETCODE lpexFlushAddCols(
       SCIPsetDebugMsg(set, "flushing added column <%s>: ", SCIPvarGetName(col->var));
 
       /* Because the column becomes a member of the LP solver, it now can take values
-       * different from zero. That means, we have to include the column in the corresponding
+       * different from zero. That means,f 3 we have to include the column in the corresponding
        * row vectors.
        */
       SCIP_CALL( colexLink(col, blkmem, set, eventqueue, lp) );
@@ -2755,6 +2753,8 @@ SCIP_RETCODE SCIPcolexFree(
 
    BMSfreeBlockMemory(blkmem, col);
 
+   col = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -3340,7 +3340,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    psdata->interiorray = NULL;
    psdata->includedrows = NULL;
    psdata->psbasis = NULL;
-   psdata->rectfactor = NULL;
+   psdata->rectfactor = (qsnum_factor_work*) NULL;
    psdata->commonslack = NULL;
 
    psdata->nextendedrows = 0;
@@ -3374,15 +3374,18 @@ SCIP_RETCODE SCIPlpPsdataFree(
    assert(blkmem != NULL);
 
    psdata = lp->psdata;
+   if( psdata->psdatacon )
+   {
+      RdeleteArray(blkmem, &psdata->interiorpt, psdata->nextendedrows);
+      RdeleteArray(blkmem, &psdata->interiorray, psdata->nextendedrows);
+      Rdelete(blkmem, &psdata->commonslack);
 
-   RdeleteArray(blkmem, &psdata->interiorpt, psdata->nextendedrows);
-   RdeleteArray(blkmem, &psdata->interiorray, psdata->nextendedrows);
-   Rdelete(blkmem, &psdata->commonslack);
+      BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
+      BMSfreeBlockMemoryArrayNull(blkmem, &psdata->psbasis, psdata->nextendedrows);
 
-   BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
-   BMSfreeBlockMemoryArrayNull(blkmem, &psdata->psbasis, psdata->nextendedrows);
-   RECTLUfreeFactorization(psdata->rectfactor);
-
+      if( psdata->rectfactor != NULL )
+         RECTLUfreeFactorization(psdata->rectfactor);
+   }
    assert(psdata->interiorpt == NULL);
    assert(psdata->interiorray == NULL);
    assert(psdata->includedrows == NULL);
@@ -4217,6 +4220,9 @@ SCIP_RETCODE SCIProwexFree(
    assert((*row)->nuses == 0);
    assert((*row)->lppos == -1);
    //assert((*row)->eventfilter != NULL);
+
+   /* remove column indices from corresponding rows */
+   SCIP_CALL( rowexUnlink(*row, set, lp) );
 
    Rdelete(blkmem, &(*row)->constant);
    Rdelete(blkmem, &(*row)->lhs);
@@ -5324,7 +5330,14 @@ SCIP_RETCODE SCIPlpexShrinkCols(
          if( RisInfinity(col->ub) || RisNegInfinity(col->lb) )
             lp->ninfiniteboundcols--;
       }
+
+      assert(lp->ncols == newncols);
+      lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
+
+      lp->flushed = FALSE;
+      checkLinks(lp);
    }
+   assert(lp->nremovablecols <= lp->ncols);
 
    return SCIP_OKAY;
 }
@@ -5400,7 +5413,7 @@ SCIP_RETCODE SCIPlpexReset(
    assert(stat != NULL);
 
    SCIP_CALL( SCIPlpexClear(lp, blkmem, set, eventqueue, eventfilter) );
-   //SCIP_CALL( SCIPlpexFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpexFlush(lp, blkmem, set, eventqueue) );
 
    /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;

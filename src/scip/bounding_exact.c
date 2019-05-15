@@ -2070,7 +2070,7 @@ SCIP_RETCODE getPSdual(
 {
    SCIP_COL** cols;
    SCIP_Rational** approxdual;
-   SCIP_Rational** costvect; /**< dual cost vector for expanded problem*/
+   SCIP_Rational** costvect;                 /**< dual cost vector for expanded problem*/
    SCIP_Rational** violation;
    SCIP_Rational** correction;
    SCIP_Bool useinteriorpoint;
@@ -2087,7 +2087,9 @@ SCIP_RETCODE getPSdual(
    int j;
    int rval;
    int nextendedrows;
+   int approxsize;
    int nrows;
+   int nrowsps; /* number of rows used for ps. this can be lower than nrows, if e.g. cuts were added */
    int ncols;
    int currentrow;
    SCIP_Bool isfeas;
@@ -2123,6 +2125,7 @@ SCIP_RETCODE getPSdual(
       lp->hasprovedbound = FALSE;
       return SCIP_OKAY;
    }
+
    lp->hasprovedbound = TRUE;
 
    SCIPdebugMessage("calling getPSdualbound()\n");
@@ -2147,14 +2150,16 @@ SCIP_RETCODE getPSdual(
    maxv = RcreateTemp(set->buffer);
    dualbound = RcreateTemp(set->buffer);
 
-   nextendedrows = psdata->nextendedrows;
-   nrows = lpex->nrows;
-   ncols = lpex->ncols;
-
    /* flush exact lp */
    /* set up the exact lpi for the current node */
    SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+
+   nextendedrows = psdata->nextendedrows;
+   nrows = lpex->nrows;
+   ncols = lpex->ncols;
+   nrowsps = psdata->nextendedrows/2 - ncols;
+   approxsize = 2 * (nrows + ncols);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
    approxdual = RcreateArrayTemp(set->buffer, nextendedrows);
@@ -2166,16 +2171,16 @@ SCIP_RETCODE getPSdual(
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
     * dual vars of lb constraint (including -inf) and ub constraints (including +inf)
     */
-   for( i = 0; i < nrows; i++ )
+   for( i = 0; i < nrowsps; i++ )
    {
       /* in case we want to prove infeasibility it might be that we were not able to compute a dual solution
        * with bound exceeding objective value; in this case dual solution is set to SCIP_INVALID
        */
-      if( SCIProwGetDualsol(lp->rows[i]) == SCIP_INVALID )
+      if( (!usefarkas && SCIProwGetDualsol(lp->rows[i]) == SCIP_INVALID) || (usefarkas && SCIProwGetDualfarkas(lp->rows[i]) == SCIP_INVALID) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
-            if( usefarkas )
+         if( usefarkas )
             stat->nfailprojshiftinf++;
          else
             stat->nfailprojshift++;
@@ -2193,11 +2198,12 @@ SCIP_RETCODE getPSdual(
          Rset(approxdual[i], tmp);
       /* rhs constraint */
       else
-         Rneg(approxdual[i+nrows], tmp);
+         Rneg(approxdual[i+nrowsps], tmp);
 
       Rset(costvect[i], lpex->rows[i]->lhs);
-      Rneg(costvect[i+nrows], lpex->rows[i]->rhs);
+      Rneg(costvect[i+nrowsps], lpex->rows[i]->rhs);
    }
+
    cols = SCIPlpGetCols(lp);
    for( i = 0; i < ncols; i++ )
    {
@@ -2206,14 +2212,14 @@ SCIP_RETCODE getPSdual(
       else
          RsetReal(tmp, -SCIPcolGetFarkasCoef(cols[i], stat, lp));
       /* lb constraint */
-      if( RisPositive(tmp) > 0 )
-         Rset(approxdual[i + 2*nrows], tmp);
+      if( RisPositive(tmp) )
+         Rset(approxdual[i + 2*nrowsps], tmp);
       /* ub constraint */
       else
-         Rneg(approxdual[i + 2*nrows + ncols], tmp);
+         Rneg(approxdual[i + 2*nrowsps + ncols], tmp);
 
-      Rset(costvect[i + 2*nrows], lpex->cols[i]->lb);
-      Rneg(costvect[i + 2*nrows + ncols], lpex->cols[i]->ub);
+      Rset(costvect[i + 2*nrowsps], lpex->cols[i]->lb);
+      Rneg(costvect[i + 2*nrowsps + ncols], lpex->cols[i]->ub);
    }
 
 #ifdef PS_OUT
@@ -2246,7 +2252,9 @@ SCIP_RETCODE getPSdual(
          RsetInt(approxdual[i], 0, 1);
       else if( RisNegInfinity(costvect[i]) )
       {
-         assert(!psdata->includedrows[i]);
+         if( i < nextendedrows )
+            assert(!psdata->includedrows[i]);
+
          RsetInt(approxdual[i], 0, 1);
       }
    }
@@ -2261,23 +2269,39 @@ SCIP_RETCODE getPSdual(
    }
 
    /* A^ty for y corresponding to primal constraints */
-   for( i = 0; i < nrows; i++ )
+   for( i = 0; i < nrowsps; i++ )
    {
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          currentrow = lpex->rows[i]->cols_index[j];
          Rmult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
          Rdiff(violation[currentrow], violation[currentrow], tmp);
-         Rmult(tmp, approxdual[i+nrows], lpex->rows[i]->vals[j]);
+         Rmult(tmp, approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
          Radd(violation[currentrow], violation[currentrow], tmp);
+      }
+   }
+
+   /* add violations coming from non-initial rows */
+   for( i = nrowsps; i < nrows; ++i )
+   {
+      for( j = 0; j < lpex->rows[i]->len; j++)
+      {
+         if( !usefarkas )
+            RsetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
+         else
+            RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
+
+         currentrow = lpex->rows[i]->cols_index[j];
+         Rmult(tmp, tmp, lpex->rows[i]->vals[j]);
+         Rdiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
 
    /* A^ty for y corresponding to bound constraints */
    for( i = 0; i < ncols; i++ )
    {
-      Rdiff(violation[i], violation[i], approxdual[i+2*nrows]);
-      Radd(violation[i], violation[i], approxdual[i+2*nrows+ncols]);
+      Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
+      Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
 
 
@@ -2344,7 +2368,7 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
    printf("updated dual solution:\n");
-   for( i = 0; i < nextendedrows; i++ )
+   for( i = 0; i < approxsize; i++ )
    {
       printf("   i=%d: ", i);
       Rprint(approxdual[i]);
@@ -2418,11 +2442,11 @@ SCIP_RETCODE getPSdual(
     * this will tighten the solution and improve the objective value, there is no way this can hurt
     */
       /* y(lhs) and y(rhs) corresponding to primal constraints */
-   for( i = 0; i < nrows; i++ )
+   for( i = 0; i < nrowsps; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      if( RisGT(approxdual[i], approxdual[i+nrows]) )
-         Rset(tmp, approxdual[i+nrows]);
+      if( RisGT(approxdual[i], approxdual[i+nrowsps]) )
+         Rset(tmp, approxdual[i+nrowsps]);
       else
          Rset(tmp, approxdual[i]);
 
@@ -2430,23 +2454,23 @@ SCIP_RETCODE getPSdual(
       if( RisPositive(tmp) )
       {
          Rdiff(approxdual[i], approxdual[i], tmp);
-         Rdiff(approxdual[i+nrows], approxdual[i+nrows], tmp);
+         Rdiff(approxdual[i+nrowsps], approxdual[i+nrowsps], tmp);
       }
    }
    /* y(lhs) and y(rhs) corresponding to bound constraints */
    for( i = 0; i < ncols; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      if( RisGT(approxdual[i + 2*nrows], approxdual[i + 2*nrows + ncols]) )
-         Rset(tmp, approxdual[i + 2*nrows + ncols]);
+      if( RisGT(approxdual[i + 2*nrowsps], approxdual[i + 2*nrowsps + ncols]) )
+         Rset(tmp, approxdual[i + 2*nrowsps + ncols]);
       else
-         Rset(tmp, approxdual[i + 2*nrows]);
+         Rset(tmp, approxdual[i + 2*nrowsps]);
 
       /* shift if both are nonzero */
       if( RisPositive(tmp) )
       {
-         Rdiff(approxdual[i+2*nrows], approxdual[i+2*nrows], tmp);
-         Rdiff(approxdual[i+2*nrows + ncols], approxdual[i+2*nrows + ncols], tmp);
+         Rdiff(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps], tmp);
+         Rdiff(approxdual[i+2*nrowsps + ncols], approxdual[i+2*nrowsps + ncols], tmp);
       }
    }
 
@@ -2473,22 +2497,38 @@ SCIP_RETCODE getPSdual(
       else
          RsetInt(violation[i], 0, 1);
    }
-   for( i = 0; i < nrows; i++ )
+   for( i = 0; i < nrowsps; i++ )
    {
       for( j = 0; j < lpex->rows[i]->len; j++ )
       {
          currentrow = lpex->rows[i]->cols_index[j];
          Rmult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
          Rdiff(violation[currentrow], violation[currentrow], tmp);
-         Rmult(tmp, approxdual[i+nrows], lpex->rows[i]->vals[j]);
+         Rmult(tmp, approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
          Radd(violation[currentrow], violation[currentrow], tmp);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
-      Rdiff(violation[i], violation[i], approxdual[i+2*nrows]);
-      Radd(violation[i], violation[i], approxdual[i+2*nrows+ncols]);
+      Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
+      Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
+   /* add violations coming from non-initial rows */
+   for( i = nrowsps; i < nrows; ++i )
+   {
+      for( j = 0; j < lpex->rows[i]->len; j++)
+      {
+         if( !usefarkas )
+            RsetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
+         else
+            RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
+
+         currentrow = lpex->rows[i]->cols_index[j];
+         Rmult(tmp, tmp, lpex->rows[i]->vals[j]);
+         Rdiff(violation[currentrow], violation[currentrow], tmp);
+      }
+   }
+
    for( i = 0; i < ncols; i++ )
    {
       if( !RisZero(violation[i]) )
@@ -3042,16 +3082,6 @@ SCIP_RETCODE SCIPcomputeSafeBound(
       case 'e':
          SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                         prob, itlim, lperror, dualfarkas) );
-         break;
-      /* interval neumaier and scherbina */
-      case 'i':
-         SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
-         SCIPABORT();
-         break;
-      /* exact neumaier and scherbina */
-      case 'x':
-         SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
-         SCIPABORT();
          break;
       default:
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
