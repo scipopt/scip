@@ -45,7 +45,7 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXUNKNOWNTERMS       5 /**< default value for parameter maxunknownterms */
+#define DEFAULT_MAXUNKNOWNTERMS       0 /**< default value for parameter maxunknownterms */
 #define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
 #define DEFAULT_MAXNONZEROPROP      0.0 /**< default value for parameter maxnonzeroprop */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
