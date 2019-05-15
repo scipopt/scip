@@ -3275,7 +3275,7 @@ SCIP_RETCODE presolveBinaryProducts(
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
-   printf("call presolveBinaryProducts()\n");
+   SCIPdebugMsg(scip, "call presolveBinaryProducts()\n");
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3289,7 +3289,7 @@ SCIP_RETCODE presolveBinaryProducts(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      printf("  check constraint %s\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "  check constraint %s\n", SCIPconsGetName(conss[c]));
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
