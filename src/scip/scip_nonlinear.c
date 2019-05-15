@@ -994,8 +994,8 @@ void SCIPcomputeBilinEnvelope2(
 
    /* compute cut according to Locatelli 2016 */
    computeBilinEnvelope2(scip, refpointx, refpointy, mi, qi, mj, qj, &xi, &yi, &xj, &yj, &xcoef, &ycoef, &constant);
-   assert(SCIPisEQ(scip, mi*xi + qi, yi));
-   assert(SCIPisEQ(scip, mj*xj + qj, yj));
+   assert(SCIPisRelEQ(scip, mi*xi + qi, yi));
+   assert(SCIPisRelEQ(scip, mj*xj + qj, yj));
 
    /* it might happen that (xi,yi) = (xj,yj) if the two lines intersect */
    if( SCIPisEQ(scip, xi, xj) && SCIPisEQ(scip, yi, yj) )
