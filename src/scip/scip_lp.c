@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_lp.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the LP relaxation, rows and columns
  * @author Tobias Achterberg
  * @author Timo Berthold

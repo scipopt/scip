@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for problem variables
  * @author Tobias Achterberg
  * @author Timo Berthold

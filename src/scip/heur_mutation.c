@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mutation.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that tries to randomly mutate the incumbent solution
  * @author Timo Berthold
  */

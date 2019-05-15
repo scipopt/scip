@@ -26,6 +26,11 @@
  *  - \ref scip::ObjHeur "C++ wrapper class"
  */
 
+/** @defgroup DEFPLUGINS_HEUR Default Primal Heuristics
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default primal heuristics of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_HEUR_H__

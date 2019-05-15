@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for tree compressions
  * @author Jakob Witzig
  */

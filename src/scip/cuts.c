@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cuts.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
  * @author Robert Lion Gottwald

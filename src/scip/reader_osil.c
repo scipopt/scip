@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_osil.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  OS instance language (OSiL) format file reader
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus

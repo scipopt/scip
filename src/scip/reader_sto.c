@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  */

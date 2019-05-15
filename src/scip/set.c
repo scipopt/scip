@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold

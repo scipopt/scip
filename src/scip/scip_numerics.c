@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_numerics.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for numerical tolerances
  * @author Tobias Achterberg
  * @author Timo Berthold

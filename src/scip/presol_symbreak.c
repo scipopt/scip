@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_symbreak.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver for adding symmetry breaking constraints
  * @author Marc Pfetsch
  * @author Thomas Rehn

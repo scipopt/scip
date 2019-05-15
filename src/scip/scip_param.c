@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_param.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for SCIP parameter handling
  * @author Tobias Achterberg
  * @author Timo Berthold

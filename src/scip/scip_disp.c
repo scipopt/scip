@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_disp.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for display handler plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

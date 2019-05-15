@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for managing events
  * @author Tobias Achterberg
  */

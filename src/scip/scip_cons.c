@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_cons.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for constraint handler plugins and constraints
  * @author Tobias Achterberg
  * @author Timo Berthold

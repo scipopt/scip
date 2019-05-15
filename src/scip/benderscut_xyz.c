@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz Benders' decomposition cut
  * @author Stephen J. Maher
  */

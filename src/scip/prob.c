@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.c
+ * @ingroup OTHER_CFILES
  * @brief  Methods and datastructures for storing and manipulating the main problem
  * @author Tobias Achterberg
  */

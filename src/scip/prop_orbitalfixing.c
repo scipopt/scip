@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_orbitalfixing.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  propagator for orbital fixing
  * @author Marc Pfetsch
  *

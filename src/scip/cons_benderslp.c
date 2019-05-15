@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benderslp.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
  *

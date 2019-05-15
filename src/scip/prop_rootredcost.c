@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  reduced cost strengthening using root node reduced costs and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_relax.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for relaxator plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

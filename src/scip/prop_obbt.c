@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    prop_obbt.c
- * @ingroup PROPAGATORS
+ * @ingroup DEFPLUGINS_PROP
  * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  * @author  Benjamin Mueller
