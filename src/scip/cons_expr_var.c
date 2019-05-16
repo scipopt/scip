@@ -445,19 +445,6 @@ SCIP_VAR* SCIPgetConsExprExprVarVar(
    return SCIPgetConsExprExprData(expr)->var;
 }
 
-static
-int compareCons(
-   void* cons1,
-   void* cons2
-   )
-{
-   /* SCIPconsGetPos is "position of constraint in the handler's conss array"
-    * since we only compare expr-constraints, this should be unique
-    * we assume, though, that the position does not change during one solve
-    */
-   return SCIPconsGetPos((SCIP_CONS*)cons1) - SCIPconsGetPos((SCIP_CONS*)cons2);
-}
-
 /** registers event handler to catch variable events on variable
  *
  * Additionally, the given constraint is stored in the data of the variable-expression.
@@ -499,7 +486,11 @@ SCIP_RETCODE SCIPcatchConsExprExprVarEvent(
    exprdata->conss[exprdata->nconss++] = cons;
    /* we're not capturing the constraint here to avoid circular references */
 
-   exprdata->consssorted = exprdata->nconss <= 1;
+   /* updated sorted flag */
+   if( exprdata->nconss <= 1 )
+      exprdata->consssorted = TRUE;
+   else if( exprdata->consssorted )
+      exprdata->consssorted = SCIPcompareConsExprIndex(exprdata->conss[exprdata->nconss-2], exprdata->conss[exprdata->nconss-1]) > 0;
 
    /* catch variable events, if not done so yet (first constraint) */
    if( exprdata->filterpos < 0 )
@@ -541,18 +532,25 @@ SCIP_RETCODE SCIPdropConsExprExprVarEvent(
    assert(exprdata != NULL);
    assert(exprdata->nconss > 0);
 
-   if( !exprdata->consssorted )
+   if( exprdata->conss[exprdata->nconss-1] == cons )
    {
-      SCIPsortPtr((void**)exprdata->conss, compareCons, exprdata->nconss);
-      exprdata->consssorted = TRUE;
+      pos = exprdata->nconss-1;
    }
+   else
+   {
+      if( !exprdata->consssorted )
+      {
+         SCIPsortPtr((void**)exprdata->conss, SCIPcompareConsExprIndex, exprdata->nconss);
+         exprdata->consssorted = TRUE;
+      }
 
-   if( !SCIPsortedvecFindPtr((void**)exprdata->conss, compareCons, cons, exprdata->nconss, &pos) )
-   {
-      SCIPerrorMessage("Constraint <%s> not in constraint array of expression for variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(exprdata->var));
-      return SCIP_ERROR;
+      if( !SCIPsortedvecFindPtr((void**)exprdata->conss, SCIPcompareConsExprIndex, cons, exprdata->nconss, &pos) )
+      {
+         SCIPerrorMessage("Constraint <%s> not in constraint array of expression for variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(exprdata->var));
+         return SCIP_ERROR;
+      }
+      assert(pos >= 0 && pos < exprdata->nconss);
    }
-   assert(pos >= 0 && pos < exprdata->nconss);
    assert(exprdata->conss[pos] == cons);
 
    /* move last constraint into position of removed constraint */

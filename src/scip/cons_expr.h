@@ -1134,6 +1134,28 @@ SCIP_Real SCIPgetRhsConsExpr(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gives the unique index of an expression constraint
+ *
+ * Each expression constraint gets an index assigned when it is created.
+ * This index never changes and is unique among all expression constraints
+ * within the same SCIP instance.
+ * Thus, it can be used to sort a set of expression constraints.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprIndex(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** compares two expression constraints by its index
+ *
+ * Usable as compare operator in array sort functions.
+ */
+SCIP_EXPORT
+int SCIPcompareConsExprIndex(
+   void*                 cons1,
+   void*                 cons2
+   );
+
 /** returns an equivalent linear constraint if possible */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinearConsExpr(

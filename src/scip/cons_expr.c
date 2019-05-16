@@ -155,6 +155,8 @@ struct SCIP_ConsData
    SCIP_VAR*             linvarincr;         /**< variable that may be increased without making any other constraint infeasible, or NULL if none */
    SCIP_Real             linvardecrcoef;     /**< linear coefficient of linvardecr */
    SCIP_Real             linvarincrcoef;     /**< linear coefficient of linvarincr */
+
+   int                   consindex;          /**< an index of the constraint that is unique among all expr-constraints in this SCIP instance and is constant */
 };
 
 /** constraint handler data */
@@ -202,6 +204,8 @@ struct SCIP_ConshdlrData
    SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
    SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
    SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
+
+   int                      lastconsindex;   /**< last used consindex, plus one */
 
    /* parameters */
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
@@ -3035,7 +3039,7 @@ SCIP_RETCODE canonicalizeConstraints(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
-   assert(nconss >= 0);
+   assert(nconss > 0);
    assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3231,27 +3235,39 @@ SCIP_RETCODE canonicalizeConstraints(
    /* replace common subexpressions */
    if( havechange && !*infeasible )
    {
+      SCIP_CONS** consssorted;
+
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
       /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
        * been changed after simplification; now we completely recollect all variable expression and variable events
        */
-      for( i = 0; i < nconss; ++i )
+
+      /* Each variable stores the constraints for which it catched varbound events sorted by the constraint index.
+       * Thus, for performance reasons, it is better to call dropVarEvents in descending order of constraint index.
+       */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &consssorted, conss, nconss) );
+      SCIPsortPtr((void**)consssorted, SCIPcompareConsExprIndex, nconss);
+
+      for( i = nconss-1; i >= 0; --i )
       {
-         if( SCIPconsIsDeleted(conss[i]) )
+         assert(i == 0 || SCIPcompareConsExprIndex((void*)consssorted[i-1], (void*)consssorted[i]) < 0);
+         if( SCIPconsIsDeleted(consssorted[i]) )
             continue;
 
-         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, consssorted[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(consssorted[i])) );
       }
       for( i = 0; i < nconss; ++i )
       {
-         if( SCIPconsIsDeleted(conss[i]) )
+         if( SCIPconsIsDeleted(consssorted[i]) )
             continue;
 
-         SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
-         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(consssorted[i])) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, consssorted[i]) );
       }
+
+      SCIPfreeBufferArray(scip, &consssorted);
    }
 
    /* restore locks */
@@ -6512,15 +6528,25 @@ static
 SCIP_DECL_CONSEXIT(consExitExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS** consssorted;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( i = 0; i < nconss; ++i )
+   if( nconss > 0 )
    {
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      /* for better performance of dropVarEvents, we sort by index, descending */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &consssorted, conss, nconss) );
+      SCIPsortDownPtr((void**)consssorted, SCIPcompareConsExprIndex, nconss);
+
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, consssorted[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(consssorted[i])) );
+      }
+
+      SCIPfreeBufferArray(scip, &consssorted);
    }
 
    conshdlrdata->subnlpheur = NULL;
@@ -7092,6 +7118,12 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    int c;
 
    *result = SCIP_DIDNOTFIND;
+
+   if( nconss == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* simplify constraints and replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, &infeasible, ndelconss) );
@@ -11253,6 +11285,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    /* TODO: (optional) modify the definition of the SCIPcreateConsExpr() call, if you don't need all the information */
 
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    assert(expr != NULL);
@@ -11264,6 +11297,8 @@ SCIP_RETCODE SCIPcreateConsExpr(
       SCIPerrorMessage("expr constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* TODO remove this once we allow for local expression constraints */
    if( local && SCIPgetDepth(scip) != 0 )
@@ -11284,6 +11319,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    consdata->expr = expr;
    consdata->lhs = lhs;
    consdata->rhs = rhs;
+   consdata->consindex = conshdlrdata->lastconsindex++;
 
    /* capture expression */
    SCIPcaptureConsExprExpr(consdata->expr);
@@ -11373,6 +11409,42 @@ SCIP_Real SCIPgetRhsConsExpr(
    assert(consdata != NULL);
 
    return consdata->rhs;
+}
+
+/** gives the unique index of an expression constraint
+ *
+ * Each expression constraint gets an index assigned when it is created.
+ * This index never changes and is unique among all expression constraints
+ * within the same SCIP instance.
+ * Thus, it can be used to sort a set of expression constraints.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprIndex(
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->consindex;
+}
+
+/** compares two expression constraints by its index
+ *
+ * Usable as compare operator in array sort functions.
+ */
+SCIP_EXPORT
+int SCIPcompareConsExprIndex(
+   void*                 cons1,
+   void*                 cons2
+   )
+{
+   return SCIPgetConsExprIndex((SCIP_CONS*)cons1) - SCIPgetConsExprIndex((SCIP_CONS*)cons2);
 }
 
 /** returns an equivalent linear constraint if possible */
