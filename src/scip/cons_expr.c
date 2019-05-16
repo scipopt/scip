@@ -3235,6 +3235,82 @@ SCIP_RETCODE getBinaryProductVarexpr(
    return SCIP_OKAY;
 }
 
+/** helper function to replace binary products in a given expression constraints */
+static
+SCIP_RETCODE replaceBinaryProducts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
+   SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
+   int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* varexpr;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(exprmap != NULL);
+   assert(it != NULL);
+   assert(naddconss != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   SCIPdebugMsg(scip, "  check constraint %s\n", SCIPconsGetName(cons));
+
+   for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      int prodexpridx;
+
+      prodexpridx = SCIPexpriteratorGetChildIdxDFS(it);
+      assert(prodexpridx >= 0 && prodexpridx <= SCIPgetConsExprExprNChildren(expr));
+      prodexpr = SCIPexpriteratorGetChildExprDFS(it);
+      assert(prodexpr != NULL);
+
+      /* try to create a variable expression that represents a product of binary variables */
+      SCIP_CALL( getBinaryProductVarexpr(scip, conshdlr, exprmap, prodexpr, &varexpr, naddconss) );
+      if( varexpr == NULL )
+         continue;
+
+      assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr) == varexpr);
+      assert(naddconss == NULL || *naddconss > 0);
+
+      /* replace product expression */
+      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, varexpr) );
+
+      /* note that the variable expression has been captures by getBinaryProductVarexpr and SCIPreplaceConsExprExprChild */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** helper function to replace products of binary variables but before factorizing variables */
+static
+SCIP_RETCODE replaceBinaryProductsFactorize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
+   SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
+   int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(exprmap != NULL);
+   assert(it != NULL);
+   assert(naddconss != NULL);
+
+
+   return SCIP_OKAY;
+}
+
 /** reformulates products of binary variables during presolving */
 static
 SCIP_RETCODE presolveBinaryProducts(
@@ -3272,42 +3348,9 @@ SCIP_RETCODE presolveBinaryProducts(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSDATA* consdata;
-      SCIP_CONSEXPR_EXPR* varexpr;
 
-      assert(conss[c] != NULL);
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-      assert(consdata->expr != NULL);
-
-      SCIPdebugMsg(scip, "  check constraint %s\n", SCIPconsGetName(conss[c]));
-
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_CONSEXPR_EXPR* prodexpr;
-         int prodexpridx;
-
-         prodexpridx = SCIPexpriteratorGetChildIdxDFS(it);
-         assert(prodexpridx >= 0 && prodexpridx <= SCIPgetConsExprExprNChildren(expr));
-         prodexpr = SCIPexpriteratorGetChildExprDFS(it);
-         assert(prodexpr != NULL);
-
-         /* try to create a variable expression that represents a product of binary variables */
-         SCIP_CALL( getBinaryProductVarexpr(scip, conshdlr, exprmap, prodexpr, &varexpr, naddconss) );
-         if( varexpr == NULL )
-            continue;
-
-         assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr) == varexpr);
-         assert(naddconss == NULL || *naddconss > 0);
-
-         /* replace product expression */
-         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, varexpr) );
-
-         /* note that the variable expression has been captures by getBinaryProductVarexpr and SCIPreplaceConsExprExprChild */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
-      }
+      /* replace each product of binary variables separately */
+      SCIP_CALL( replaceBinaryProducts(scip, conshdlr, conss[c], exprmap, it, naddconss) );
    }
 
    /* free memory */
