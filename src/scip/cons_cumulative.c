@@ -4661,8 +4661,8 @@ SCIP_RETCODE propagateUbTTEF(
    )
 {
    int coreEnergyAfterEnd;
-   int maxavailable;
-   int minavailable;
+   SCIP_Longint maxavailable;
+   SCIP_Longint minavailable;
    int totalenergy;
    int nests;
    int est;
@@ -4691,7 +4691,7 @@ SCIP_RETCODE propagateUbTTEF(
    end = hmax + 1;
    coreEnergyAfterEnd = -1;
 
-   maxavailable = (hmax - hmin) * capacity;
+   maxavailable = (hmax - hmin) * ((SCIP_Longint) capacity);
    minavailable = maxavailable;
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
@@ -4774,7 +4774,7 @@ SCIP_RETCODE propagateUbTTEF(
       for( i = nests-1; i >= 0; --i )
       {
          SCIP_VAR* var;
-         int freeenergy;
+         SCIP_Longint freeenergy;
          int duration;
          int demand;
          int begin;
@@ -4889,7 +4889,7 @@ SCIP_RETCODE propagateUbTTEF(
          assert(coreEnergyAfterEst[i] >= coreEnergyAfterEnd);
 
          /* compute the energy which is not used yet */
-         freeenergy = capacity * (end - begin) - flexenergy - coreEnergyAfterEst[i] + coreEnergyAfterEnd;
+         freeenergy = ((SCIP_Longint) capacity) * (end - begin) - flexenergy - coreEnergyAfterEst[i] + coreEnergyAfterEnd;
 
          /* check overload */
          if( freeenergy < 0 )
@@ -5012,8 +5012,8 @@ SCIP_RETCODE propagateLbTTEF(
    )
 {
    int coreEnergyAfterStart;
-   int maxavailable;
-   int minavailable;
+   SCIP_Longint maxavailable;
+   SCIP_Longint minavailable;
    int totalenergy;
    int nlcts;
    int begin;
@@ -5045,7 +5045,7 @@ SCIP_RETCODE propagateLbTTEF(
    hmin = MAX(hmin, minest);
    hmax = MIN(hmax, maxlct);
 
-   maxavailable = (hmax - hmin) * capacity;
+   maxavailable = (hmax - hmin) * ((SCIP_Longint) capacity);
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
    /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
@@ -5103,7 +5103,7 @@ SCIP_RETCODE propagateLbTTEF(
       for( i = nlcts; i < nvars; ++i )
       {
          SCIP_VAR* var;
-         int freeenergy;
+         SCIP_Longint freeenergy;
          int duration;
          int demand;
          int idx;
@@ -5218,7 +5218,7 @@ SCIP_RETCODE propagateLbTTEF(
          assert(coreEnergyAfterLct[i] <= coreEnergyAfterStart);
 
          /* compute the energy which is not used yet */
-         freeenergy = capacity * (end - begin) - flexenergy - coreEnergyAfterStart + coreEnergyAfterLct[i];
+         freeenergy = ((SCIP_Longint) capacity) * (end - begin) - flexenergy - coreEnergyAfterStart + coreEnergyAfterLct[i];
 
          /* check overload */
          if( freeenergy < 0 )
