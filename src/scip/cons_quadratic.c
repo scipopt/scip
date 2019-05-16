@@ -16976,6 +16976,7 @@ SCIP_Real SCIPscaleupRowprep(
       factor = SCIPscaleRowprep(rowprep, factor);
 
 #ifdef SCIP_DEBUG
+      factor = pow(2.0, factor);  /* SCIPscaleRowprep() actually returned log2 of factor */
       maxval *= factor;
       SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g (minfrac=%g, minscaleup=%g), maxval is now %g\n", factor, minfrac, minscaleup, maxval);
       SCIPprintRowprep(scip, rowprep, NULL);
