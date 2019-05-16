@@ -1661,6 +1661,105 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityProduct)
    return SCIP_OKAY;
 }
 
+/** expression branching score callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
+{
+   SCIP_Real auxval;
+   SCIP_Real violation;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childauxvar;
+   SCIP_Bool havewideinteger;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+
+   *success = FALSE;
+
+   /* get value of auxiliary variable of this expression */
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+   if( auxvalue == auxval )  /* absolute no violation */ /*lint !e777*/
+      return SCIP_OKAY;
+
+   violation = REALABS(auxvalue - auxval);
+
+   /* Add violation as branching score to only those children that would be fixed after branching on it
+    * as the children may not be actual variables that are branched on, but the branching score might be
+    * propagated down the tree first, we consider children with an auxiliary variable (that would be all
+    * if this exprhdlr is also used for estimate/separate) and then check the auxiliary variable whether
+    * it appears to be binary (locally).
+    * Also count number of discrete variables that would not be fixed after branching.
+    */
+   havewideinteger = FALSE;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      childauxvar = SCIPgetConsExprExprAuxVar(child);
+      if( childauxvar == NULL )
+         continue;
+      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+      /* skip fixed children */
+      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) < 0.5 )
+         continue;
+      /* skip children with wide bounds (consider in fallback below) */
+      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) >= 2.0 )
+      {
+         havewideinteger = TRUE;
+         continue;
+      }
+
+      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
+      *success = TRUE;
+   }
+
+   /* if we passed on some branching score then we are done */
+   if( *success )
+      return SCIP_OKAY;
+
+   /* if there are no unfixed discrete children, then fall back to default rule */
+   if( !havewideinteger )
+      return SCIP_OKAY;
+
+   /* pass branching score to all unfixed discrete children not at their bound (could be all children, in which case it is like the nlhdlr's default) */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_Real auxvarval;
+      SCIP_Real auxvarlb;
+      SCIP_Real auxvarub;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      childauxvar = SCIPgetConsExprExprAuxVar(child);
+      if( childauxvar == NULL )
+         continue;
+      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      auxvarval = SCIPgetSolVal(scip, sol, childauxvar);
+      auxvarlb = SCIPvarGetLbLocal(childauxvar);
+      auxvarub = SCIPvarGetUbLocal(childauxvar);
+
+      /* if at lower bound, then skip */
+      if( !SCIPisInfinity(scip, -auxvarlb) && SCIPisFeasEQ(scip, auxvarval, auxvarlb) )
+         continue;
+      /* if at upper bound, then skip */
+      if( !SCIPisInfinity(scip,  auxvarub) && SCIPisFeasEQ(scip, auxvarval, auxvarub) )
+         continue;
+
+      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
+      *success = TRUE;
+   }
+
+   /* if we didn't add branchscore for any child, then fall back to nlhdlr_default's branchscore rule */
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1699,6 +1798,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreProduct) );
 
    return SCIP_OKAY;
 }
