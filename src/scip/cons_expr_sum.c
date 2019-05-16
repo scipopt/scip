@@ -476,6 +476,53 @@ SCIP_RETCODE simplifyTerm(
       SCIP_CALL( createExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
                SCIPgetConsExprExprSumCoefs(expr), coef, SCIPgetConsExprExprNChildren(expr), simplifiedterm) );
    }
+   /* enforce SS9 */
+   else if( REALABS(coef) != 1.0 && strcmp(exprtype, "prod") == 0 )
+   {
+      SCIP_CONSEXPR_EXPR* expchild = NULL;
+      int i;
+
+      for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      {
+         SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+         assert(child != NULL);
+
+         if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "exp") == 0 )
+         {
+            expchild = child;
+            break;
+         }
+      }
+
+      if( expchild != NULL )
+      {
+         SCIP_CONSEXPR_EXPR* child;
+         SCIP_Real constant;
+
+         child = SCIPgetConsExprExprChildren(expchild)[0];
+         assert(child != NULL);
+
+         /* check whether the child of the exponential expression is a sum */
+         if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "sum") == 0 )
+         {
+            if( coef > 0.0 )
+            {
+               constant = log(coef);
+               coef = 1.0;
+            }
+            else
+            {
+               constant = log(-(coef));
+               coef = -1.0;
+            }
+
+            constant += SCIPgetConsExprExprSumConstant(child);
+            SCIPsetConsExprExprSumConstant(child, constant);
+         }
+      }
+
+      SCIP_CALL( createExprNode(scip, expr, coef, simplifiedterm) );
+   }
    else
    {
       /* other types of (simplified) expressions can be a child of a simplified sum */

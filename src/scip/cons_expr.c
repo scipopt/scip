@@ -10389,6 +10389,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    SS6: it has at least one child
  *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
  *    SS8: no child has coefficient 0
+ *    SS9: if a child c is an exponential or a product that has an exponential expression as one of its factors, then the coefficient of c is +/-1.0
  *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
  * - it is a function with simplified arguments, but not all of them can be values
  * ? a logarithm doesn't have a product as a child
