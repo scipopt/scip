@@ -3588,8 +3588,8 @@ SCIP_RETCODE SCIPhashsetCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
 
-   /* dont create too small hashtables, i.e. at least size 32, and increase
-    * the given size by divinding it by 0.9, since then no rebuilding will
+   /* do not create too small hashtables, i.e. at least size 32, and increase
+    * the given size by dividing it by 0.9, since then no rebuilding will
     * be necessary if the given number of elements are inserted. Finally round
     * to the next power of two.
     */
