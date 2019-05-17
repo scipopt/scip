@@ -11418,7 +11418,6 @@ SCIP_Real SCIPgetRhsConsExpr(
  * within the same SCIP instance.
  * Thus, it can be used to sort a set of expression constraints.
  */
-SCIP_EXPORT
 int SCIPgetConsExprIndex(
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -11438,7 +11437,6 @@ int SCIPgetConsExprIndex(
  *
  * Usable as compare operator in array sort functions.
  */
-SCIP_EXPORT
 int SCIPcompareConsExprIndex(
    void*                 cons1,
    void*                 cons2

@@ -579,7 +579,6 @@ SCIP_RETCODE SCIPdropConsExprExprVarEvent(
 
 
 /** gives number of constraints for which the expression catches bound change events on the variable */
-SCIP_EXPORT
 int SCIPgetConsExprExprVarNConss(
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    )
@@ -596,7 +595,6 @@ int SCIPgetConsExprExprVarNConss(
 }
 
 /** gives constraints for which the expression catches bound change events on the variable */
-SCIP_EXPORT
 SCIP_CONS** SCIPgetConsExprExprVarConss(
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    )
