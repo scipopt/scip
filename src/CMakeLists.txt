@@ -319,6 +319,7 @@ set(scipsources
     scip/sepastoreex.c
     scip/set.c
     scip/sol.c
+    scip/solex.c
     scip/solve.c
     scip/stat.c
     scip/syncstore.c
