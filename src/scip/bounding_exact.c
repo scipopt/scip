@@ -47,6 +47,8 @@
 #define PSWARMSTARTAUXPROB         TRUE
 #define PSPOSTPROCESSDUALSOL       TRUE
 
+
+
 static
 SCIP_RETCODE solveLpExact(
    SCIP_LP*              lp,                 /**< LP data */
@@ -111,6 +113,8 @@ SCIP_RETCODE solveLpExact(
       SCIPdebugMessage("Error solving lp exactly in node %"SCIP_LONGINT_FORMAT" \n", SCIPnodeGetNumber(SCIPgetCurrentNode(set->scip)));
    }
 
+   lpex->solved = TRUE;
+
    SCIPlpiexGetIterations(lpex->lpiex, &niterations);
    if( usefarkas )
       stat->niterationsexlpinf += niterations;
@@ -119,53 +123,51 @@ SCIP_RETCODE solveLpExact(
 
    if( SCIPlpiexIsOptimal(lpex->lpiex) )
    {
-      if( usefarkas )
-         SCIPdebugMessage("Failed to prove infeasibility, exact lp is solved optimally \n");
-
       /* evaluate solution status and set safe bound correctly */
-      SCIP_CALL( SCIPlpiexGetSol(lpex->lpiex, lpex->lpobjval, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpexGetSol(lpex, set, stat, NULL, NULL) );
       SCIP_CALL( SCIPlpiexGetObjval(lpex->lpiex, lpex->lpobjval) );
       SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
             RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
       lp->lpobjval = RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
-
+   else if( SCIPlpiexIsPrimalUnbounded(lpex->lpiex) )
+   {
+      /** @todo exip: where to save the ray? */
+      SCIP_CALL( SCIPlpexGetPrimalRay(lpex, set, NULL) );
+      lp->hasprovedbound = TRUE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
+   }
+   else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
+   {
+      SCIP_Bool valid;
+      SCIP_CALL( SCIPlpexGetDualfarkas(lpex, set, stat, &valid) );
+      if( valid )
+      {
+         lp->hasprovedbound = TRUE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+      }
+   }
+   else
+   {
+      lp->hasprovedbound = FALSE;
+      SCIPdebugMessage("Exact lp solve failed. Terminated with status %d \n", SCIPlpiexGetInternalStatus(lpex->lpiex));
+      if( usefarkas )
+         stat->nfailexlpinf++;
+      else
+         stat->nfailexlp++;
+   }
    /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
    {
-      if( !SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
-         stat->nfailexlpinf++;
-      else
-         lp->hasprovedbound = TRUE;
-
       SCIPclockStop(stat->provedinfeaslptime, set);
       stat->nexlpinf++;
    }
    else
    {
-      if( !SCIPlpiexIsOptimal(lpex->lpiex) )
-         stat->nfailexlp++;
-
       SCIPclockStop(stat->provedfeaslptime, set);
       stat->nexlp++;
-      if( !SCIPsetIsInfinity(set, -1.0 * (lp->lpobjval)) )
-      {
-#ifdef WITH_EXACTSOLVE
-         /* SCIP_CONS** conss;
-
-         conss = SCIPgetConss(set->scip);
-         assert(conss != NULL);
-         assert(SCIPgetnrows(set->scip) == 1); */
-
-         //SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *safebound) );
-#endif
-         lp->hasprovedbound = TRUE;
-      }
-      else
-      {
-         assert(!lp->hasprovedbound);
-      }
    }
 
    SCIPsetFreeBufferArray(set, &rstat);
