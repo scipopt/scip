@@ -99,7 +99,8 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
       {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
       {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
-      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"}
+      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
+      {"exp(<x>)^2", "exp"}
 
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
@@ -413,5 +414,10 @@ Test(simplify, more_simplification_tests)
    cr_assert_not_null(simplified);
 
    cr_expect_eq(SCIPgetConsExprExprNChildren(simplified), 2, "got %d", SCIPgetConsExprExprNChildren(simplified));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+
+   parseSimplifyCheck(scip, "(exp(<x>/2.0))^2.0", "exp", &simplified);
+   cr_assert_not_null(simplified);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(simplified)[0]));
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
 }
