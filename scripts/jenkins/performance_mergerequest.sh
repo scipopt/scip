@@ -19,7 +19,7 @@
 # GITBRANCH | master                                   | master, bugfix
 
 echo "This is performance_mergerequest.sh running."
-: ${TESTMODE:="full"}
+: ${TESTMODE:="all"}
 
 ######################################
 ### evaluate commandline arguments ###
@@ -28,11 +28,13 @@ echo "This is performance_mergerequest.sh running."
 export GITBRANCH=${gitlabTargetBranch}
 
 if [ "${GITBRANCH}" != "master" ]; then
-  if [[ ${GITBRANCH} =~ "bugfix" ]]; then
-    GITBRANCH=bugfix
-  else
-    echo "Branch is neither 'master' nor 'bugfix'. Something is wrong. Exiting."
-    exit 1
+  if [ "${GITBRANCH}" != "consexpr" ]; then
+    if [[ ${GITBRANCH} =~ "bugfix" ]]; then
+      GITBRANCH=bugfix
+    else
+      echo "Branch is neither 'master' nor 'bugfix'. Something is wrong. Exiting."
+      exit 1
+    fi
   fi
 fi
 
@@ -41,7 +43,11 @@ export MODE=performance
 # This soplex there is installed on pushes to soplex by the jenkins job SOPLEX_install_${GITBRANCH}.
 # We have to export these variables to make them available to cmake.
 # Scripts will also use nonexported variables correctly.
-export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_master_Release/
+else
+  export SOPLEX_DIR=/nfs/OPTI/adm_timo/soplex_${GITBRANCH}_Release/
+fi
 
 export CRITERION_DIR=""
 export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
@@ -73,12 +79,18 @@ declare -A JOBS
 # for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running
 
-if [ "${TESTMODE}" == "full" ]; then
+if [ "${TESTMODE}" == "all" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
   JOBS[2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
   JOBS[3]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
-else
+elif [ "${TESTMODE}" == "short" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=mip-dbg TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
+elif [ "${TESTMODE}" == "mipdev-solvable" ]; then
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
+elif [ "${TESTMODE}" == "minlpdev-solvable" ]; then
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
+elif [ "${TESTMODE}" == "sapdev-solvable" ]; then
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 fi
 
 SAPSETTINGS=sap-next-release-pure-diff
