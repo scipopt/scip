@@ -1215,6 +1215,7 @@ SCIP_Bool RroundInteger(
       *retval = mpz_get_si(roundint);
       success = TRUE;
    }
+   mpz_clear(roundint);
 
    return success;
 }
