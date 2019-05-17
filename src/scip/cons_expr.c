@@ -10349,6 +10349,20 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  * In particular Chapter 3
  * The other fountain of inspiration is the current simplifying methods in expr.c.
  *
+ * Note: The things to keep in mind when adding simplification rules are the following.
+ * I will be using the product expressions as an example.
+ * There are mainly 3 parts of the simplification process. You need to decide
+ * at which stage the simplification rule makes sense.
+ * 1. Simplify each factor (simplifyFactor): At this stage we got the children of the product expression.
+ * At this point, each child is simplified when viewed as a stand-alone
+ * expression, but not necessarily when viewed as child of a product
+ * expression. Rules like SP2, SP7, etc are enforced at this point.
+ * 2. Multiply the factors (mergeProductExprlist): At this point rules like SP4, SP5 and SP14 are enforced.
+ * 3. Build the actual simplified product expression (buildSimplifiedProduct):
+ * At this point rules like SP10, SP11, etc are enforced.
+ *
+ * **During step 1. and 2. do not forget to set the flag changed to TRUE when something actually changes**
+ *
  * Definition of simplified expressions
  * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  * An expression is simplified if it
@@ -10362,13 +10376,13 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    SP7:  no child is a value
  *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
  *    SP10: it has at least two children
- *    ? at most one child is an exp
  *    ? at most one child is an abs
  *    SP11: no two children are expr*log(expr)
  *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
  *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
  *    SP12: if it has two children, then neither of them is a sum (expand sums)
  *    SP13: no child is a sum with a single term
+ *    SP14: at most one child is an exp
  * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
@@ -10380,6 +10394,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    POW8: if exponent is integer, its child is not a power
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
  *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
+ *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum

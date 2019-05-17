@@ -93,7 +93,13 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"<x>*(<x>+1)", "sum"},
       {"2*<x>*(<x>+1)", "sum"},
       {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
-      {"(25.0 * <x>^2)^0.5", "sum"}
+      {"(25.0 * <x>^2)^0.5", "sum"},
+      {"exp(<x>)*exp(<y>)", "exp"},
+      {"exp(<x>)*exp(-<x>)", "val"},
+      {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
+      {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
+      {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
+      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"}
 
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
@@ -124,7 +130,7 @@ static SCIP_VAR* multiagg2;
 
 /* helper method */
 static
-void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
+void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CONSEXPR_EXPR** simplifiedexpr)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
@@ -185,10 +191,18 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type)
    cr_expect_not(changed);
    cr_assert_not(infeasible);
 
+
    /* release expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified_again) );
+
+   if( simplifiedexpr != NULL )
+      *simplifiedexpr = simplified;
+   else
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+   }
+
 }
 
 /** execution method of presolver */
@@ -216,7 +230,7 @@ SCIP_DECL_PRESOLEXEC(presolExec)
       SCIP_CALL( SCIPsetSolVal(scip, sol2, multiagg1, -16.78827) );
 
       /* simplify */
-      parseSimplifyCheck(scip, "<t_multiagg1>", "sum");
+      parseSimplifyCheck(scip, "<t_multiagg1>", "sum", NULL);
    }
 
    /* TEST fixed variable */
@@ -227,7 +241,7 @@ SCIP_DECL_PRESOLEXEC(presolExec)
       cr_assert(!infeasible && success);
 
       /* simplify */
-      parseSimplifyCheck(scip, "<t_fixvar>", "val");
+      parseSimplifyCheck(scip, "<t_fixvar>", "val", NULL);
    }
 
    /* TEST multi-aggregated variable to fixed variabe */
@@ -247,7 +261,7 @@ SCIP_DECL_PRESOLEXEC(presolExec)
       SCIP_CALL( SCIPsetSolVal(scip, sol2, multiagg2, 2.85) );
 
       /* simplify */
-      parseSimplifyCheck(scip, "<t_multiagg2>", "val");
+      parseSimplifyCheck(scip, "<t_multiagg2>", "val", NULL);
    }
 
    /* TEST aggregated variable */
@@ -263,7 +277,7 @@ SCIP_DECL_PRESOLEXEC(presolExec)
       SCIP_CALL( SCIPsetSolVal(scip, sol2, agg1, 1.088372) );
 
       /* simplify */
-      parseSimplifyCheck(scip, "<t_agg1>", "sum");
+      parseSimplifyCheck(scip, "<t_agg1>", "sum", NULL);
    }
 
    /* TEST aggregated variable to single var*/
@@ -279,7 +293,7 @@ SCIP_DECL_PRESOLEXEC(presolExec)
       SCIP_CALL( SCIPsetSolVal(scip, sol2, agg2, 0.7463) );
 
       /* simplify */
-      parseSimplifyCheck(scip, "<t_agg2>", "var");
+      parseSimplifyCheck(scip, "<t_agg2>", "var", NULL);
    }
    return SCIP_OKAY;
 }
@@ -358,20 +372,46 @@ TestSuite(simplify, .init = setup, .fini = teardown);
 /* actual test; we get one parameter as argument */
 ParameterizedTest(const struct expr_type* expression, simplify, simplify_test)
 {
-   //fprintf(stderr,"received %s and %s\n", expression->expr, expression->type);
-   parseSimplifyCheck(scip, expression->expr, expression->type);
+   fprintf(stderr,"received %s and %s\n", expression->expr, expression->type);
+   parseSimplifyCheck(scip, expression->expr, expression->type, NULL);
 }
 
-/* non-parametrized test, which calls presolve */
+/* to debug parameterized test, since it doesn't work with --single :/ */
+//Test(simplify, debug)
+//{
+//   fprintf(stderr,"blabla\n");
+//   parseSimplifyCheck(scip, "<x>*(<x>+1)", "sum", NULL);
+//}
+
+
+/* non-parametrized test, which calls presolve: tests aggregation */
 Test(simplify, remove_fix_variables)
 {
    SCIP_CALL( SCIPpresolve(scip) );
    SCIP_CALL( SCIPfreeTransform(scip) ); /* why do I need to call this one before freeing the sols? */
 }
 
-/* parameterized test don't work with --single :/ */
-//Test(simplify, debug)
-//{
-//   fprintf(stderr,"blabla\n");
-//   parseSimplifyCheck(scip, "<x>*(<x>+1)", "sum");
-//}
+
+/* further simplification tests */
+Test(simplify, more_simplification_tests)
+{
+   SCIP_CONSEXPR_EXPR* simplified = NULL;
+
+   parseSimplifyCheck(scip, "<x>*exp(<x>)*exp(<x>)", "prod", &simplified);
+   cr_assert_not_null(simplified);
+
+   cr_expect_eq(SCIPgetConsExprExprNChildren(simplified), 2, "got %d", SCIPgetConsExprExprNChildren(simplified));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+
+   parseSimplifyCheck(scip, "<x>*exp(<x>)*exp(<y>)", "prod", &simplified);
+   cr_assert_not_null(simplified);
+
+   cr_expect_eq(SCIPgetConsExprExprNChildren(simplified), 2, "got %d", SCIPgetConsExprExprNChildren(simplified));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+
+   parseSimplifyCheck(scip, "<x>*exp(-<x>)*exp(<x>+<y>)", "prod", &simplified);
+   cr_assert_not_null(simplified);
+
+   cr_expect_eq(SCIPgetConsExprExprNChildren(simplified), 2, "got %d", SCIPgetConsExprExprNChildren(simplified));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+}
