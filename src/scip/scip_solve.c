@@ -49,6 +49,7 @@
 #include "scip/benderscut.h"
 #include "scip/branch.h"
 #include "scip/branch_nodereopt.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/compr.h"
 #include "scip/concsolver.h"
@@ -1661,6 +1662,9 @@ SCIP_RETCODE initSolve(
    /* possibly create visualization output file */
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
+   /* possibly create a certificate output file */
+   SCIP_CALL( SCIPcertificateInit(scip, SCIPgetCertificate(scip), scip->mem->probmem, scip->set, scip->messagehdlr) );
+
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
@@ -1732,7 +1736,7 @@ SCIP_RETCODE initSolve(
          objbound = SCIPnextafter(objbound, SCIP_REAL_MAX);
 
       /* update cutoff bound */
-      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) )
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) && !SCIPisExactSolve(scip) )
       {
          /* adjust cutoff bound */
          SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -1816,6 +1820,12 @@ SCIP_RETCODE freeSolve(
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
+   /* print DER header after clearing the tree in order to get the count right */
+   if( SCIPgetCertificate(scip) != NULL )
+   {
+      SCIPcertificatePrintDerHeader(SCIPgetCertificate(scip));
+   }
+
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
 
@@ -1830,6 +1840,9 @@ SCIP_RETCODE freeSolve(
       SCIP_CALL( SCIPsepastoreexFree(&scip->sepastoreex, scip->mem->probmem) );
    }
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
+
+   /* possibly close CERTIFICATE output file */
+   SCIPcertificateExit(scip->stat->certificate, scip->set, scip->messagehdlr);
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);

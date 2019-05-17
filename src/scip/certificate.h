@@ -30,7 +30,9 @@
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
 #include "scip/type_solex.h"
+#include "scip/type_lpex.h"
 #include "scip/pub_fileio.h"
+#include "scip/type_prob.h"
 #include "gmp.h"
 
 #ifdef __cplusplus
@@ -53,6 +55,7 @@ void SCIPcertificateFree(
 /** initializes certificate information and creates files for certificate output */
 extern
 SCIP_RETCODE SCIPcertificateInit(
+   SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -206,12 +209,20 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
 extern
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,               /**< problem data */
    const char*           linename,           /**< name of the unsplitting line */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   len,                /**< number of dual multipiers */
    int*                  ind,                /**< index array */
    SCIP_Rational**       val                 /**< array of dual multipliers */
+   );
+
+/** Print a dual bound from an exact lp solution */
+SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
+   SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
+   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_SET*             set,                /**< scip settings */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** prints unsplitting information to proof section */

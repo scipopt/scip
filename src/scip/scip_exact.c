@@ -127,6 +127,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/struct_certificate.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -235,3 +236,30 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
                                               *   active variables */
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
+
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPisCertificateActive(
+   SCIP*                 scip                /**< certificate information */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   return (scip->stat->certificate != NULL && scip->stat->certificate->file != NULL);
+}
+
+/** returns certificate data structure
+ *
+ *  @return tolerance certificate data structure
+ */
+SCIP_CERTIFICATE* SCIPgetCertificate(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->stat->certificate;
+}

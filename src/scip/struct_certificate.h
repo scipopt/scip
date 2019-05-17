@@ -48,6 +48,8 @@ struct SCIP_Certificate
 {
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHTABLE*       varboundtable;      /**< hash table for mapping variable bounds to line index in file */
+   SCIP_CERTIFICATEBOUND** boundvals;          /**< array to store rationals in varboundtable to avoid memory leak */
+   int boundvalsize;
    struct SCIP_CertificateBound* workbound;  /**< temporary memory for hashing bound information */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
@@ -57,6 +59,7 @@ struct SCIP_Certificate
    char*                 derivationfilename; /**< name of the derivation file */
    char*                 objstring;          /**< string for buffering the objective function */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
+   SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
 };
 
 #ifdef __cplusplus

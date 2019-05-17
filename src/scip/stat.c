@@ -38,6 +38,7 @@
 #include "scip/struct_stat.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "scip/certificate.h"
 
 
 
@@ -90,6 +91,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
+   SCIP_CALL( SCIPcertificateCreate(&(*stat)->certificate, messagehdlr ) );
 
    SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
 
@@ -153,6 +155,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvisualFree(&(*stat)->visual);
+   SCIPcertificateFree(&(*stat)->certificate);
 
    SCIPregressionFree(&(*stat)->regressioncandsobjval);
 

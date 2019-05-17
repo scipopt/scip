@@ -28,6 +28,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
+#include "scip/certificate.h"
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
@@ -2365,8 +2366,13 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
       SCIPABORT();
    }
-
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
+
+   if( SCIPcertificateIsActive(stat->certificate) && lpobjval > node->lowerbound )
+   {
+      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, transprob) );
+   }
+
 
    SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 

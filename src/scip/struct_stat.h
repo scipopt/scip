@@ -41,6 +41,7 @@
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
 #include "scip/type_misc.h"
+#include "scip/type_certificate.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,6 +173,7 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
    SCIP_VISUAL*          visual;             /**< visualization information */
+   SCIP_CERTIFICATE*     certificate;        /**< CERTIFICATE Tool information */
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */

@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpex.h"
 #include "scip/type_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -347,6 +348,15 @@ void SCIPgetDualfarkasExactLinear(
  */
 EXTERN
 SCIP_ROW* SCIPgetRowExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+EXTERN
+SCIP_ROWEX* SCIPgetRowexExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

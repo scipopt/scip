@@ -22,6 +22,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "blockmemshell/memory.h"
+#include "scip/certificate.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_exactlp.h"
 #include "scip/cons_linear.h"
@@ -33,6 +34,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_lp.h"
+#include "scip/lpex.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -62,6 +64,7 @@
 #include "scip/scip_var.h"
 #include "scip/sepastoreex.h"
 #include "scip/struct_scip.h"
+#include "scip/struct_certificate.h"
 #include <ctype.h>
 #include <string.h>
 #ifdef SCIP_WITH_MPFR
@@ -15492,6 +15495,103 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE printCertificateConsLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_CONSDATA* consdata;
+   SCIP_ROWEX* row;
+   SCIP_COLEX** cols;
+   SCIP_VAR* var;
+   SCIP_Rational** vals;
+   SCIP_Rational* lhs;
+   SCIP_Rational* rhs;
+   SCIP_Bool isupper;
+   int* varsindex;
+   int i;
+   void* image;
+
+   /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   /* print constraint into certificate output */
+   if( SCIPcertificateIsActive(SCIPgetCertificate(scip)) )
+   {
+      certificate = SCIPgetCertificate(scip);
+      consdata = SCIPconsGetData(cons);
+      row = SCIPgetRowexExactLinear(scip, cons);
+      assert(row != NULL);
+
+      /* in case the row is a bound change (i.e. a row with only one variable), we add the bound change to the variable
+       * hashtable
+       */
+      if( !SCIProwexIsModifiable(row) && SCIProwexGetNNonz(row) == 1)
+      {
+         var = consdata->vars[0];
+         vals = consdata->vals;
+         assert(vals != NULL);
+         assert(!RisZero(vals[0]));
+         lhs = consdata->lhs;
+         rhs = consdata->rhs;
+
+         /* coefficient is positive -> lhs corresponds to lower bound, if negative to upper bound */
+         isupper = RisPositive(vals[0]) ? FALSE : TRUE;
+
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), lhs, isupper) );
+
+         /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
+         isupper = RisPositive(vals[0]) ? TRUE : FALSE;
+
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), rhs, isupper) );
+      }
+      else
+      {
+         image = SCIPhashmapGetImage(certificate->rowdatahash, row);
+         /* add row to hashmap */
+         if( image != NULL )
+         {
+            SCIPmessageFPrintWarning(scip->messagehdlr, "%ld \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
+            SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
+            SCIPABORT();
+            return SCIP_ERROR;
+         }
+         else
+         {
+            SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, row, (void*)(size_t)certificate->conscounter) );
+            assert(SCIPhashmapExists(certificate->rowdatahash, row));
+         }
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
+         for( i = 0; i < consdata->nvars; ++i )
+            varsindex[i] = SCIPvarGetIndex(consdata->vars[i]) - SCIPgetNVars(scip);
+
+         /* print constraint */
+         if( RisEqual(consdata->lhs, consdata->rhs) )
+         {
+            assert(!RisAbsInfinity(consdata->lhs));
+            SCIPcertificatePrintCons(certificate, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+         }
+         else
+         {
+            if( !RisNegInfinity(consdata->lhs) )
+               SCIPcertificatePrintCons(certificate, NULL, 'L', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+            if( !RisInfinity(consdata->rhs) )
+               SCIPcertificatePrintCons(certificate, NULL, 'G', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
+         }
+         SCIPfreeBufferArray(scip, &varsindex);
+      }
+   }
+   else
+      return SCIP_OKAY;
+
+   return SCIP_OKAY;
+}
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
@@ -15510,6 +15610,11 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
       assert(SCIPconsIsInitial(conss[c]));
       /* add both the relaxation to the fp-lp as well as the correct constraint to the exact lp */
       SCIP_CALL( addRelaxation(scip, conss[c], infeasible) );
+      if( SCIPisCertificateActive(scip) )
+      {
+         SCIP_CALL( printCertificateConsLinear(scip, conshdlr, conss[c]) );
+      }
+
    }
 
    SCIPgetIntParam(scip, "constraints/exactlp/interleavedbfreq", &freq);
@@ -18179,6 +18284,31 @@ SCIP_ROW* SCIPgetRowExactLinear(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+SCIP_ROWEX* SCIPgetRowexExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+      return NULL;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->exrow;
 }
 
 #if 0

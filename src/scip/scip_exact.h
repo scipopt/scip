@@ -39,6 +39,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
+#include "scip/type_certificate.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -142,6 +143,21 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
                                               *   active variables */
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   );
+
+
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPisCertificateActive(
+   SCIP*                 scip                /**< certificate information */
+   );
+
+
+/** returns certificate data structure
+ *
+ *  @return tolerance certificate data structure
+ */
+SCIP_CERTIFICATE* SCIPgetCertificate(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

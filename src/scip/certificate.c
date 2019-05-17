@@ -28,10 +28,16 @@
 #include "blockmemshell/memory.h"
 #include "scip/scip.h"
 #include "scip/set.h"
+#include "scip/lpex.h"
 #include "scip/pub_misc.h"
+#include "scip/prob.h"
 #include "scip/certificate.h"
 #include "scip/struct_certificate.h"
 #include "scip/solex.h"
+#include "scip/struct_scip.h"
+#include "scip/pub_varex.h"
+
+#define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
 /** gets the key of the given element */
 static
@@ -100,6 +106,10 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derivationfilename = NULL;
    (*certificate)->objstring = NULL;
    (*certificate)->filesize = 0.0;
+   (*certificate)->rowdatahash = NULL;
+   (*certificate)->boundvals = NULL;
+   (*certificate)->boundvalsize = 0;
+
    return SCIP_OKAY;
 }
 
@@ -119,6 +129,7 @@ void SCIPcertificateFree(
 
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInit(
+   SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -127,8 +138,16 @@ SCIP_RETCODE SCIPcertificateInit(
 {
    int filenamelen;
    int bufferlen;
-   char* name;
-   char* extension;
+   int nvars;
+   int nintvars;
+   int nbinvars;
+   int nboundconss;
+   int j;
+   char* name = NULL;
+   char* compression = NULL;
+   SCIP_VAR** vars;
+   SCIP_Rational* lb;
+   SCIP_Rational* ub;
 
    assert(certificate != NULL);
    assert(set != NULL);
@@ -140,15 +159,15 @@ SCIP_RETCODE SCIPcertificateInit(
 
    filenamelen = strlen(set->certificate_filename);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&name, filenamelen) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &name, filenamelen + 1) );
    BMScopyMemoryArray(name, set->certificate_filename, filenamelen);
 
-   SCIPsplitFilename(name, NULL, NULL, NULL, &extension);
+   SCIPsplitFilename(name, NULL, NULL, NULL, &compression);
 
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing certificate information in file <%s>\n", set->certificate_filename);
 
-   if( NULL != extension && 0 == strncmp(extension, "gz", 2) )
+   if( NULL != compression && 0 == strncmp(compression, "gz", 2) )
       certificate->file = SCIPfopen(set->certificate_filename, "wb");
    else
       certificate->file = SCIPfopen(set->certificate_filename, "wT");
@@ -160,17 +179,20 @@ SCIP_RETCODE SCIPcertificateInit(
    certificate->derivationfilename[bufferlen+1] = 'd';
    certificate->derivationfilename[bufferlen+2] = 'e';
    certificate->derivationfilename[bufferlen+3] = 'r';
-   certificate->derivationfilename[bufferlen+4] = '\0';
-   if( NULL != extension && 0 == strncmp(extension, "gz", 2) )
+   if( NULL != compression && 0 == strncmp(compression, "gz", 2) )
    {
-      certificate->derivationfilename[bufferlen+5] = '.';
-      certificate->derivationfilename[bufferlen+6] = 'g';
-      certificate->derivationfilename[bufferlen+7] = 'z';
+      certificate->derivationfilename[bufferlen+4] = '.';
+      certificate->derivationfilename[bufferlen+5] = 'g';
+      certificate->derivationfilename[bufferlen+6] = 'z';
+      certificate->derivationfilename[bufferlen+7] = '\0';
 
       certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wb");
    }
    else
+   {
+      certificate->derivationfilename[bufferlen+4] = '\0';
       certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wT");
+   }
 
    if( certificate->file == NULL || certificate->derivationfile == NULL )
    {
@@ -179,9 +201,79 @@ SCIP_RETCODE SCIPcertificateInit(
       return SCIP_FILECREATEERROR;
    }
 
-   certificate->blkmem = blkmem;
-   BMSfreeMemoryArray(&name);
+   assert(certificate->rowdatahash == NULL);
+   SCIP_CALL( SCIPhashmapCreate(&certificate->rowdatahash, blkmem, SCIP_HASHSIZE_CERTIFICATE) );
 
+   certificate->blkmem = blkmem;
+   SCIPsetFreeBufferArray(set, &name);
+
+   SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   nboundconss = 0;
+   for ( j = 0 ; j < nvars ; j++ )
+   {
+      lb = SCIPvarGetLbGlobalExact(vars[j]);
+      ub = SCIPvarGetUbGlobalExact(vars[j]);
+      if( !RisAbsInfinity(lb) )
+         nboundconss++;
+      if( !RisAbsInfinity(ub) )
+         nboundconss++;
+   }
+
+   /* print the Version Header into certificate */
+   SCIPcertificatePrintVersionHeader(certificate);
+
+   /* print the Variable Header into certificate */
+   SCIPcertificatePrintVarHeader(certificate, nvars);
+   for( j = 0; j < nvars; j++ )
+   {
+      const char* varname;
+
+      varname = SCIPvarGetName(vars[j]);
+      if( strstr(varname, " ") != NULL || strstr(varname, "\t") != NULL || strstr(varname, "\n") != NULL
+         || strstr(varname, "\v") != NULL || strstr(varname, "\f") != NULL || strstr(varname, "\r") != NULL )
+      {
+         SCIPerrorMessage("Variable name <%s> cannot be printed to certificate file because it contains whitespace.\n",
+            varname);
+         return SCIP_ERROR;
+      }
+
+      SCIPcertificatePrintProblemMessage(certificate, "%s\n", varname);
+   }
+
+   /* print the Integer Variable Header into certificate */
+   SCIPcertificatePrintIntHeader(certificate, nintvars + nbinvars);
+   for( j = 0; j < nvars; j++ )
+   {
+      if( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[j]) == SCIP_VARTYPE_INTEGER )
+      {
+         SCIPcertificatePrintProblemMessage(certificate, "%d \n", SCIPvarGetIndex(vars[j]));
+      }
+   }
+
+   {
+      SCIP_Rational** objcoefs = RcreateArrayTemp(SCIPbuffer(scip), nvars);
+      for( j = 0; j < nvars; j++)
+         Rset(objcoefs[j], SCIPvarGetObjExact(vars[j]));
+
+      /* print the objective function into certificate header */
+      SCIPcertificateSetAndPrintObjective(certificate, blkmem, objcoefs, nvars);
+
+      RdeleteArrayTemp(SCIPbuffer(scip), &objcoefs, nvars);
+   }
+
+   SCIPcertificatePrintConsHeader(certificate, SCIPgetNConss(scip), nboundconss);
+
+   for( j = 0; j < nvars; j++ )
+   {
+      if( !RisAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
+      {
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+      }
+      if( RisAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
+      {
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -195,14 +287,15 @@ void concatCert(
 {
    SCIP_FILE* derivationfile;
    char buffer[SCIP_MAXSTRLEN];
+   size_t size;
 
    derivationfile = SCIPfopen(certificate->derivationfilename, "r");
 
    /* append the derivation file to the problem file */
 
 
-   while( 0 != SCIPfread(buffer, sizeof(char), SCIP_MAXSTRLEN, derivationfile) )
-      SCIPfwrite(buffer, sizeof(char), SCIP_MAXSTRLEN, certificate->file);
+   while( 0 != (size = SCIPfread(buffer, sizeof(char), SCIP_MAXSTRLEN, derivationfile)) )
+      SCIPfwrite(buffer, sizeof(char), size, certificate->file);
 
    SCIPfclose(derivationfile);
    /* delete the derivation file */
@@ -216,6 +309,8 @@ void SCIPcertificateExit(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
   )
 {
+   int i;
+
    assert(certificate != NULL);
    assert(set != NULL);
 
@@ -237,8 +332,15 @@ void SCIPcertificateExit(
       BMSfreeMemoryArray(&certificate->derivationfilename);
       if( certificate->varboundtable != NULL )
       {
+         for( i = 0; i < SCIPhashtableGetNElements(certificate->varboundtable); i++ )
+         {
+            Rdelete(certificate->blkmem, &certificate->boundvals[i]->boundval);
+            BMSfreeBlockMemory(certificate->blkmem, &certificate->boundvals[i]);
+         }
          /**@todo fix memory leak: mpq_clear and free all elements */
+         SCIPhashtableRemoveAll(certificate->varboundtable);
          SCIPhashtableFree(&certificate->varboundtable);
+         BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize);
       }
       if( certificate->workbound != NULL )
       {
@@ -246,6 +348,9 @@ void SCIPcertificateExit(
          BMSfreeBlockMemory(certificate->blkmem, &certificate->workbound);
       }
       BMSfreeMemoryArrayNull(&certificate->objstring);
+
+      if( certificate->rowdatahash)
+         SCIPhashmapFree(&certificate->rowdatahash);
    }
 }
 
@@ -323,7 +428,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    leftsize = allocsize;
 
    buffpos = 0;
-   printlen = SCIPsnprintf(obj, SCIP_MAXSTRLEN - 2, "%d ", nnonz);
+   printlen = SCIPsnprintf(obj, SCIP_MAXSTRLEN - 2, "OBJ min\n %d ", nnonz);
    if( printlen >= leftsize )
    {
       SCIPerrorMessage("Objective function string exceeds %d characters: currently not implemented.\n",
@@ -344,16 +449,19 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
          {
             obj[buffpos] = '\0';
             SCIPcertificatePrintProblemMessage(certificate, "%s \n", obj);
+            buffpos = 0;
+            i--;
          }
          else
          {
             objstring += printlen;
+            buffpos += printlen;
             leftsize -= printlen;
          }
       }
    }
 
-   SCIPcertificatePrintProblemMessage(certificate, "OBJ min\n%s\n", certificate->objstring); 
+   SCIPcertificatePrintProblemMessage(certificate, "%s \n", obj); 
 
    return SCIP_OKAY;
 }
@@ -626,6 +734,14 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
       insertbound->boundval = Rcopy(certificate->blkmem, boundval);
+      /* ensure size and insert boundval in array to be able to free it at the end */
+      if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
+      {
+         BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
+         certificate->boundvalsize += 100;
+      }
+      certificate->boundvals[SCIPhashtableGetNElements(certificate->varboundtable)] = insertbound;
+
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
       certificate->indexcounter++;
       certificate->conscounter++;
@@ -708,10 +824,68 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
    }
 }
 
+/** Print a dual bound from an exact lp solution */
+SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
+   SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
+   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_SET*             set,                /**< scip settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_Rational** vals;
+   int* ind;
+   int len;
+   int i;
+   unsigned long key;
+   SCIP_Rational* lowerbound;
+
+   assert(lpex!= NULL);
+   assert(certificate->file != NULL);
+
+   vals = RcreateArrayTemp(set->buffer, lpex->nrows);
+   SCIPsetAllocBufferArray(set, &ind, lpex->nrows);
+
+   len = 0;
+   for( i = 0; i < lpex->nrows; ++i)
+   {
+      SCIP_ROWEX* row;
+      row = lpex->rows[i];
+
+      if( !RisZero(row->dualsol) )
+      {
+         Rset(vals[i], row->dualsol);
+         key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) row);
+         if( key >= INT_MAX - 1 )
+         {
+            SCIPerrorMessage("row not in rowdata-hash \n");
+            SCIPABORT();
+            return SCIP_ERROR;
+         }
+
+         ind[len] = key;
+         /* if we have a ranged row, and the dual corresponds to the upper bound,
+          * the index for the rhs-constraint is one larger in the certificate */
+         if( !RisEqual(row->lhs, row->rhs) && !RisAbsInfinity(row->lhs) && RisNegative(row->dualsol) )
+             ind[len] += 1;
+         
+         len++;
+      }
+   }
+
+   lowerbound = lpex->lpobjval;
+
+   SCIPcertificatePrintDualbound(certificate, prob, NULL, lowerbound, len, ind, vals);
+
+   SCIPsetFreeBufferArray(set, &ind);
+   RdeleteArrayTemp(set->buffer, &vals, lpex->nrows);
+
+   return SCIP_OKAY;
+}
+
 /** prints dual bound to proof section */
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,               /**< problem data */
    const char*           linename,           /**< name of the unsplitting line */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   len,                /**< number of dual multipiers */
@@ -764,7 +938,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    }
 
    /* print rounding derivation */
-   if( lowerbound != NULL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisObjIntegral(scip) && !RisIntegral(lowerbound) )
+   if( lowerbound != NULL && SCIPprobIsObjIntegral(prob) && !RisIntegral(lowerbound) )
    {
       long int ceilint;
 
@@ -911,7 +1085,7 @@ void SCIPcertificatePrintSolex(
    nnonz = 0;
    for( i = 0; i < nvars; i ++)
    {
-      SCIPsolexGetVal(sol, vars[i], solval);
+      SCIPsolexGetVal(solval, sol, scip->set, scip->stat, vars[i]);
       if( !RisZero(solval) )
          nnonz++;
    }
@@ -920,7 +1094,7 @@ void SCIPcertificatePrintSolex(
 
    for( i = 0; i < nvars; i ++)
    {
-      SCIPsolexGetVal(sol, vars[i], solval);
+      SCIPsolexGetVal(solval, sol, scip->set, scip->stat, vars[i]);
       if( !RisZero(solval) )
       {
          SCIPcertificatePrintProblemMessage(certificate, " %d ", i);
