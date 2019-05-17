@@ -2446,10 +2446,10 @@ SCIP_RETCODE lpexFlushChgCols(
             SCIP_CALL( SCIPlpiexGetObj(lp->lpiex, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiexGetBounds(lp->lpiex, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(RisEqual(lpiobj, col->flushedobj));
-            /* assert((SCIPsetIsInfinity(set, -lpilb) && SCIPsetIsInfinity(set, -col->flushedlb))
-                  || (!SCIPsetIsInfinity(set, -lpilb) && !SCIPsetIsInfinity(set, -col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
-            assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
-                  || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub))); */
+            /* assert((RisNegInfinity(lpilb) && RisNegInfinity(col->flushedlb))
+                  || (!RisNegInfinity(lpilb) && !RisNegInfinity(col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((RisInfinity(lpiub) && RisInfinity(col->flushedub))
+                  || (!RisInfinity(lpiub) && !RisInfinity(col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub))); */
             RdeleteTemp(set->buffer, &lpiub);
             RdeleteTemp(set->buffer, &lpilb);
             RdeleteTemp(set->buffer, &lpiobj);
@@ -3702,7 +3702,7 @@ SCIP_RETCODE SCIPlpexAddRow(
       SCIPsetDebugMsgPrint(set, "  %g <=", rowex->fprow->lhs);
       for( i = 0; i < row->len; ++i )
          SCIPsetDebugMsgPrint(set, " %+g<%s>", rowex->fprow->vals[i], SCIPvarGetName(rowex->fprow->cols[i]->var));
-      if( !SCIPsetIsZero(set, row->constant) )
+      if( !RisZero(row->constant) )
          SCIPsetDebugMsgPrint(set, " %+g", rowex->fprow->constant);
       SCIPsetDebugMsgPrint(set, " <= %g\n", row->fprow->rhs);
    }
@@ -3797,6 +3797,16 @@ int SCIProwexGetIndex(
    return row->index;
 }
 
+/** get the length of a row */
+int SCIProwexGetNNonz(
+   SCIP_ROWEX*           row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->len;
+}
+
 /** returns TRUE iff row is member of current LP */
 SCIP_Bool SCIProwexIsInLP(
    SCIP_ROWEX*           row                 /**< LP row */
@@ -3805,6 +3815,17 @@ SCIP_Bool SCIProwexIsInLP(
    assert(row != NULL);
 
    return (row->lppos >= 0);
+}
+
+/** return TRUE iff row is modifiable */
+SCIP_Bool SCIProwexIsModifiable(
+   SCIP_ROWEX*           row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(row->fprow != NULL);
+
+   return row->fprow->modifiable;
 }
 
 /** returns true, if an exact row for this fprow was already created */
@@ -5245,33 +5266,573 @@ SCIP_RETCODE SCIPlexGetNRows(
 
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpexGetSol(
-   SCIP_LPEX*            lpex,               /**< current LP data */
+   SCIP_LPEX*            lp,               /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {
-   return SCIP_ERROR;
+   SCIP_COLEX** lpicols;
+   SCIP_ROWEX** lpirows;
+   SCIP_Rational** primsol;
+   SCIP_Rational** dualsol;
+   SCIP_Rational** activity;
+   SCIP_Rational** redcost;
+   SCIP_Rational* primalbound;
+   SCIP_Rational* dualbound;
+   SCIP_Rational* tmp;
+   SCIP_Bool stillprimalfeasible;
+   SCIP_Bool stilldualfeasible;
+   int* cstat;
+   int* rstat;
+   SCIP_Longint lpcount;
+   int nlpicols;
+   int nlpirows;
+   int c;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
+    * corresponding flag immediately to FALSE to skip all checks
+    */
+   if( primalfeasible == NULL )
+      stillprimalfeasible = FALSE;
+   else
+   {
+      *primalfeasible = TRUE;
+      stillprimalfeasible = TRUE;
+   }
+   if( dualfeasible == NULL )
+      stilldualfeasible = FALSE;
+   else
+   {
+      *dualfeasible = TRUE;
+      stilldualfeasible = TRUE;
+   }
+
+   SCIPsetDebugMsg(set, "getting new LP solution %" SCIP_LONGINT_FORMAT " for solstat %d\n",
+      stat->lpcount, lp->lpsolstat);
+
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
+   lpcount = stat->lpcount;
+
+   /* get temporary memory */
+   primalbound = RcreateTemp(set->buffer);
+   dualbound = RcreateTemp(set->buffer);
+   tmp = RcreateTemp(set->buffer);
+   primsol = RcreateArrayTemp(set->buffer, nlpicols);
+   dualsol = RcreateArrayTemp(set->buffer, nlpirows);
+   activity = RcreateArrayTemp(set->buffer, nlpirows);
+   redcost = RcreateArrayTemp(set->buffer, nlpicols);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
+
+   SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, NULL, primsol, dualsol, activity, redcost) );
+   if( lp->solisbasic )
+   {
+      SCIP_CALL( SCIPlpiexGetBase(lp->lpiex, cstat, rstat) );
+   }
+   else
+   {
+      BMSclearMemoryArray(cstat, nlpicols);
+      BMSclearMemoryArray(rstat, nlpirows);
+   }
+
+   RsetReal(primalbound, 0.0);
+   RsetReal(dualbound, 0.0);
+
+   /* copy primal solution and reduced costs into columns */
+   for( c = 0; c < nlpicols; ++c )
+   {
+      assert( 0 <= cstat[c] && cstat[c] < 4 );
+      Rset(lpicols[c]->primsol, primsol[c]);
+      Rmin(lpicols[c]->minprimsol, lpicols[c]->minprimsol, primsol[c]);
+      Rmax(lpicols[c]->maxprimsol, lpicols[c]->maxprimsol, primsol[c]);
+      Rset(lpicols[c]->redcost, redcost[c]);
+      lpicols[c]->basisstatus = (unsigned int) cstat[c];
+      lpicols[c]->validredcostlp = lpcount;
+      if( stillprimalfeasible )
+      {
+         stillprimalfeasible =
+            (RisNegInfinity(lpicols[c]->lb) || !RisLT(lpicols[c]->primsol, lpicols[c]->lb))
+            && (RisInfinity(lpicols[c]->ub) || !RisGT(lpicols[c]->primsol, lpicols[c]->ub));
+         Rmult(tmp, lpicols[c]->primsol, lpicols[c]->obj);
+         Radd(primalbound, primalbound, tmp);
+      }
+
+      /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
+      if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
+         RsetReal(lpicols[c]->redcost, 0.0);
+
+      /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
+         * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
+         * bounds, its reduced cost must be zero
+         */
+      if( stilldualfeasible
+         && (RisNegInfinity(lpicols[c]->lb) || RisGT(lpicols[c]->primsol, lpicols[c]->lb)) )
+         stilldualfeasible = !RisPositive(lpicols[c]->redcost);
+      if( stilldualfeasible
+         && (RisInfinity(lpicols[c]->ub) || RisLT(lpicols[c]->primsol, lpicols[c]->ub)) )
+         stilldualfeasible = !RisNegative(lpicols[c]->redcost);
+
+      SCIPsetDebugMsg(set, " col <%s> [%.9g,%.9g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         SCIPvarGetName(lpicols[c]->var), RgetRealApprox(lpicols[c]->lb), RgetRealApprox(lpicols[c]->ub),
+         RgetRealApprox(lpicols[c]->primsol), RgetRealApprox(lpicols[c]->redcost),
+         RisGE(lpicols[c]->primsol, lpicols[c]->lb),
+         RisLE(lpicols[c]->primsol, lpicols[c]->ub),
+         primalfeasible != NULL ? stillprimalfeasible : TRUE,
+         !RisGT(lpicols[c]->primsol, lpicols[c]->lb) || !RisPositive(lpicols[c]->redcost),
+         !RisGT(lpicols[c]->primsol, lpicols[c]->ub) || !RisNegative(lpicols[c]->redcost),
+         dualfeasible != NULL ? stilldualfeasible : TRUE);
+
+      /* we intentionally use an exact positive/negative check because ignoring small reduced cost values may lead to a
+       * wrong bound value; if the corresponding bound is +/-infinity, we use zero reduced cost (if stilldualfeasible is
+       * TRUE, we are in the case that the reduced cost is tiny with wrong sign)
+       */
+      if( stilldualfeasible )
+      {
+         if( RisPositive(lpicols[c]->redcost) && !RisNegInfinity(lpicols[c]->lb) )
+         {
+            Rmult(tmp, lpicols[c]->redcost, lpicols[c]->lb);
+            Radd(dualbound, dualbound, tmp);
+         }
+         else if( RisNegative(lpicols[c]->redcost) && !RisInfinity(lpicols[c]->ub) )
+         {
+            Rmult(tmp, lpicols[c]->redcost, lpicols[c]->ub);
+            Radd(dualbound, dualbound, tmp);
+         }
+      }
+   }
+
+   /* copy dual solution and activities into rows */
+   for( r = 0; r < nlpirows; ++r )
+   {
+      assert( 0 <= rstat[r] && rstat[r] < 4 );
+      Rset(lpirows[r]->dualsol, dualsol[r]);
+      Radd(lpirows[r]->activity, activity[r], lpirows[r]->constant);
+      lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
+      lpirows[r]->validactivitylp = lpcount;
+      if( stillprimalfeasible )
+      {
+         stillprimalfeasible =
+            (RisNegInfinity(lpirows[r]->lhs) ||RisGE(lpirows[r]->activity, lpirows[r]->lhs))
+            && (RisInfinity(lpirows[r]->rhs) || RisLE(lpirows[r]->activity, lpirows[r]->rhs));
+      }
+      /* complementary slackness means that if the activity of a row is not at its left-hand or right-hand side,
+         * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
+         * strictly within left-hand and right-hand side, its dual multiplier must be zero
+         */
+      if( stilldualfeasible &&
+            (RisNegInfinity(lpirows[r]->lhs) || RisGT(lpirows[r]->activity, lpirows[r]->lhs)) )
+         stilldualfeasible = !RisPositive(lpirows[r]->dualsol);
+      if( stilldualfeasible &&
+            (RisInfinity(lpirows[r]->rhs) || RisLT(lpirows[r]->activity, lpirows[r]->rhs)) )
+         stilldualfeasible = !RisNegative(lpirows[r]->dualsol);
+
+      SCIPsetDebugMsg(set, " row <%s> [%.9g,%.9g] + %.9g: activity=%.9f, dualsol=%.9f, pfeas=%u/%u(%u), dfeas=%d/%d(%u)\n",
+         lpirows[r]->name, RgetRealApprox(lpirows[r]->lhs), RgetRealApprox(lpirows[r]->rhs), 
+         RgetRealApprox(lpirows[r]->constant), RgetRealApprox(lpirows[r]->activity), RgetRealApprox(lpirows[r]->dualsol),
+         RisGE(lpirows[r]->activity, lpirows[r]->lhs),
+         RisLE(lpirows[r]->activity, lpirows[r]->rhs),
+         primalfeasible != NULL ? stillprimalfeasible : TRUE,
+         !RisGT(lpirows[r]->activity, lpirows[r]->lhs) || !RisPositive(lpirows[r]->dualsol),
+         !RisLT(lpirows[r]->activity, lpirows[r]->rhs) || !RisNegative(lpirows[r]->dualsol),
+         dualfeasible != NULL ? stilldualfeasible : TRUE);
+
+      /* we intentionally use an exact positive/negative check because ignoring small dual multipliers may lead to a
+       * wrong bound value; if the corresponding side is +/-infinity, we use a zero dual multiplier (if
+       * stilldualfeasible is TRUE, we are in the case that the dual multiplier is tiny with wrong sign)
+       */
+      if( stilldualfeasible )
+      {
+         if( RisPositive(lpirows[r]->dualsol) && !RisNegInfinity(lpirows[r]->lhs) )
+         {
+            Rdiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
+            Rmult(tmp, tmp, lpirows[r]->dualsol);
+            Radd(dualbound, dualbound, tmp);
+         }
+         else if( RisNegative(lpirows[r]->dualsol) && !RisInfinity(lpirows[r]->rhs) )
+         {
+            Rdiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
+            Rmult(tmp, tmp, lpirows[r]->dualsol);
+            Radd(dualbound, dualbound, tmp);
+         }
+      }
+   }
+
+   /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
+    * declare the solution primal infeasible; we assume primalbound and lp->lpobjval to be equal if they are both +/-
+    * infinity
+    */
+   /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
+   if( stillprimalfeasible && !(RisInfinity(primalbound) && RisInfinity(lp->lpobjval))
+      && !(RisNegInfinity(primalbound) && RisNegInfinity(lp->lpobjval)) )
+   {
+      stillprimalfeasible = RisLE(primalbound, lp->lpobjval);
+      SCIPsetDebugMsg(set, " primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
+         RisLE(primalbound, lp->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
+   }
+
+   /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
+    * the solution dual infeasible; we assume dualbound and lp->lpobjval to be equal if they are both +/- infinity
+    */
+   /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
+   if( stilldualfeasible && !(RisInfinity(dualbound) && RisInfinity(lp->lpobjval))
+      && !(RisNegInfinity(dualbound) && RisNegInfinity(lp->lpobjval)) )
+   {
+      stilldualfeasible =  RisGE(dualbound, lp->lpobjval);
+      SCIPsetDebugMsg(set, " dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", RgetRealApprox(dualbound), RgetRealApprox(lp->lpobjval),
+         RisGE(dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
+   }
+
+   if( primalfeasible != NULL )
+      *primalfeasible = stillprimalfeasible;
+   if( dualfeasible != NULL )
+      *dualfeasible = stilldualfeasible;
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &rstat);
+   SCIPsetFreeBufferArray(set, &cstat);
+   RdeleteArrayTemp(set->buffer, &redcost, nlpicols);
+   RdeleteArrayTemp(set->buffer, &activity, nlpirows);
+   RdeleteArrayTemp(set->buffer, &dualsol, nlpirows);
+   RdeleteArrayTemp(set->buffer, &primsol, nlpicols);
+   RdeleteTemp(set->buffer, &tmp);
+   RdeleteTemp(set->buffer, &dualbound);
+   RdeleteTemp(set->buffer, &primalbound);
+
+   return SCIP_OKAY;
 }
 
 /** stores LP solution with infinite objective value in the columns and rows */
 SCIP_RETCODE SCIPlpexGetUnboundedSol(
-   SCIP_LPEX*            lpex,               /**< current LP data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            rayfeasible         /**< pointer to store whether the primal ray is a feasible unboundedness proof, or NULL */
    );
+#if 0
+{
+   SCIP_COLEX** lpicols;
+   SCIP_ROWEX** lpirows;
+   SCIP_Rational** primsol;
+   SCIP_Rational** activity;
+   SCIP_Rational** ray;
+   SCIP_Rational* rayobjval;
+   SCIP_Rational* rayscale;
+   SCIP_Rational* tmp;
+   SCIP_Longint lpcount;
+   SCIP_COLEX* col;
+   int nlpicols;
+   int nlpirows;
+   int c;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   assert(RisNegInfinity(lp->lpobjval));
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   if( primalfeasible != NULL )
+      *primalfeasible = TRUE;
+   if( rayfeasible != NULL )
+      *rayfeasible = TRUE;
+
+   /* check if the LP solver is able to provide a primal unbounded ray */
+   if( !SCIPlpiexHasPrimalRay(lp->lpiex) )
+   {
+      SCIPerrorMessage("LP solver has no primal ray to prove unboundedness\n");
+      return SCIP_LPERROR;
+   }
+
+   SCIPsetDebugMsg(set, "getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
+
+   /* get temporary memory */
+   rayobjval = RcreateTemp(set->buffer);
+   rayscale = RcreateTemp(set->buffer);
+   tmp = RcreateTemp(set->buffer);
+   primsol = RcreateArrayTemp(set->buffer, lp->nlpicols);
+   activity = RcreateArrayTemp(set->buffer, lp->nlpirows);
+   ray = RcreateArrayTemp(set->buffer, lp->nlpicols);
+
+   /* get primal unbounded ray */
+   SCIP_CALL( SCIPlpiexGetPrimalRay(lp->lpiex, ray) );
+
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
+   lpcount = stat->lpcount;
+
+   /* calculate the objective value decrease of the ray and heuristically try to construct primal solution */
+   RsetReal(rayobjval, 0.0);
+   for( c = 0; c < nlpicols; ++c )
+   {
+      assert(lpicols[c] != NULL);
+      assert(lpicols[c]->var != NULL);
+
+      col = lpicols[c];
+
+      /* there should only be a nonzero value in the ray if there is no finite bound in this direction */
+      if( rayfeasible != NULL )
+      {
+         *rayfeasible = *rayfeasible
+            && (!RisNegative(ray[c]) || RisNegInfinity(col->lb))
+            && (!RisPositive(ray[c]) || RisInfinity(col->ub));
+      }
+
+      if( !RisZero(ray[c]) )
+      {
+         Rmult(tmp, ray[c], col->obj);
+         Radd(rayobjval, rayobjval, tmp);
+      }
+
+      /* Many LP solvers cannot directly provide a feasible solution if they detected unboundedness. We therefore first
+       * heuristically try to construct a primal solution.
+       */
+      RsetReal(primsol[c], 0.0);
+      if( RisZero(ray[c]) )
+      {
+         /* if the ray component is 0, we try to satisfy as many rows as possible */
+         if( SCIPvarGetNLocksDown(col->var) == 0 && ! RisNegInfinity(col->lb) )
+            Rset(primsol[c], col->lb);
+         else if( SCIPvarGetNLocksUp(col->var) == 0 && ! RisInfinity(col->ub) )
+            Rset(primsol[c], col->ub);
+      }
+
+      /* make sure we respect the bounds */
+      Rmax(primsol[c], primsol[c], col->lb);
+      Rmin(primsol[c], primsol[c], col->ub);
+   }
+
+   /* check feasibility of heuristic solution and compute activity */
+   for( r = 0; r < nlpirows; ++r )
+   {
+      SCIP_Rational* act = RcreateTemp(set->buffer);
+      SCIP_ROWEX* row;
+
+      row = lpirows[r];
+      assert( row != NULL );
+
+      for( c = 0; c < row->nlpcols; ++c )
+      {
+         col = row->cols[c];
+
+         assert( col != NULL );
+         assert( col->lppos >= 0 );
+         assert( row->linkpos[c] >= 0 );
+
+
+      }
+
+      if( row->nunlinked > 0 )
+      {
+         for( c = row->nlpcols; c < row->len; ++c )
+         {
+            col = row->cols[c];
+
+            assert( col != NULL );
+
+            if( col->lppos >= 0 )
+            {
+               Rmult(tmp, row->vals[c], primsol[col->lppos]);
+               Radd(act, act, tmp);
+            }
+         }
+      }
+
+      /* check feasibility */
+      if( (!RisNegInfinity(row->lhs) && RisLT(act, row->lhs) ) ||
+          (!RisInfinity(row->rhs)  && RisGT(act, row->rhs) ) )
+         break;
+
+      Rset(activity[r], act);
+      RdeleteTemp(set->buffer, &act);
+   }
+
+   /* if heuristic solution is not feasible, try to obtain solution from LPI */
+   if( r < nlpirows )
+   {
+      /* get primal feasible point */
+      SCIP_CALL( SCIPlpiexGetSol(lp->lpiex, NULL, primsol, NULL, activity, NULL) );
+
+      /* determine feasibility status */
+      if( primalfeasible != NULL )
+      {
+         for( c = 0; c < nlpicols; ++c )
+         {
+            assert( lpicols[c] != NULL );
+            assert( lpicols[c]->var != NULL );
+
+            /* check primal feasibility of (finite) primal solution; note that the comparisons ensure that the primal
+             * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
+             */
+            *primalfeasible = *primalfeasible
+               && !RisLT(primsol[c], lpicols[c]->lb)
+               && !RisGT(primsol[c], lpicols[c]->ub);
+         }
+      }
+   }
+   else
+   {
+      if( primalfeasible != NULL )
+         *primalfeasible = TRUE;
+   }
+
+   if( primalfeasible != NULL && !(*primalfeasible) )
+   {
+      /* if the finite point is already infeasible, we do not have to add the ray */
+      RsetReal(rayscale, 0.0);
+   }
+   else if( rayfeasible != NULL && !(*rayfeasible) )
+   {
+      /* if the ray is already infeasible (due to numerics), we do not want to add the ray */
+      RsetReal(rayscale, 0.0);
+   }
+   else if( !RisNegative(rayobjval) )
+   {
+      /* due to numerical problems, the objective of the ray might be nonnegative,
+       *
+       * @todo How to check for negative objective value here?
+       */
+      if( rayfeasible != NULL )
+      {
+         *rayfeasible = FALSE;
+      }
+
+      RsetReal(rayscale, 0.0);
+   }
+   else
+   {
+      assert(!RisZero(rayobjval));
+
+      /* scale the ray, such that the resulting point has infinite objective value */
+      rayscale = -2*SCIPsetInfinity(set)/rayobjval;
+      assert(SCIPsetIsFeasPositive(set, rayscale));
+
+      /* ensure that unbounded point does not violate the bounds of the variables */
+      for( c = 0; c < nlpicols; ++c )
+      {
+         if( RisPositive(ray[c]) )
+            rayscale = MIN(rayscale, (lpicols[c]->ub - primsol[c])/ray[c]);
+         else if( RisNegative(ray[c]) )
+            rayscale = MIN(rayscale, (lpicols[c]->lb - primsol[c])/ray[c]);
+
+         assert(SCIPsetIsFeasPositive(set, rayscale));
+      }
+   }
+
+   SCIPsetDebugMsg(set, "unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
+
+   /* calculate the unbounded point: x' = x + rayscale * ray */
+   for( c = 0; c < nlpicols; ++c )
+   {
+      if( RisZero(ray[c]) )
+         lpicols[c]->primsol = primsol[c];
+      else
+      {
+         SCIP_Rational* primsolval;
+         primsolval = primsol[c] + rayscale * ray[c];
+         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval)); /*lint !e666*/
+      }
+      lpicols[c]->redcost = SCIP_INVALID;
+      lpicols[c]->validredcostlp = -1;
+   }
+
+   /* transfer solution and check feasibility */
+   for( r = 0; r < nlpirows; ++r )
+   {
+      lpirows[r]->dualsol = SCIP_INVALID;
+      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+      lpirows[r]->validactivitylp = lpcount;
+
+      /* check for feasibility of the rows */
+      if( primalfeasible != NULL )
+         *primalfeasible = *primalfeasible
+            && (RisNegInfinity(lpirows[r]->lhs) || SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
+            && (RisInfinity(lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
+   }
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &ray);
+   SCIPsetFreeBufferArray(set, &activity);
+   SCIPsetFreeBufferArray(set, &primsol);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** returns primal ray proving the unboundedness of the current LP */
 SCIP_RETCODE SCIPlpexGetPrimalRay(
-   SCIP_LPEX*            lpex,               /**< current LP data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational**       ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
                                               *   so the size of this array should be at least number of active variables
                                               *   (all entries have to be initialized to 0 before) */
-   );
+   )
+{
+
+   SCIP_COLEX** lpicols;
+   SCIP_Rational** lpiray;
+   SCIP_VAR* var;
+   int nlpicols;
+   int c;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(ray != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   assert(RisNegInfinity(lp->lpobjval));
+
+   /* check if the LP solver is able to provide a primal unbounded ray */
+   if( !SCIPlpiexHasPrimalRay(lp->lpiex) )
+   {
+      SCIPerrorMessage("LP solver has no primal ray for unbounded LP\n");
+      return SCIP_LPERROR;
+   }
+
+   /* get temporary memory */
+   lpiray = RcreateArrayTemp(set->buffer, lp->nlpicols);
+
+   SCIPsetDebugMsg(set, "getting primal ray values\n");
+
+   /* get primal unbounded ray */
+   SCIP_CALL( SCIPlpiexGetPrimalRay(lp->lpiex, lpiray) );
+
+   lpicols = lp->lpicols;
+   nlpicols = lp->nlpicols;
+
+   /* store the ray values of active problem variables */
+   for( c = 0; c < nlpicols; c++ )
+   {
+      assert(lpicols[c] != NULL);
+
+      var = lpicols[c]->var;
+      assert(var != NULL);
+      assert(SCIPvarGetProbindex(var) != -1);
+      Rset(ray[SCIPvarGetProbindex(var)], lpiray[c]);
+   }
+
+   RdeleteArrayTemp(set->buffer, &lpiray, lp->nlpicols);
+
+   return SCIP_OKAY;
+}
+
 
 /** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
  *  lp/checkfarkas = TRUE.
@@ -5279,11 +5840,183 @@ SCIP_RETCODE SCIPlpexGetPrimalRay(
  *  @note the check will not be performed if @p valid is NULL.
  */
 SCIP_RETCODE SCIPlpexGetDualfarkas(
-   SCIP_LPEX*            lpex,               /**< current LP data */
+   SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
-   );
+   )
+{
+   SCIP_COLEX** lpicols;
+   SCIP_ROWEX** lpirows;
+   SCIP_Rational** dualfarkas;
+   SCIP_Rational** farkascoefs;
+   SCIP_Rational* farkaslhs;
+   SCIP_Rational* maxactivity;
+   SCIP_Rational* tmp;
+   SCIP_Bool checkfarkas;
+   int nlpicols;
+   int nlpirows;
+   int c;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   if( valid != NULL )
+      *valid = TRUE;
+
+   farkascoefs = NULL;
+   maxactivity = RcreateTemp(set->buffer);
+   farkaslhs = RcreateTemp(set->buffer);
+   tmp = RcreateTemp(set->buffer);
+
+   checkfarkas = (set->lp_checkfarkas && valid != NULL);
+
+   /* get temporary memory */
+   dualfarkas = RcreateArrayTemp(set->buffer, lp->nlpirows);
+
+   if( checkfarkas )
+      farkascoefs = RcreateArrayTemp(set->buffer, lp->nlpicols);
+
+   /* get dual Farkas infeasibility proof */
+   SCIP_CALL( SCIPlpiexGetDualfarkas(lp->lpiex, dualfarkas) );
+
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+   nlpicols = lp->nlpicols;
+   nlpirows = lp->nlpirows;
+
+   /* store infeasibility proof in rows */
+   SCIPsetDebugMsg(set, "LP is infeasible:\n");
+   for( r = 0; r < nlpirows; ++r )
+   {
+      SCIPsetDebugMsg(set, " row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
+      Rset(lpirows[r]->dualfarkas, dualfarkas[r]);
+      RsetString(lpirows[r]->dualsol, "inf");
+      RsetReal(lpirows[r]->activity, 0.0);
+      lpirows[r]->validactivitylp = -1L;
+      lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+
+      if( checkfarkas )
+      {
+         assert(farkascoefs != NULL);
+
+         /* the infeasibility proof would be invalid if
+          *   (i)  dualfarkas[r] > 0 and lhs = -inf
+          *   (ii) dualfarkas[r] < 0 and rhs = inf
+          * however, due to numerics we accept slightly negative / positive values
+          */
+         if( (RisPositive(dualfarkas[r]) && RisNegInfinity(lpirows[r]->lhs))
+            || (RisNegative(dualfarkas[r]) && RisInfinity(lpirows[r]->rhs)) )
+         {
+            SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
+               SCIProwGetName(lpirows[r]->fprow), RgetRealApprox(lpirows[r]->lhs), RgetRealApprox(lpirows[r]->rhs),
+               RgetRealApprox(lpirows[r]->constant), RgetRealApprox(dualfarkas[r]));
+
+            *valid = FALSE; /*lint !e613*/
+
+            goto TERMINATE;
+         }
+
+         /* dual multipliers, for which the corresponding row side in infinite, are treated as zero if they are zero
+          * within tolerances (see above) but slighty positive / negative
+          */
+         if( (RisPositive(dualfarkas[r]) && RisNegInfinity(lpirows[r]->lhs))
+            || (RisNegative(dualfarkas[r]) && RisInfinity(lpirows[r]->rhs)) )
+            continue;
+
+         /* iterate over all columns and scale with dual solution */
+         for( c = 0; c < lpirows[r]->len; c++ )
+         {
+            int pos = lpirows[r]->cols[c]->lppos;
+
+            if( pos == -1 )
+               continue;
+
+            assert(pos >= 0 && pos < nlpicols);
+            Rmult(tmp, dualfarkas[r], lpirows[r]->vals[c]);
+            Radd(farkascoefs[pos], farkascoefs[pos], tmp);
+         }
+
+         /* the row contributes with its left-hand side to the proof */
+         if( RisPositive(dualfarkas[r]) )
+         {
+            assert(!RisNegInfinity(lpirows[r]->lhs));
+            Rdiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
+            Rmult(tmp, tmp, dualfarkas[r]);
+            Radd(farkaslhs, farkaslhs, tmp);
+         }
+         /* the row contributes with its right-hand side to the proof */
+         else if( RisNegative(dualfarkas[r]) )
+         {
+            assert(!RisInfinity(lpirows[r]->rhs));
+
+            assert(!RisNegInfinity(lpirows[r]->lhs));
+            Rdiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
+            Rmult(tmp, tmp, dualfarkas[r]);
+            Radd(farkaslhs, farkaslhs, tmp);
+         }
+      }
+   }
+
+   /* set columns as invalid */
+   for( c = 0; c < nlpicols; ++c )
+   {
+      RsetString(lpicols[c]->primsol, "inf");
+      RsetString(lpicols[c]->redcost, "inf");
+      lpicols[c]->validredcostlp = -1L;
+      lpicols[c]->validfarkaslp = -1L;
+
+      if( checkfarkas )
+      {
+         assert(farkascoefs != NULL);
+         assert(lpicols[c]->lppos == c);
+
+         /* skip coefficients that are too close to zero */
+         if( RisZero(farkascoefs[c]) )
+            continue;
+
+         /* calculate the maximal activity */
+         if( RisPositive(farkascoefs[c]) )
+         {
+            Rmult(tmp, farkascoefs[c], SCIPcolexGetUb(lpicols[c]));
+            Radd(maxactivity, maxactivity, tmp);
+         }
+         else
+         {
+            Rmult(tmp, farkascoefs[c], SCIPcolexGetLb(lpicols[c]));
+            Radd(maxactivity, maxactivity, tmp);
+         }
+      }
+   }
+
+   /* check whether the farkasproof is valid
+    * due to numerics, it might happen that the left-hand side of the aggregation is larger/smaller or equal than +/- infinity.
+    * in that case, we declare the Farkas proof to be invalid.
+    */
+   if( checkfarkas && (RisAbsInfinity(farkaslhs) || RisGE(maxactivity, farkaslhs)) )
+   {
+      SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
+
+      *valid = FALSE; /*lint !e613*/
+   }
+
+  TERMINATE:
+   /* free temporary memory */
+   if( checkfarkas )
+      RdeleteArrayTemp(set->buffer, &farkascoefs, nlpicols);
+
+   RdeleteArrayTemp(set->buffer, &dualfarkas, nlpirows);
+   RdeleteTemp(set->buffer, &tmp);
+   RdeleteTemp(set->buffer, &farkaslhs);
+   RdeleteTemp(set->buffer, &maxactivity);
+
+   return SCIP_OKAY;
+}
 
 /** removes all columns after the given number of cols from the LP */
 SCIP_RETCODE SCIPlpexShrinkCols(

@@ -196,10 +196,20 @@ void SCIProwexPrint(
 int SCIProwexGetIndex(
    SCIP_ROWEX*           row                 /**< LP row */
    );
-   
+
+/** get the length of a row */
+int SCIProwexGetNNonz(
+   SCIP_ROWEX*           row                 /**< LP row */
+   );
+
 /** returns TRUE iff row is member of current LP */
 extern
 SCIP_Bool SCIProwexIsInLP(
+   SCIP_ROWEX*           row                 /**< LP row */
+   );
+
+/** return TRUE iff row is modifiable */
+SCIP_Bool SCIProwexIsModifiable(
    SCIP_ROWEX*           row                 /**< LP row */
    );
 
