@@ -21,6 +21,21 @@
 echo "This is performance_mergerequest.sh running."
 : ${TESTMODE:="all"}
 
+if [ "${TESTMODE}" == "all" ]; then
+  echo "Testing mipdev-solvable, minlpdev-solvable and sapdev-solvable"
+elif [ "${TESTMODE}" == "short" ]; then
+  echo "Testing short"
+elif [ "${TESTMODE}" == "mipdev-solvable" ]; then
+  echo "Testing mipdev-solvable"
+elif [ "${TESTMODE}" == "minlpdev-solvable" ]; then
+  echo "Testing minlpdev-solvable"
+elif [ "${TESTMODE}" == "sapdev-solvable" ]; then
+  echo "Testing sapdev-solvable"
+else
+  echo "Nothing to do, exiting."
+  exit 0
+fi
+
 ######################################
 ### evaluate commandline arguments ###
 ######################################
