@@ -1002,60 +1002,6 @@ SCIP_RETCODE enforceSP12(
    return SCIP_OKAY;
 }
 
-/* check that simplifiedcoef is different from 1 and there is a child that is an exponential expression; in that case
- * the coefficient is turned to one and we add exp(log(simplifiedcoef)) to the child of the exponential expression; note
- * that it might be necessary to create a sum expression for the last step
- */
-static
-SCIP_RETCODE enforceSP14(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_Real*               simplifiedcoef,  /**< pointer to store simplified product should be simplifiedcoef * PI simplifiedfactors */
-   EXPRNODE*                finalchildren    /**< factors of simplified product */
-   )
-{
-   EXPRNODE* expchild;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_Real constant;
-
-   /* if the coefficient is +/- 1.0 then there is nothing to do */
-   if( REALABS(*simplifiedcoef) == 1.0 )
-      return SCIP_OKAY;
-
-   /* find (first) exponential expression */
-   for( expchild = finalchildren; expchild != NULL; expchild = expchild->next )
-   {
-       if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expchild->expr)), "exp") == 0 )
-         break;
-   }
-
-   /* check whether there is an exponential expression available */
-   if( expchild == NULL )
-      return SCIP_OKAY;
-
-   child = SCIPgetConsExprExprChildren(expchild->expr)[0];
-   assert(child != NULL);
-
-   /* check whether the child of the exponential expression is a sum */
-   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "sum") == 0 )
-   {
-      if( *simplifiedcoef > 0.0 )
-      {
-         constant = log(*simplifiedcoef);
-         *simplifiedcoef = 1.0;
-      }
-      else
-      {
-         constant = log(-(*simplifiedcoef));
-         *simplifiedcoef = -1.0;
-      }
-
-      constant += SCIPgetConsExprExprSumConstant(child);
-      SCIPsetConsExprExprSumConstant(child, constant);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** builds a simplified product from simplifiedfactors
  * Note: this function also releases simplifiedfactors
  */
