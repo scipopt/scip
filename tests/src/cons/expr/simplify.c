@@ -100,8 +100,10 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
       {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
       {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
-      {"exp(<x>)^2", "exp"}
-
+      {"exp(<x>)^2", "exp"},
+      {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
+      {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
+      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
    };

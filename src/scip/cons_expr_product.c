@@ -1088,11 +1088,18 @@ SCIP_RETCODE buildSimplifiedProduct(
    if( simplifiedcoef != 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
+      SCIP_CONSEXPR_EXPR* sum;
 
+      /* create sum */
       SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux) );
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &sum,
                1, &aux, &simplifiedcoef, 0.0) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+      /* simplify sum */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sum, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
+
       goto CLEANUP;
    }
 
