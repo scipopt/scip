@@ -2222,24 +2222,24 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
       for( c = 0; c < nconss; ++c )
       {
-         assert(conss[c] != NULL);
-         consdata = SCIPconsGetData(conss[c]);
+         assert(conss[c] != NULL);  /*lint !e613*/
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
 
          /* if boundchange, then mark constraints to be propagated again */
          if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
          {
             consdata->ispropagated = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
 
             /* store handler for below */
-            conshdlr = SCIPconsGetHdlr(conss[c]);
+            conshdlr = SCIPconsGetHdlr(conss[c]);  /*lint !e613*/
          }
 
          /* if still in presolve, then mark constraints to be simplified again */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
          {
             consdata->issimplified = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          }
       }
    }
@@ -10196,7 +10196,7 @@ SCIP_RETCODE SCIPmarkConsExprExprPropagate(
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
    {
       if( !SCIPisConsExprExprVar(expr) )
          continue;
