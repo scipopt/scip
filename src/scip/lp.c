@@ -14524,6 +14524,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* activity;
+   SCIP_Bool activitycomputed; /* whether some meaningful values are stored in activity */
    SCIP_Real* ray;
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
@@ -14663,7 +14664,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    if( r < nlpirows )
    {
       /* get primal feasible point */
-      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
+      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
 
       /* determine feasibility status */
       if( primalfeasible != NULL )
@@ -14681,11 +14682,17 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
                && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);
          }
       }
+
+      /* remember that we still need to compute activity (we cannot trust the one from LP solver, see #2594)*/
+      activitycomputed = FALSE;
    }
    else
    {
       if( primalfeasible != NULL )
          *primalfeasible = TRUE;
+
+      /* remember that we have decent values in the activity array */
+      activitycomputed = TRUE;
    }
 
    if( primalfeasible != NULL && !(*primalfeasible) )
@@ -14752,8 +14759,13 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = SCIP_INVALID;
-      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-      lpirows[r]->validactivitylp = lpcount;
+      if( activitycomputed )
+      {
+         lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+         lpirows[r]->validactivitylp = lpcount;
+      }
+      else if( lpirows[r]->validactivitylp != stat->lpcount )
+         SCIProwRecalcLPActivity(lpirows[r], stat);
 
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
