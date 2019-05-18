@@ -2848,7 +2848,7 @@ SCIP_RETCODE reformulateConsExprExpr(
             {
                if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
                {
-                  SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &refexpr) );
+                  SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, expr, &refexpr) );
                   if( expr != refexpr )
                   {
                      SCIP_INTERVAL activity;
@@ -8414,7 +8414,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->simplifytime) );
-      SCIP_CALL( expr->exprhdlr->simplify(scip, expr, simplifiedexpr) );
+      SCIP_CALL( expr->exprhdlr->simplify(scip, conshdlr, expr, simplifiedexpr) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->simplifytime) );
 
       /* update statistics */

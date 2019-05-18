@@ -383,12 +383,14 @@ typedef enum
  *
  * input:
  *  - scip           : SCIP main data structure
+ *  - consexprhdlr   : expression constraint handler
  *  - expr           : expression to simplify
  * output:
  *  - simplifiedexpr : the simplified expression
  */
 #define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*                 scip,               \
+   SCIP_CONSHDLR*        conshdlr,           \
    SCIP_CONSEXPR_EXPR*   expr,               \
    SCIP_CONSEXPR_EXPR**  simplifiedexpr)
 

@@ -246,6 +246,7 @@ SCIP_RETCODE freeExprlist(
 static
 SCIP_RETCODE mergeSumExprlist(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< consexpr handler */
    EXPRNODE*             tomerge,            /**< list to merge */
    EXPRNODE**            finalchildren,      /**< pointer to store the result of merge between tomerge and *finalchildren */
    SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
@@ -273,19 +274,19 @@ SCIP_RETCODE mergeSumExprlist(
       int compareres;
       EXPRNODE* aux;
 
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), EXPRHDLR_NAME) != 0);
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), "val") != 0);
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), EXPRHDLR_NAME) != 0);
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "val") != 0);
+      assert(SCIPgetConsExprExprHdlr(tomergenode->expr) != SCIPgetConsExprExprHdlrSum(conshdlr));
+      assert(SCIPgetConsExprExprHdlr(tomergenode->expr) != SCIPgetConsExprExprHdlrValue(conshdlr));
+      assert(SCIPgetConsExprExprHdlr(current->expr) != SCIPgetConsExprExprHdlrSum(conshdlr));
+      assert(SCIPgetConsExprExprHdlr(current->expr) != SCIPgetConsExprExprHdlrValue(conshdlr));
       assert(previous == NULL || previous->next == current);
 
       compareres = SCIPcompareConsExprExprs(current->expr, tomergenode->expr);
 
       #ifdef SIMPLIFY_DEBUG
       SCIPinfoMessage(scip, NULL, "comparing exprs:\n");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), current->expr, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, current->expr, NULL) );
       SCIPinfoMessage(scip, NULL, " vs ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), tomergenode->expr, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, tomergenode->expr, NULL) );
       SCIPinfoMessage(scip, NULL, ": won %d\n", compareres);
       #endif
 
@@ -383,6 +384,7 @@ SCIP_RETCODE mergeSumExprlist(
 static
 SCIP_RETCODE createExprSumFromExprlist(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< consexpr handler */
    EXPRNODE*             exprlist,           /**< list containing the children of expr */
    SCIP_Real             constant,           /**< constant of expr */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the sum expression */
@@ -406,7 +408,7 @@ SCIP_RETCODE createExprSumFromExprlist(
    }
    assert(exprlist == NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), expr, nchildren, children, coefs, constant) );
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, expr, nchildren, children, coefs, constant) );
 
    SCIPfreeBufferArray(scip, &children);
    SCIPfreeBufferArray(scip, &coefs);
@@ -424,6 +426,7 @@ SCIP_RETCODE createExprSumFromExprlist(
 static
 SCIP_RETCODE simplifyTerm(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< consexpr handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression to be simplified */
    SCIP_Real             coef,               /**< coefficient of expressions to be simplified */
    SCIP_Real*            simplifiedconstant, /**< constant of parent sum expression */
@@ -431,16 +434,16 @@ SCIP_RETCODE simplifyTerm(
    SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
-   const char* exprtype;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    assert(simplifiedterm != NULL);
    assert(*simplifiedterm == NULL);
    assert(expr != NULL);
 
-   exprtype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
 
    /* enforces SS3 */
-   if( strcmp(exprtype, "val") == 0 )
+   if( exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
       *changed = TRUE;
       *simplifiedconstant += coef * SCIPgetConsExprExprValueValue(expr);
@@ -459,7 +462,7 @@ SCIP_RETCODE simplifyTerm(
     * and so simplifying expr' gives expr1.
     * All this can be done and checked without modifying expr
     */
-   if( strcmp(exprtype, EXPRHDLR_NAME) == 0 )
+   if( exprhdlr == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
       *changed = TRUE;
 
@@ -469,8 +472,9 @@ SCIP_RETCODE simplifyTerm(
       /* check if SS7 could fail after distributing */
       if( SCIPgetConsExprExprNChildren(expr) == 1 && coef * SCIPgetConsExprExprSumCoefs(expr)[0] == 1.0 )
       {
-         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), EXPRHDLR_NAME) != 0);
+         assert(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0]) != SCIPgetConsExprExprHdlrSum(conshdlr));
          SCIP_CALL( createExprNode(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedterm) );
+
          return SCIP_OKAY;
       }
 
@@ -482,7 +486,7 @@ SCIP_RETCODE simplifyTerm(
    }
 
    /* enforce SS9 */
-   if( REALABS(coef) != 1.0 && strcmp(exprtype, "prod") == 0 )
+   if( REALABS(coef) != 1.0 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) )
    {
       SCIP_CONSEXPR_EXPR* expchild = NULL;
       int i;
@@ -492,7 +496,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
          assert(child != NULL);
 
-         if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "exp") == 0 )
+         if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrExponential(conshdlr) )
          {
             expchild = child;
             break;
@@ -526,24 +530,23 @@ SCIP_RETCODE simplifyTerm(
          }
 
          /* add constant to exponential's child */
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &sum, 1,
-                  SCIPgetConsExprExprChildren(expchild), NULL, constant) );
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sum, 1, SCIPgetConsExprExprChildren(expchild), NULL,
+                  constant) );
 
          /* simplify sum */
-         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sum, &simplifiedsum) );
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, sum, &simplifiedsum) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
 
          /* create exponential with new child */
-         SCIP_CALL( SCIPcreateConsExprExprExp(scip, SCIPfindConshdlr(scip, "expr"), &exponential, simplifiedsum) );
+         SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &exponential, simplifiedsum) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */
-         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, exponential, &simplifiedexp) );
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, exponential, &simplifiedexp) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exponential) );
 
          /* create product with new child */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, SCIPfindConshdlr(scip, "expr"), &prod, 0,
-                  NULL, 1.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prod, 0, NULL, 1.0) );
 
          for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
          {
@@ -559,13 +562,13 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedexp) );
 
          /* simplify product */
-         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, prod, &simplifiedprod) );
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, prod, &simplifiedprod) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prod) );
 
          /* since the simplified product can be a sum ( exp(-1)*exp(log(x+y)+1) -> x+y ), we call the function we are in
           * again; this is not recursive, since the coef is now +- 1
           */
-         SCIP_CALL( simplifyTerm(scip, simplifiedprod, coef, simplifiedconstant, simplifiedterm, changed) );
+         SCIP_CALL( simplifyTerm(scip, conshdlr, simplifiedprod, coef, simplifiedconstant, simplifiedterm, changed) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedprod) );
 
          return SCIP_OKAY;
@@ -574,8 +577,8 @@ SCIP_RETCODE simplifyTerm(
 
 
    /* other types of (simplified) expressions can be a child of a simplified sum */
-   assert(strcmp(exprtype, EXPRHDLR_NAME) != 0);
-   assert(strcmp(exprtype, "val") != 0);
+   assert(exprhdlr != SCIPgetConsExprExprHdlrSum(conshdlr));
+   assert(exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
 
    SCIP_CALL( createExprNode(scip, expr, coef, simplifiedterm) );
 
@@ -648,7 +651,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
 
    children  = SCIPgetConsExprExprChildren(expr);
    nchildren = SCIPgetConsExprExprNChildren(expr);
@@ -672,11 +675,11 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
       /* enforces SS2, SS3 and SS9 */
       tomerge = NULL;
-      SCIP_CALL( simplifyTerm(scip, children[i], coefs[i], &simplifiedconstant, &tomerge, &changed) );
+      SCIP_CALL( simplifyTerm(scip, conshdlr, children[i], coefs[i], &simplifiedconstant, &tomerge, &changed) );
 
       /* enforces SS4 and SS5
        * note: merge frees (or uses) the nodes of the list tomerge */
-      SCIP_CALL( mergeSumExprlist(scip, tomerge, &finalchildren, &changed) );
+      SCIP_CALL( mergeSumExprlist(scip, conshdlr, tomerge, &finalchildren, &changed) );
    }
 
    /* build sum expression from finalchildren and post-simplify */
@@ -686,7 +689,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    if( finalchildren == NULL )
    {
       debugSimplify("[sum] got empty list, return value %g\n", simplifiedconstant); /*lint !e506 !e681*/
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedconstant) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, simplifiedconstant) );
    }
    /* enforces SS7
     * if list consists of one expr with coef 1.0 and constant is 0, return that expr */
@@ -698,7 +701,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    /* build sum expression from list */
    else if( changed )
    {
-      SCIP_CALL( createExprSumFromExprlist(scip, finalchildren, simplifiedconstant, simplifiedexpr) );
+      SCIP_CALL( createExprSumFromExprlist(scip, conshdlr, finalchildren, simplifiedconstant, simplifiedexpr) );
    }
    else
    {
