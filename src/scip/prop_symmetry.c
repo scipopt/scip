@@ -982,7 +982,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *npermvars = 0;
    *permvars = NULL;
    *permvarsobj = NULL;
-   *nperms = 0;
+   *nperms = -1;
    *nmaxperms = 0;
    *perms = NULL;
    *permstrans = NULL;
@@ -1827,7 +1827,7 @@ SCIP_RETCODE determineSymmetry(
    assert( propdata->npermvars == 0 );
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
-   assert( propdata->nperms == 0 );
+   assert( propdata->nperms < 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->perms == NULL );
 
@@ -3440,14 +3440,13 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->computedsymmetry = FALSE;
    propdata->symconsenabled = FALSE;
    propdata->ofenabled = FALSE;
-   propdata->nperms = -1;
    propdata->log10groupsize = -1.0;
    propdata->binvaraffected = FALSE;
    propdata->norbitopes = 0;
    propdata->nsymresacks = 0;
 
    propdata->npermvars = 0;
-   propdata->nperms = 0;
+   propdata->nperms = -1;
    propdata->nmaxperms = 0;
    propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
@@ -3456,7 +3455,6 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->permvarmap = NULL;
    propdata->permvarsevents = NULL;
 
-   propdata->nperms = -1;
    propdata->permstrans = NULL;
    propdata->permvars = NULL;
    propdata->nbg0 = 0;
@@ -3554,7 +3552,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->permvarsobj = NULL;
    propdata->perms = NULL;
    propdata->permstrans = NULL;
-   propdata->nperms = 0;
    propdata->nmaxperms = 0;
    propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
