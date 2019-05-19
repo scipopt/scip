@@ -99,11 +99,11 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
       {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
       {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
-      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
-      {"exp(<x>)^2", "exp"},
-      {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
-      {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
-      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
+      //{"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
+      //{"exp(<x>)^2", "exp"},
+      //{"2+2*<x>*exp(<x>*<y>)-2", "prod"},
+      //{"2+2*<x>*cos(<x>*<y>)-2", "sum"},
+      //{"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
       //{"<fixvar>", "val"}
       //{"<fixvar>^2", "val"}
    };
@@ -160,9 +160,12 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CO
    SCIP_CALL( SCIPshowConsExprExpr(scip, expr) );
    fprintf(stderr,"simplifying!\n");
 #endif
+   SCIPdismantleConsExprExpr(scip, expr);
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_assert_not(infeasible);
+   printf("simplified\n");
+   SCIPdismantleConsExprExpr(scip, simplified);
 
 #if 0
    fprintf(stderr,"done simplifying!\n");
@@ -189,6 +192,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CO
          values[1], SCIPgetConsExprExprValue(simplified));
 
    /* test that the same expression is obtained when simplifying again */
+   printf("~~~~~~~~~~~~~ simplify again ~~~~~~~~~~~~~~~~~~~~ \n");
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, simplified, &simplified_again, &changed, &infeasible) );
    cr_expect_eq(SCIPcompareConsExprExprs(simplified, simplified_again), 0);
    cr_expect_not(changed);
@@ -380,11 +384,11 @@ ParameterizedTest(const struct expr_type* expression, simplify, simplify_test)
 }
 
 /* to debug parameterized test, since it doesn't work with --single :/ */
-//Test(simplify, debug)
-//{
-//   fprintf(stderr,"blabla\n");
-//   parseSimplifyCheck(scip, "<x>*(<x>+1)", "sum", NULL);
-//}
+Test(simplify, debug)
+{
+   fprintf(stderr,"blabla\n");
+   parseSimplifyCheck(scip, "-<x>+2*<y>+2*(0+0.5*<x>-<y>)", "val", NULL);
+}
 
 
 /* non-parametrized test, which calls presolve: tests aggregation */
