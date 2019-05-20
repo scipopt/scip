@@ -31,6 +31,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_exp.h"
 
 #define EXPRHDLR_NAME         "pow"
 #define EXPRHDLR_DESC         "power expression"
@@ -980,6 +981,35 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
       assert(baseval != 0.0 || exponent != 0.0);
 
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, pow(baseval, exponent)) );
+      return SCIP_OKAY;
+   }
+
+   /* enforces POW11 */
+   if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrExponential(conshdlr) )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_CONSEXPR_EXPR* prod;
+      SCIP_CONSEXPR_EXPR* exponential;
+      SCIP_CONSEXPR_EXPR* simplifiedprod;
+
+      SCIPdebugPrintf("[simplifyPow] POW11\n");
+      child = SCIPgetConsExprExprChildren(base)[0];
+
+      /* multiply child of exponential with exponent */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prod, 1, &child, exponent) );
+
+      /* simplify product */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, prod, &simplifiedprod) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prod) );
+
+      /* create exponential with new child */
+      SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &exponential, simplifiedprod) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedprod) );
+
+      /* the final simplified expression is the simplification of the just created exponential */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, exponential, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exponential) );
+
       return SCIP_OKAY;
    }
 
