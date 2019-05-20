@@ -507,7 +507,8 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    SCIP_SOL*             sol,                /**< primal solution used to setup tht problem, NULL for LP solution */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** calls the solving method for a single Benders' decomposition subproblem

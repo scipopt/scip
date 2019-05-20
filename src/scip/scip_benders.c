@@ -749,7 +749,8 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    SCIP_SOL*             sol,                /**< primal solution used to setup the problem, NULL for LP solution */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
    assert(scip != NULL);
@@ -759,7 +760,7 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetupBendersSubproblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber) );
+   SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber, type) );
 
    return SCIP_OKAY;
 }

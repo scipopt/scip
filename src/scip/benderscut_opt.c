@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -419,7 +418,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
       var = subvars[i];
 
-      (*checkobj) += SCIPvarGetUnchangedObj(var) * getNlpVarSol(var, primalvals, var2idx);
+      (*checkobj) += SCIPvarGetObj(var) * getNlpVarSol(var, primalvals, var2idx);
 
       /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
@@ -774,8 +773,15 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          success = FALSE;
          SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
             verifyobj);
+
 #ifdef SCIP_DEBUG
-         SCIPABORT();
+         /* we only need to abort if cut strengthen is not used. If cut strengthen has been used in this round and the
+          * cut could not be generated, then another subproblem solving round will be executed
+          */
+         if( !SCIPbendersInStrengthenRound(benders) )
+         {
+            SCIPABORT();
+         }
 #endif
       }
 

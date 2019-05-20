@@ -90,7 +90,8 @@ struct SCIP_Benders
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
-   SCIP_Bool             addslackvars;       /**< adds slack variables to all constraints to ensure the subproblem is always feasible */
+   SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
+                                                  adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
 
    /* information for heuristics */
@@ -140,6 +141,7 @@ struct SCIP_Benders
 
    /* solving process information */
    int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
+   SCIP_Bool             feasibilityphase;   /**< is the Benders' decomposition in a feasibility phase, i.e. using slack variables */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */

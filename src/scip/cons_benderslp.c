@@ -308,5 +308,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
 
+   conshdlrdata->stallcount = 0;
    return SCIP_OKAY;
 }
