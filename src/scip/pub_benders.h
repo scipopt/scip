@@ -331,6 +331,12 @@ int SCIPbendersGetNConvexSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** returns the flag indicating that Benders' decomposition is in a cut strengthening round */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersInStrengthenRound(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** solves the LP of the Benders' decomposition subproblem
  *
  *  This requires that the subproblem is in probing mode.
