@@ -800,6 +800,21 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
+/** mark constraints that include this expression to be propagated again
+ *
+ * This can be used by, e.g., nlhdlrs, to trigger a new propagation of constraints without
+ * a change of variable bounds, e.g., because new information on the expression is available
+ * that could potentially lead to tighter expression activity values.
+ *
+ * Note, that this call marks also constraints for propagation which only share some variable
+ * with this expression.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmarkConsExprExprPropagate(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to propagate again */
+   );
+
 /** increments the curboundstag and resets lastboundrelax in constraint handler data
  *
  * @note This method is not intended for normal use.
@@ -1129,6 +1144,28 @@ SCIP_EXPORT
 SCIP_Real SCIPgetRhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gives the unique index of an expression constraint
+ *
+ * Each expression constraint gets an index assigned when it is created.
+ * This index never changes and is unique among all expression constraints
+ * within the same SCIP instance.
+ * Thus, it can be used to sort a set of expression constraints.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprIndex(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** compares two expression constraints by its index
+ *
+ * Usable as compare operator in array sort functions.
+ */
+SCIP_EXPORT
+int SCIPcompareConsExprIndex(
+   void*                 cons1,
+   void*                 cons2
    );
 
 /** returns an equivalent linear constraint if possible */
