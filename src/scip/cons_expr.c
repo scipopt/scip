@@ -3301,12 +3301,42 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
    int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
    )
 {
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** xs;
+   SCIP_VAR** ys;
+   int* pos;
+   int nbilinterms;
+   int nchildren;
+
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(exprmap != NULL);
    assert(it != NULL);
    assert(naddconss != NULL);
 
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* only handle large sums of products of bilinear terms */
+   if( SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+      return SCIP_OKAY;
+
+   nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
+   nbilinterms = 0;
+
+   /* allocate enough memory to store variables of bilinear products */
+   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pos, nchildren) );
+
+   /* TODO collect and store bilinear terms; store position to replace products afterwards; remember which products have been used */
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &pos);
+   SCIPfreeBufferArray(scip, &ys);
+   SCIPfreeBufferArray(scip, &xs);
 
    return SCIP_OKAY;
 }
