@@ -2257,7 +2257,7 @@ void SCIPintervalReciprocal(
    )
 {
    SCIP_ROUNDMODE roundmode;
-   /* the volatile here seems to prevent some wrong GCC optimizations in this routine, which lead to results, #2650 */
+   /* the volatile here seems to prevent some wrong GCC optimizations in this routine, which lead to wrong results, #2650 */
    volatile SCIP_INTERVAL operand = operand_;
 
    assert(resultant != NULL);
