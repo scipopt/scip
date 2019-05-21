@@ -54,7 +54,6 @@ and the application or example target is `scip_project_binary`,
 simply execute
 
 ```
-cd build
 cmake --build build --target <scip_project_binary>
 ```
 
