@@ -33,6 +33,12 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Unfortunately, this does not always help with GCC 5.4 and 8.3, see #2650
+ */
+#pragma STD FENV_ACCESS ON
+
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
@@ -212,6 +218,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
  * However, compiling with -frounding-math would allow to return -x here.
+ * @todo We now set the FENV_ACCESS pragma to on, which is the same as -frounding-math, so we might be able to eliminate this.
  */
 static
 double negate(

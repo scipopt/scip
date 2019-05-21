@@ -72,6 +72,7 @@ Fixed bugs
 - fixed bug in propagation of dual proofs
 - improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
 - fixed bug related to releasing pending bound changes in tree.c
+- set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
 
 Miscellaneous
 -------------
