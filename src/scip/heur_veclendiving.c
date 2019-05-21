@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_veclendiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that rounds variables with long column vectors
  * @author Tobias Achterberg
  */

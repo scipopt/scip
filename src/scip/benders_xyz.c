@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz Benders' decomposition algorithm
  * @author Stephen J. Maher
  */

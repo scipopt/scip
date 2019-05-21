@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_probing.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  probing propagator
  * @author Tobias Achterberg
  * @author Matthias Miltenberger

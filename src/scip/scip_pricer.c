@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_pricer.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for variable pricer plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

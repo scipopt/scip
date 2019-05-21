@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_feaspump.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Objective Feasibility Pump 2.0
  * @author Timo Berthold
  * @author Domenico Salvagnin

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_tim.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  TIM file reader - the stage information for a stochastic programming instance in SMPS format
  * @author Stephen J. Maher
  */

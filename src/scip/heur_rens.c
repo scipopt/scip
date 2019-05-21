@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rens.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
  */

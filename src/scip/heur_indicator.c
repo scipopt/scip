@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_indicator.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  handle partial solutions for linear problems with indicators and otherwise continuous variables
  * @author Marc Pfetsch
  *

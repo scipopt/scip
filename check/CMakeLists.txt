@@ -70,7 +70,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-    "intobj"
+#     "intobj" <- please delete at all or enable if #2637 is closed
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"

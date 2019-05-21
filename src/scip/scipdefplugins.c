@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipdefplugins.c
+ * @ingroup OTHER_CFILES
  * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */

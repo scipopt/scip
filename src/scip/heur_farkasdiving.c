@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_farkasdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that tries to construct a Farkas-proof
  * @author Jakob Witzig
  *

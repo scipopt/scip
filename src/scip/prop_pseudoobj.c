@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz

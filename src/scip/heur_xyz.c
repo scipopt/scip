@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_xyz.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  xyz primal heuristic
  * @author Tobias Achterberg
  */

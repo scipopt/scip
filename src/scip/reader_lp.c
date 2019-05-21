@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_lp.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  LP file reader
  * @author Tobias Achterberg
  * @author Marc Pfetsch

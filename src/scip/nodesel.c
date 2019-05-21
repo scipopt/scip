@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for node selectors
  * @author Tobias Achterberg
  * @author Timo Berthold

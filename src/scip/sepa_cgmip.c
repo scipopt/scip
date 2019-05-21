@@ -15,6 +15,7 @@
 /* #define SCIP_WRITEPROB */
 /* #define SCIP_OUTPUT */
 /**@file   sepa_cgmip.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
  *

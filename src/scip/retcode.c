@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   retcode.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for return codes for SCIP methods
  * @author Tobias Achterberg
  */

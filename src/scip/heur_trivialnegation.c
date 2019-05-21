@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trivialnegation.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  trivialnegation primal heuristic
  * @author Jakob Witzig
  */

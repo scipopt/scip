@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp_default.c
+ * @ingroup DEFPLUGINS_DISP
  * @brief  default display columns
  * @author Tobias Achterberg
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_components.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for handling independent components
  * @author Gerald Gamrath
  *

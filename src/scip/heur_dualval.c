@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dualval.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  dualval primal heuristic
  * @author Tobias Buchwald
  *

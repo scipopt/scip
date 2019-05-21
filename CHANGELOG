@@ -28,10 +28,17 @@ Features
   heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
   applied to Benders' decomposition.
 
+- Modularity of symmetry handling has been increased. It is now possible to use orbitopes (i.e., polyhedral symmetry
+  handling techniques) and orbital fixing on the same instance.
+
 - cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
   method and Kelly's method. The cut strengthening is enabled by setting the paramemter
   "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
-  "corepointperturb" control the behavior of the cut strengthening method.
+  "corepointperturb" control the behavior of the cut strengthening method. Additionally, the parameter
+  "cutstrengthenintpoint" allows the user to specify the solution that is used to initialize the core point. The options
+  are the first LP solution, the first integer feasible solution, a relative interior point, a solution vector of all
+  ones and a solution vector of all zeros. Also, the core point can be reinitialized after each update to the incumbent
+  solution.
 
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
@@ -40,6 +47,10 @@ Features
   At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
   During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
   The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
+- Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
+  whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
+
 
 Performance improvements
 ------------------------
@@ -62,6 +73,7 @@ Performance improvements
   use event handler to catch global fixings;
   speed up orbit computations;
   change handling of restarts;
+  use only permutations that can contribute to a variable's orbit;
 
 - allow rapid learning at local nodes
 
@@ -76,6 +88,8 @@ Interface changes
   - new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
     which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
+- new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
+
 ### Deleted and changed API methods
 
 - LPI:
@@ -85,6 +99,11 @@ Interface changes
 - Symmetry:
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
+  + extended method SCIP_RETCODE SCIPgetGeneratorsSymmetry(): It is possible to access both the original and
+    transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
+  + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
+    SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
+    by "ismodelcons" to encode whether the constraints are model constraints or not
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -143,6 +162,11 @@ Interface changes
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
 - all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
 - deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
+- changed default value of "presolving/symbreak/detectorbitopes" (new value: TRUE, old value: FALSE)
+- extended range of "misc/usesymmetry" (new range: [0,3], old range: [0,2])
+- deleted parameter "constraints/orbisack/checkalwaysfeas"
+- deleted parameter "constraints/orbitope/checkalwaysfeas"
+- deleted parameter "constraints/symresack/checkalwaysfeas"
 
 ### New parameters
 
@@ -151,7 +175,7 @@ Interface changes
 - added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
   checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
-  branching strategy is provided
+  branching strategy is provided (only possible for non-model constraints)
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
@@ -246,6 +270,9 @@ Known bugs
 Features
 --------
 
+- The abspower constraint handler now passes more accurate convexity
+  information to the NLP relaxation.
+
 Performance improvements
 ------------------------
 
@@ -306,6 +333,10 @@ Fixed bugs
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
 - fixed bug in propagation of dual proofs
+- improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
+- fixed bug related to releasing pending bound changes in tree.c
+- set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
+- workaround problem with wrong GCC optimizations in SCIPintervalReciprocal
 
 Miscellaneous
 -------------
