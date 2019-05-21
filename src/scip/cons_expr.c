@@ -3290,29 +3290,30 @@ SCIP_RETCODE replaceBinaryProducts(
    return SCIP_OKAY;
 }
 
-/** helper function to replace products of binary variables but before factorizing variables */
+/** helper function to reformulate bilinear products of binary variables by factorizing variables that appear most often */
 static
 SCIP_RETCODE replaceBinaryProductsFactorize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS*            cons,               /**< expression constraint */
-   SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
-   SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
    int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR** children;
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** xs;
-   SCIP_VAR** ys;
-   int* pos;
-   int nbilinterms;
+   SCIP_VAR** auxvars;
+   SCIP_VAR** vars;
+   SCIP_Real* sumcoefs;
+   SCIP_Real* coefs;
+   SCIP_Bool* replaced;
    int nchildren;
+   int nauxvars;
+   int nreplaced;
+   int nvars;
+   int i;
 
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(exprmap != NULL);
-   assert(it != NULL);
    assert(naddconss != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -3323,20 +3324,210 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
    if( SCIPgetConsExprExprHdlr(consdata->expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
       return SCIP_OKAY;
 
+   children = SCIPgetConsExprExprChildren(consdata->expr);
    nchildren = SCIPgetConsExprExprNChildren(consdata->expr);
-   nbilinterms = 0;
+   sumcoefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+   nvars = SCIPgetNVars(scip);
+   nauxvars = 0;
+   nreplaced = 0;
 
-   /* allocate enough memory to store variables of bilinear products */
-   SCIP_CALL( SCIPallocBufferArray(scip, &xs, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ys, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pos, nchildren) );
+   SCIPdebugMsg(scip, "call replaceBinaryProductsFactorize() for %p with %d children\n", (void*)consdata->expr, nchildren);
 
-   /* TODO collect and store bilinear terms; store position to replace products afterwards; remember which products have been used */
+   /* allocate memory to store x_i sum_j coef_j x_j */
+   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, MIN(nvars, nchildren)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, MIN(nvars, nchildren)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, MIN(nvars, nchildren)) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &replaced, nchildren) );
+
+   for( i = nchildren - 1; i >= 1; --i )
+   {
+      SCIP_VAR* facvar;
+      SCIP_Real maxact;
+      SCIP_Real minact;
+      SCIP_Bool integral;
+      int nterms;
+      int j;
+
+      /* check whether i-th children is a product of two binary variables */
+      if( SCIPgetConsExprExprNChildren(children[i]) != 2 || !isBinaryProduct(scip, conshdlr, children[i]) )
+         continue;
+
+      facvar = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(children[i])[1]);
+      nterms = 0;
+      maxact = 0.0;
+      minact = 0.0;
+      integral = TRUE;
+
+      /* collect variables of bilinear products */
+      for( j = i; j >= 0; --j )
+      {
+         SCIP_VAR* x;
+         SCIP_VAR* y;
+
+         /* stop if there is a children which is not the product of binary variables */
+         if( SCIPgetConsExprExprNChildren(children[j]) != 2 || !isBinaryProduct(scip, conshdlr, children[j]) )
+            break;
+
+         x = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(children[j])[0]);
+         y = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(children[j])[1]);
+         assert(x != y);
+
+         if( y != facvar )
+            break;
+
+         vars[nterms] = x;
+         coefs[nterms] = sumcoefs[j];
+         maxact += MAX(0.0, coefs[nterms]);
+         minact += MIN(0.0, coefs[nterms]);
+         integral = integral && SCIPisIntegral(scip, coefs[nterms]);
+         ++nterms;
+      }
+
+      /* TODO add a parameter for the magic number */
+      if( nterms > 10 )
+      {
+         SCIP_CONS* newcons;
+         SCIP_VAR* auxvar;
+         char name[SCIP_MAXSTRLEN];
+         int k;
+
+         assert(minact <= 0.0);
+         assert(maxact >= 0.0);
+
+         SCIPdebugMsg(scip, "found %d terms when factorizing %s\n", nterms, SCIPvarGetName(facvar));
+         SCIPdebugMsg(scip, "[minact,maxact]=[%g,%g]\n", minact, maxact);
+
+         /* create and add auxiliary variable */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
+         SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, auxvar) );
+
+         /* create and add z - maxact x <= 0 */
+         if( !SCIPisZero(scip, maxact) )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPconsGetName(cons), SCIPvarGetName(facvar));
+            SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &newcons, name, auxvar, facvar, -maxact, -SCIPinfinity(scip), 0.0) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            if( naddconss != NULL )
+               ++(naddconss);
+         }
+
+         /* create and add  0 <= z - minact x */
+         if( !SCIPisZero(scip, minact) )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPconsGetName(cons), SCIPvarGetName(facvar));
+            SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &newcons, name, auxvar, facvar, -minact, 0.0, SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            if( naddconss != NULL )
+               ++(naddconss);
+         }
+
+         /* create and add minact <= sum_j c_j x_j - z + minact x_i */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPconsGetName(cons), SCIPvarGetName(facvar));
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &newcons, name, nterms, vars, coefs, minact, SCIPinfinity(scip)) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, newcons, auxvar, -1.0) );
+         if( !SCIPisZero(scip, minact) )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(scip, newcons, facvar, minact) );
+         }
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         if( naddconss != NULL )
+            ++(naddconss);
+
+         /* create and add sum_j c_j x_j - z + maxact x_i <= maxact */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_4", SCIPconsGetName(cons), SCIPvarGetName(facvar));
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &newcons, name, nterms, vars, coefs, -SCIPinfinity(scip), maxact) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, newcons, auxvar, -1.0) );
+         if( !SCIPisZero(scip, maxact) )
+         {
+            SCIP_CALL( SCIPaddCoefLinear(scip, newcons, facvar, maxact) );
+         }
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         if( naddconss != NULL )
+            ++(naddconss);
+
+         /* store auxiliary variable; release it later */
+         auxvars[nauxvars] = auxvar;
+         ++nauxvars;
+
+         /* mark children that need to be replaced later */
+         for( k = j+1; k <= i; ++k )
+         {
+            replaced[k] = TRUE;
+            ++nreplaced;
+         }
+      }
+
+      /* skip children that have been considered in the inner loop */
+      i = j;
+   }
+
+   if( nauxvars > 0 )
+   {
+      SCIP_CONSEXPR_EXPR** exprs;
+      SCIP_CONSEXPR_EXPR* newroot;
+      SCIP_Real* newcoefs;
+      int nexprs = 0;
+
+      /* allocate memory to create a new root expression */
+      SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren - nreplaced + nauxvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newcoefs, nchildren - nreplaced + nauxvars) );
+
+      /* consider remaining children */
+      for( i = 0; i < nchildren; ++i )
+      {
+         if( !replaced[i] )
+         {
+            exprs[nexprs] = children[i];
+            newcoefs[nexprs] = sumcoefs[i];
+            SCIPcaptureConsExprExpr(exprs[nexprs]);
+            ++nexprs;
+         }
+      }
+
+      /* consider auxiliary variables */
+      for( i = 0; i < nauxvars; ++i )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[nexprs], auxvars[i]) );
+         newcoefs[nexprs] = 1.0;
+         ++nexprs;
+      }
+      assert(nexprs == nchildren - nreplaced + nauxvars);
+
+      /* create a new root expression */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &newroot, nexprs, exprs, newcoefs, SCIPgetConsExprExprSumConstant(consdata->expr)) );
+
+      /* replace old with new root */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+      consdata->expr = newroot;
+
+      /* all expression in the exprs array have been captured once */
+      for( i = 0; i < nexprs; ++i )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[i]) );
+      }
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &newcoefs);
+      SCIPfreeBufferArray(scip, &exprs);
+   }
+
+   /* release auxiliary variables */
+   for( i = 0; i < nauxvars; ++i )
+   {
+      assert(auxvars[i] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvars[i]) );
+   }
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &pos);
-   SCIPfreeBufferArray(scip, &ys);
-   SCIPfreeBufferArray(scip, &xs);
+   SCIPfreeBufferArray(scip, &replaced);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &auxvars);
 
    return SCIP_OKAY;
 }
@@ -3378,6 +3569,7 @@ SCIP_RETCODE presolveBinaryProducts(
 
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_CALL( replaceBinaryProductsFactorize(scip, conshdlr, conss[c], naddconss) );
 
       /* replace each product of binary variables separately */
       SCIP_CALL( replaceBinaryProducts(scip, conshdlr, conss[c], exprmap, it, naddconss) );
