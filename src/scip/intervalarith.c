@@ -2253,13 +2253,15 @@ void SCIPintervalSignPowerScalar(
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_INTERVAL         operand             /**< operand of operation */
+   SCIP_INTERVAL         operand_            /**< operand of operation */
    )
 {
    SCIP_ROUNDMODE roundmode;
+   /* the volatile here seems to prevent some wrong GCC optimizations in this routine, which lead to results, #2650 */
+   volatile SCIP_INTERVAL operand = operand_;
 
    assert(resultant != NULL);
-   assert(!SCIPintervalIsEmpty(infinity, operand));
+   assert(!SCIPintervalIsEmpty(infinity, operand_));
 
    if( operand.inf == 0.0 && operand.sup == 0.0 )
    { /* 1/0 = [-inf,inf] */
