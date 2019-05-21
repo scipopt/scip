@@ -1560,7 +1560,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    interval = SCIPgetConsExprExprActivity(scip, expr);
    child = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
-   SCIPdebugMsg(scip, "reverseprop x^%g in [%g,%g], x = [%g,%g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
+   SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
 
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
    {
@@ -1581,7 +1581,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
       SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
    }
 
-   SCIPdebugMsgPrint(scip, " -> [%g,%g]\n", interval.inf, interval.sup);
+   SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,

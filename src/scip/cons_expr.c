@@ -1114,7 +1114,7 @@ SCIP_RETCODE forwardPropExpr(
                SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
 
 #ifdef SCIP_DEBUG
-               SCIPdebugMsg(scip, "computed interval [%g, %g] for expr ", exprhdlrinterval.inf, exprhdlrinterval.sup);
+               SCIPdebugMsg(scip, "computed interval [%.15g, %.15g] for expr ", exprhdlrinterval.inf, exprhdlrinterval.sup);
                SCIP_CALL( SCIPprintConsExprExpr(scip, consexprhdlr, expr, NULL) );
                SCIPdebugMsgPrint(scip, " (was [%g,%g]) by exprhdlr <%s>\n", interval.inf, interval.sup, expr->exprhdlr->name);
 #endif
@@ -1147,7 +1147,7 @@ SCIP_RETCODE forwardPropExpr(
                {
                   SCIP_INTERVAL auxvarbounds;
                   auxvarbounds = intevalvar(scip, expr->auxvar, intevalvardata);
-                  SCIPdebugMsg(scip, "intersect with auxvar <%s> bounds [%g,%g]\n", SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
+                  SCIPdebugMsg(scip, "intersect previnterval [%.15g,%.15g] with auxvar <%s> bounds [%.15g,%.15g]\n", previnterval.inf, previnterval.sup, SCIPvarGetName(expr->auxvar), auxvarbounds.inf, auxvarbounds.sup);
 
                   /* it would be odd if the domain of an auxiliary variable were empty */
                   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
@@ -1161,9 +1161,14 @@ SCIP_RETCODE forwardPropExpr(
                 */
                if( reversepropqueue != NULL && !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, interval, previnterval) && !expr->inqueue )
                {
+                  /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is not subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup); */
                   SCIP_CALL( SCIPqueueInsert(reversepropqueue, expr) );
                   expr->inqueue = TRUE;
                }
+               /* else
+               {
+                  SCIPdebugMsg(scip, "do not insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup);
+               } */
 
                SCIPintervalIntersect(&interval, interval, previnterval);
             }
@@ -1182,6 +1187,7 @@ SCIP_RETCODE forwardPropExpr(
             {
                /* update expression activity only */
                expr->activity = interval;
+               /* SCIPdebugMsg(scip, "expr <%p> (%s) activity set to [%.15g, %.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup); */
             }
 
             /* remember that activity is uptodate now */
@@ -1307,6 +1313,7 @@ SCIP_RETCODE reversePropQueue(
 
             if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 )
             {
+               /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)child, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))); */
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
                child->inqueue = TRUE;
             }
@@ -1483,6 +1490,7 @@ SCIP_RETCODE propConss(
 
          if( allexprs && !consdata->expr->inqueue )
          {
+            /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)consdata->expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(consdata->expr))); */
             SCIP_CALL( SCIPqueueInsert(queue, consdata->expr) );
             consdata->expr->inqueue = TRUE;
          }
@@ -10076,11 +10084,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    oldub = SCIPintervalGetSup(expr->activity);
    *cutoff = FALSE;
 
-#if 0 /* def SCIP_DEBUG */
+/* #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
-   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-   SCIPdebugMsgPrint(scip, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
-#endif
+   SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
+   SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+#endif */
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
@@ -10096,6 +10104,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    /* intersect old interval with the new one */
    SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+   /* SCIPdebugMsg(scip, "expr <%p> (%s) activity set to [%.15g, %.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup); */
    newlb = SCIPintervalGetInf(expr->activity);
    newub = SCIPintervalGetSup(expr->activity);
 
@@ -10180,6 +10189,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( reversepropqueue != NULL && !expr->inqueue && (expr->nenfos > 0 || SCIPhasConsExprExprHdlrReverseProp(expr->exprhdlr)) )
       {
          /* @todo put children which are in the queue to the end of it! */
+         /* SCIPdebugMsg(scip, "insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))); */
          SCIP_CALL( SCIPqueueInsert(reversepropqueue, (void*) expr) );
          expr->inqueue = TRUE;
       }
