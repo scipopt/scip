@@ -18,7 +18,7 @@ or refer to the online documentation of SCIP.
 
 In the following description, `scip_example_binary` inside its respective `SCIPExampleDir`
 can be one of the following:
-- `binpacking` from example `BinPacking`
+- `binpacking` from example `Binpacking`
 - `brachistochrome`, `circle`, `circlepacking`, `gastrans`, `string` from example `CallableLibrary`
 - `eventhdlr` from example `Eventhdlr`
 - `gmi` from example `GMI`
