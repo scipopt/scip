@@ -33,6 +33,7 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_entropy.h"
 
 #include "scip/pub_misc.h"
@@ -359,7 +360,7 @@ SCIP_RETCODE simplifyFactor(
  * Both, tomerge and finalchildren contain expressions that could be the children of a simplified product
  * (except for SP8 and SP10 which are enforced later).
  * However, the concatenation of both lists will not in general yield a simplified product expression,
- * because both SP4 and SP5 could be violated.  So the purpose of this method is to enforce SP4 and SP5.
+ * because SP4, SP5 and SP14 could be violated.  So the purpose of this method is to enforce SP4, SP5 and SP14.
  * In the process of enforcing SP4, it could happen that SP2 is violated. Since enforcing SP2
  * could generate further violations, we remove the affected children from finalchildren
  * and include them in unsimplifiedchildren for further processing.
@@ -406,9 +407,76 @@ SCIP_RETCODE mergeProductExprlist(
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "val") != 0);
       assert(previous == NULL || previous->next == current);
 
-      /* we are going to multiply the two exprs: current and tomergenode; to multiply them we interpret them as
-       * base^exponent; the base of an expr is the expr itself if type(expr) != pow, otherwise it is the child of pow
+      /* we are going to multiply the two exprs: current and tomergenode; we first check if they are both exponentials;
+       * if so, we multiply them; Otherwise, we interpret them as base^exponent; the base of an expr is the expr itself
+       * if type(expr) != pow, otherwise it is the child of pow
        */
+
+      /* if both are exponentials, create a new exponential with the sum of theirs children */
+      if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "exp") == 0 &&
+            strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), "exp") == 0 )
+      {
+         SCIP_CONSEXPR_EXPR* sum;
+         SCIP_CONSEXPR_EXPR* simplifiedsum;
+         SCIP_CONSEXPR_EXPR* expexpr;
+         SCIP_CONSEXPR_EXPR* simplifiedexp;
+
+         /* inform that expressions changed */
+         *changed = TRUE;
+
+         /* create sum */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &sum, 1,
+                  SCIPgetConsExprExprChildren(current->expr), NULL, 0.0) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sum, SCIPgetConsExprExprChildren(tomergenode->expr)[0], 1.0)
+               );
+
+         /* simplify sum */
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sum, &simplifiedsum) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
+
+         /* create exponential */
+         SCIP_CALL( SCIPcreateConsExprExprExp(scip, SCIPfindConshdlr(scip, "expr"), &expexpr, simplifiedsum) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedsum) );
+
+         /* simplify exponential */
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expexpr, &simplifiedexp) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expexpr) );
+
+         /* note that simplified exponential might be a product exp(x) * exp(-x + log(y*z)) -> y*z and so it is not a
+          * valid child of a simplified product; therefore we add it to the unsimplifiedchildren's list
+          */
+
+         /* replace tomergenode's expression with simplifiedexp */
+         /* TODO: this code repeats below; add new function to avoid duplication */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tomergenode->expr) );
+         tomergenode->expr = simplifiedexp;
+
+         /* move tomergenode to unsimplifiedchildren */
+         aux = tomergenode;
+         tomergenode = tomergenode->next;
+         insertFirstList(aux, unsimplifiedchildren);
+
+         /* remove current */
+         if( current == *finalchildren )
+         {
+            assert(previous == NULL);
+            aux = listPopFirst(finalchildren);
+            assert(aux == current);
+            current = *finalchildren;
+         }
+         else
+         {
+            assert(previous != NULL);
+            aux = current;
+            current = current->next;
+            previous->next = current;
+         }
+         SCIP_CALL( freeExprNode(scip, &aux) );
+
+         continue;
+      }
+
+      /* they were not exponentials, so collect bases and exponents */
       if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "pow") == 0 )
       {
          base1 = SCIPgetConsExprExprChildren(current->expr)[0];
@@ -966,11 +1034,18 @@ SCIP_RETCODE buildSimplifiedProduct(
    if( simplifiedcoef != 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
+      SCIP_CONSEXPR_EXPR* sum;
 
+      /* create sum */
       SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux) );
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &sum,
                1, &aux, &simplifiedcoef, 0.0) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+      /* simplify sum */
+      SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sum, simplifiedexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
+
       goto CLEANUP;
    }
 
@@ -1661,6 +1736,105 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityProduct)
    return SCIP_OKAY;
 }
 
+/** expression branching score callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreProduct)
+{
+   SCIP_Real auxval;
+   SCIP_Real violation;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childauxvar;
+   SCIP_Bool havewideinteger;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+
+   *success = FALSE;
+
+   /* get value of auxiliary variable of this expression */
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+   if( auxvalue == auxval )  /* absolute no violation */ /*lint !e777*/
+      return SCIP_OKAY;
+
+   violation = REALABS(auxvalue - auxval);
+
+   /* Add violation as branching score to only those children that would be fixed after branching on it
+    * as the children may not be actual variables that are branched on, but the branching score might be
+    * propagated down the tree first, we consider children with an auxiliary variable (that would be all
+    * if this exprhdlr is also used for estimate/separate) and then check the auxiliary variable whether
+    * it appears to be binary (locally).
+    * Also count number of discrete variables that would not be fixed after branching.
+    */
+   havewideinteger = FALSE;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      childauxvar = SCIPgetConsExprExprAuxVar(child);
+      if( childauxvar == NULL )
+         continue;
+      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+      /* skip fixed children */
+      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) < 0.5 )
+         continue;
+      /* skip children with wide bounds (consider in fallback below) */
+      if( SCIPvarGetUbLocal(childauxvar) - SCIPvarGetLbLocal(childauxvar) >= 2.0 )
+      {
+         havewideinteger = TRUE;
+         continue;
+      }
+
+      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
+      *success = TRUE;
+   }
+
+   /* if we passed on some branching score then we are done */
+   if( *success )
+      return SCIP_OKAY;
+
+   /* if there are no unfixed discrete children, then fall back to default rule */
+   if( !havewideinteger )
+      return SCIP_OKAY;
+
+   /* pass branching score to all unfixed discrete children not at their bound (could be all children, in which case it is like the nlhdlr's default) */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_Real auxvarval;
+      SCIP_Real auxvarlb;
+      SCIP_Real auxvarub;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      childauxvar = SCIPgetConsExprExprAuxVar(child);
+      if( childauxvar == NULL )
+         continue;
+      if( SCIPvarGetType(childauxvar) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      auxvarval = SCIPgetSolVal(scip, sol, childauxvar);
+      auxvarlb = SCIPvarGetLbLocal(childauxvar);
+      auxvarub = SCIPvarGetUbLocal(childauxvar);
+
+      /* if at lower bound, then skip */
+      if( !SCIPisInfinity(scip, -auxvarlb) && SCIPisFeasEQ(scip, auxvarval, auxvarlb) )
+         continue;
+      /* if at upper bound, then skip */
+      if( !SCIPisInfinity(scip,  auxvarub) && SCIPisFeasEQ(scip, auxvarval, auxvarub) )
+         continue;
+
+      SCIPaddConsExprExprBranchScore(scip, child, brscoretag, violation);
+      *success = TRUE;
+   }
+
+   /* if we didn't add branchscore for any child, then fall back to nlhdlr_default's branchscore rule */
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1699,6 +1873,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreProduct) );
 
    return SCIP_OKAY;
 }
