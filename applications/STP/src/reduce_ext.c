@@ -300,9 +300,9 @@ SCIP_RETCODE dheap_Test1(
 
 
    graph_heap_correct(1, 2.0, heap);
-   graph_heap_correct(2, 1.0, heap);
+   graph_heap_correct(2, 2.7, heap);
    graph_heap_correct(0, 1.5, heap);
-   graph_heap_correct(2, 1.7, heap);
+   graph_heap_correct(2, 1.9, heap);
    graph_heap_correct(4, 0.5, heap);
 
    assert(heap->size == 4);
@@ -320,27 +320,27 @@ SCIP_RETCODE dheap_Test1(
    graph_heap_clean(heap);
 
    graph_heap_correct(1, 2.0, heap);
-   graph_heap_correct(2, 1.0, heap);
+   graph_heap_correct(2, 3.0, heap);
    graph_heap_correct(0, 1.5, heap);
-   graph_heap_correct(2, 1.7, heap);
-   graph_heap_correct(4, 0.5, heap);
+   graph_heap_correct(2, 1.6, heap);
+   graph_heap_correct(12, 22.5, heap);
    graph_heap_correct(12, 7.7, heap);
-   graph_heap_correct(4, 7.5, heap);
+   graph_heap_correct(4, 8.5, heap);
 
 
    assert(heap->size == 5);
 
    graph_heap_deleteMinGetNode(&min, heap);
-   printf("min %d \n", min);
    assert(min == 0);
    graph_heap_deleteMinGetNode(&min, heap);
    assert(min == 2);
    graph_heap_deleteMinGetNode(&min, heap);
    assert(min == 1);
    graph_heap_deleteMinGetNode(&min, heap);
-   assert(min == 4);
-   graph_heap_deleteMinGetNode(&min, heap);
    assert(min == 12);
+   graph_heap_deleteMinGetNode(&min, heap);
+   assert(min == 4);
+
 
    assert(heap->size == 0);
 

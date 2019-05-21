@@ -5490,7 +5490,7 @@ void graph_heap_deleteMinGetNode(
 /** corrects node position in heap according to new key (or newly inserts the node) */
 void graph_heap_correct(
    int                   node,               /**< the node */
-   SCIP_Real             newkey,             /**< the new key */
+   SCIP_Real             newkey,             /**< the new key (needs to be smaller than current one) */
    DHEAP*                heap                /**< the heap  */
    )
 {
@@ -5515,7 +5515,11 @@ void graph_heap_correct(
    {
       assert(position[node] >= 1);
       hole = position[node];
+
+      assert(entries[hole].node == node);
+      assert(entries[hole].key >= newkey);
    }
+
    parent = hole / 2;
    parentkey = entries[parent].key;
 
