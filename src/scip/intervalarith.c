@@ -215,7 +215,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -234,7 +234,7 @@ double negate(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
