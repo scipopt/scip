@@ -5318,3 +5318,222 @@ SCIP_Bool graph_valid(
 
    return TRUE;
 }
+
+void
+graph_heap_clean(
+   DHEAP*                heap                /**< the heap  */
+   )
+{
+   int* const position = heap->position;
+   int capacity = heap->capacity;
+
+   assert(heap && position);
+
+   for( int i = 0; i < capacity; i++ )
+      position[i] = UNKNOWN;
+}
+
+
+/** creates new heap. If entries array is provided, it must be of size capacity + 2  */
+SCIP_RETCODE graph_heap_create(
+   SCIP*                 scip,               /**< SCIP */
+   int                   capacity,           /**< heap capacity */
+   int*                  position,           /**< heap position array or NULL */
+   DENTRY*               entries,            /**< entries array or NULL */
+   DHEAP**               heap                /**< the heap  */
+   )
+{
+   int* position_heap;
+   DENTRY* entries_heap;
+
+   assert(scip && heap);
+   assert(capacity >= 1);
+
+   SCIP_CALL( SCIPallocMemory(scip, heap) );
+
+   if( position )
+      position_heap = position;
+   else
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(position_heap), capacity) );
+
+   if( entries )
+      entries_heap = entries;
+   else
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(entries_heap), capacity + 2) );
+
+   (*heap)->size = 0;
+   (*heap)->capacity = capacity;
+   (*heap)->position = position_heap;
+   (*heap)->entries = entries_heap;
+
+   /* sentinels */
+   entries_heap[0].key = DHEAP_MIN_KEY;
+   entries_heap[capacity + 1].key = DHEAP_MAX_KEY;
+
+   graph_heap_clean(*heap);
+
+   return SCIP_OKAY;
+}
+
+/** frees the heap */
+void graph_heap_free(
+   SCIP*                 scip,               /**< SCIP */
+   SCIP_Bool             freePositions,      /**< free positions array? */
+   SCIP_Bool             freeEntries,        /**< free entries array? */
+   DHEAP**               heap                /**< the heap  */
+   )
+{
+   assert(scip && heap);
+
+   if( freePositions )
+      SCIPfreeMemoryArray(scip, &((*heap)->position));
+
+   if( freeEntries )
+      SCIPfreeMemoryArray(scip, &((*heap)->entries));
+
+   SCIPfreeMemoryArray(scip, heap);
+}
+
+/** deletes heap minimum */
+void graph_heap_deleteMin(
+   int*                  node,               /**< pointer to value of minimum */
+   SCIP_Real*            key,                /**< pointer to key of minimum */
+   DHEAP*                heap                /**< the heap  */
+   )
+{
+   *key = heap->entries[1].key;
+
+   graph_heap_deleteMinGetNode(node, heap);
+}
+
+/** deletes heap minimum */
+void graph_heap_deleteMinGetNode(
+   int*                  node,               /**< pointer to node stored in minimum (set by method) */
+   DHEAP*                heap                /**< the heap  */
+   )
+{
+   int* const RESTRICT position = heap->position;
+   DENTRY* const RESTRICT entries = heap->entries;
+   SCIP_Real fill;
+   int parent;
+   int hole = 1;
+   int child = 2;
+   const int lastentry = heap->size--;
+
+   assert(heap && position && entries && node);
+   assert(heap->size >= 0);
+
+   *node = entries[1].node;
+
+   assert(position[*node] == 1);
+
+   position[*node] = CONNECT;
+
+   /* move down along min-path */
+   while( child < lastentry )
+   {
+      const SCIP_Real key1 = entries[child].key;
+      const SCIP_Real key2 = entries[child + 1].key;
+      assert(hole >= 1);
+
+      /* second child with smaller key? */
+      if( key1 > key2 )
+      {
+         entries[hole].key = key2;
+         child++;
+      }
+      else
+      {
+         entries[hole].key = key1;
+      }
+
+      assert(entries[hole].node >= 0 && entries[hole].node < heap->capacity);
+
+      entries[hole].node = entries[child].node;
+      position[entries[hole].node] = hole;
+
+      hole = child;
+      child *= 2;
+   }
+
+   /* now hole is at last tree level, fill it with last heap entry and move it up */
+
+   fill = entries[lastentry].key;
+   parent = hole / 2;
+
+   while( entries[parent].key > fill )
+   {
+      assert(hole >= 1);
+
+      entries[hole] = entries[parent];
+
+      assert(entries[hole].node >= 0 && entries[hole].node < heap->capacity);
+
+      position[entries[hole].node] = hole;
+      hole = parent;
+      parent /= 2;
+   }
+
+   /* finally, fill the hole */
+   entries[hole].key = fill;
+   entries[hole].node = entries[lastentry].node;
+
+   assert(entries[hole].node >= 0 && entries[hole].node < heap->capacity);
+
+   if( hole != lastentry )
+      position[entries[hole].node] = hole;
+
+   /* set sentinel */
+   entries[lastentry].key = DHEAP_MAX_KEY;
+}
+
+/** corrects node position in heap according to new key (or newly inserts the node) */
+void graph_heap_correct(
+   int                   node,               /**< the node */
+   SCIP_Real             newkey,             /**< the new key */
+   DHEAP*                heap                /**< the heap  */
+   )
+{
+   int* const RESTRICT position = heap->position;
+   DENTRY* const RESTRICT entries = heap->entries;
+   int hole;
+   int parent;
+   SCIP_Real parentkey;
+
+   assert(heap && position && entries);
+   assert(newkey < DHEAP_MAX_KEY && newkey > DHEAP_MIN_KEY);
+   assert(heap->size < heap->capacity);
+   assert(node >= 0 && node < heap->capacity);
+   assert(position[node] != CONNECT);
+
+   if( position[node] == UNKNOWN )
+   {
+      assert(heap->size < heap->capacity - 1);
+      hole = ++(heap->size);
+   }
+   else
+   {
+      assert(position[node] >= 1);
+      hole = position[node];
+   }
+   parent = hole / 2;
+   parentkey = entries[parent].key;
+
+   /* move hole up */
+   while( parentkey > newkey )
+   {
+      assert(hole >= 1);
+
+      entries[hole].key = parentkey;
+      entries[hole].node = entries[parent].node;
+      position[entries[hole].node] = hole;
+      hole = parent;
+      parent /= 2;
+      parentkey = entries[parent].key;
+   }
+
+   /* fill the hole */
+   entries[hole].key = newkey;
+   entries[hole].node = node;
+   position[node] = hole;
+}

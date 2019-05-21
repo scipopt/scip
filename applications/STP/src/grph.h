@@ -157,6 +157,23 @@ typedef struct shortest_path
    signed int            edge;               /* Incoming edge to go along                   */
 } PATH;
 
+/** heap entry */
+typedef struct dijkstra_heap_entry
+{
+   SCIP_Real             key;
+   int                   node;
+}DENTRY;
+
+/** Dijkstra heap */
+typedef struct dijkstra_heap
+{
+   int                   capacity;           /**< maximum size                     */
+   int                   size;               /**< size */
+   int*                  position;           /**< position of an index in range 0 to capacity */
+   DENTRY*               entries;            /**< number of components                                   */
+}DHEAP;
+
+
 /* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */
 #define flipedge(edge) ( ((edge) + 1) - 2 * ((edge) % 2) )
 #define flipedge_Uint(edge) ( (((unsigned int) edge) + 1) - 2 * (((unsigned int) edge) % 2) )
@@ -166,6 +183,9 @@ typedef struct shortest_path
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
 #define BLOCKED      1e10
+#define DHEAP_MAX_KEY  (1e20)
+#define DHEAP_MIN_KEY  -(1e20)
+
 
 #define EDGE_BLOCKED      0
 #define EDGE_MODIFIABLE    1
@@ -190,6 +210,14 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 /* grphbase.c
  */
+
+extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY* entries, DHEAP** heap);
+extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
+extern void   graph_heap_deleteMin(int*, SCIP_Real*, DHEAP*);
+extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);
+extern void   graph_heap_clean(DHEAP*);
+extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
+
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   enforcePterm(GRAPH*, int);
@@ -404,6 +432,7 @@ extern SCIP_RETCODE    reduceExtCheckArc(SCIP*, const GRAPH*, int, const SCIP_Re
  */
 extern SCIP_RETCODE    reduce_extTest1(SCIP*);
 extern SCIP_RETCODE    reduce_extTest2(SCIP*);
+extern SCIP_RETCODE    dheap_Test1(SCIP*);
 
 
 /* reduce_simple.c
