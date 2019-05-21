@@ -571,21 +571,24 @@
  * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
  * available options and usage information.
  *
+ * Platform independent build instructions:
+ *
  * ```
- * cd scip
+ * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
+ * cmake --build build
+ * ```
+ *
+ * Linux/macOS Makefile-based build instructions:
+ *
+ * ```
  * mkdir build
  * cd build
  * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
  * make
- *
  * # optional: run a quick check on some instances
- *
  * make check
- *
  * # optional: install scip executable, library, and headers
- *
  * make install
- *
  * ```
  *
  * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
