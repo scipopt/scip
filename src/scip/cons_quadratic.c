@@ -85,6 +85,11 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ */
+#pragma STD FENV_ACCESS ON
+
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
 #define CONSHDLR_DESC          "quadratic constraints of the form lhs <= b' x + x' A x <= rhs"

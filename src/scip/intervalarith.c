@@ -34,6 +34,12 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Unfortunately, this does not always help with GCC 5.4 and 8.3, see #2650
+ */
+#pragma STD FENV_ACCESS ON
+
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
@@ -213,10 +219,11 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
  * However, compiling with -frounding-math would allow to return -x here.
+ * @todo We now set the FENV_ACCESS pragma to on, which is the same as -frounding-math, so we might be able to eliminate this.
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -235,7 +242,7 @@ double negate(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -2247,13 +2254,15 @@ void SCIPintervalSignPowerScalar(
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_INTERVAL         operand             /**< operand of operation */
+   SCIP_INTERVAL         operand_            /**< operand of operation */
    )
 {
    SCIP_ROUNDMODE roundmode;
+   /* the volatile here seems to prevent some wrong GCC optimizations in this routine, which lead to wrong results, #2650 */
+   volatile SCIP_INTERVAL operand = operand_;
 
    assert(resultant != NULL);
-   assert(!SCIPintervalIsEmpty(infinity, operand));
+   assert(!SCIPintervalIsEmpty(infinity, operand_));
 
    if( operand.inf == 0.0 && operand.sup == 0.0 )
    { /* 1/0 = [-inf,inf] */

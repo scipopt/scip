@@ -7450,9 +7450,8 @@
   * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
   * href="https://projects.coin-or.org/GAMSlinks">here</a>.
   *
-  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
-  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
-  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
+  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
   * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   * free modeling language.
   *

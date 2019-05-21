@@ -3589,8 +3589,8 @@ SCIP_RETCODE SCIPhashsetCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
 
-   /* dont create too small hashtables, i.e. at least size 32, and increase
-    * the given size by divinding it by 0.9, since then no rebuilding will
+   /* do not create too small hashtables, i.e. at least size 32, and increase
+    * the given size by dividing it by 0.9, since then no rebuilding will
     * be necessary if the given number of elements are inserted. Finally round
     * to the next power of two.
     */
@@ -9321,6 +9321,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    return SCIP_OKAY;
 }
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ */
+#pragma STD FENV_ACCESS ON
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9361,6 +9366,8 @@ SCIP_Bool SCIPfindSimpleRational(
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
+
+#pragma STD FENV_ACCESS OFF
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
