@@ -3447,7 +3447,7 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
       i = j;
    }
 
-   if( nauxvars > 0 )
+   if( nauxvars > 0 ) /*lint !e850*/
    {
       SCIP_CONSEXPR_EXPR** exprs;
       SCIP_CONSEXPR_EXPR* newroot;
@@ -3529,11 +3529,11 @@ SCIP_RETCODE presolveBinaryProducts(
    int c;
 
    assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
 
    /* no expression constraints or binary variables -> skip */
    if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
       return SCIP_OKAY;
+   assert(conss != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3550,6 +3550,8 @@ SCIP_RETCODE presolveBinaryProducts(
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss[c] != NULL);
+
       SCIP_CALL( replaceBinaryProductsFactorize(scip, conshdlr, conss[c], naddconss) );
 
       /* replace each product of binary variables separately */
