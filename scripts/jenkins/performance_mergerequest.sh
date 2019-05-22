@@ -65,8 +65,8 @@ else
 fi
 
 export CRITERION_DIR=""
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
-export BLISS_DIR=/nfs/optimi/usr/sw/bliss
+export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
 
 # create required directory
 mkdir -p settings
@@ -99,7 +99,7 @@ if [ "${TESTMODE}" == "all" ]; then
   JOBS[2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
   JOBS[3]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 elif [ "${TESTMODE}" == "short" ]; then
-  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=mip-dbg TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "mipdev-solvable" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
 elif [ "${TESTMODE}" == "minlpdev-solvable" ]; then

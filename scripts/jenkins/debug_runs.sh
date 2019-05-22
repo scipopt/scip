@@ -63,9 +63,9 @@ else
 fi
 
 export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
-export BLISS_DIR=/nfs/optimi/usr/sw/bliss
+export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
 
 # create all required directories
 mkdir -p settings
