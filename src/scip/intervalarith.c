@@ -35,8 +35,11 @@
 
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
+#ifndef __clang__
 #pragma STD FENV_ACCESS ON
+#endif
 
 /* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
  * see #2650 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=34678.
