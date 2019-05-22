@@ -78,6 +78,53 @@ SCIP_RETCODE reduce_extArc(
 }
 
 
+static
+SCIP_RETCODE reduce_checkSdWalk(
+   SCIP* scip,
+   GRAPH* graph,
+   SCIP_Real* rootdist,
+   SCIP_Real* redcost,
+   PATH* termpaths,
+   STP_Bool* edgedeleted,
+   SCIP_Real cutoff,
+   int edge,
+   int root,
+   SCIP_Bool* deletable
+)
+{
+   const int nnodes = graph->knots;
+   int* nodearr_int1;
+   int* nodearr_int2;
+   int* nodearr_int3;
+   int* nodearr_int4;
+   int* nodearr_int5;
+   SCIP_Bool* isterm;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int1, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int3, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int4, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int5, nnodes) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
+
+   graph_get_isTerm(graph, isterm);
+
+   /* actual test */
+   SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeleted,
+         isterm, cutoff, edge, FALSE, nodearr_int1, nodearr_int2, nodearr_int3, nodearr_int4, nodearr_int5, deletable) );
+
+   /* clean up */
+   SCIPfreeBufferArray(scip, &isterm);
+   SCIPfreeBufferArray(scip, &nodearr_int5);
+   SCIPfreeBufferArray(scip, &nodearr_int4);
+   SCIPfreeBufferArray(scip, &nodearr_int3);
+   SCIPfreeBufferArray(scip, &nodearr_int2);
+   SCIPfreeBufferArray(scip, &nodearr_int1);
+
+   return SCIP_OKAY;
+}
+
 SCIP_RETCODE reduce_extTest1(
    SCIP*                 scip                /**< SCIP data structure */
 )

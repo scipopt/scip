@@ -4313,6 +4313,7 @@ SCIP_RETCODE graph_init(
    p->term2edge = NULL;
    p->budget = -1.0;
    p->costbudget = NULL;
+   p->dcsr_storage = NULL;
 
    SCIPdebugMessage("Initialized new graph \n");
 
@@ -4461,6 +4462,9 @@ void graph_free(
 
    if( p->term2edge != NULL )
       SCIPfreeMemoryArray(scip, &(p->term2edge));
+
+   if( p->dcsr_storage != NULL )
+      graph_free_dcsr(scip, p);
 
    if( p->stp_type == STP_DCSTP )
    {
@@ -5540,4 +5544,190 @@ void graph_heap_correct(
    entries[hole].key = newkey;
    entries[hole].node = node;
    position[node] = hole;
+}
+
+/** initializes dynamic CSR storage */
+SCIP_RETCODE graph_init_dcsr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   DCSR* dcsr;
+   RANGE* range_csr;
+   int* head_csr;
+   int* edgeid_csr;
+   SCIP_Real* cost_csr;
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+
+   assert(scip && g);
+   assert(nnodes >= 1);
+   assert(g->dcsr_storage == NULL);
+   assert(!pcmw || !g->extended);
+
+   SCIP_CALL( SCIPallocMemory(scip, &dcsr) );
+   g->dcsr_storage = dcsr;
+
+   dcsr->nedges = nedges;
+   dcsr->nnodes = nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(range_csr), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(edgeid_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges) );
+
+   dcsr->range = range_csr;
+   dcsr->head = head_csr;
+   dcsr->edgeid = edgeid_csr;
+   dcsr->cost = cost_csr;
+
+   /* now fill the data in */
+
+   range_csr[0].start = 0;
+
+   for( int k = 0; k < nnodes - 1; k++ )
+   {
+      int pos = range_csr[k].start;
+
+      if( !pcmw || g->mark[k] )
+      {
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int ehead = g->head[e];
+
+            if( pcmw && !g->mark[ehead] )
+               continue;
+
+            head_csr[pos] = ehead;
+            edgeid_csr[pos] = e;
+            cost_csr[pos++] = g->cost[e];
+         }
+      }
+
+      assert(pos == range_csr[k].start + g->grad[k] || (pcmw && !g->mark[k]));
+
+      range_csr[k].end = pos;
+      range_csr[k + 1].start = range_csr[k].end;
+   }
+
+   range_csr[nnodes - 1].end = range_csr[nnodes - 1].start + g->grad[nnodes - 1];
+
+   assert(graph_dcsr_isValid(g));
+
+   return SCIP_OKAY;
+}
+
+/** frees dynamic CSR storage */
+void graph_free_dcsr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   DCSR* dcsr = g->dcsr_storage;
+
+   assert(scip && g);
+   assert(dcsr != NULL && dcsr->nnodes >= 1);
+
+   SCIPfreeMemoryArray(scip, &(dcsr->range));
+   SCIPfreeMemoryArray(scip, &(dcsr->edgeid));
+   SCIPfreeMemoryArray(scip, &(dcsr->head));
+   SCIPfreeMemoryArray(scip, &(dcsr->cost));
+
+   SCIPfreeMemoryArray(scip, &(g->dcsr_storage));
+
+   assert(g->dcsr_storage == NULL);
+}
+
+/** updates dynamic CSR storage */
+void graph_update_dcsr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   assert(scip && g);
+
+   assert(0 && "implement"); // check whether enough edges and nodes, otherwise reallocate
+}
+
+/** deletes CSR indexed edge */
+void graph_dcsr_deleteEdge(
+   DCSR*                 dcsr,               /**< DCSR edge */
+   int                   tail,               /**< tail of edge */
+   int                   e_csr               /**< CSR indexed edge */
+)
+{
+   RANGE* const range = dcsr->range;
+   int* const head = dcsr->head;
+   int* const edgeid = dcsr->edgeid;
+   SCIP_Real* const cost = dcsr->cost;
+   int last;
+
+   assert(dcsr);
+   assert(tail >= 0 && tail < dcsr->nnodes);
+   assert(e_csr >= 0 && e_csr < dcsr->nedges);
+   assert(range[tail].start <= e_csr && e_csr < range[tail].end);
+
+   last = --(range[tail].end);
+
+   /* e_csr not already deleted? */
+   if( e_csr != last )
+   {
+      head[e_csr] = head[last];
+      edgeid[e_csr] = edgeid[last];
+      cost[e_csr] = cost[last];
+   }
+
+#ifndef NDEBUG
+   head[last] = -1;
+   edgeid[last] = -1;
+   cost[last] = -FARAWAY;
+#endif
+
+}
+
+/** is DCSR storage of graph valid? */
+SCIP_Bool graph_dcsr_isValid(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const DCSR* const dcsr = g->dcsr_storage;
+   const RANGE* const range = dcsr->range;
+   const int* const head = dcsr->head;
+   const int* const edgeid = dcsr->edgeid;
+   const SCIP_Real* const cost = dcsr->cost;
+   const int nnodes = dcsr->nnodes;
+   const int nedges = dcsr->nedges;
+
+   assert(g && dcsr && range && head && edgeid && cost);
+
+   if( nnodes != g->knots || nedges != g->edges )
+   {
+      return FALSE;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int start = range[i].start;
+      const int end = range[i].end;
+
+      if( start > end )
+      {
+         return FALSE;
+      }
+
+      for( int e = start; e < end; e++ )
+      {
+         const int ordedge = edgeid[e];
+
+         assert(ordedge >= 0 && ordedge < nedges);
+
+         if( head[e] != g->head[ordedge] || i != g->tail[ordedge] )
+         {
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
 }

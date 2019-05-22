@@ -62,6 +62,25 @@ typedef unsigned char STP_Bool;
 
 extern SCIP_Bool show;
 
+/** for dynamic CSR */
+typedef struct csr_range
+{
+   int start;
+   int end;
+} RANGE;
+
+
+/** dynamic CSR */
+typedef struct dynamic_csr_storage
+{
+   RANGE*                range;              /**< CSR range */
+   int*                  head;               /**< edge head array */
+   int*                  edgeid;             /**< id of edge */
+   SCIP_Real*            cost;               /**< edge cost array */
+   int                   nedges;             /**< number of edges */
+   int                   nnodes;             /**< number of nodes */
+} DCSR;
+
 
 typedef struct
 {
@@ -137,8 +156,10 @@ typedef struct
    /* Global information */
    int                   stp_type;          /**< Steiner problem variant                                                */
    SCIP_Bool             extended;          /**< For (R)PCSTP and (R)MWCSP: signifies whether problem is in extended
-                                                 form (TRUE) or not (FALSE)                                             */
+                                                 form (TRUE) or not (FALSE) */
 
+   /* other adjacency storages */
+   DCSR*                 dcsr_storage;       /**< Dynamic CSR structure */
 } GRAPH;
 
 typedef struct presolve_info
@@ -162,17 +183,16 @@ typedef struct dijkstra_heap_entry
 {
    SCIP_Real             key;
    int                   node;
-}DENTRY;
+} DENTRY;
 
 /** Dijkstra heap */
 typedef struct dijkstra_heap
 {
-   int                   capacity;           /**< maximum size                     */
+   int                   capacity;           /**< maximum size */
    int                   size;               /**< size */
    int*                  position;           /**< position of an index in range 0 to capacity */
-   DENTRY*               entries;            /**< number of components                                   */
-}DHEAP;
-
+   DENTRY*               entries;            /**< number of components  */
+} DHEAP;
 
 /* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */
 #define flipedge(edge) ( ((edge) + 1) - 2 * ((edge) % 2) )
@@ -211,12 +231,20 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 /* grphbase.c
  */
 
+/* Dijkstra heap */
 extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY* entries, DHEAP** heap);
 extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
 extern void   graph_heap_deleteMin(int*, SCIP_Real*, DHEAP*);
 extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);
 extern void   graph_heap_clean(DHEAP*);
 extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
+
+/* Dynamic CSR storage */
+extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
+extern void   graph_free_dcsr(SCIP*, GRAPH*);
+extern void   graph_update_dcsr(SCIP*, GRAPH*);
+extern void   graph_dcsr_deleteEdge(DCSR*, int, int);
+extern SCIP_Bool graph_dcsr_isValid(const GRAPH*);
 
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
