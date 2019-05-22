@@ -63,8 +63,8 @@ else
 fi
 
 export CRITERION_DIR=""
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
-export BLISS_DIR=/nfs/optimi/usr/sw/bliss
+export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
 
 # create required directory
 mkdir -p settings
