@@ -1188,6 +1188,138 @@ SCIP_Bool graph_sdWalks(
 }
 
 
+
+/** modified Dijkstra along walks for PcMw, returns special distance between start and end */
+SCIP_Bool graph_sdWalks_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            termmark,           /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise)*/
+   SCIP_Real             distlimit,          /**< distance limit of the search */
+   int                   start,              /**< start */
+   int                   end,                /**< end */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  heap,               /**< array representing a heap */
+   int*                  state,              /**< array to indicate whether a node has been scanned */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+   )
+{
+   int count;
+   int nchecks;
+   SCIP_Bool success = FALSE;
+   const int edgelimit1 = edgelimit / 2;
+   DCSR* const dcsr = g->dcsr_storage;
+   RANGE* const RESTRICT range_csr = dcsr->range;
+   int* const RESTRICT head_csr = dcsr->head;
+   SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+
+   assert(dcsr && g && heap && dist && visitlist && nvisits && visited); // todo && dheap
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+
+   *nvisits = 0;
+
+   if( g->grad[start] == 0 || g->grad[end] == 0 )
+      return FALSE;
+
+   assert(g->mark[start] && g->mark[end]);
+
+   count = 0;
+   nchecks = 0;
+   dist[start] = 0.0;
+   state[start] = CONNECT;
+   visitlist[(*nvisits)++] = start;
+
+   g->mark[start] = FALSE;
+
+   for( int e = range_csr[start].start; e < range_csr[start].end; e++ )
+   {
+      const int m = head_csr[e];
+      assert(g->mark[m]);
+
+      if( SCIPisLE(scip, cost_csr[e], distlimit) && m != end )
+      {
+         assert(!visited[m]);
+
+         visitlist[(*nvisits)++] = m;
+         visited[m] = TRUE;
+
+         if( termmark[m] != 0 )
+         {
+            const SCIP_Real newcost = MAX(cost_csr[e] - g->prize[m], 0.0);
+            correctXwalk(scip, heap, state, &count, dist, m, newcost);
+         }
+         else
+         {
+            correctXwalk(scip, heap, state, &count, dist, m, cost_csr[e]);
+         }
+
+         if( ++nchecks > edgelimit1 )
+            break;
+      }
+   }
+
+   while( count > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labelled node */
+      const int k = nearestX(heap, state, &count, dist);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+
+      assert(k != end && k != start);
+      assert(SCIPisLE(scip, dist[k], distlimit));
+
+      if( termmark[k] == 2 )
+         state[k] = CONNECT;
+      else
+         state[k] = UNKNOWN;
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( state[m] != CONNECT && m != start )
+         {
+            SCIP_Real distnew = dist[k] + cost_csr[e];
+
+            assert(g->mark[m]);
+
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( termmark[m] != 0 )
+               distnew = MAX(distnew - g->prize[m], 0.0);
+
+            if( distnew < dist[m] )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( m == end )
+               {
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
+                  break;
+               }
+
+               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+            }
+         }
+         nchecks++;
+      }
+   }
+
+   return success;
+}
+
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
 SCIP_Bool graph_sdWalksExt(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -2554,6 +2554,126 @@ SCIP_RETCODE reduce_sdspSap(
 }
 
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
+SCIP_RETCODE reduce_sdWalk_csr(
+   SCIP*                 scip,
+   int                   edgelimit,
+   const int*            edgestate,
+   GRAPH*                g,
+   int*                  termmark,
+   SCIP_Real*            dist,
+   int*                  heap,
+   int*                  state,
+   int*                  visitlist,
+   STP_Bool*             visited,
+   DHEAP*                dheap,
+   int*                  nelims
+   )
+{
+   DCSR* dcsr;
+   RANGE* range_csr;
+   int* head_csr;
+   int* edgeid_csr;
+   int* id2csredge_csr;
+   SCIP_Real* cost_csr;
+   STP_Bool* edge_deletable;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   assert(g && scip && nelims && dheap && visited && visitlist);
+   assert(!g->extended);
+   assert(graph_pc_isPcMw(g));
+
+   if( edgelimit <= 0 )
+      return SCIP_OKAY;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      state[i] = UNKNOWN;
+      dist[i] = FARAWAY;
+   }
+
+   graph_init_dcsr(scip, g);
+
+   dcsr = g->dcsr_storage;
+   range_csr = dcsr->range;
+   head_csr = dcsr->head;
+   edgeid_csr = dcsr->edgeid;
+   id2csredge_csr = dcsr->id2csredge;
+   cost_csr = dcsr->cost;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
+
+   for( int e = 0; e < nedges / 2; e++ )
+      edge_deletable[e] = FALSE;
+
+   assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
+
+   graph_pc_termMarkProper(g, termmark);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+      const int start = range_csr[i].start;
+      const int end = range_csr[i].end;
+
+      /* traverse neighbours */
+      for( int e = start; e < end; e = enext )
+      {
+         SCIP_Bool success;
+         const SCIP_Real ecost = cost_csr[e];
+         int nvisits;
+         const int i2 = head_csr[e];
+
+         assert(g->mark[i] && g->mark[i2]);
+
+         enext = e + 1;
+
+         if( checkstate  )
+         {
+            const int orgedge = edgeid_csr[e];
+            if( edgestate[orgedge] == EDGE_BLOCKED )
+               continue;
+         }
+int todo; // go from i to i2! better for cache! and maybe remember all the neighbors visited! if smaller, delete right away!
+          // also write in paper! also for Steiner tree problem! just add an epsilon to outgoing edges??
+          // if first edge is remembered, this might be enough!
+         success = graph_sdWalks_csr(scip, g, termmark, ecost, i2, i, edgelimit, dist, heap, state, visitlist, &nvisits, dheap, visited);
+         sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
+
+         if( success )
+         {
+            const int erev = id2csredge_csr[flipedge(edgeid_csr[e])];
+
+            assert(head_csr[erev] == i && SCIPisEQ(scip, cost_csr[e], cost_csr[erev]));
+
+            edge_deletable[edgeid_csr[e] / 2] = TRUE;
+
+            graph_dcsr_deleteEdge(dcsr, i, e);
+            graph_dcsr_deleteEdge(dcsr, i, erev);
+
+            (*nelims)++;
+            enext--;
+         }
+      }
+   }
+
+   for( int e = 0; e < nedges / 2; e++ )
+      if( edge_deletable[e] )
+         graph_edge_del(scip, g, e * 2, TRUE);
+
+   SCIPfreeBufferArray(scip, &edge_deletable);
+
+   graph_free_dcsr(scip, g);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalk(
    SCIP*                 scip,
    int                   edgelimit,

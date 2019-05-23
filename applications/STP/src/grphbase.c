@@ -5556,6 +5556,7 @@ SCIP_RETCODE graph_init_dcsr(
    RANGE* range_csr;
    int* head_csr;
    int* edgeid_csr;
+   int* id2csr_csr;
    SCIP_Real* cost_csr;
    const int nedges = g->edges;
    const int nnodes = g->knots;
@@ -5575,14 +5576,19 @@ SCIP_RETCODE graph_init_dcsr(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(range_csr), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(edgeid_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(id2csr_csr), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges) );
 
    dcsr->range = range_csr;
    dcsr->head = head_csr;
    dcsr->edgeid = edgeid_csr;
+   dcsr->id2csredge = id2csr_csr;
    dcsr->cost = cost_csr;
 
    /* now fill the data in */
+
+   for( int e = 0; e < nedges; e++ )
+      id2csr_csr[e] = -1;
 
    range_csr[0].start = 0;
 
@@ -5599,6 +5605,7 @@ SCIP_RETCODE graph_init_dcsr(
             if( pcmw && !g->mark[ehead] )
                continue;
 
+            id2csr_csr[e] = pos;
             head_csr[pos] = ehead;
             edgeid_csr[pos] = e;
             cost_csr[pos++] = g->cost[e];
@@ -5629,10 +5636,11 @@ void graph_free_dcsr(
    assert(scip && g);
    assert(dcsr != NULL && dcsr->nnodes >= 1);
 
-   SCIPfreeMemoryArray(scip, &(dcsr->range));
+   SCIPfreeMemoryArray(scip, &(dcsr->cost));
+   SCIPfreeMemoryArray(scip, &(dcsr->id2csredge));
    SCIPfreeMemoryArray(scip, &(dcsr->edgeid));
    SCIPfreeMemoryArray(scip, &(dcsr->head));
-   SCIPfreeMemoryArray(scip, &(dcsr->cost));
+   SCIPfreeMemoryArray(scip, &(dcsr->range));
 
    SCIPfreeMemoryArray(scip, &(g->dcsr_storage));
 
