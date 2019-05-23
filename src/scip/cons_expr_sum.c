@@ -1151,7 +1151,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 {  /*lint --e{715}*/
    SCIP_ROWPREP* rowprep;
    SCIP_Real viol;
-   SCIP_Bool success;
+   SCIP_Bool violreliable;
+   SCIP_Bool success = FALSE;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1159,9 +1160,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIP_CALL( separatePointSum(scip, expr, overestimate, &rowprep) );
    assert(rowprep != NULL);
 
-   viol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
+   viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
 
-   SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, mincutviolation);
+   SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (reliable: %d min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, violreliable, mincutviolation);
    if( SCIPisZero(scip, viol) )
    {
       SCIPfreeRowprep(scip, &rowprep);
@@ -1177,8 +1178,11 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above minviolation */
-   (void) SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success);
+   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above minviolation
+    * if the violation is not reliable, then we better go to the more powerful cleanup
+    */
+   if( violreliable )
+      (void) SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success);
 
    if( !success )
    {
@@ -1194,12 +1198,12 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
-      assert(SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation);
+      assert(SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable) >= mincutviolation && violreliable);
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "add %s cut with violation %g\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, NULL));
+      SCIPdebugMsg(scip, "add %s cut with violation %g, reliable = %d\n", rowprep->local ? "local" : "global", SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable), violreliable);
       SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
 
