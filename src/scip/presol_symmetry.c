@@ -1139,7 +1139,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* if no active constraint contains active variables */
-   if ( matrixdata.nrhscoef == 0 )
+   if ( SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "expr")) == 0 && matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
 
