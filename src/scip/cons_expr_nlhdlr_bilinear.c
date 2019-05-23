@@ -36,7 +36,7 @@
 #define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
 
 /* properties of the bilinear nlhdlr statistics table */
-#define TABLE_NAME_BILINEAR                 "bilinear nlhdlr"
+#define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
 #define TABLE_DESC_BILINEAR                 "bilinear nlhdlr statistics table"
 #define TABLE_POSITION_BILINEAR             12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
