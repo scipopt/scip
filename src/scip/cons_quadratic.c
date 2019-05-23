@@ -35,6 +35,7 @@
 
 #include "blockmemshell/memory.h"
 #include <ctype.h>
+#include <math.h>
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/pub_expr.h"
@@ -83,6 +84,10 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include <string.h>
+
+#ifndef M_SQRT2
+#define M_SQRT2 sqrt(2.0)
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -16165,6 +16170,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_Real maxterm;
    SCIP_Real term;
    SCIP_Real violation;
+   SCIP_Real val;
    int i;
 
    activity = 0.0;
@@ -16178,7 +16184,33 @@ SCIP_Real SCIPgetRowprepViolation(
        */
       if( sol != NULL || SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
       {
-         term = rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+         val = SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+
+         /* If a variable is at infinity, then this should lead to an immediate decision.
+          * Having different contradicting infinities is something I would now know how to handle and am ignoring now.
+          */
+         if( SCIPisInfinity(scip, val * (rowprep->coefs[i] >= 0.0 ? 1.0 : -1.0)) )
+         {
+            /* activity = SCIPinfinity(scip); */
+            if( reliable != NULL )
+               *reliable = TRUE;
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               return SCIPinfinity(scip);  /* infinity <= side -> always violated */
+            else
+               return 0.0;  /* infinity >= side -> never violated */
+         }
+         if( SCIPisInfinity(scip, val * (rowprep->coefs[i] >= 0.0 ? -1.0 : 1.0)) )
+         {
+            /* activity = -SCIPinfinity(scip); */
+            if( reliable != NULL )
+               *reliable = TRUE;
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               return 0.0;  /* -infinity <= side -> never violated */
+            else
+               return SCIPinfinity(scip);  /* -infinity >= side -> always violated */
+         }
+
+         term = rowprep->coefs[i] * val;
          activity += term;
 
          if( reliable != NULL && REALABS(term) > maxterm )
@@ -16551,6 +16583,7 @@ void rowprepCleanupScaleup(
    /* if violation is already above minviol, then nothing to do */
    if( *viol >= minviol )
       return;
+   assert(!SCIPisInfinity(scip, *viol));
 
    /* if violation is sufficiently positive (>10*eps), but has not reached minviol,
     * then consider scaling up to reach approx MINVIOLFACTOR*minviol
@@ -16595,7 +16628,7 @@ void rowprepCleanupScaledown(
    scalefactor = 10.0 / REALABS(rowprep->coefs[0]);
 
    /* if minimal violation would be lost by scaling down, then increase scalefactor such that minviol is still reached */
-   if( *viol > minviol && scalefactor * *viol < minviol )
+   if( *viol > minviol && !SCIPisInfinity(scip, *viol) && scalefactor * *viol < minviol )
    {
       assert(minviol > 0.0);  /* since viol >= 0, the if-condition should ensure that minviol > 0 */
       assert(*viol > 0.0);    /* since minviol > 0, the if-condition ensures viol > 0 */
@@ -16613,7 +16646,8 @@ void rowprepCleanupScaledown(
          SCIPprintRowprep(scip, rowprep, NULL); */
 
       scaleexp = SCIPscaleRowprep(rowprep, scalefactor);
-      *viol = ldexp(*viol, scaleexp);
+      if( !SCIPisInfinity(scip, *viol) )
+         *viol = ldexp(*viol, scaleexp);
 
       /* SCIPinfoMessage(scip, NULL, "scaled down by %g, viol=%g: ", ldexp(1.0, scaleexp), myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
@@ -16924,39 +16958,68 @@ SCIP_Real SCIPscaleupRowprep(
 )
 {
    SCIP_Real minfrac = 0.5;
+   SCIP_Real minfrac0 = 0.5;
    SCIP_Real frac;
    SCIP_Real maxval;
    SCIP_Real factor = 1.0;
+   SCIP_Bool makeintegral = TRUE;
    int i;
 
    /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
    frac = REALABS(floor(rowprep->side + 0.5) - rowprep->side);
-   if( frac != 0.0 && frac < minfrac )
-      minfrac = frac;
+   if( frac != 0.0 )
+   {
+      if( REALABS(rowprep->side) > 0.5 )
+      {
+         if( frac < minfrac )
+            minfrac = frac;
+      }
+      else if( frac < minfrac0 )
+         minfrac0 = frac;
+   }
    maxval = REALABS(rowprep->side);
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
       frac = REALABS(floor(rowprep->coefs[i] + 0.5) - rowprep->coefs[i]);
-      if( frac != 0.0 && frac < minfrac )
-         minfrac = frac;
+      if( frac != 0.0 )
+      {
+         if( REALABS(rowprep->coefs[i]) > 0.5 )
+         {
+            if( frac < minfrac )
+               minfrac = frac;
+         }
+         else if( frac < minfrac0 )
+            minfrac0 = frac;
+      }
       if( REALABS(rowprep->coefs[i]) > maxval )
          maxval = REALABS(rowprep->coefs[i]);
    }
 
-   SCIPdebugMsg(scip, "minimal fractional of rowprep coefs and side is %g, max coef/side is %g\n", minfrac, maxval);
+   SCIPdebugMsg(scip, "minimal fractional of rowprep coefs and side is %g, max coef/side is %g\n", MIN(minfrac, minfrac0), maxval);
 
    /* in order for SCIP_ROW to not modify the coefs and side, they need to be more than epsilon way from an integer value
-    * that is, scaling up the rowprep by epsilon/minfrac will increase its minimal fractionality above epsilon (right?)
-    * but if that increases the maximal coef/value beyond SCIPinfinity, then the rowprep would be useless
-    * we even check that we don't increase beyond SCIPhugeValue here
+    *
+    * If the integer value is 0, then scaling up the rowprep by epsilon/minfrac will increase its minimal fractionality
+    * above epsilon.
+    * If the integer value is not zero, then scaling up the rowprep by a well-chosen fractional number alpha will increase
+    * the minimal fractionality by about alpha*integer-value mod 1. To reduce the chance that alpha*integer-value is integral,
+    * we use a "very fractional" value for alpha.
+    *
+    * If the scaling increases the maximal coef/value beyond SCIPinfinity, then the rowprep would be useless.
+    * We even check that we don't increase beyond SCIPhugeValue here
     */
-   if( minfrac <= SCIPepsilon(scip) )
+   if( minfrac0 <= SCIPepsilon(scip) )
    {
-      factor = 1.1 * SCIPepsilon(scip) / minfrac;
+      factor = 1.1 * SCIPepsilon(scip) / minfrac0;
 
       if( factor < minscaleup )
          factor = minscaleup;
+   }
+   else if( minfrac <= SCIPepsilon(scip) )
+   {
+      factor = MAX(M_SQRT2, minscaleup);
+      makeintegral = FALSE;
    }
    else if( minscaleup > 1.0 )
    {
@@ -16973,8 +17036,23 @@ SCIP_Real SCIPscaleupRowprep(
 
    if( !SCIPisHugeValue(scip, factor * maxval) )
    {
-      factor = SCIPscaleRowprep(rowprep, factor);
+      if( makeintegral)
+      {
+         factor = SCIPscaleRowprep(rowprep, factor);
 
+#ifdef SCIP_DEBUG
+         factor = pow(2.0, factor);  /* SCIPscaleRowprep() actually returned log2 of factor */
+#endif
+      }
+      else
+      {
+         /* multiply each coefficient by factor */
+         for( i = 0; i < rowprep->nvars; ++i )
+            rowprep->coefs[i] *= factor;
+
+         /* multiply side by factor */
+         rowprep->side *= factor;
+      }
 #ifdef SCIP_DEBUG
       maxval *= factor;
       SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g (minfrac=%g, minscaleup=%g), maxval is now %g\n", factor, minfrac, minscaleup, maxval);
