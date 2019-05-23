@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel

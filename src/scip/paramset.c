@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold

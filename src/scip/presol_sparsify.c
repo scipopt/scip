@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_sparsify.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
  * @author Robert Lion Gottwald

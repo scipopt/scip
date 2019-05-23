@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_conflict.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for conflict handler plugins and conflict analysis
  * @author Tobias Achterberg
  * @author Timo Berthold

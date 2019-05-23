@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
  *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg

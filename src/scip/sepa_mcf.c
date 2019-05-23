@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_mcf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
  * @author Christian Raack

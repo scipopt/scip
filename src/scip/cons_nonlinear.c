@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_nonlinear.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus (consparse)
@@ -72,6 +73,10 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ */
+#pragma STD FENV_ACCESS ON
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -1457,6 +1462,8 @@ SCIP_RETCODE chgLinearCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real coef;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -1486,10 +1493,14 @@ SCIP_RETCODE chgLinearCoefPos(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, remove the rounding locks and event catching of the variable */
    if( newcoef * coef < 0.0 )
    {
-      if( SCIPconsIsLocked(cons) )
+      if( locked )
       {
          assert(SCIPconsIsTransformed(cons));
 
@@ -1510,7 +1521,7 @@ SCIP_RETCODE chgLinearCoefPos(
    /* if necessary, install the rounding locks and event catching of the variable again */
    if( newcoef * coef < 0.0 )
    {
-      if( SCIPconsIsLocked(cons) )
+      if( locked )
       {
          /* install rounding locks for variable with new coefficient */
          SCIP_CALL( lockLinearVariable(scip, cons, var, newcoef) );
@@ -1835,7 +1846,13 @@ SCIP_RETCODE splitOffLinearPart(
          /* setting constraint lhs to -infinity; this may change linear variable locks and events */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
-            if( SCIPconsIsLocked(cons) )
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
+            if( locked )
             {
                SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1849,11 +1866,17 @@ SCIP_RETCODE splitOffLinearPart(
 
          for( i = 0; i < consdata->nlinvars; ++i )
          {
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
             if( SCIPconsIsEnabled(cons) )
             {
                SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
             }
-            if( SCIPconsIsLocked(cons) )
+            if( locked )
             {
                SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1873,7 +1896,13 @@ SCIP_RETCODE splitOffLinearPart(
          /* setting constraint rhs to infinity; this may change linear variable locks and events */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
-            if( SCIPconsIsLocked(cons) )
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
+            if( locked )
             {
                SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1887,11 +1916,17 @@ SCIP_RETCODE splitOffLinearPart(
 
          for( i = 0; i < consdata->nlinvars; ++i )
          {
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
             if( SCIPconsIsEnabled(cons) )
             {
                SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
             }
-            if( SCIPconsIsLocked(cons) )
+            if( locked )
             {
                SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }

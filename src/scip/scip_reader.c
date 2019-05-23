@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_reader.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for reader plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

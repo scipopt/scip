@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_tworowbnd.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  do bound tightening by using two rows
  * @author Dieter Weninger
  *

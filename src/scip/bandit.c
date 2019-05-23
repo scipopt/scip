@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit.c
+ * @ingroup OTHER_CFILES
  * @brief  internal API of bandit algorithms and bandit virtual function tables
  * @author Gregor Hendel
  */

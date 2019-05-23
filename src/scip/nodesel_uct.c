@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_uct.c
+ * @ingroup DEFPLUGINS_NODESEL
  * @brief  uct node selector which balances exploration and exploitation by considering node visits
  * @author Gregor Hendel
  *

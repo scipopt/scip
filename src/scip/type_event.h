@@ -24,6 +24,11 @@
  *  - \ref scip::ObjEventhdlr "C++ wrapper class"
  */
 
+/** @defgroup DEFPLUGINS_EVENT Default event handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default event handlers of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_EVENT_H__

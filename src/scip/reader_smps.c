@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_smps.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  SMPS file reader - smps files list the cor, tim and sto files for a single instance
  * @author Stephen J. Maher
  */

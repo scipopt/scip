@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi/expr.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for expressions, expression trees, expression graphs, and related
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

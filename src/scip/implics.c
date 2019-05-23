@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for implications, variable bounds, and clique tables
  * @author Tobias Achterberg
  */

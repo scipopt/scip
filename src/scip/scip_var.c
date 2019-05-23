@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_var.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for SCIP variables
  * @author Tobias Achterberg
  * @author Timo Berthold

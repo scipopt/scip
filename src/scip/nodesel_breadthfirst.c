@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file nodesel_breadthfirst.h
+ * @ingroup DEFPLUGINS_NODESEL
  * @ingroup NODESELECTORS
  * @brief node selector for breadth-first search
  * @author Stefan Heinz

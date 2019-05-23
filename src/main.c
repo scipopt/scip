@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip/src/main.c
+ * @ingroup OTHER_CFILES
  * @brief  main file for C compilation
  * @author Tobias Achterberg
  */
