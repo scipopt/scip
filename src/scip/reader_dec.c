@@ -73,6 +73,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_solve.h"
@@ -276,8 +277,13 @@ SCIP_RETCODE readDecomposition(
    if( ! error )
    {
       char strbuf[SCIP_MAXSTRLEN];
+      SCIP_Bool benderslabels;
 
-      SCIP_CALL( SCIPdecompCreate(scip, &decomp, nblocks, TRUE) );
+      /* retrieving the Benders' variable labels setting */
+      SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
+
+
+      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, benderslabels) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
       SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);

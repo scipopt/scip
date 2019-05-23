@@ -34,7 +34,7 @@ static SCIP_DECOMP* decomp;
 static SCIP_VAR* vars[NVARS];
 static SCIP_CONS* conss[NCONSS];
 static int labels_vars[] = {SCIP_DECOMP_LINKVAR,0,0,1,1,0,1};
-static int benderslabels_vars[] = {SCIP_DECOMP_LINKCONS,SCIP_DECOMP_LINKVAR,SCIP_DECOMP_LINKVAR,SCIP_DECOMP_LINKVAR,
+static int benderslabels_vars[] = {SCIP_DECOMP_LINKVAR,SCIP_DECOMP_LINKVAR,SCIP_DECOMP_LINKVAR,SCIP_DECOMP_LINKVAR,
    SCIP_DECOMP_LINKVAR,0,1};
 static int labels_conss[] = {SCIP_DECOMP_LINKCONS, 0, 1};
 static int nblocks = 2; /* only blocks that aren't linking blocks are counted */
@@ -82,7 +82,7 @@ void setup(void)
 
 
    SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
-   SCIP_CALL( SCIPdecompCreate(scip, &decomp, nblocks, TRUE) );
+   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, FALSE) );
 
    setupData();
 }
@@ -107,7 +107,7 @@ Test(decomptest, create_and_free)
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
    SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(scip, &newdecomp, 1, TRUE) );
+   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), 1, TRUE, FALSE) );
 
    SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
 }
@@ -181,7 +181,7 @@ Test(decomptest, test_cons_labeling, .description="check constraint label comput
 static
 void checkVarsLabels(
    SCIP_DECOMP*          decomposition,      /**< some decomposition */
-   int                   varlabels[]         /**< the variable labels to check agains */
+   int                   varlabels[]         /**< the variable labels to check against */
    )
 {
    int returnedlabels[NVARS];
