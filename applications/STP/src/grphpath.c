@@ -1233,8 +1233,6 @@ SCIP_Bool graph_sdWalks_csr(
    state[start] = CONNECT;
    visitlist[(*nvisits)++] = start;
 
-   g->mark[start] = FALSE;
-
    for( int e = range_csr[start].start; e < range_csr[start].end; e++ )
    {
       const int m = head_csr[e];

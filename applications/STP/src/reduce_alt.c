@@ -2616,10 +2616,9 @@ SCIP_RETCODE reduce_sdWalk_csr(
    {
       int enext;
       const int start = range_csr[i].start;
-      const int end = range_csr[i].end;
 
       /* traverse neighbours */
-      for( int e = start; e < end; e = enext )
+      for( int e = start; e < range_csr[i].end; e = enext )
       {
          SCIP_Bool success;
          const SCIP_Real ecost = cost_csr[e];
@@ -2646,12 +2645,17 @@ int todo; // go from i to i2! better for cache! and maybe remember all the neigh
          {
             const int erev = id2csredge_csr[flipedge(edgeid_csr[e])];
 
+            assert(edgeid_csr[e] >= 0);
+            assert(erev >= 0);
+
             assert(head_csr[erev] == i && SCIPisEQ(scip, cost_csr[e], cost_csr[erev]));
+
+            SCIPdebugMessage("delete %d %d \n", i, i2);
 
             edge_deletable[edgeid_csr[e] / 2] = TRUE;
 
+            graph_dcsr_deleteEdge(dcsr, head_csr[e], erev);
             graph_dcsr_deleteEdge(dcsr, i, e);
-            graph_dcsr_deleteEdge(dcsr, i, erev);
 
             (*nelims)++;
             enext--;

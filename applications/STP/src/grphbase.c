@@ -5668,6 +5668,7 @@ void graph_dcsr_deleteEdge(
    RANGE* const range = dcsr->range;
    int* const head = dcsr->head;
    int* const edgeid = dcsr->edgeid;
+   int* const id2csredge = dcsr->id2csredge;
    SCIP_Real* const cost = dcsr->cost;
    int last;
 
@@ -5678,11 +5679,16 @@ void graph_dcsr_deleteEdge(
 
    last = --(range[tail].end);
 
+#ifndef NDEBUG
+   id2csredge[edgeid[e_csr]] = -1;
+#endif
+
    /* e_csr not already deleted? */
    if( e_csr != last )
    {
       head[e_csr] = head[last];
       edgeid[e_csr] = edgeid[last];
+      id2csredge[edgeid[last]] = e_csr;
       cost[e_csr] = cost[last];
    }
 
