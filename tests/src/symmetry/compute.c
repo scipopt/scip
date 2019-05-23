@@ -1133,7 +1133,7 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
 
 /* get symmetry */
    SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, FALSE, &npermvars,
-         &permvars, &nperms, &perms, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+         &permvars, &nperms, &perms, NULL, NULL, &binvarsaffected, NULL, NULL, NULL, NULL) );
 
    cr_assert(binvarsaffected);
    cr_assert( nperms == 1, "number of permutations: %d, but expected: 1", nperms );
