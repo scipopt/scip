@@ -5592,7 +5592,7 @@ SCIP_RETCODE graph_init_dcsr(
 
    range_csr[0].start = 0;
 
-   for( int k = 0; k < nnodes - 1; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       int pos = range_csr[k].start;
 
@@ -5612,15 +5612,15 @@ SCIP_RETCODE graph_init_dcsr(
          }
       }
 
-      assert(pos == range_csr[k].start + g->grad[k] || (pcmw && !g->mark[k]));
+      assert(pos == range_csr[k].start + g->grad[k] || pcmw);
 
       range_csr[k].end = pos;
-      range_csr[k + 1].start = range_csr[k].end;
+
+      if( k != nnodes - 1 )
+         range_csr[k + 1].start = range_csr[k].end;
    }
 
-   range_csr[nnodes - 1].end = range_csr[nnodes - 1].start + g->grad[nnodes - 1];
-
-   assert(graph_dcsr_isValid(g));
+   assert(graph_dcsr_isValid(g, TRUE));
 
    return SCIP_OKAY;
 }
@@ -5696,21 +5696,25 @@ void graph_dcsr_deleteEdge(
 
 /** is DCSR storage of graph valid? */
 SCIP_Bool graph_dcsr_isValid(
-   const GRAPH*          g                   /**< the graph */
+   const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool             verbose             /**< be verbose? */
 )
 {
    const DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const range = dcsr->range;
    const int* const head = dcsr->head;
    const int* const edgeid = dcsr->edgeid;
+   const int* const id2csredge = dcsr->id2csredge;
    const SCIP_Real* const cost = dcsr->cost;
    const int nnodes = dcsr->nnodes;
    const int nedges = dcsr->nedges;
 
-   assert(g && dcsr && range && head && edgeid && cost);
+   assert(g && dcsr && range && head && edgeid && cost && id2csredge);
 
    if( nnodes != g->knots || nedges != g->edges )
    {
+      if( verbose )
+         printf("DCSR: wrong node/edge cound \n");
       return FALSE;
    }
 
@@ -5721,6 +5725,9 @@ SCIP_Bool graph_dcsr_isValid(
 
       if( start > end )
       {
+         if( verbose )
+            printf("DCSR: ranges corrupted \n");
+
          return FALSE;
       }
 
@@ -5730,8 +5737,21 @@ SCIP_Bool graph_dcsr_isValid(
 
          assert(ordedge >= 0 && ordedge < nedges);
 
+         if( id2csredge[ordedge] != e )
+         {
+            if( verbose )
+               printf("DCSR: id assignment corrupted \n");
+
+            return FALSE;
+         }
+
          if( head[e] != g->head[ordedge] || i != g->tail[ordedge] )
          {
+            if( verbose )
+               printf("DCSR: edge assignment corrupted \n");
+
+            printf(" %d == %d %d == %d \n",  head[e], g->head[ordedge], i, g->tail[ordedge]);
+
             return FALSE;
          }
       }

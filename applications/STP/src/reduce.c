@@ -1655,27 +1655,38 @@ SCIP_RETCODE redLoopPc(
                reductbound, verbose, &sd) );
       }
 
+
+      if( sdw || extensive )
+      {
+         int sdwnelims2 = 0; int sdwnelims3 = 0;
+
+
+    SCIP_CALL( reduce_sdWalk_csr(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, NULL, &sdwnelims) );
+
+
+
+   //      SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
+         SCIP_CALL( reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
+
+
+         printf("sdw %d \n", sdwnelims);
+         if( verbose )  printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
+
+         exit(1);
+         sdwnelims += sdwnelims2 + sdwnelims3;
+
+         if( sdwnelims <= reductbound )
+            sdw = FALSE;
+      }
+
       if( sdc || extensive )
       {
          SCIP_CALL( execPc_SDSP(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
                getWorkLimits_pc(g, rounds, pc_sdc), NULL, reductbound, verbose, &sdc) );
       }
 
-      if( sdw || extensive )
-      {
-         int sdwnelims2 = 0; int sdwnelims3 = 0;
 
-         SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
-         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2));
-         SCIP_CALL( reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
-
-         if( verbose )  printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
-
-         sdwnelims += sdwnelims2 + sdwnelims3;
-
-         if( sdwnelims <= reductbound )
-            sdw = FALSE;
-      }
 
       if( SCIPgetTotalTime(scip) > timelimit )
           break;
@@ -2113,7 +2124,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_path_init(scip, graph) );
 
   // SCIP_CALL( reduce_extTest2(scip) );
-   SCIP_CALL( dheap_Test1(scip) );
+   //SCIP_CALL( dheap_Test1(scip) );
 
 
    SCIP_CALL( level0(scip, graph) );
