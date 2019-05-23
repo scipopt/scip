@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.c
+ * @ingroup OTHER_CFILES
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  * @author Timo Berthold

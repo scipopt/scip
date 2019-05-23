@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_solvingphase.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  event handler for solving phase dependent parameter adjustment
  * @author Gregor Hendel
  *

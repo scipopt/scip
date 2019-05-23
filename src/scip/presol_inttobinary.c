@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_inttobinary.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
  */

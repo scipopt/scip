@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_distributiondiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
  * @author Gregor Hendel
  */

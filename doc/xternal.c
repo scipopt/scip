@@ -571,21 +571,24 @@
  * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
  * available options and usage information.
  *
+ * Platform independent build instructions:
+ *
  * ```
- * cd scip
+ * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
+ * cmake --build build
+ * ```
+ *
+ * Linux/macOS Makefile-based build instructions:
+ *
+ * ```
  * mkdir build
  * cd build
  * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
  * make
- *
  * # optional: run a quick check on some instances
- *
  * make check
- *
  * # optional: install scip executable, library, and headers
- *
  * make install
- *
  * ```
  *
  * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
@@ -7450,9 +7453,8 @@
   * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
   * href="https://projects.coin-or.org/GAMSlinks">here</a>.
   *
-  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
-  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
-  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
+  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
   * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   * free modeling language.
   *
@@ -8266,4 +8268,25 @@
  * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
  * - change tolerances inside relaxations
  * - epsilon-comparison methods for floating point numbers
+ */
+
+/** @defgroup CFILES Implementation files (.c files)
+ *  @brief implementation files (.c files) of the SCIP core and the default plugins
+ *
+ *  The core provides the functionality for creating problems, variables, and general constraints.
+ *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup DEFPLUGINS SCIP Default Plugins
+ *  @ingroup CFILES
+ *  @brief implementation files (.c files) of the SCIP default plugins
+ *
+ *  The SCIP default plugins provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup OTHER_CFILES Other implementation files of SCIP
+ *  @ingroup CFILES
+ *  @brief other implementation files of SCIP
+ *
+ *  Relevant core and other functionality of SCIP.
  */

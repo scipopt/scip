@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   fileio.c
+ * @ingroup OTHER_CFILES
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
  * @author Tobias Achterberg
  */

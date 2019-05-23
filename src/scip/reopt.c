@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reopt.c
+ * @ingroup OTHER_CFILES
  * @brief  data structures and methods for collecting reoptimization information
  * @author Jakob Witzig
  */

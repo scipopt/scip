@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_ofins.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  OFINS - Objective Function Induced Neighborhood Search - a primal heuristic for reoptimization
  * @author Jakob Witzig
  */

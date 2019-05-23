@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_quadratic.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_i x_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -84,6 +85,11 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include <string.h>
+
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ */
+#pragma STD FENV_ACCESS ON
 
 #ifndef M_SQRT2
 #define M_SQRT2 sqrt(2.0)
@@ -2446,7 +2452,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
    if( eventhdlr != NULL )
    {
       assert(SCIPconsIsEnabled(cons));
-      
+
       /* catch bound change events of variable */
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, pos) );
    }
@@ -13368,6 +13374,9 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
 
    SCIPdebugMsg(scip, "enable cons <%s>\n", SCIPconsGetName(cons));
 
+   /* catch variable events */
+   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
@@ -13375,9 +13384,6 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
       SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
    }
-
-   /* catch variable events */
-   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
    /* initialize solving data */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )

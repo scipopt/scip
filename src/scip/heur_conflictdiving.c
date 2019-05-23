@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_conflictdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
  * @author Jakob Witzig
  */

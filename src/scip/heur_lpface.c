@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_lpface.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  lpface primal heuristic that searches the optimal LP face inside a sub-MIP
  * @author Gregor Hendel
  */

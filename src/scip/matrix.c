@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   matrix.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for MIP matrix data structure
  * @author Dieter Weninger
  * @author Gerald Gamrath

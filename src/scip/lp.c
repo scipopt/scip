@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.c
+ * @ingroup OTHER_CFILES
  * @brief  LP management methods and data structures
  * @author Tobias Achterberg
  * @author Timo Berthold

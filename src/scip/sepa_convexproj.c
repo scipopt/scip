@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_convexproj.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  convexproj separator
  * @author Felipe Serrano
  *

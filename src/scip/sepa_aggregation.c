@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_aggregation.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  flow cover and complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Robert Lion Gottwald
  * @author Kati Wolter

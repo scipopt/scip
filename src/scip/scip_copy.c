@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_copy.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for problem copies
  * @author Tobias Achterberg
  * @author Timo Berthold

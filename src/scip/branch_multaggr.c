@@ -13,6 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   branch_multaggr.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  fullstrong branching on fractional and multi-aggregated variables
  * @author Anna Melchiori
  * @author Gerald Gamrath

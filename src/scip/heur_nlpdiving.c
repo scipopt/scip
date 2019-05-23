@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_nlpdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
  * @author Stefan Vigerske

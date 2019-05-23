@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch

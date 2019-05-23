@@ -19,6 +19,11 @@
  * @author Tobias Achterberg
  */
 
+/** @defgroup DEFPLUGINS_READER Default Readers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default readers of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_READER_H__

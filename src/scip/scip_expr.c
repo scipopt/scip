@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_expr.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for expression handlers
  * @author Tobias Achterberg
  * @author Timo Berthold

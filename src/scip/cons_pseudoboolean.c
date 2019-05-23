@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_pseudoboolean.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for pseudo Boolean constraints
  * @author Gerald Gamrath
  * @author Stefan Heinz

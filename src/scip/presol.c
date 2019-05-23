@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for presolvers
  * @author Tobias Achterberg
  * @author Timo Berthold
