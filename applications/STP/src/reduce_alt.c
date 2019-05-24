@@ -2580,7 +2580,7 @@ SCIP_RETCODE reduce_sdWalk_csr(
    const int nedges = g->edges;
    const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(g && scip && nelims  && visited && visitlist); // && todo dheap
+   assert(g && scip && nelims && visited && visitlist); // && todo dheap
    assert(!g->extended);
    assert(graph_pc_isPcMw(g));
 
@@ -2664,8 +2664,20 @@ int todo; // go from i to i2! better for cache! and maybe remember all the neigh
    }
 
    for( int e = 0; e < nedges / 2; e++ )
+   {
       if( edge_deletable[e] )
+      {
+         assert(id2csredge_csr[e * 2] == -1);
          graph_edge_del(scip, g, e * 2, TRUE);
+      }
+#ifndef NDEBUG
+      else
+      {
+         const int ecsr = id2csredge_csr[e * 2];
+         assert(ecsr != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+      }
+#endif
+   }
 
    SCIPfreeBufferArray(scip, &edge_deletable);
 

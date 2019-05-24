@@ -5605,6 +5605,8 @@ SCIP_RETCODE graph_init_dcsr(
             if( pcmw && !g->mark[ehead] )
                continue;
 
+            assert(g->cost[e] < FARAWAY && g->cost[flipedge(e)] < FARAWAY);
+
             id2csr_csr[e] = pos;
             head_csr[pos] = ehead;
             edgeid_csr[pos] = e;
