@@ -5323,8 +5323,10 @@ SCIP_Bool graph_valid(
    return TRUE;
 }
 
+/** clean the heap */
 void
 graph_heap_clean(
+   SCIP_Bool             cleanposition,      /**< clean position array? */
    DHEAP*                heap                /**< the heap  */
    )
 {
@@ -5333,8 +5335,11 @@ graph_heap_clean(
 
    assert(heap && position);
 
-   for( int i = 0; i < capacity; i++ )
-      position[i] = UNKNOWN;
+   heap->size = 0;
+
+   if( cleanposition )
+      for( int i = 0; i < capacity; i++ )
+         position[i] = UNKNOWN;
 }
 
 
@@ -5365,7 +5370,6 @@ SCIP_RETCODE graph_heap_create(
    else
       SCIP_CALL( SCIPallocMemoryArray(scip, &(entries_heap), capacity + 2) );
 
-   (*heap)->size = 0;
    (*heap)->capacity = capacity;
    (*heap)->position = position_heap;
    (*heap)->entries = entries_heap;
@@ -5374,7 +5378,7 @@ SCIP_RETCODE graph_heap_create(
    entries_heap[0].key = DHEAP_MIN_KEY;
    entries_heap[capacity + 1].key = DHEAP_MAX_KEY;
 
-   graph_heap_clean(*heap);
+   graph_heap_clean(TRUE, *heap);
 
    return SCIP_OKAY;
 }
@@ -5439,6 +5443,7 @@ void graph_heap_deleteMinGetNode(
       const SCIP_Real key1 = entries[child].key;
       const SCIP_Real key2 = entries[child + 1].key;
       assert(hole >= 1);
+      assert(key1 < DHEAP_MAX_KEY && key2 < DHEAP_MAX_KEY);
 
       /* second child with smaller key? */
       if( key1 > key2 )
@@ -5465,6 +5470,8 @@ void graph_heap_deleteMinGetNode(
    fill = entries[lastentry].key;
    parent = hole / 2;
 
+   assert(fill < DHEAP_MAX_KEY && entries[parent].key < DHEAP_MAX_KEY);
+
    while( entries[parent].key > fill )
    {
       assert(hole >= 1);
@@ -5476,6 +5483,8 @@ void graph_heap_deleteMinGetNode(
       position[entries[hole].node] = hole;
       hole = parent;
       parent /= 2;
+
+      assert(entries[parent].key < DHEAP_MAX_KEY);
    }
 
    /* finally, fill the hole */
@@ -5487,6 +5496,7 @@ void graph_heap_deleteMinGetNode(
    if( hole != lastentry )
       position[entries[hole].node] = hole;
 
+   int todo; // only for debug...
    /* set sentinel */
    entries[lastentry].key = DHEAP_MAX_KEY;
 }
@@ -5506,13 +5516,14 @@ void graph_heap_correct(
 
    assert(heap && position && entries);
    assert(newkey < DHEAP_MAX_KEY && newkey > DHEAP_MIN_KEY);
-   assert(heap->size < heap->capacity);
-   assert(node >= 0 && node < heap->capacity);
+   assert(heap->size <= heap->capacity);
+   assert(node >= 0 && node <= heap->capacity);
    assert(position[node] != CONNECT);
 
+   /* node not yet in heap? */
    if( position[node] == UNKNOWN )
    {
-      assert(heap->size < heap->capacity - 1);
+      assert(heap->size < heap->capacity);
       hole = ++(heap->size);
    }
    else
@@ -5527,6 +5538,8 @@ void graph_heap_correct(
    parent = hole / 2;
    parentkey = entries[parent].key;
 
+   assert(parentkey < DHEAP_MAX_KEY);
+
    /* move hole up */
    while( parentkey > newkey )
    {
@@ -5538,6 +5551,7 @@ void graph_heap_correct(
       hole = parent;
       parent /= 2;
       parentkey = entries[parent].key;
+      assert(parentkey < DHEAP_MAX_KEY);
    }
 
    /* fill the hole */

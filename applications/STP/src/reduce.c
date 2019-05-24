@@ -1590,6 +1590,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
    )
 {
+   DHEAP* dheap;
    SCIP_Real fix;
    SCIP_Real timelimit;
    SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
@@ -1611,8 +1612,9 @@ SCIP_RETCODE redLoopPc(
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
 
-   /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
+
+   graph_heap_create(scip, g->knots, NULL, NULL, &dheap);
 
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
@@ -1660,13 +1662,17 @@ SCIP_RETCODE redLoopPc(
          int sdwnelims2 = 0;
          int sdwnelims3 = 0;
 
-         SCIP_CALL( reduce_sdWalk_csr(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, NULL, &sdwnelims));
+         SCIP_CALL( reduce_sdWalk_csr(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, dheap, &sdwnelims));
 
-         //SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
+      //   SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
          SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
          //SCIP_CALL( reduce_sdWalkExt2(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims3));
 
          // triggers bug in STP-DIMACS/PCSPG-hand/HAND_SMALL_ICERM/handsi04.stp
+
+         printf("pc_sdw1 %d \n", sdwnelims);
+
+         exit(1);
 
          if( verbose )
             printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
@@ -1818,6 +1824,7 @@ SCIP_RETCODE redLoopPc(
    graph_pc_2trans(g);
    graph_pc_presolExit(scip, g);
 
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
    SCIPfreeRandom(scip, &randnumgen);
 
    *fixed += fix;
@@ -2122,7 +2129,8 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_path_init(scip, graph) );
 
   // SCIP_CALL( reduce_extTest2(scip) );
-   SCIP_CALL( reduce_sdPcMwTest3(scip) );
+  // SCIP_CALL( reduce_sdPcMwTest3(scip) );
+   SCIP_CALL( dheap_Test1(scip) );
 
 
    SCIP_CALL( level0(scip, graph) );

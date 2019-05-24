@@ -237,7 +237,7 @@ extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY
 extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
 extern void   graph_heap_deleteMin(int*, SCIP_Real*, DHEAP*);
 extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);
-extern void   graph_heap_clean(DHEAP*);
+extern void   graph_heap_clean(SCIP_Bool, DHEAP*);
 extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
 
 /* Dynamic CSR storage */

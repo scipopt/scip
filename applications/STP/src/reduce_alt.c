@@ -2580,7 +2580,7 @@ SCIP_RETCODE reduce_sdWalk_csr(
    const int nedges = g->edges;
    const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(g && scip && nelims && visited && visitlist); // && todo dheap
+   assert(g && scip && nelims && visited && visitlist && dheap);
    assert(!g->extended);
    assert(graph_pc_isPcMw(g));
 

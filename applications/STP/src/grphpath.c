@@ -1227,6 +1227,8 @@ SCIP_Bool graph_sdWalks_csr(
 
    assert(g->mark[start] && g->mark[end]);
 
+ //  state =
+
    count = 0;
    nchecks = 0;
    dist[start] = 0.0;

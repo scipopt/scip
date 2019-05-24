@@ -495,6 +495,7 @@ SCIP_RETCODE dheap_Test1(
 )
 {
    DHEAP* heap = NULL;
+
    int min = -1;
    graph_heap_create(scip, 13, NULL, NULL, &heap);
    assert(heap != NULL);
@@ -513,7 +514,7 @@ SCIP_RETCODE dheap_Test1(
    assert(min == 1);
 
    assert(heap->size == 0);
-   graph_heap_clean(heap);
+   graph_heap_clean(TRUE, heap);
 
 
    graph_heap_correct(1, 2.0, heap);
@@ -534,7 +535,7 @@ SCIP_RETCODE dheap_Test1(
    assert(min == 1);
 
    assert(heap->size == 0);
-   graph_heap_clean(heap);
+   graph_heap_clean(TRUE, heap);
 
    graph_heap_correct(1, 2.0, heap);
    graph_heap_correct(2, 3.0, heap);
@@ -564,6 +565,28 @@ SCIP_RETCODE dheap_Test1(
 
    graph_heap_free(scip, TRUE, TRUE, &heap);
    assert(heap == NULL);
+
+   graph_heap_create(scip, 3, NULL, NULL, &heap);
+
+   graph_heap_correct(1, 2.0, heap);
+   graph_heap_correct(2, 3.0, heap);
+   graph_heap_correct(0, 1.5, heap);
+   graph_heap_correct(2, 2.5, heap);
+
+
+   graph_heap_deleteMinGetNode(&min, heap);
+   assert(min == 0);
+   graph_heap_deleteMinGetNode(&min, heap);
+   assert(min == 1);
+   graph_heap_deleteMinGetNode(&min, heap);
+   assert(min == 2);
+
+   assert(heap->size == 0);
+
+   graph_heap_free(scip, TRUE, TRUE, &heap);
+   assert(heap == NULL);
+
+
 
    assert(0);
 
