@@ -2561,8 +2561,6 @@ SCIP_RETCODE reduce_sdWalk_csr(
    GRAPH*                g,
    int*                  termmark,
    SCIP_Real*            dist,
-   int*                  heap,
-   int*                  state,
    int*                  visitlist,
    STP_Bool*             visited,
    DHEAP*                dheap,
@@ -2590,10 +2588,10 @@ SCIP_RETCODE reduce_sdWalk_csr(
    for( int i = 0; i < nnodes; i++ )
    {
       visited[i] = FALSE;
-      state[i] = UNKNOWN;
       dist[i] = FARAWAY;
    }
 
+   graph_heap_clean(TRUE, dheap);
    graph_init_dcsr(scip, g);
 
    dcsr = g->dcsr_storage;
@@ -2638,8 +2636,9 @@ SCIP_RETCODE reduce_sdWalk_csr(
 int todo; // go from i to i2! better for cache! and maybe remember all the neighbors visited! if smaller, delete right away!
           // also write in paper! also for Steiner tree problem! just add an epsilon to outgoing edges??
           // if first edge is remembered, this might be enough!
-         success = graph_sdWalks_csr(scip, g, termmark, ecost, i2, i, edgelimit, dist, heap, state, visitlist, &nvisits, dheap, visited);
-         sdwalk_reset(nnodes, nvisits, visitlist, dist, state, visited);
+         success = graph_sdWalks_csr(scip, g, termmark, ecost, i2, i, edgelimit, dist, visitlist, &nvisits, dheap, visited);
+         sdwalk_reset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
+         graph_heap_clean(FALSE, dheap);
 
          if( success )
          {
@@ -2670,9 +2669,10 @@ int todo; // go from i to i2! better for cache! and maybe remember all the neigh
          graph_edge_del(scip, g, e * 2, TRUE);
       }
 #ifndef NDEBUG
-      else
+      else if( g->oeat[e * 2] != EAT_FREE )
       {
          const int ecsr = id2csredge_csr[e * 2];
+
          assert(ecsr != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
       }
 #endif

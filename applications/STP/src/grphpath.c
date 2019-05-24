@@ -1199,24 +1199,22 @@ SCIP_Bool graph_sdWalks_csr(
    int                   end,                /**< end */
    int                   edgelimit,          /**< maximum number of edges to consider during execution */
    SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state,              /**< array to indicate whether a node has been scanned */
    int*                  visitlist,          /**< stores all visited nodes */
    int*                  nvisits,            /**< number of visited nodes */
    DHEAP*                dheap,              /**< Dijkstra heap */
    STP_Bool*             visited             /**< stores whether a node has been visited */
    )
 {
-   int count;
    int nchecks;
    SCIP_Bool success = FALSE;
    const int edgelimit1 = edgelimit / 2;
+   int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    RANGE* const RESTRICT range_csr = dcsr->range;
    int* const RESTRICT head_csr = dcsr->head;
    SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
 
-   assert(dcsr && g && heap && dist && visitlist && nvisits && visited); // todo && dheap
+   assert(dcsr && g && dist && visitlist && nvisits && visited && dheap);
    assert(graph_pc_isPcMw(g));
    assert(!g->extended);
 
@@ -1226,10 +1224,13 @@ SCIP_Bool graph_sdWalks_csr(
       return FALSE;
 
    assert(g->mark[start] && g->mark[end]);
+   assert(dheap->size == 0);
 
- //  state =
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+      assert(state[k] == UNKNOWN);
+#endif
 
-   count = 0;
    nchecks = 0;
    dist[start] = 0.0;
    state[start] = CONNECT;
@@ -1250,11 +1251,14 @@ SCIP_Bool graph_sdWalks_csr(
          if( termmark[m] != 0 )
          {
             const SCIP_Real newcost = MAX(cost_csr[e] - g->prize[m], 0.0);
-            correctXwalk(scip, heap, state, &count, dist, m, newcost);
+
+            dist[m] = newcost;
+            graph_heap_correct(m, newcost, dheap);
          }
          else
          {
-            correctXwalk(scip, heap, state, &count, dist, m, cost_csr[e]);
+            dist[m] = cost_csr[e];
+            graph_heap_correct(m, cost_csr[e], dheap);
          }
 
          if( ++nchecks > edgelimit1 )
@@ -1262,10 +1266,10 @@ SCIP_Bool graph_sdWalks_csr(
       }
    }
 
-   while( count > 0 && nchecks <= edgelimit )
+   while( dheap->size > 0 && nchecks <= edgelimit )
    {
       /* get nearest labelled node */
-      const int k = nearestX(heap, state, &count, dist);
+      const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
 
@@ -1310,7 +1314,8 @@ SCIP_Bool graph_sdWalks_csr(
                   break;
                }
 
-               correctXwalk(scip, heap, state, &count, dist, m, distnew);
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
             }
          }
          nchecks++;

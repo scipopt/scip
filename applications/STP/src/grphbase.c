@@ -5420,22 +5420,33 @@ void graph_heap_deleteMinGetNode(
    DHEAP*                heap                /**< the heap  */
    )
 {
+   assert(node);
+   *node = graph_heap_deleteMinReturnNode(heap);
+}
+
+
+/** deletes heap minimum and returns corresponding node */
+int graph_heap_deleteMinReturnNode(
+   DHEAP*                heap                /**< the heap  */
+   )
+{
    int* const RESTRICT position = heap->position;
    DENTRY* const RESTRICT entries = heap->entries;
    SCIP_Real fill;
    int parent;
    int hole = 1;
    int child = 2;
+   int node;
    const int lastentry = heap->size--;
 
-   assert(heap && position && entries && node);
+   assert(heap && position && entries);
    assert(heap->size >= 0);
 
-   *node = entries[1].node;
+   node = entries[1].node;
 
-   assert(position[*node] == 1);
+   assert(position[node] == 1);
 
-   position[*node] = CONNECT;
+   position[node] = CONNECT;
 
    /* move down along min-path */
    while( child < lastentry )
@@ -5499,7 +5510,10 @@ void graph_heap_deleteMinGetNode(
    int todo; // only for debug...
    /* set sentinel */
    entries[lastentry].key = DHEAP_MAX_KEY;
+
+   return node;
 }
+
 
 /** corrects node position in heap according to new key (or newly inserts the node) */
 void graph_heap_correct(

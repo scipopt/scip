@@ -1662,7 +1662,7 @@ SCIP_RETCODE redLoopPc(
          int sdwnelims2 = 0;
          int sdwnelims3 = 0;
 
-         SCIP_CALL( reduce_sdWalk_csr(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, dheap, &sdwnelims));
+         SCIP_CALL( reduce_sdWalk_csr(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
 
       //   SCIP_CALL( reduce_sdWalk(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims) );
          SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimits_pc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
@@ -2128,9 +2128,9 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-  // SCIP_CALL( reduce_extTest2(scip) );
-  // SCIP_CALL( reduce_sdPcMwTest3(scip) );
-   SCIP_CALL( dheap_Test1(scip) );
+   // SCIP_CALL( reduce_extTest2(scip) );
+   // SCIP_CALL( reduce_sdPcMwTest2(scip) );
+   // SCIP_CALL( dheap_Test1(scip) );
 
 
    SCIP_CALL( level0(scip, graph) );
