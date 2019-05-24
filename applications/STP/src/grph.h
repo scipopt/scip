@@ -465,6 +465,8 @@ extern SCIP_RETCODE    reduce_extTest1(SCIP*);
 extern SCIP_RETCODE    reduce_extTest2(SCIP*);
 extern SCIP_RETCODE    dheap_Test1(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest1(SCIP*);
+extern SCIP_RETCODE    reduce_sdPcMwTest2(SCIP*);
+extern SCIP_RETCODE    reduce_sdPcMwTest3(SCIP*);
 
 
 /* reduce_simple.c

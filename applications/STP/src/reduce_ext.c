@@ -81,12 +81,13 @@ SCIP_RETCODE reduce_extArc(
 static
 SCIP_RETCODE reduce_checkSdWalk(
    SCIP* scip,
+   SCIP_Bool extended,
    GRAPH* graph,
    int* nelims
 )
 {
    DHEAP* dheap;
-   const int nnodes = graph->knots;
+   int nnodes;
    int* nodearr_int1;
    int* nodearr_int2;
    int* vbase;
@@ -95,6 +96,20 @@ SCIP_RETCODE reduce_checkSdWalk(
    SCIP_Real* nodearrreal1;
    SCIP_Bool* isterm;
    STP_Bool* nodearrchar;
+
+   /* build PC graph */
+   SCIP_CALL( graph_pc_2pc(scip, graph) );
+
+   nnodes = graph->knots;
+
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->mark[i] = (graph->grad[i] > 0);
+
+   graph_pc_2org(graph);
+
 
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
 
@@ -109,16 +124,28 @@ SCIP_RETCODE reduce_checkSdWalk(
 
    graph_heap_create(scip, nnodes, NULL, NULL, &dheap);
 
-
    graph_get_isTerm(graph, isterm);
 
    /* actual test */
-   SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1,
-         nodearrreal1, heap, state, vbase, nodearrchar, dheap, nelims));
 
-   graph_heap_free(scip, TRUE, TRUE, &dheap);
+   if( extended )
+   {
+      SCIP_CALL( reduce_sdWalkExt2(scip, 200, NULL, graph, nodearr_int2,
+            nodearrreal1, heap, state, vbase, nodearrchar, nelims) );
+   }
+   else
+   {
+      SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1,
+            nodearrreal1, heap, state, vbase, nodearrchar, dheap, nelims));
+   }
 
    /* clean up */
+
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &vbase);
@@ -128,8 +155,6 @@ SCIP_RETCODE reduce_checkSdWalk(
    SCIPfreeBufferArray(scip, &nodearr_int1);
    SCIPfreeBufferArray(scip, &nodearrreal1);
    SCIPfreeBufferArray(scip, &heap);
-
-
 
    return SCIP_OKAY;
 }
@@ -345,8 +370,6 @@ SCIP_RETCODE reduce_sdPcMwTest1(
 
    /* build graph */
    graph_knot_add(graph, 0);
-
-   /* also add dummy nodes to avoid full stack */
    for( int i = 1; i < nnodes; i++ )
       graph_knot_add(graph, -1);
 
@@ -357,25 +380,107 @@ SCIP_RETCODE reduce_sdPcMwTest1(
    graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
 
    graph_pc_init(scip, graph, nnodes, -1);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
    graph->prize[0] = 1.0;
-
-   SCIP_CALL( graph_pc_2pc(scip, graph) );
-
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
-
-   for( int i = 1; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
-
-   graph_pc_2org(graph);
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, graph, &nelims) );
+   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, graph, &nelims) );
 
-   graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-   assert(graph == NULL);
+   assert(nelims == 1);
+
+assert(0);
+
+   return SCIP_OKAY;
+}
+
+
+
+SCIP_RETCODE reduce_sdPcMwTest2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nelims;
+   const int nnodes = 4;
+   const int nedges = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, 2 * nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 3;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);    /* edge to be deleted */
+   graph_edge_add(scip, graph, 0, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
+
+   graph_pc_init(scip, graph, nnodes, -1);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[3] = 1.0;
+   graph->prize[2] = 1.0;
+
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 2, 0);
+
+   nelims = 0;
+
+   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, graph, &nelims) );
+
+   assert(nelims == 1);
+
+
+assert(0);
+
+   return SCIP_OKAY;
+}
+
+
+SCIP_RETCODE reduce_sdPcMwTest3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nelims;
+   const int nnodes = 4;
+   const int nedges = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, 2 * nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 3;
+
+   graph_edge_add(scip, graph, 0, 1, 3.0, 3.0);    /* edge to be deleted */
+   graph_edge_add(scip, graph, 0, 2, 2.0, 2.0);
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
+
+   graph_pc_init(scip, graph, nnodes, -1);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[3] = 2.0;
+
+   graph_knot_chg(graph, 3, 0);
+
+   nelims = 0;
+
+   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, graph, &nelims) );
 
    assert(nelims == 1);
 

@@ -2647,7 +2647,6 @@ int todo; // go from i to i2! better for cache! and maybe remember all the neigh
 
             assert(edgeid_csr[e] >= 0);
             assert(erev >= 0);
-
             assert(head_csr[erev] == i && SCIPisEQ(scip, cost_csr[e], cost_csr[erev]));
 
             SCIPdebugMessage("delete %d %d \n", i, i2);
