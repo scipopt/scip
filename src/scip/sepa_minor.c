@@ -148,6 +148,7 @@ SCIP_RETCODE detectMinors(
    SCIP_VAR** xs;
    SCIP_VAR** ys;
    SCIP_VAR** auxvars;
+   int* perm = NULL;
    int nbilinterms = 0;
    int nquadterms = 0;
    int c;
@@ -267,7 +268,16 @@ SCIP_RETCODE detectMinors(
     */
    if( sepadata->maxminors > 0 && sepadata->maxminors < nbilinterms && sepadata->maxminors < SQR(nquadterms) )
    {
+      SCIP_RANDNUMGEN* randnumgen;
+
+      /* TOOD use global seed */
+      SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, 0) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
+
       /* TODO permute */
+
+      SCIPfreeBufferArray(scip, &perm);
+      SCIPfreeRandom(scip, &randnumgen);
    }
 
    /* store 2x2 minors */
