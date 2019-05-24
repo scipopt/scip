@@ -59,6 +59,50 @@ struct SCIP_SepaData
  * Local methods
  */
 
+/** helper method to store a 2x2 minor in the separation data */
+static
+SCIP_RETCODE sepadataAddMinor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR*             auxvarxx,           /**< auxiliary variable for x*x */
+   SCIP_VAR*             auxvaryy,           /**< auxiliary variable for y*y */
+   SCIP_VAR*             auxvarxy            /**< auxiliary variable for x*y */
+   )
+{
+   assert(sepadata != NULL);
+   assert(auxvarxx != NULL);
+   assert(auxvaryy != NULL);
+   assert(auxvarxy != NULL);
+   assert(auxvarxx != auxvaryy);
+   assert(auxvarxx != auxvarxy);
+   assert(auxvaryy != auxvarxy);
+
+   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy), SCIPvarGetName(auxvarxy));
+
+   /* reallocate if necessary */
+   if( sepadata->minorssize < 3 * (sepadata->nminors + 1) )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, 3 * (sepadata->nminors + 1));
+      assert(newsize > 3 * (sepadata->nminors + 1));
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->minors), sepadata->minorssize, newsize) );
+      sepadata->minorssize = newsize;
+   }
+
+   /* store minor */
+   sepadata->minors[3 * sepadata->nminors] = auxvarxx;
+   sepadata->minors[3 * sepadata->nminors + 1] = auxvaryy;
+   sepadata->minors[3 * sepadata->nminors + 2] = auxvarxy;
+   ++(sepadata->nminors);
+
+   /* capture variables */
+   SCIPcaptureVar(scip, auxvarxx);
+   SCIPcaptureVar(scip, auxvaryy);
+   SCIPcaptureVar(scip, auxvarxy);
+
+   return SCIP_OKAY;
+}
+
 /** helper method to clear separation data */
 static
 SCIP_RETCODE sepadataClear(
@@ -100,11 +144,14 @@ SCIP_RETCODE detectMinors(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_HASHMAP* exprmap;
+   SCIP_HASHMAP* quadmap;
    SCIP_VAR** xs;
    SCIP_VAR** ys;
    SCIP_VAR** auxvars;
-   int nstored = 0;
+   int nbilinterms = 0;
+   int nquadterms = 0;
    int c;
+   int i;
 
    assert(sepa != NULL);
 
@@ -131,6 +178,7 @@ SCIP_RETCODE detectMinors(
    /* allocate memory */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPhashmapCreate(&exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&quadmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ys, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, SCIPgetNVars(scip)) );
@@ -175,13 +223,18 @@ SCIP_RETCODE detectMinors(
             && SCIPgetConsExprExprPowExponent(expr) == 2.0
             && SCIPisConsExprExprVar(children[0]) )
          {
+            SCIP_VAR* quadvar;
+
             assert(children[0] != NULL);
 
-            xs[nstored] = SCIPgetConsExprExprVarVar(children[0]);
-            ys[nstored] = xs[nstored];
-            auxvars[nstored] = auxvar;
-            SCIPdebugMsg(scip, "found %s = (%s)^2\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nstored]));
-            ++nstored;
+            quadvar = SCIPgetConsExprExprVarVar(children[0]);
+            assert(quadvar != NULL);
+            assert(!SCIPhashmapExists(quadmap, (void*)quadvar));
+            SCIPdebugMsg(scip, "found %s = (%s)^2\n", SCIPvarGetName(auxvar), SCIPvarGetName(quadvar));
+
+            /* hash the quadratic variable to its corresponding auxiliary variable */
+            SCIP_CALL( SCIPhashmapInsert(quadmap, (void*)quadvar, auxvar) );
+            ++nquadterms;
 
             /* add expression to the map to not reconsider it */
             SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)expr, NULL) );
@@ -193,28 +246,59 @@ SCIP_RETCODE detectMinors(
             assert(children[0] != NULL);
             assert(children[1] != NULL);
 
-            xs[nstored] = SCIPgetConsExprExprVarVar(children[0]);
-            ys[nstored] = SCIPgetConsExprExprVarVar(children[1]);
-            auxvars[nstored] = auxvar;
-            SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nstored]), SCIPvarGetName(ys[nstored]));
-            ++nstored;
+            xs[nbilinterms] = SCIPgetConsExprExprVarVar(children[0]);
+            ys[nbilinterms] = SCIPgetConsExprExprVarVar(children[1]);
+            auxvars[nbilinterms] = auxvar;
+            SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
+            ++nbilinterms;
 
             /* add expression to the map to not reconsider it */
             SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)expr, NULL) );
          }
       }
    }
-   SCIPdebugMsg(scip, "stored %d terms in total\n", nstored);
+   assert(nbilinterms < SCIPgetNVars(scip));
+   SCIPdebugMsg(scip, "stored %d bilinear terms in total\n", nbilinterms);
 
-   /* it cannot happen that we have stored more terms than SCIPgetNVars() because every stored term has an auxiliary variable */
-   assert(nstored < SCIPgetNVars(scip));
+   /* permute bilinear terms if there are be too many of them; the motivation for this is that we don't want to
+    * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
+    * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
+    * are more likely to be chosen
+    */
+   if( sepadata->maxminors > 0 && sepadata->maxminors < nbilinterms && sepadata->maxminors < SQR(nquadterms) )
+   {
+      /* TODO permute */
+   }
 
-   /* TODO use arrays xs, ys, and auxvars to find all important 2x2 minors */
+   /* store 2x2 minors */
+   for( i = 0; i < nbilinterms && (sepadata->maxminors == 0 || sepadata->nminors < sepadata->maxminors); ++i )
+   {
+      assert(xs[i] != NULL);
+      assert(ys[i] != NULL);
+      assert(auxvars[i] != NULL);
+      assert(xs[i] != ys[i]);
+
+      if( SCIPhashmapExists(quadmap, (void*)xs[i]) && SCIPhashmapExists(quadmap, (void*)ys[i]) )
+      {
+         SCIP_VAR* auxvarxx;
+         SCIP_VAR* auxvaryy;
+
+         auxvarxx = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)xs[i]);
+         assert(auxvarxx != NULL);
+         auxvaryy = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)ys[i]);
+         assert(auxvaryy != NULL);
+
+         /* store minor into te separation data */
+         SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarxx, auxvaryy, auxvars[i]) );
+      }
+   }
+   SCIPdebugMsg(scip, "found %d 2x2 minors in total\n", sepadata->nminors);
 
    /* free memory */
    SCIPfreeBufferArray(scip, &auxvars);
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
+   SCIPhashmapFree(&quadmap);
    SCIPhashmapFree(&exprmap);
    SCIPexpriteratorFree(&it);
 
