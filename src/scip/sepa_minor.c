@@ -501,7 +501,7 @@ SCIP_RETCODE SCIPincludeSepaMinor(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxminors",
          "maximum number for minors (0: no limit)",
-         &sepadata->maxminors, TRUE, DEFAULT_MAXMINORS, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxminors, FALSE, DEFAULT_MAXMINORS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
