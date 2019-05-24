@@ -18,8 +18,8 @@
  * @brief  presolver for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
- * @author Christopher Hojny
  * @author Fabian Wegscheider
+ * @author Christopher Hojny
  *
  * This presolver computes symmetries of the problem and stores this information in adequate form. It does not
  * perform additional actions. The symmetry information can be accessed through external functions. However, the user
