@@ -210,8 +210,10 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
    assert(result != NULL);
    assert(ncuts != NULL);
 
-   /* if we did not say that we will separate, then stand by it */
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   /* if we did not say that we will separate on this side, then stand by it */
+   if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
+      return SCIP_OKAY;
+   if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
       return SCIP_OKAY;
 
    if( separated )
@@ -239,8 +241,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    assert(rowprep != NULL);
    assert(success != NULL);
 
-   /* if we did not say that we will separate, then stand by it */
-   if( ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+   /* if we did not say that we will separate on this side, then stand by it */
+   if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
    {
       *success = FALSE;
       return SCIP_OKAY;
