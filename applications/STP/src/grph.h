@@ -246,6 +246,7 @@ extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
 extern void   graph_free_dcsr(SCIP*, GRAPH*);
 extern void   graph_update_dcsr(SCIP*, GRAPH*);
 extern void   graph_dcsr_deleteEdge(DCSR*, int, int);
+extern void   graph_dcsr_deleteEdgeBi(SCIP*, DCSR*, int);
 extern SCIP_Bool graph_dcsr_isValid(const GRAPH*, SCIP_Bool verbose);
 
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);

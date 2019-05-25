@@ -5690,7 +5690,7 @@ void graph_update_dcsr(
 
 /** deletes CSR indexed edge */
 void graph_dcsr_deleteEdge(
-   DCSR*                 dcsr,               /**< DCSR edge */
+   DCSR*                 dcsr,               /**< DCSR container */
    int                   tail,               /**< tail of edge */
    int                   e_csr               /**< CSR indexed edge */
 )
@@ -5730,6 +5730,31 @@ void graph_dcsr_deleteEdge(
 
 }
 
+/** deletes CSR indexed edge and anti-parallel one */
+void graph_dcsr_deleteEdgeBi(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DCSR*                 dcsr,               /**< DCSR container */
+   int                   e_csr               /**< CSR indexed edge */
+)
+{
+   int* const head = dcsr->head;
+   int* const edgeid = dcsr->edgeid;
+   int* const id2csredge = dcsr->id2csredge;
+   const int erev_csr = id2csredge[flipedge(edgeid[e_csr])];
+   const int i1 = head[erev_csr];
+   const int i2 = head[e_csr];
+
+   assert(scip && dcsr);
+   assert(e_csr >= 0 && edgeid[e_csr] >= 0);
+   assert(erev_csr >= 0);
+   assert(SCIPisEQ(scip, dcsr->cost[e_csr], dcsr->cost[erev_csr]));
+
+   SCIPdebugMessage("delete %d %d \n", i1, i2);
+
+   graph_dcsr_deleteEdge(dcsr, i2, erev_csr);
+   graph_dcsr_deleteEdge(dcsr, i1, e_csr);
+}
+
 /** is DCSR storage of graph valid? */
 SCIP_Bool graph_dcsr_isValid(
    const GRAPH*          g,                  /**< the graph */
@@ -5741,11 +5766,10 @@ SCIP_Bool graph_dcsr_isValid(
    const int* const head = dcsr->head;
    const int* const edgeid = dcsr->edgeid;
    const int* const id2csredge = dcsr->id2csredge;
-   const SCIP_Real* const cost = dcsr->cost;
    const int nnodes = dcsr->nnodes;
    const int nedges = dcsr->nedges;
 
-   assert(g && dcsr && range && head && edgeid && cost && id2csredge);
+   assert(g && dcsr && range && head && edgeid && id2csredge);
 
    if( nnodes != g->knots || nedges != g->edges )
    {
