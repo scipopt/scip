@@ -2766,10 +2766,32 @@ SCIP_RETCODE reduce_sdStar(
 
    if( pcmw )
    {
+      /* bias DCSR costs*/
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( Is_term(g->term[k]) )
+         {
+            const int end = range_csr[k].end;
+            SCIP_Real mincost = FARAWAY;
 
-      // todo bias csr costs
+            assert(g->mark[k]);
 
+            for( int e = range_csr[k].start; e < end; e++ )
+               if( cost_csr[e] < mincost )
+                  mincost = cost_csr[e];
 
+            assert(mincost < FARAWAY && g->prize[k] > 0.0);
+            mincost = MIN(mincost, g->prize[k]);
+
+            for( int e = range_csr[k].start; e < end; e++ )
+            {
+               assert(cost_csr[e] < FARAWAY);
+
+               cost_csr[e] -= mincost;
+               assert(!SCIPisNegative(scip, cost_csr[e]));
+            }
+         }
+      }
    }
 
    for( int i = 0; i < nnodes; i++ )

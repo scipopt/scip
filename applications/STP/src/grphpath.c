@@ -1105,7 +1105,7 @@ void graph_sdStar(
    state[star_root] = CONNECT;
    visitlist[(*nvisits)++] = star_root;
 
-   for( int e = range_csr[star_root].start; e < range_csr[star_root].end; e++ )
+   for( int e = range_csr[star_root].start, end = range_csr[star_root].end; e < end; e++ )
    {
       const int m = head_csr[e];
 
