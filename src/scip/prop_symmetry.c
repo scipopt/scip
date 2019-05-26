@@ -3355,7 +3355,7 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
       {
          if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[i] >= 0 )
          {
-            /* If symmetry is computed before propving, it might happen that some variables are turned into binary
+            /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
              * variables, for which no event has been catched. Since there currently is no way of checking whether a var
              * event has been caught for a particular variable, we use the stored eventfilter positions. */
             SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
@@ -3617,43 +3617,43 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propving/" PROP_NAME "/maxgenerators",
+         "propagating/" PROP_NAME "/maxgenerators",
          "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
          &propdata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propving/" PROP_NAME "/checksymmetries",
+         "propagating/" PROP_NAME "/checksymmetries",
          "Should all symmetries be checked after computation?",
          &propdata->checksymmetries, TRUE, DEFAULT_CHECKSYMMETRIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propving/" PROP_NAME "/displaynorbitvars",
+         "propagating/" PROP_NAME "/displaynorbitvars",
          "Should the number of variables affected by some symmetry be displayed?",
          &propdata->displaynorbitvars, TRUE, DEFAULT_DISPLAYNORBITVARS, NULL, NULL) );
 
    /* add parameters for adding symmetry handling constraints */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PROP_NAME "/conssaddlp",
+         "propagating/" PROP_NAME "/conssaddlp",
          "Should the symmetry breaking constraints be added to the LP?",
          &propdata->conssaddlp, TRUE, DEFAULT_CONSSADDLP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PROP_NAME "/addsymresacks",
+         "propagating/" PROP_NAME "/addsymresacks",
          "Add inequalities for symresacks for each generator?",
          &propdata->addsymresacks, TRUE, DEFAULT_ADDSYMRESACKS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PROP_NAME "/computeorbits",
+         "propagating/" PROP_NAME "/computeorbits",
          "Should the orbits of the symmetry group be computed?",
          &propdata->computeorbits, TRUE, DEFAULT_COMPUTEORBITS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PROP_NAME "/detectorbitopes",
+         "propagating/" PROP_NAME "/detectorbitopes",
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &propdata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/" PROP_NAME "/addconsstiming",
+         "propagating/" PROP_NAME "/addconsstiming",
          "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving)",
          &propdata->addconsstiming, TRUE, DEFAULT_ADDCONSSTIMING, 0, 2, NULL, NULL) );
 
@@ -3759,7 +3759,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
          {
             if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[v] >= 0 )
             {
-               /* If symmetry is computed before propving, it might happen that some variables are turned into binary
+               /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
                 * variables, for which no event has been catched. Since there currently is no way of checking whether a var
                 * event has been caught for a particular variable, we use the stored eventfilter positions. */
                SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
@@ -3818,7 +3818,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
            SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
            SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       {
-         SCIPerrorMessage("Cannot call symmetry detection outside of propving.\n");
+         SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;
       }
 
