@@ -54,6 +54,8 @@
 #define PC_TERM_SIMPLE 1
 #define PC_TERM_NONE 0
 
+#define SDSTAR_BASE_UNSET -1
+#define SDSTAR_BASE_KILLED -2
 
 typedef unsigned char STP_Bool;
 
@@ -262,6 +264,7 @@ extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_edge_delBlocked(SCIP*, GRAPH*, const SCIP_Bool*, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_edge_printInfo(const GRAPH*, int);
 extern void   graph_knot_printInfo(const GRAPH*, int);
@@ -366,6 +369,7 @@ extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_B
 extern void   graph_sdPaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_voronoiWithRadiusMw(SCIP* scip, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
+extern void   graph_sdStar(SCIP*, const GRAPH*, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);
 extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Bool);
 extern SCIP_RETCODE   graph_voronoiExtend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
@@ -421,6 +425,7 @@ extern void    reduce_ansAdv(SCIP*, GRAPH*, int*, int*, SCIP_Bool);
 extern void    reduce_ansAdv2(SCIP*, GRAPH*, int*, int*);
 extern void    reduce_nnp(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
+extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdWalk(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalk_csr(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdWalkExt(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);

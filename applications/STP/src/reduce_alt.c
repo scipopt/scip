@@ -51,6 +51,38 @@
 
 
 static
+void sdstar_reset(
+   int                   nnodes,
+   int                   nvisits,
+   const int*            visitlist,
+   int*                  star_base,
+   SCIP_Real*            dist,
+   int*                  state,
+   STP_Bool*             visited
+)
+{
+   for( int k = 0; k < nvisits; k++ )
+   {
+      const int node = visitlist[k];
+      visited[node] = FALSE;
+      dist[node] = FARAWAY;
+      state[node] = UNKNOWN;
+      star_base[node] = SDSTAR_BASE_UNSET;
+   }
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+   {
+      assert(star_base[k] == SDSTAR_BASE_UNSET);
+      assert(visited[k] == FALSE);
+      assert(state[k] == UNKNOWN);
+      assert(dist[k] == FARAWAY);
+   }
+#endif
+}
+
+
+static
 void sdwalk_reset(
    int                   nnodes,
    int                   nvisits,
@@ -2573,7 +2605,7 @@ SCIP_RETCODE reduce_sdWalk_csr(
    int* edgeid_csr;
    int* id2csredge_csr;
    SCIP_Real* cost_csr;
-   STP_Bool* edge_deletable;
+   SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const SCIP_Bool checkstate = (edgestate != NULL);
@@ -2656,22 +2688,17 @@ SCIP_RETCODE reduce_sdWalk_csr(
       }
    }
 
+#ifndef NDEBUG
    for( int e = 0; e < nedges / 2; e++ )
    {
       if( edge_deletable[e] )
-      {
          assert(id2csredge_csr[e * 2] == -1);
-         graph_edge_del(scip, g, e * 2, TRUE);
-      }
-#ifndef NDEBUG
       else if( g->oeat[e * 2] != EAT_FREE )
-      {
-         const int ecsr = id2csredge_csr[e * 2];
-
-         assert(ecsr != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
-      }
-#endif
+         assert(id2csredge_csr[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
    }
+#endif
+
+   graph_edge_delBlocked(scip, g, edge_deletable, TRUE);
 
    SCIPfreeBufferArray(scip, &edge_deletable);
 
@@ -2680,15 +2707,15 @@ SCIP_RETCODE reduce_sdWalk_csr(
    return SCIP_OKAY;
 }
 
-#if 0
+
 /** SD star test for PcMw and SPG */
 SCIP_RETCODE reduce_sdStar(
    SCIP*                 scip,
    int                   edgelimit,
    const int*            edgestate,
    GRAPH*                g,
-   int*                  termmark,
-   SCIP_Real*            dist,
+   SCIP_Real*            dist,               /**< vertex distances */
+   int*                  star_base,
    int*                  visitlist,
    STP_Bool*             visited,
    DHEAP*                dheap,
@@ -2701,13 +2728,13 @@ SCIP_RETCODE reduce_sdStar(
    int* edgeid_csr;
    int* id2csredge_csr;
    SCIP_Real* cost_csr;
-   STP_Bool* edge_deletable;
+   SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const SCIP_Bool checkstate = (edgestate != NULL);
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
 
-   assert(g && scip && nelims && visited && visitlist && dheap);
+   assert(g && scip && nelims && visited && visitlist && dheap && star_base);
    assert(!graph_pc_isPcMw(g) || !g->extended);
 
    if( edgelimit <= 0 )
@@ -2717,6 +2744,7 @@ SCIP_RETCODE reduce_sdStar(
    {
       visited[i] = FALSE;
       dist[i] = FARAWAY;
+      star_base[i] = SDSTAR_BASE_UNSET;
    }
 
    graph_heap_clean(TRUE, dheap);
@@ -2737,89 +2765,93 @@ SCIP_RETCODE reduce_sdStar(
    assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
 
    if( pcmw )
-      graph_pc_termMarkProper(g, termmark);
+   {
+
+      // todo bias csr costs
+
+
+   }
 
    for( int i = 0; i < nnodes; i++ )
    {
-      int enext;
       SCIP_Bool runloop = TRUE;
       const int start = range_csr[i].start;
 
       while( runloop )
       {
+         SCIP_Bool success;
+         int nvisits;
+         assert(g->mark[i]);
 
-            SCIP_Bool success;
-            const SCIP_Real ecost = cost_csr[e];
-            int nvisits;
+         if( range_csr[i].end - start <= 1 )
+            break;
 
-            assert(g->mark[i] && g->mark[i2]);
+         runloop = FALSE;
 
-            enext = e + 1;
+         /* do the actual star run */
+         graph_sdStar(scip, g, i, edgelimit, star_base, dist, visitlist, &nvisits, dheap, visited, &success);
 
-            /* mark all neighbors */
+         if( success )
+         {
+            int enext;
 
-            /* do star run */
-
-            /* unmark and check all neighbors */
+            /* check all star nodes (neighbors of i) */
             for( int e = start; e < range_csr[i].end; e = enext )
             {
-               const int i2 = head_csr[e];
+               const int starnode = head_csr[e];
+               const int starbase = star_base[starnode];
+               assert(star_base[starnode] >= 0);
+               assert(SCIPisLE(scip, dist[starnode], cost_csr[e]));
 
-               /* can we delete edge? */
+               enext = e + 1;
 
-            }
+               if( checkstate )
+               {
+                  const int orgedge = edgeid_csr[e];
+                  if( edgestate[orgedge] == EDGE_BLOCKED )
+                     continue;
+               }
 
+               /* shorter path to current star node found? */
+               if( starbase != starnode )
+               {
+                  assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-            if( checkstate )
-            {
-               const int orgedge = edgeid_csr[e];
-               if( edgestate[orgedge] == EDGE_BLOCKED )
-                  continue;
-            }
+                  /* path still valid? */
+                  if( star_base[starbase] != SDSTAR_BASE_KILLED )
+                  {
+                     star_base[starnode] = SDSTAR_BASE_KILLED;
+                     edge_deletable[edgeid_csr[e] / 2] = TRUE;
+                     graph_dcsr_deleteEdgeBi(scip, dcsr, e);
 
+                     (*nelims)++;
+                     enext--;
+                  }
+                  else
+                  {
+                     runloop = TRUE;
+                  }
+               }
+            } /* traverse star nodes */
+         } /* if success */
 
-            success = graph_sdWalks_csr(scip, g, termmark, ecost, i2, i, edgelimit, dist, visitlist, &nvisits, dheap, visited);
-            sdwalk_reset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
-            graph_heap_clean(FALSE, dheap);
+         sdstar_reset(nnodes, nvisits, visitlist, star_base, dist, dheap->position, visited);
 
-            if( success )
-            {
-               const int erev = id2csredge_csr[flipedge(edgeid_csr[e])];
-
-               assert(edgeid_csr[e] >= 0);
-               assert(erev >= 0);
-               assert(head_csr[erev] == i && SCIPisEQ(scip, cost_csr[e], cost_csr[erev]));
-
-               SCIPdebugMessage("delete %d %d \n", i, i2);
-
-               edge_deletable[edgeid_csr[e] / 2] = TRUE;
-
-               graph_dcsr_deleteEdge(dcsr, head_csr[e], erev);
-               graph_dcsr_deleteEdge(dcsr, i, e);
-
-               (*nelims)++;
-               enext--;
-            }
-
+         graph_heap_clean(FALSE, dheap);
       }
    }
 
+#ifndef NDEBUG
    for( int e = 0; e < nedges / 2; e++ )
    {
       if( edge_deletable[e] )
-      {
          assert(id2csredge_csr[e * 2] == -1);
-         graph_edge_del(scip, g, e * 2, TRUE);
-      }
-#ifndef NDEBUG
       else if( g->oeat[e * 2] != EAT_FREE )
-      {
-         const int ecsr = id2csredge_csr[e * 2];
-
-         assert(ecsr != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
-      }
-#endif
+         assert(id2csredge_csr[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
    }
+#endif
+
+   graph_edge_delBlocked(scip, g, edge_deletable, TRUE);
 
    SCIPfreeBufferArray(scip, &edge_deletable);
 
@@ -2828,7 +2860,6 @@ SCIP_RETCODE reduce_sdStar(
    return SCIP_OKAY;
 }
 
-#endif
 
 /** SD test for PcMw using only limited Dijkstra-like walk from both endpoints of an edge */
 SCIP_RETCODE reduce_sdWalk(

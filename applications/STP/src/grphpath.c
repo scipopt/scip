@@ -976,7 +976,6 @@ void graph_sdPaths(
    int                   limit               /**< maximum number of edges to consider during execution */
    )
 {
-
    int count;
    int nchecks;
    const int limit1 = limit / 2;
@@ -1054,6 +1053,145 @@ void graph_sdPaths(
             break;
       }
    }
+}
+
+
+/** limited Dijkstra, stopping at terminals */
+void graph_sdStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   star_root,          /**< root of the start */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   int*                  star_base,          /**< star base node, must be initially set to SDSTAR_BASE_UNSET */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   STP_Bool*             visited,            /**< stores whether a node has been visited */
+   SCIP_Bool*            success             /**< will be set to TRUE iff at least one edge can be deleted */
+   )
+{
+   int nchecks;
+   int nstarhits;
+   int* const state = dheap->position;
+   DCSR* const dcsr = g->dcsr_storage;
+   RANGE* const RESTRICT range_csr = dcsr->range;
+   int* const RESTRICT head_csr = dcsr->head;
+   SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
+   SCIP_Real distlimit;
+
+   assert(dcsr && g && dist && visitlist && nvisits && visited && dheap && success);
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+   assert(g->mark[star_root] && star_degree >= 1);
+   assert(dheap->size == 0);
+   assert(edgelimit >= 1);
+
+   *nvisits = 0;
+   *success = FALSE;
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+   {
+      assert(dist[k] == FARAWAY);
+      assert(star_base[k] == SDSTAR_BASE_UNSET);
+      assert(state[k] == UNKNOWN);
+   }
+#endif
+
+   distlimit = 0.0;
+   dist[star_root] = 0.0;
+   state[star_root] = CONNECT;
+   visitlist[(*nvisits)++] = star_root;
+
+   for( int e = range_csr[star_root].start; e < range_csr[star_root].end; e++ )
+   {
+      const int m = head_csr[e];
+
+      assert(g->mark[m]);
+      assert(!visited[m]);
+
+      visitlist[(*nvisits)++] = m;
+      visited[m] = TRUE;
+      dist[m] = cost_csr[e];
+      star_base[m] = m;
+      graph_heap_correct(m, cost_csr[e], dheap);
+
+      if( cost_csr[e] > distlimit )
+         distlimit = cost_csr[e];
+   }
+
+   nchecks = 0;
+   nstarhits = 0;
+
+   while( dheap->size > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+
+      assert(k != star_root);
+      assert(state[k] == CONNECT);
+      assert(SCIPisLE(scip, dist[k], distlimit));
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+         assert(g->mark[m] && star_base[k] >= 0);
+
+         if( state[m] != CONNECT )
+         {
+            SCIP_Real distnew = dist[k] + cost_csr[e];
+
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( distnew < dist[m] )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               if( star_base[m] == m )
+                  nstarhits++;
+
+               dist[m] = distnew;
+               star_base[m] = star_base[k];
+               graph_heap_correct(m, distnew, dheap);
+
+               assert(star_base[m] != m);
+            }
+            else if( star_base[m] == m && SCIPisEQ(scip, distnew, dist[m]) )
+            {
+               assert(visited[m]);
+
+               if( star_base[m] == m )
+                  nstarhits++;
+
+               dist[m] = distnew;
+               star_base[m] = star_base[k];
+               graph_heap_correct(m, distnew, dheap);
+
+               assert(star_base[m] != m);
+            }
+
+            /* all star nodes hit already? */
+            if( nstarhits == star_degree )
+            {
+               nchecks = edgelimit + 1;
+               break;
+            }
+         }
+         nchecks++;
+      }
+   }
+
+  *success = (nstarhits > 0);
 }
 
 
@@ -1217,14 +1355,11 @@ SCIP_Bool graph_sdWalks_csr(
    assert(dcsr && g && dist && visitlist && nvisits && visited && dheap);
    assert(graph_pc_isPcMw(g));
    assert(!g->extended);
-
-   *nvisits = 0;
-
-   if( g->grad[start] == 0 || g->grad[end] == 0 )
-      return FALSE;
-
+   assert(g->grad[start] != 0 && g->grad[end] != 0);
    assert(g->mark[start] && g->mark[end]);
    assert(dheap->size == 0);
+
+   *nvisits = 0;
 
 #ifndef NDEBUG
    for( int k = 0; k < g->knots; k++ )

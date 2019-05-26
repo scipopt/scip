@@ -3496,6 +3496,25 @@ void graph_edge_del(
    g->oeat[e] = EAT_FREE;
 }
 
+
+/** deletes edges marked by given array */
+void graph_edge_delBlocked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   const SCIP_Bool*      edge_deletable,     /**< marks edges to delete (of size nedges / 2) */
+   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   )
+{
+   const int nedges = g->edges;
+
+   assert(g && edge_deletable);
+
+   for( int e = 0; e < nedges / 2; e++ )
+      if( edge_deletable[e] )
+         graph_edge_del(scip, g, e * 2, freeancestors);
+}
+
+
 /** hide edge */
 void graph_edge_hide(
    GRAPH*                g,                  /**< the graph */
