@@ -9322,8 +9322,11 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
+#ifndef __clang__
 #pragma STD FENV_ACCESS ON
+#endif
 
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational

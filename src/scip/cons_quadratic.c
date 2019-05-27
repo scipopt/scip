@@ -86,8 +86,11 @@
 
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
+#ifndef __clang__
 #pragma STD FENV_ACCESS ON
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
