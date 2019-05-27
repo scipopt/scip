@@ -1,3 +1,4 @@
+#define SCIP_STATISTIC
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -154,6 +155,10 @@ SCIP_RETCODE detectMinors(
    int c;
    int i;
 
+#ifdef SCIP_STATISTIC
+   SCIP_Real totaltime = -SCIPgetTotalTime(scip);
+#endif
+
    assert(sepa != NULL);
 
    sepadata = SCIPsepaGetData(sepa);
@@ -270,47 +275,73 @@ SCIP_RETCODE detectMinors(
    {
       SCIP_RANDNUMGEN* randnumgen;
 
-      /* TOOD use global seed */
+      /* TODO use global seed */
       SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, 0) );
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
 
-      /* TODO permute */
+      for( i = 0; i < nbilinterms; ++i )
+         perm[i] = i;
 
-      SCIPfreeBufferArray(scip, &perm);
+      /* permute array */
+      SCIPrandomPermuteIntArray(randnumgen, perm, 0, nbilinterms);
+
       SCIPfreeRandom(scip, &randnumgen);
    }
 
-   /* store 2x2 minors */
+   /* store 2x2 principal minors */
    for( i = 0; i < nbilinterms && (sepadata->maxminors == 0 || sepadata->nminors < sepadata->maxminors); ++i )
    {
-      assert(xs[i] != NULL);
-      assert(ys[i] != NULL);
-      assert(auxvars[i] != NULL);
-      assert(xs[i] != ys[i]);
+      SCIP_VAR* x;
+      SCIP_VAR* y;
+      SCIP_VAR* auxvar;
 
-      if( SCIPhashmapExists(quadmap, (void*)xs[i]) && SCIPhashmapExists(quadmap, (void*)ys[i]) )
+      if( perm == NULL )
+      {
+         x = xs[i];
+         y = ys[i];
+         auxvar = auxvars[i];
+      }
+      else
+      {
+         x = xs[perm[i]];
+         y = ys[perm[i]];
+         auxvar = auxvars[perm[i]];
+      }
+
+      assert(x != NULL);
+      assert(y != NULL);
+      assert(auxvar != NULL);
+      assert(x != y);
+
+      if( SCIPhashmapExists(quadmap, (void*)x) && SCIPhashmapExists(quadmap, (void*)y) )
       {
          SCIP_VAR* auxvarxx;
          SCIP_VAR* auxvaryy;
 
-         auxvarxx = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)xs[i]);
+         auxvarxx = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)x);
          assert(auxvarxx != NULL);
-         auxvaryy = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)ys[i]);
+         auxvaryy = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)y);
          assert(auxvaryy != NULL);
 
          /* store minor into te separation data */
-         SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarxx, auxvaryy, auxvars[i]) );
+         SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarxx, auxvaryy, auxvar) );
       }
    }
    SCIPdebugMsg(scip, "found %d 2x2 minors in total\n", sepadata->nminors);
 
    /* free memory */
+   SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArray(scip, &auxvars);
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
    SCIPhashmapFree(&quadmap);
    SCIPhashmapFree(&exprmap);
    SCIPexpriteratorFree(&it);
+
+#ifdef SCIP_STATISTIC
+   totaltime += SCIPgetTotalTime(scip);
+   SCIPstatisticMessage("MINOR DETECT %s %f %d\n", SCIPgetProbName(scip), totaltime, sepadata->nminors);
+#endif
 
    return SCIP_OKAY;
 }
