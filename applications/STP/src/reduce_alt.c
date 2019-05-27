@@ -2689,7 +2689,6 @@ SCIP_RETCODE reduce_sdWalk_csr(
    RANGE* range_csr;
    int* head_csr;
    int* edgeid_csr;
-   int* id2csredge_csr;
    SCIP_Real* cost_csr;
    SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
@@ -2716,7 +2715,6 @@ SCIP_RETCODE reduce_sdWalk_csr(
    range_csr = dcsr->range;
    head_csr = dcsr->head;
    edgeid_csr = dcsr->edgeid;
-   id2csredge_csr = dcsr->id2csredge;
    cost_csr = dcsr->cost;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
@@ -2724,7 +2722,7 @@ SCIP_RETCODE reduce_sdWalk_csr(
    for( int e = 0; e < nedges / 2; e++ )
       edge_deletable[e] = FALSE;
 
-   assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
+   assert(dcsr && range_csr && edgeid_csr && cost_csr);
 
    graph_pc_termMarkProper(g, termmark);
 
@@ -2778,9 +2776,9 @@ SCIP_RETCODE reduce_sdWalk_csr(
    for( int e = 0; e < nedges / 2; e++ )
    {
       if( edge_deletable[e] )
-         assert(id2csredge_csr[e * 2] == -1);
+         assert(dcsr->id2csredge[e * 2] == -1);
       else if( g->oeat[e * 2] != EAT_FREE )
-         assert(id2csredge_csr[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
    }
 #endif
 
@@ -2812,8 +2810,6 @@ SCIP_RETCODE reduce_sdStar(
    RANGE* range_csr;
    int* head_csr;
    int* edgeid_csr;
-   int* id2csredge_csr;
-   SCIP_Real* cost_csr;
    SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
    const int nedges = g->edges;
@@ -2832,15 +2828,13 @@ SCIP_RETCODE reduce_sdStar(
    range_csr = dcsr->range;
    head_csr = dcsr->head;
    edgeid_csr = dcsr->edgeid;
-   id2csredge_csr = dcsr->id2csredge;
-   cost_csr = dcsr->cost;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
 
    for( int e = 0; e < nedges / 2; e++ )
       edge_deletable[e] = FALSE;
 
-   assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
+   assert(dcsr && range_csr && edgeid_csr);
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -2885,7 +2879,7 @@ SCIP_RETCODE reduce_sdStar(
                const int starnode = head_csr[e];
                const int starbase = star_base[starnode];
                assert(star_base[starnode] >= 0);
-               assert(SCIPisLE(scip, dist[starnode], cost_csr[e]));
+               assert(SCIPisLE(scip, dist[starnode], dcsr->cost[e]));
                assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
 
                enext = e + 1;
@@ -2908,7 +2902,7 @@ SCIP_RETCODE reduce_sdStar(
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
                      graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-printf("base killed! %d \n", 0);
+
                      (*nelims)++;
                      enext--;
                   }
@@ -2930,9 +2924,9 @@ printf("base killed! %d \n", 0);
    for( int e = 0; e < nedges / 2; e++ )
    {
       if( edge_deletable[e] )
-         assert(id2csredge_csr[e * 2] == -1);
+         assert(dcsr->id2csredge[e * 2] == -1);
       else if( g->oeat[e * 2] != EAT_FREE )
-         assert(id2csredge_csr[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
    }
 #endif
 

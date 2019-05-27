@@ -1663,7 +1663,7 @@ SCIP_RETCODE redLoopPc(
       {
          SCIP_CALL( reduce_sdStar(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarnelims));
 
-         printf("sdstarnelims %d \n", sdstarnelims);
+       //  printf("sdstarnelims %d \n", sdstarnelims);
 
 
          if( sdstarnelims <= reductbound )
@@ -1684,9 +1684,9 @@ SCIP_RETCODE redLoopPc(
 
          // triggers bug in STP-DIMACS/PCSPG-hand/HAND_SMALL_ICERM/handsi04.stp
 
-         printf("pc_sdw1 %d \n", sdwnelims);
+//         printf("pc_sdw1 %d \n", sdwnelims);
 
-         exit(1);
+
 
          if( verbose )
             printf("SDw: %d, SDwEx1: %d, SDwEx2: %d \n", sdwnelims, sdwnelims2, sdwnelims3);
