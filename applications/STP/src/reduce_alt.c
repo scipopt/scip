@@ -2769,12 +2769,10 @@ SCIP_RETCODE reduce_sdStar(
       /* bias DCSR costs*/
       for( int k = 0; k < nnodes; k++ )
       {
-         if( Is_term(g->term[k]) )
+         if( Is_term(g->term[k]) && g->mark[k] )
          {
             const int end = range_csr[k].end;
             SCIP_Real mincost = FARAWAY;
-
-            assert(g->mark[k]);
 
             for( int e = range_csr[k].start; e < end; e++ )
                if( cost_csr[e] < mincost )
@@ -2796,14 +2794,21 @@ SCIP_RETCODE reduce_sdStar(
 
    for( int i = 0; i < nnodes; i++ )
    {
-      SCIP_Bool runloop = TRUE;
-      const int start = range_csr[i].start;
+      SCIP_Bool runloop;
+
+      if( !g->mark[i] )
+      {
+         assert(g->mark[i] == 2 || g->mark[i] == 0 || i == g->source);
+         continue;
+      }
+
+      runloop = TRUE;
 
       while( runloop )
       {
          SCIP_Bool success;
          int nvisits;
-         assert(g->mark[i]);
+         const int start = range_csr[i].start;
 
          if( range_csr[i].end - start <= 1 )
             break;
@@ -2845,7 +2850,7 @@ SCIP_RETCODE reduce_sdStar(
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
                      graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-
+printf("star delete %d \n", 0);
                      (*nelims)++;
                      enext--;
                   }

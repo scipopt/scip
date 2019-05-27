@@ -82,7 +82,7 @@ static
 SCIP_RETCODE reduce_checkSdWalk(
    SCIP* scip,
    SCIP_Bool extended,
-   GRAPH* graph,
+   GRAPH** g,
    int* nelims
 )
 {
@@ -96,6 +96,7 @@ SCIP_RETCODE reduce_checkSdWalk(
    SCIP_Real* nodearrreal1;
    SCIP_Bool* isterm;
    STP_Bool* nodearrchar;
+   GRAPH* graph = *g;
 
    /* build PC graph */
    SCIP_CALL( graph_pc_2pc(scip, graph) );
@@ -135,16 +136,16 @@ SCIP_RETCODE reduce_checkSdWalk(
    }
    else
    {
-      SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1,
-            nodearrreal1, heap, nodearrchar, dheap, nelims));
+  //    SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1,        nodearrreal1, heap, nodearrchar, dheap, nelims));
+
+  SCIP_CALL( reduce_sdStar(scip, 200, NULL, graph, nodearrreal1, nodearr_int1, nodearr_int2, nodearrchar, dheap, nelims));
    }
 
    /* clean up */
 
    graph_heap_free(scip, TRUE, TRUE, &dheap);
    graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-   assert(graph == NULL);
+   graph_free(scip, g, TRUE);
 
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &state);
@@ -388,9 +389,13 @@ SCIP_RETCODE reduce_sdPcMwTest1(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, graph, &nelims) );
+   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
+
+   printf("nelims %d \n", nelims);
 
    assert(nelims == 1);
+
+   assert(graph == NULL);
 
 assert(0);
 
@@ -435,10 +440,11 @@ SCIP_RETCODE reduce_sdPcMwTest2(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, graph, &nelims) );
+   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
 
    assert(nelims == 1);
 
+   assert(graph == NULL);
 
 assert(0);
 
@@ -480,10 +486,11 @@ SCIP_RETCODE reduce_sdPcMwTest3(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, graph, &nelims) );
+   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, &graph, &nelims) );
 
    assert(nelims == 1);
 
+   assert(graph == NULL);
 
 assert(0);
 
