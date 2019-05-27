@@ -10024,6 +10024,18 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
    /* SCIPdebugMsg(scip, "alpha: %g beta: %g gamma: %g delta: %g\n", *alpha, *beta, *gamma_, *delta); */
 
+   if( SCIPisInfinity(scip, REALABS(*gamma_ * a3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * b3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * c3)) )
+   {
+      SCIPdebugMsg(scip, "activity above SCIP infinity\n");
+      *delta  = 0.0;
+      *alpha  = 0.0;
+      *beta   = 0.0;
+      *gamma_ = 0.0;
+      return SCIP_OKAY;
+   }
+
    /* check if hyperplane contains all three points (necessary because of numerical troubles) */
    if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
       !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
@@ -10085,7 +10097,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    {
       *alpha  = -*alpha;
       *beta   = -*beta;
-      *gamma_  = -*gamma_;
+      *gamma_ = -*gamma_;
       *delta  = -*delta;
    }
 
