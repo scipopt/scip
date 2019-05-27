@@ -31,6 +31,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_iterator.h"
+#include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME              "minor"
 #define SEPA_DESC              "separator template"
@@ -134,7 +135,16 @@ SCIP_RETCODE sepadataClear(
    return SCIP_OKAY;
 }
 
-/** method to detect and store minors */
+/** method to detect and store minors; the cut generated in separatePoint() looks like
+ *
+ *    v_1^2 X_ii + 2 v_1 v_2 X_ij + v_2^2 X_jj >= 0
+ *
+ *  The cut is only useful if X_ii and X_jj are locked downwards. Depending on the sign of
+ *  v_1 v_2, X_ij needs to be up- or down-locked.
+ *
+ *  @todo It is checked whether bilinear terms are locked in both directions. We can detect the
+ *        expressions here and check their locks depending on sign(v_1 v_2) in separatePoints().
+ */
 static
 SCIP_RETCODE detectMinors(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -206,7 +216,6 @@ SCIP_RETCODE detectMinors(
          SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
          SCIP_CONSEXPR_EXPR** children;
          SCIP_VAR* auxvar;
-         int nchildren;
 
          SCIPdebugMsg(scip, "visit expression %p in constraint %s\n", (void*)expr, SCIPconsGetName(cons));
 
@@ -222,12 +231,12 @@ SCIP_RETCODE detectMinors(
          exprhdlr = SCIPgetConsExprExprHdlr(expr);
          assert(exprhdlr != NULL);
          children = SCIPgetConsExprExprChildren(expr);
-         nchildren = SCIPgetConsExprExprNChildren(expr);
 
          /* check for expr = (x)^2 */
-         if( nchildren == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
+         if( SCIPgetConsExprExprNChildren(expr) == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
             && SCIPgetConsExprExprPowExponent(expr) == 2.0
-            && SCIPisConsExprExprVar(children[0]) )
+            && SCIPisConsExprExprVar(children[0])
+            && SCIPgetConsExprExprNLocksNeg(expr) > 0 )
          {
             SCIP_VAR* quadvar;
 
@@ -246,8 +255,9 @@ SCIP_RETCODE detectMinors(
             SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)expr, NULL) );
          }
          /* check for expr = x * y */
-         else if( nchildren == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
-            && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1]) )
+         else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
+            && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1])
+            && SCIPgetConsExprExprNLocksNeg(expr) > 0 && SCIPgetConsExprExprNLocksPos(expr) > 0 )
          {
             assert(children[0] != NULL);
             assert(children[1] != NULL);
@@ -357,6 +367,8 @@ SCIP_RETCODE separatePoint(
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_Real minefficacy;
+   int i;
 
    assert(sepa != NULL);
    assert(result != NULL);
@@ -366,11 +378,119 @@ SCIP_RETCODE separatePoint(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
+   /* TODO add a parameter for this */
+   minefficacy = 1e-4;
+
    /* check whether there are some minors available */
    if( sepadata->nminors == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
+
+   for( i = 0; i < sepadata->nminors && (*result != SCIP_CUTOFF); ++i )
+   {
+      SCIP_VAR* xx;
+      SCIP_VAR* yy;
+      SCIP_VAR* xy;
+      SCIP_Real solxx;
+      SCIP_Real solyy;
+      SCIP_Real solxy;
+      SCIP_Real determinant;
+
+      xx = sepadata->minors[3*i];
+      assert(xx != NULL);
+      solxx = SCIPgetSolVal(scip, sol, xx);
+
+      yy = sepadata->minors[3*i + 1];
+      assert(yy != NULL);
+      solyy = SCIPgetSolVal(scip, sol, yy);
+
+      xy = sepadata->minors[3*i + 2];
+      assert(xy != NULL);
+      solxy = SCIPgetSolVal(scip, sol, xy);
+
+      determinant = solxx * solyy - SQR(solxy);
+      SCIPdebugMsg(scip, "(%s,%s,%s) = (%g,%g,%g) implies determinant = %g\n", SCIPvarGetName(xx), SCIPvarGetName(yy),
+         SCIPvarGetName(xy), solxx, solyy, solxy, determinant);
+
+      /* check whether minor is positive semi-definit in the current solution */
+      if( SCIPisFeasLT(scip, determinant, 0.0) )
+      {
+         SCIP_Real eigenvals[2];
+         SCIP_Real matrix[4];
+         int k;
+
+         matrix[0] = solxx;
+         matrix[1] = solxy;
+         matrix[2] = solxy;
+         matrix[3] = solyy;
+
+         /* use LAPACK to compute the eigenvalues and eigenvectors */
+         if( LapackDsyev(TRUE, 2, matrix, eigenvals) != SCIP_OKAY )
+         {
+            SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
+            continue;
+         }
+
+         /* at least one eigenvalue needs to be negative */
+         assert(SCIPisLT(scip, eigenvals[0], 0.0) || SCIPisLT(scip, eigenvals[1], 0.0));
+
+         SCIPdebugMsg(scip, "eigenvec[0] = (%g,%g) with eigenvalue[0] = %g\n", matrix[0], matrix[1], eigenvals[0]);
+         assert(SCIPisRelEQ(scip, solxx * matrix[0] + solxy * matrix[1], eigenvals[0] * matrix[0]));
+         assert(SCIPisRelEQ(scip, solxy * matrix[0] + solyy * matrix[1], eigenvals[0] * matrix[1]));
+
+         SCIPdebugMsg(scip, "eigenvec[1] = (%g,%g) with eigenvalue[1] = %g\n", matrix[2], matrix[3], eigenvals[1]);
+         assert(SCIPisRelEQ(scip, solxx * matrix[2] + solxy * matrix[3], eigenvals[1] * matrix[2]));
+         assert(SCIPisRelEQ(scip, solxy * matrix[2] + solyy * matrix[3], eigenvals[1] * matrix[3]));
+
+         /* try to generate a cut for every negative eigenvalue */
+         for( k = 0; k < 2 && (*result != SCIP_CUTOFF); ++k )
+         {
+            SCIP_ROWPREP* rowprep;
+            SCIP_VAR* vars[3];
+            SCIP_Real coefs[3];
+
+            if( !SCIPisFeasLT(scip, eigenvals[k], 0.0) )
+               continue;
+
+            if( matrix[2*k] * matrix[2*k + 1] > 0.0 )
+               printf("XXXX %g\n", matrix[2*k] * matrix[2*k + 1]);
+
+            /* create rowprep */
+            SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
+
+            /* cuts reads as v_1^2 X_ii + 2 v_1 v_2 X_ij + v_2^2 X_jj >= 0 */
+            vars[0] = xx;
+            coefs[0] = SQR(matrix[2*k]);
+            vars[1] = xy;
+            coefs[1] = 2.0 * matrix[2*k] * matrix[2*k + 1];
+            vars[2] = yy;
+            coefs[2] = SQR(matrix[2*k+1]);
+
+            SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 3, vars, coefs) );
+            SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
+            SCIPdebugMsg(scip, "cut violation %g minefficacy = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), minefficacy);
+
+            /* check cut violation */
+            if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > minefficacy )
+            {
+               SCIP_ROW* row;
+               SCIP_Bool infeasible;
+
+               /* create, add, and release row */
+               SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+               /* update result pointer */
+               *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+            }
+
+            /* free rowprep */
+            SCIPfreeRowprep(scip, &rowprep);
+         }
+      }
+   }
 
    /* TODO generate a/several cut/cuts */
 
@@ -475,6 +595,10 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 {  /*lint --e{715}*/
 
+   /* need routine to compute eigenvalues/eigenvectors */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
    /* try to detect minors */
    SCIP_CALL( detectMinors(scip, sepa) );
 
@@ -489,6 +613,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
 {  /*lint --e{715}*/
+
+   /* need routine to compute eigenvalues/eigenvectors */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
 
    /* try to detect minors */
    SCIP_CALL( detectMinors(scip, sepa) );
