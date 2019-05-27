@@ -1000,6 +1000,12 @@ SCIP_RETCODE copyVars(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    int nsourcevars;
+#ifndef NDEBUG
+   int nrelaxonlybinvars = 0;
+   int nrelaxonlyintvars = 0;
+   int nrelaxonlyimplvars = 0;
+   int nrelaxonlycontvars = 0;
+#endif
    int i;
 
    assert(sourcescip != NULL);
@@ -1043,6 +1049,31 @@ SCIP_RETCODE copyVars(
       SCIP_Bool success;
       SCIP_VAR* targetvar;
 
+      if( SCIPvarIsCutInvalidAfterRestart(sourcevars[i]) )
+      {
+#ifndef NDEBUG
+         switch( SCIPvarGetType(sourcevars[i]) )
+         {
+         case SCIP_VARTYPE_BINARY:
+            nrelaxonlybinvars++;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            nrelaxonlyintvars++;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            nrelaxonlyimplvars++;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            nrelaxonlycontvars++;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            return SCIP_INVALIDDATA;
+         }
+#endif
+         continue;
+      }
+
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
       assert(success);
@@ -1055,6 +1086,9 @@ SCIP_RETCODE copyVars(
       SCIP_VAR* targetvar;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+
+      if( SCIPvarIsCutInvalidAfterRestart(sourcevars[i]) )
+         continue;
 
       /* retrieve target variable as image of the source variable */
       targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, (void *)fixedvars[i]);
@@ -1118,13 +1152,13 @@ SCIP_RETCODE copyVars(
          }
       }
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
-      assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
-      assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)
-         && SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip) <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
-      assert(SCIPgetNImplVars(sourcescip) <= SCIPgetNImplVars(targetscip)
-         && SCIPgetNImplVars(targetscip) <= SCIPgetNImplVars(sourcescip) + nfixedimplvars);
-      assert(SCIPgetNContVars(sourcescip) <= SCIPgetNContVars(targetscip)
-         && SCIPgetNContVars(targetscip) <= SCIPgetNContVars(targetscip) + nfixedcontvars);
+      assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
+      assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
+      assert(SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
+      assert(SCIPgetNImplVars(sourcescip) <= SCIPgetNImplVars(targetscip) + nrelaxonlyimplvars);
+      assert(SCIPgetNImplVars(targetscip) + nrelaxonlyimplvars <= SCIPgetNImplVars(sourcescip) + nfixedimplvars);
+      assert(SCIPgetNContVars(sourcescip) <= SCIPgetNContVars(targetscip) + nrelaxonlycontvars);
+      assert(SCIPgetNContVars(targetscip) + nrelaxonlycontvars <= SCIPgetNContVars(sourcescip) + nfixedcontvars);
    }
 #endif
 
