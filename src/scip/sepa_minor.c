@@ -450,13 +450,6 @@ SCIP_DECL_SEPAEXIT(sepaExitMinor)
 static
 SCIP_DECL_SEPAINITSOL(sepaInitsolMinor)
 {  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   /* TODO */
-
    return SCIP_OKAY;
 }
 
