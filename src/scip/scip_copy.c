@@ -1327,6 +1327,9 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    {
       SCIP_VARSTATUS sourcevarstatus;
 
+      if( sourcevars[i] == NULL || targetvars[i] == NULL )
+         continue;
+
       assert(sourcevars[i]->scip == sourcescip);
       assert(targetvars[i]->scip == targetscip);
 
