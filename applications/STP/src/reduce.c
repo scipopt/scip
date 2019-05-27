@@ -1598,6 +1598,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdc = TRUE;
    SCIP_Bool sdw = TRUE;
+   SCIP_Bool sdstar = TRUE;
    SCIP_Bool bd3 = nodereplacing;
    SCIP_Bool nvsl = TRUE;
    SCIP_Bool rerun = TRUE;
@@ -1645,6 +1646,7 @@ SCIP_RETCODE redLoopPc(
       int bd3nelims = 0;
       int nvslnelims = 0;
       int sdwnelims = 0;
+      int sdstarnelims = 0;
       int brednelims = 0;
       degnelims = 0;
 
@@ -1656,6 +1658,18 @@ SCIP_RETCODE redLoopPc(
          SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
                reductbound, verbose, &sd) );
       }
+
+      if( sdstar || extensive )
+      {
+         SCIP_CALL( reduce_sdStar(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarnelims));
+
+         printf("sdstarnelims %d \n", sdstarnelims);
+
+
+         if( sdstarnelims <= reductbound )
+            sdstar = FALSE;
+      }
+
 
       if( sdw || extensive )
       {
@@ -1741,9 +1755,9 @@ SCIP_RETCODE redLoopPc(
 
       SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
-      ntotalelims += (degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims);
+      ntotalelims += (degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims);
 
-      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims <= reductbound )
+      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims <= reductbound )
          rerun = FALSE;
 
       if( !rerun && advancedrun && g->terms > 2 )
@@ -2129,7 +2143,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    // SCIP_CALL( reduce_extTest1(scip) );
-    SCIP_CALL( reduce_sdPcMwTest2(scip) );
+   // SCIP_CALL( reduce_sdPcMwTest4(scip) );
    // SCIP_CALL( dheap_Test1(scip) );
 
 

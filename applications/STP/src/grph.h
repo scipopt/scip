@@ -54,7 +54,7 @@
 #define PC_TERM_SIMPLE 1
 #define PC_TERM_NONE 0
 
-#define SDSTAR_BASE_UNSET -1
+#define SDSTAR_BASE_UNSET  -1
 #define SDSTAR_BASE_KILLED -2
 
 typedef unsigned char STP_Bool;
@@ -474,6 +474,7 @@ extern SCIP_RETCODE    dheap_Test1(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest1(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest2(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest3(SCIP*);
+extern SCIP_RETCODE    reduce_sdPcMwTest4(SCIP*);
 
 
 /* reduce_simple.c

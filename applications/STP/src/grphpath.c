@@ -1075,9 +1075,9 @@ void graph_sdStar(
    int nstarhits;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
-   RANGE* const RESTRICT range_csr = dcsr->range;
-   int* const RESTRICT head_csr = dcsr->head;
-   SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+   const RANGE* const RESTRICT range_csr = dcsr->range;
+   const int* const RESTRICT head_csr = dcsr->head;
+   const SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
    const int star_degree = range_csr[star_root].end - range_csr[star_root].start;
    SCIP_Real distlimit;
 
@@ -1127,7 +1127,7 @@ void graph_sdStar(
 
    while( dheap->size > 0 && nchecks <= edgelimit )
    {
-      /* get nearest labelled node */
+      /* get nearest labeled node */
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
@@ -1144,7 +1144,7 @@ void graph_sdStar(
 
          if( state[m] != CONNECT )
          {
-            SCIP_Real distnew = dist[k] + cost_csr[e];
+            const SCIP_Real distnew = dist[k] + cost_csr[e];
 
             if( SCIPisGT(scip, distnew, distlimit) )
                continue;
@@ -1166,12 +1166,12 @@ void graph_sdStar(
 
                assert(star_base[m] != m);
             }
-            else if( star_base[m] == m && SCIPisEQ(scip, distnew, dist[m]) )
+            else if( SCIPisEQ(scip, distnew, dist[m]) && star_base[m] == m )
             {
                assert(visited[m]);
+               nstarhits++;
 
-               if( star_base[m] == m )
-                  nstarhits++;
+               assert(star_base[m] != star_base[k]);
 
                dist[m] = distnew;
                star_base[m] = star_base[k];

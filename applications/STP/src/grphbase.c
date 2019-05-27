@@ -5621,10 +5621,10 @@ SCIP_RETCODE graph_init_dcsr(
    dcsr->nnodes = nnodes;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(range_csr), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(edgeid_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges / 2) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(edgeid_csr), nedges / 2) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(id2csr_csr), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges / 2) );
 
    dcsr->range = range_csr;
    dcsr->head = head_csr;
@@ -5668,6 +5668,8 @@ SCIP_RETCODE graph_init_dcsr(
       if( k != nnodes - 1 )
          range_csr[k + 1].start = range_csr[k].end;
    }
+
+   assert(range_csr[nnodes - 1].end <= nedges / 2);
 
    assert(graph_dcsr_isValid(g, TRUE));
 

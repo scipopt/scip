@@ -1152,11 +1152,13 @@ int reduce_sduction(
 }
 #endif
 
+#if 0
 /** bias DCSR costs for PCMW */
 static
 void pcBiasCostsDCSR(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real*            costbiased,         /**< bias edge cost */
    SCIP_Real*            mincost_in          /**< vertex distances */
    )
 {
@@ -1173,6 +1175,10 @@ void pcBiasCostsDCSR(
    range_csr = dcsr->range;
    head_csr = dcsr->head;
    cost_csr = dcsr->cost;
+
+   assert(g->edges >= dcsr->nedges);
+
+   BMScopyMemoryArray(costbiased, cost_csr, dcsr->nedges / 2);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1199,10 +1205,10 @@ void pcBiasCostsDCSR(
             if( Is_term(g->term[head]) )
             {
                assert(g->mark[head]);
-               assert(cost_csr[e] < FARAWAY && cost_csr[e] > 0.0);
+               assert(costbiased[e] < FARAWAY && costbiased[e] > 0.0);
 
-               if( cost_csr[e] < mincost_in[head] )
-                  mincost_in[head] = cost_csr[e];
+               if( costbiased[e] < mincost_in[head] )
+                  mincost_in[head] = costbiased[e];
             }
          }
       }
@@ -1221,14 +1227,16 @@ void pcBiasCostsDCSR(
             if( Is_term(g->term[head]) )
             {
                assert(g->mark[head]);
-               cost_csr[e] -= mincost_in[head];
+               costbiased[e] -= mincost_in[head];
 
-               assert(!SCIPisNegative(scip, cost_csr[e]));
+               assert(!SCIPisNegative(scip, costbiased[e]));
             }
          }
       }
    }
 }
+
+#endif
 
 /** ans subtest */
 static
@@ -2810,7 +2818,6 @@ SCIP_RETCODE reduce_sdStar(
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const SCIP_Bool checkstate = (edgestate != NULL);
-   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
 
    assert(g && scip && nelims && visited && visitlist && dheap && star_base);
    assert(!graph_pc_isPcMw(g) || !g->extended);
@@ -2834,10 +2841,6 @@ SCIP_RETCODE reduce_sdStar(
       edge_deletable[e] = FALSE;
 
    assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
-
-   /* bias costs for PCSTP/MWCSP */
-   if( pcmw )
-      pcBiasCostsDCSR(scip, g, dist);
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -2883,6 +2886,7 @@ SCIP_RETCODE reduce_sdStar(
                const int starbase = star_base[starnode];
                assert(star_base[starnode] >= 0);
                assert(SCIPisLE(scip, dist[starnode], cost_csr[e]));
+               assert(star_base[starnode] == starnode || star_base[starnode] >= 0);
 
                enext = e + 1;
 
@@ -2894,7 +2898,7 @@ SCIP_RETCODE reduce_sdStar(
                }
 
                /* shorter path to current star node found? */
-               if( starbase != starnode )
+               if( starnode != starbase )
                {
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
@@ -2904,7 +2908,7 @@ SCIP_RETCODE reduce_sdStar(
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
                      graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-
+printf("base killed! %d \n", 0);
                      (*nelims)++;
                      enext--;
                   }
