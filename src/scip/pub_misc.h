@@ -1800,7 +1800,7 @@ unsigned int SCIPcalcFibHash(
    );
 
 #ifdef NDEBUG
-#define SCIPcalcFibHash(v)   (((unsigned int)(v * 2654435769)) % UINT_MAX)
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
 #endif
 
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was

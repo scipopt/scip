@@ -10189,7 +10189,9 @@ unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< number to hash */
    )
 {
-   return ((unsigned long long)(v * 2654435769)) % UINT_MAX;
+   if( v >= 0 )
+      return ((unsigned long long)(v * 2654435769)) % UINT_MAX;
+   return ((unsigned long long)(-v * 683565275)) % UINT_MAX;
 }
 #endif
 
