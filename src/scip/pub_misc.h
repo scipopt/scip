@@ -1945,7 +1945,7 @@ unsigned int SCIPcalcFibHash(
    );
 
 #ifdef NDEBUG
-#define SCIPcalcFibHash(v)   (((unsigned long long)((v) * 2654435769)) % UINT_MAX)
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
 #endif
 
 /** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
