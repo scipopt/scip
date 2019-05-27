@@ -233,8 +233,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    for( i = implstart; i < implend; i++ )
    {
       SCIP_Bool infeasible;
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
 
+      if( subvars[i] == NULL )
+         continue;
+
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
       SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
       assert(!infeasible);
    }
@@ -249,6 +252,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    {
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
       }
    }
@@ -350,6 +355,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPtransformProb(subscip) );
    for( i = 0; i < nvars; ++i)
    {
+      if( subvars[i] == NULL )
+         continue;
       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
    }
 
@@ -541,6 +548,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       {
          SCIP_Bool tightened;
 
+         if( subvars[i] == NULL )
+            continue;
+
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
@@ -612,6 +622,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          SCIP_Real downconflen;
          SCIP_Real upconflen;
 
+         if( subvars[i] == NULL )
+            continue;
+
          /* copy downwards branching statistics */
          downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
          downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
@@ -672,6 +685,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       /* remove all locks that were added to avoid dual presolving */
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
+
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
       }
    }

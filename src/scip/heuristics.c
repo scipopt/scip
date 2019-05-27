@@ -988,6 +988,7 @@ SCIP_RETCODE translateSubSol(
    int nvars;
    SCIP_SOL* newsol;
    SCIP_Real* subsolvals;
+   int i;
 
    assert( scip != NULL );
    assert( subscip != NULL );
@@ -997,15 +998,16 @@ SCIP_RETCODE translateSubSol(
    /* copy the solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] != NULL )
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+      else
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -1088,6 +1090,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
 
    int nvars;
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real rhs;
    SCIP_Real* consvals;
@@ -1103,6 +1106,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvars, nbinvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvals, nbinvars + 1) );
+   nconsvars =0;
 
    /* set initial left and right hand sides of trust region constraint */
    rhs = 0.0;
@@ -1112,32 +1116,37 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    {
       SCIP_Real solval;
 
+      if( subvars[i] == NULL )
+         continue;
+
       solval = SCIPgetSolVal(sourcescip, bestsol, vars[i]);
       assert( SCIPisFeasIntegral(sourcescip,solval) );
 
       /* is variable i  part of the binary support of bestsol? */
       if( SCIPisFeasEQ(sourcescip, solval, 1.0) )
       {
-         consvals[i] = -1.0;
+         consvals[nconsvars] = -1.0;
          rhs -= 1.0;
       }
       else
-         consvals[i] = 1.0;
-      consvars[i] = subvars[i];
-      assert(SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY);
+         consvals[nconsvars] = 1.0;
+      consvars[nconsvars] = subvars[i];
+      assert(SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY);
+      ++nconsvars;
    }
 
    /* adding the violation variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
    SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(targetscip, violvar) );
-   consvars[nbinvars] = violvar;
-   consvals[nbinvars] = -1.0;
+   consvars[nconsvars] = violvar;
+   consvals[nconsvars] = -1.0;
+   ++nconsvars;
 
    /* creates trustregion constraint and adds it to subscip */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregioncons", SCIPgetProbName(sourcescip));
 
-   SCIP_CALL( SCIPcreateConsLinear(targetscip, &trustregioncons, name, nbinvars + 1, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(targetscip, &trustregioncons, name, nconsvars, consvars, consvals,
             rhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(targetscip, trustregioncons) );
    SCIP_CALL( SCIPreleaseCons(targetscip, &trustregioncons) );
