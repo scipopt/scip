@@ -1152,6 +1152,84 @@ int reduce_sduction(
 }
 #endif
 
+/** bias DCSR costs for PCMW */
+static
+void pcBiasCostsDCSR(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real*            mincost_in          /**< vertex distances */
+   )
+{
+   DCSR* dcsr;
+   RANGE* range_csr;
+   int* head_csr;
+   SCIP_Real* cost_csr;
+   const int nnodes = g->knots;
+
+   assert(g && scip && g->dcsr_storage);
+   assert(graph_pc_isPcMw(g) && !g->extended);
+
+   dcsr = g->dcsr_storage;
+   range_csr = dcsr->range;
+   head_csr = dcsr->head;
+   cost_csr = dcsr->cost;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && g->mark[k] )
+      {
+         mincost_in[k] = g->prize[k];
+      }
+      else
+      {
+         mincost_in[k] = 0.0;
+      }
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->mark[k] )
+      {
+         const int end = range_csr[k].end;
+
+         for( int e = range_csr[k].start; e < end; e++ )
+         {
+            const int head = head_csr[e];
+
+            if( Is_term(g->term[head]) )
+            {
+               assert(g->mark[head]);
+               assert(cost_csr[e] < FARAWAY && cost_csr[e] > 0.0);
+
+               if( cost_csr[e] < mincost_in[head] )
+                  mincost_in[head] = cost_csr[e];
+            }
+         }
+      }
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->mark[k] )
+      {
+         const int end = range_csr[k].end;
+
+         for( int e = range_csr[k].start; e < end; e++ )
+         {
+            const int head = head_csr[e];
+
+            if( Is_term(g->term[head]) )
+            {
+               assert(g->mark[head]);
+               cost_csr[e] -= mincost_in[head];
+
+               assert(!SCIPisNegative(scip, cost_csr[e]));
+            }
+         }
+      }
+   }
+}
+
 /** ans subtest */
 static
 void ansProcessCandidate(
@@ -2710,16 +2788,16 @@ SCIP_RETCODE reduce_sdWalk_csr(
 
 /** SD star test for PcMw and SPG */
 SCIP_RETCODE reduce_sdStar(
-   SCIP*                 scip,
-   int                   edgelimit,
-   const int*            edgestate,
-   GRAPH*                g,
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edgelimit,          /**< limit */
+   const int*            edgestate,          /**< state array or NULL */
+   GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            dist,               /**< vertex distances */
-   int*                  star_base,
-   int*                  visitlist,
-   STP_Bool*             visited,
-   DHEAP*                dheap,
-   int*                  nelims
+   int*                  star_base,          /**< array of size nnodes */
+   int*                  visitlist,          /**< array of size nnodes */
+   STP_Bool*             visited,            /**< array of size nnodes */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   int*                  nelims              /**< point to store number of deleted edges */
    )
 {
    DCSR* dcsr;
@@ -2740,13 +2818,6 @@ SCIP_RETCODE reduce_sdStar(
    if( edgelimit <= 0 )
       return SCIP_OKAY;
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      visited[i] = FALSE;
-      dist[i] = FARAWAY;
-      star_base[i] = SDSTAR_BASE_UNSET;
-   }
-
    graph_heap_clean(TRUE, dheap);
    graph_init_dcsr(scip, g);
 
@@ -2764,32 +2835,15 @@ SCIP_RETCODE reduce_sdStar(
 
    assert(dcsr && range_csr && edgeid_csr && id2csredge_csr && cost_csr);
 
+   /* bias costs for PCSTP/MWCSP */
    if( pcmw )
+      pcBiasCostsDCSR(scip, g, dist);
+
+   for( int i = 0; i < nnodes; i++ )
    {
-      /* bias DCSR costs*/
-      for( int k = 0; k < nnodes; k++ )
-      {
-         if( Is_term(g->term[k]) && g->mark[k] )
-         {
-            const int end = range_csr[k].end;
-            SCIP_Real mincost = FARAWAY;
-
-            for( int e = range_csr[k].start; e < end; e++ )
-               if( cost_csr[e] < mincost )
-                  mincost = cost_csr[e];
-
-            assert(mincost < FARAWAY && g->prize[k] > 0.0);
-            mincost = MIN(mincost, g->prize[k]);
-
-            for( int e = range_csr[k].start; e < end; e++ )
-            {
-               assert(cost_csr[e] < FARAWAY);
-
-               cost_csr[e] -= mincost;
-               assert(!SCIPisNegative(scip, cost_csr[e]));
-            }
-         }
-      }
+      visited[i] = FALSE;
+      dist[i] = FARAWAY;
+      star_base[i] = SDSTAR_BASE_UNSET;
    }
 
    for( int i = 0; i < nnodes; i++ )
@@ -2850,7 +2904,7 @@ SCIP_RETCODE reduce_sdStar(
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
                      graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-printf("star delete %d \n", 0);
+
                      (*nelims)++;
                      enext--;
                   }
