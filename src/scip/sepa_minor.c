@@ -216,7 +216,7 @@ SCIP_RETCODE detectMinors(
             continue;
 
          /* check whether the expression has been considered in another constraint */
-         if( SCIPhashmapExists(exprmap, (void*)exprmap) )
+         if( SCIPhashmapExists(exprmap, (void*)expr) )
             continue;
 
          exprhdlr = SCIPgetConsExprExprHdlr(expr);
