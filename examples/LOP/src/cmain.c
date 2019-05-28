@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   LOP/src/cmain.c
+/**@file   examples/LOP/src/cmain.c
  * @brief  main file for linear ordering example
  * @author Marc Pfetsch
  */
@@ -43,8 +43,8 @@
 
 /** main function, which starts the solution of the linear ordering problem */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
    )
 {
    SCIP* scip = NULL;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -91,7 +91,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -114,7 +114,7 @@ SCIP_RETCODE SCIPtransformProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPpresolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPsolve(
  *
  *  @deprecated Please use SCIPsolveConcurrent() instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveParallel(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -197,7 +197,7 @@ SCIP_RETCODE SCIPsolveParallel(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -222,7 +222,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPfreeSolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeReoptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -273,7 +273,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPfreeTransform(
  *
  *  @note the \SCIP stage does not get changed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinterruptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPinterruptSolve(
  *
  *  @note the \SCIP stage does not get changed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -331,20 +331,20 @@ SCIP_RETCODE SCIPrestartSolve(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    );
 
 /** returns whether reoptimization is enabled or not */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisReoptEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the stored solutions corresponding to a given run */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetReoptSolsRun(
    SCIP*                 scip,               /**< SCIP data structue */
    int                   run,                /**< number of the run */
@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPgetReoptSolsRun(
    );
 
 /** mark all stored solutions as not updated */
-EXTERN
+SCIP_EXPORT
 void SCIPresetReoptSolMarks(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -368,7 +368,7 @@ void SCIPresetReoptSolMarks(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckReoptRestart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPcheckReoptRestart(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddReoptDualBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node of the search tree */
@@ -394,7 +394,7 @@ SCIP_RETCODE SCIPaddReoptDualBndchg(
    );
 
 /** returns the optimal solution of the last iteration or NULL of none exists */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL* SCIPgetReoptLastOptSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -408,7 +408,7 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable */
@@ -431,7 +431,7 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisInRestart(
    SCIP*                 scip                /**< SCIP data structure */
    );

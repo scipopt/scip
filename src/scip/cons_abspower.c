@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1499,7 +1499,7 @@ SCIP_RETCODE tightenBounds(
             /* only check if new fixing value is consistent with variable bounds, otherwise cutoff */
             if( SCIPisLT(scip, bounds.sup, SCIPvarGetUbLocal(var)) || SCIPisGT(scip, bounds.inf, SCIPvarGetLbLocal(var)) )
             {
-               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.20g,%.20g] to [%.20g,%.20g]\n",
+               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.15g,%.15g] to [%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bounds.inf, bounds.sup);
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
@@ -1629,7 +1629,7 @@ void computeBoundsZ(
          zbnds->sup = bnd / consdata->zcoef;
    }
 
-   SCIPdebugMsg(scip, "given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
+   SCIPdebugMsg(scip, "given x = [%.15g, %.15g], computed z = [%.15g, %.15g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *zbnds));
@@ -1682,7 +1682,7 @@ void computeBoundsX(
       xbnds->inf = bnd - consdata->xoffset;
    }
 
-   SCIPdebugMsg(scip, "given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
+   SCIPdebugMsg(scip, "given z = [%.15g, %.15g], computed x = [%.15g, %.15g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *xbnds));
@@ -3651,7 +3651,7 @@ SCIP_RETCODE generateSecantCut(
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
    {
-      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.15g,%.15g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
    }
 
@@ -4253,6 +4253,7 @@ SCIP_RETCODE createNlRow(
 {
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;
+   SCIP_EXPRCURV curv;
    SCIP_QUADELEM quadelem;
    SCIP_VAR* linvars[2];
    SCIP_Real lincoefs[2];
@@ -4282,13 +4283,22 @@ SCIP_RETCODE createNlRow(
    exprtree = NULL;
    constant = 0.0;
 
-   /* check if sign of x is fixed */
+   /* check if sign of x is fixed, determine curvature of abspower function */
    if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign =  1;
+      curv = SCIP_EXPRCURV_CONVEX;
+   }
    else if( !SCIPisPositive(scip, SCIPvarGetUbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign = -1;
+      curv = SCIP_EXPRCURV_CONCAVE;
+   }
    else
+   {
       sign =  0;
+      curv = SCIP_EXPRCURV_UNKNOWN;
+   }
 
    /* check if exponent is integral */
    expisint = SCIPisIntegral(scip, consdata->exponent);
@@ -4388,7 +4398,7 @@ SCIP_RETCODE createNlRow(
          nlinvars, linvars, lincoefs,
          nquadvars, &quadvar, nquadelems, &quadelem,
          exprtree, consdata->lhs, consdata->rhs,
-         SCIP_EXPRCURV_UNKNOWN
+         curv
          ) );
 
    if( exprtree != NULL )
@@ -5568,7 +5578,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
             SCIPerrorMessage("failed to compute root for exponent %g\n", consdata->exponent);
             return SCIP_ERROR;
          }
-         SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", consdata->exponent, root, polyval);
+         SCIPdebugMsg(scip, "root for %g is %.15g, certainty = %g\n", consdata->exponent, root, polyval);
          /* @todo cache root value?? (they are actually really fast to compute...) */
 
          consdata->root = root;

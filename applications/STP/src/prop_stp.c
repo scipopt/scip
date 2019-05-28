@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -222,7 +222,7 @@ void SCIPStpSetRedcosts(
    SCIP_VAR**            vars,               /**< variables */
    int                   nedges,             /**< nedges */
    SCIP_Real*            cost                /**< reduced costs */
-)
+   )
 {
    assert(nedges >= 0);
 
@@ -262,7 +262,7 @@ void SCIPStpSetRedcosts(
 }
 
 
-/* initialize (Voronoi) distances */
+/** initialize (Voronoi) distances */
 static
 void setVnoiDistances(
    SCIP*                 scip,               /**< SCIP structure */
@@ -316,7 +316,7 @@ void setVnoiDistances(
    graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
 }
 
-/* updates fixing bounds for reduced cost fixings */
+/** updates fixing bounds for reduced cost fixings */
 static
 void updateFixingBounds(
    const GRAPH*          graph,              /**< graph data structure */
@@ -476,7 +476,7 @@ SCIP_RETCODE reduceRedcostExtended(
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    GRAPH*                propgraph           /**< graph data structure */
-)
+   )
 {
    PATH* vnoi;
    SCIP_Real* redcost;
@@ -566,7 +566,7 @@ SCIP_RETCODE redbasedVarfixing(
    int*                  nfixed,             /**< pointer to number of fixed edges */
    SCIP_Bool*            probisinfeas,       /**< is problem infeasible? */
    const GRAPH*          g                   /**< graph data structure */
-)
+   )
 {
    GRAPH* propgraph;
    IDX* curr;

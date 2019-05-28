@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1186,6 +1186,7 @@ SCIP_RETCODE readQuadraticCoefs(
          /* replace linear constraint by quadratic constraint */
          cons = conss[considx];  /*lint !e613*/
 
+         /* coverity[negative_returns] */
          SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
             SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
             0, NULL, NULL, NULL,
@@ -2049,6 +2050,7 @@ SCIP_RETCODE readNonlinearExprs(
             SCIP_Real one;
 
             one = 1.0;
+            /* coverity[negative_returns] */
             SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, cons, SCIPconsGetName(*cons),
                   SCIPgetNVarsLinear(scip, *cons), SCIPgetVarsLinear(scip, *cons), SCIPgetValsLinear(scip, *cons),
                   1, &exprtree, &one,
@@ -2369,6 +2371,7 @@ SCIP_RETCODE readSOScons(
           case 2:
              SCIP_CALL( SCIPaddVarSOS2(scip, cons, vars[idx], (SCIP_Real) (nsosvars - varcount)) );
              break;
+          /* coverity[dead_error_begin] */
           default:
              SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
              SCIPABORT();
@@ -2541,20 +2544,20 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( start != NULL )
       xmlFreeNode(start);
 
+   /* free constraints */
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
+   }
+   SCIPfreeBufferArrayNull(scip, &constypes);
+   SCIPfreeBufferArrayNull(scip, &conss);
+
    /* free variables */
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );  /*lint !e613*/
    }
    SCIPfreeBufferArrayNull(scip, &vars);
-
-   /* free constraints */
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );  /*lint !e613*/
-   }
-   SCIPfreeBufferArrayNull(scip, &conss);
-   SCIPfreeBufferArrayNull(scip, &constypes);
 
    if( objcons != NULL )
    {

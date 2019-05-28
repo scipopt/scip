@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -411,7 +411,7 @@ void transformVariable(
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
     */
-   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+   if( SCIPisHugeValue(scip, -lb) && SCIPisHugeValue(scip, ub) )
    {
       if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
@@ -422,14 +422,14 @@ void transformVariable(
    }
    else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
    {
-      assert(!SCIPisInfinity(scip, lb));
+      assert(!SCIPisHugeValue(scip, lb));
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       deltashift = lb;
       matrix->transformshiftvals[colpos] = lb;
    }
    else
    {
-      assert(!SCIPisInfinity(scip, ub));
+      assert(!SCIPisHugeValue(scip, ub));
       if( matrix->transformstatus[colpos] != TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
@@ -438,7 +438,7 @@ void transformVariable(
    }
 
    /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
-   if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
+   if( !SCIPisHugeValue(scip, ub) && !SCIPisHugeValue(scip, lb) )
       matrix->upperbounds[colpos] = ub - lb;
    else
       matrix->upperbounds[colpos] = SCIPinfinity(scip);
@@ -453,7 +453,7 @@ void transformVariable(
       int nrows;
       int i;
 
-      assert(!SCIPisInfinity(scip, deltashift));
+      assert(!SCIPisHugeValue(scip, deltashift));
 
       /* get nonzero values and corresponding rows of column */
       getColumnData(matrix, colpos, &vals, &rows, &nrows);
@@ -769,11 +769,12 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatbegin));
+      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
+
 
      (*matrix)->nrows = 0;
      (*matrix)->ncols = 0;
@@ -1581,9 +1582,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
 
-   /* the column positions are not needed anymore */
-   SCIPfreeBufferArray(scip, &colposs);
-
    /* could not initialize matrix */
    if( !initialized || infeasible )
    {
@@ -2315,8 +2313,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       );
 
    SCIP_CALL( SCIPendProbing(scip) );
-   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    freeMatrix(scip, &matrix);
+   SCIPfreeBufferArray(scip, &colposs);
+   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    eventhdlrdata->matrix = NULL;
 
    return SCIP_OKAY;

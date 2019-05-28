@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -181,7 +181,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBenderscut is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjBenderscut(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
@@ -190,14 +190,14 @@ SCIP_RETCODE SCIPincludeObjBenderscut(
    );
 
 /** returns the benderscut object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjBenderscut* SCIPfindObjBenderscut(
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
    const char*           name                /**< name of Benders' decomposition cut */
    );
 
 /** returns the benderscut object for the given constraint handler */
-EXTERN
+SCIP_EXPORT
 scip::ObjBenderscut* SCIPgetObjBenderscut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */

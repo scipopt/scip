@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -810,7 +810,7 @@ SCIP_RETCODE getVariableIndex(
    /* check if we saw this variable before */
    if( SCIPhashmapExists(varhash, (void*)var) )
    {
-      *varidx = (int)(size_t)SCIPhashmapGetImage(varhash, (void*)var);
+      *varidx = SCIPhashmapGetImageInt(varhash, (void*)var);
       assert(*varidx >= 0);
       assert(*varidx < *nvars);
 
@@ -835,7 +835,7 @@ SCIP_RETCODE getVariableIndex(
    assert(*vars != NULL);  /*lint !e613*/
 
    (*vars)[*nvars] = var;  /*lint !e613*/
-   SCIP_CALL( SCIPhashmapInsert(varhash, (void*)var, (void*)(size_t)*nvars) );
+   SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)var, (*nvars)) );
    *varidx = *nvars;
 
    ++*nvars;
@@ -1136,10 +1136,11 @@ SCIP_RETCODE readPolynomial(
    SCIPdebugMsgPrint(scip, "\n");
 
  TERMINATE_READPOLYNOMIAL:
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &monomials);
-   SCIPfreeBufferArray(scip, &exponents);
    SCIPfreeBufferArray(scip, &varidxs);
+   SCIPfreeBufferArray(scip, &exponents);
+   SCIPfreeBufferArray(scip, &monomials);
+   SCIPfreeBufferArray(scip, &vars);
+
    SCIPhashmapFree(&varhash);
 
    return SCIP_OKAY;
@@ -1618,11 +1619,11 @@ SCIP_RETCODE readConstraints(
       }
 
       /* free memory */
-      SCIPfreeBufferArray(scip, &linvars);
-      SCIPfreeBufferArray(scip, &lincoefs);
-      SCIPfreeBufferArray(scip, &quadvars1);
-      SCIPfreeBufferArray(scip, &quadvars2);
       SCIPfreeBufferArray(scip, &quadcoefs);
+      SCIPfreeBufferArray(scip, &quadvars2);
+      SCIPfreeBufferArray(scip, &quadvars1);
+      SCIPfreeBufferArray(scip, &lincoefs);
+      SCIPfreeBufferArray(scip, &linvars);
    }
 
    if( retcode == SCIP_OKAY )

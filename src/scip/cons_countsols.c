@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -63,7 +63,7 @@
 #include <string.h>
 
 /* depending if the GMP library is available we use a GMP data type or a SCIP_Longint */
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
 #include <gmp.h>
 typedef mpz_t                Int;
 #else
@@ -156,7 +156,7 @@ void allocInt(
    Int*                  value               /**< pointer to the value to allocate memory */
    )
 {  /*lint --e{715}*/
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_init(*value);
 #endif
 }
@@ -171,7 +171,7 @@ void setInt(
 {
    assert(newvalue < LONG_MAX);
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_set_si(*value, (long) newvalue);
 #else
    (*value) = newvalue;
@@ -188,7 +188,7 @@ void setPowerOfTwo(
 {
    assert(0 <= exponent && exponent < LONG_MAX);
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_ui_pow_ui(*value, 2UL, (unsigned long) exponent);
 #else
    assert(exponent < 64);
@@ -203,7 +203,7 @@ void freeInt(
    Int*                  value               /**< pointer to the value to free */
    )
 {  /*lint --e{715}*/
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_clear(*value);
 #endif
 }
@@ -215,7 +215,7 @@ void addOne(
    Int*                  value               /**< pointer to the value to increase */
    )
 {
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_add_ui(*value, *value, 1UL);
 #else
    (*value)++;
@@ -230,7 +230,7 @@ void addInt(
    Int*                  summand             /**< summand to add on */
    )
 {
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_add(*value, *value, *summand);
 #else
    (*value) += (*summand);
@@ -247,7 +247,7 @@ void multInt(
 {
    assert(0 <= factor && factor < LONG_MAX);
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    mpz_mul_ui(*value, *value, (unsigned long) factor);
 #else
    (*value) *= factor;
@@ -263,7 +263,7 @@ void toString(
    int                   buffersize          /**< length of the buffer */
    )
 {  /*lint --e{715}*/
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    (void) mpz_get_str(*buffer, 10, value);
 #else
    (void) SCIPsnprintf (*buffer, buffersize, "%" SCIP_LONGINT_FORMAT "", value);
@@ -278,7 +278,7 @@ SCIP_Longint getNCountedSols(
    SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    )
 {
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    *valid = FALSE;
    if( 0 != mpz_fits_sint_p(value) )
       (*valid) = TRUE;
@@ -1648,7 +1648,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       for( v = conshdlrdata->nvars - 1; v >= 0; --v )
       {
          assert(SCIPvarGetProbindex(conshdlrdata->vars[v]) == v);
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->hashmap, conshdlrdata->vars[v], (void*) (size_t)(v+1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->hashmap, conshdlrdata->vars[v], v+1) );
          SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
       }
 
@@ -2237,7 +2237,7 @@ SCIP_RETCODE writeExpandedSolutions(
             for( i = 0; i < nvars; ++i )
             {
                assert(SCIPhashmapExists(hashmap, vars[i]));
-               idx = ((int) (size_t)SCIPhashmapGetImage(hashmap, vars[i])) - 1;
+               idx = SCIPhashmapGetImageInt(hashmap, vars[i]) - 1;
                assert(0 <= idx && idx < nactivevars);
                assert(activevars[idx] == vars[i]); /*lint !e613*/
 
@@ -2610,7 +2610,7 @@ SCIP_RETCODE includeConshdlrCountsols(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    char gmpversion[20];
 #endif
 
@@ -2670,7 +2670,7 @@ SCIP_RETCODE includeConshdlrCountsols(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees,
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
 #ifdef mpir_version
    /* add info about using MPIR to external codes information */
    (void) SCIPsnprintf(gmpversion, (int) sizeof(gmpversion), "MPIR %s", mpir_version);
@@ -2767,7 +2767,7 @@ void SCIPgetNCountedSolsstr(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-#ifdef WITH_GMP
+#ifdef SCIP_WITH_GMP
    /* size must be by two larger than the length of the string, since there need to be storage for a sign and a
     * null-termination
     */

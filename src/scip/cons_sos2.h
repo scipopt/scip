@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPcreateConsBasicSOS2(
    );
 
 /** adds variable to SOS2 constraint, the position is determined by the given weight */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPaddVarSOS2(
    );
 
 /** appends variable to SOS2 constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPappendVarSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -132,21 +132,21 @@ SCIP_RETCODE SCIPappendVarSOS2(
    );
 
 /** gets number of variables in SOS2 constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets array of variables in SOS2 constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of weights in SOS2 constraint (or NULL if not existent) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetWeightsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

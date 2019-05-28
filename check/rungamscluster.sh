@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -98,7 +98,7 @@ fi
 
 # add commands to .u1 file to read start solutions from available gdx files, if any
 if test "$PASSSTARTSOL" = 1 ; then
-  for sol in $INPUTDIR/${GMSFILE/%.gms/}*.gdx ;
+  for sol in $INPUTDIR/${GMSFILE/%.gms*/}*.gdx ;
   do
     if test -e $sol ; then
       # create .u1 file if not existing yet and add u1 command to GAMS options

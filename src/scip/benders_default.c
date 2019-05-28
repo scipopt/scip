@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -200,7 +200,7 @@ SCIP_RETCODE createVariableMappings(
       }
 
       /* storing the mapping of the master variable to the variable index */
-      SCIP_CALL( SCIPhashmapInsert(bendersdata->mastervartosubindex, vars[i], (void*)(size_t) i) );
+      SCIP_CALL( SCIPhashmapInsertInt(bendersdata->mastervartosubindex, vars[i], i) );
    }
 
    return SCIP_OKAY;
@@ -310,6 +310,8 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable
        */
+      scalar = 1.0;
+      constant = 0.0;
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       /* using the original variable, the master variable can be retrieved from the hash map */
@@ -330,7 +332,7 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
        * NOTE: Currently the original variable is being used. This may not be correct and should be the transformed
        * variable.
        */
-      masterindex = (int)(size_t) SCIPhashmapGetImage(bendersdata->mastervartosubindex, var);
+      masterindex = SCIPhashmapGetImageInt(bendersdata->mastervartosubindex, var);
       (*mappedvar) = bendersdata->subproblemvars[probnumber][masterindex];
    }
 

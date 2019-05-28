@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -170,7 +170,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyNodesel is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjNodesel*     objnodesel,         /**< node selector object */
@@ -178,14 +178,14 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    );
 
 /** returns the nodesel object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjNodesel* SCIPfindObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of node selector */
    );
 
 /** returns the nodesel object for the given node selector */
-EXTERN
+SCIP_EXPORT
 scip::ObjNodesel* SCIPgetObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODESEL*         nodesel             /**< node selector */

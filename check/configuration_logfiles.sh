@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -91,6 +91,10 @@ then
         echo @FeasTol $FEASTOL >> $fname
         echo @Queue $QUEUE >> $fname
         echo @Exclusive $EXCLUSIVE >> $fname
+        if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
+            echo @QueueNode $CB_QUEUENODE >> $fname
+            echo @ClusterBenchmarkID $CB_ID>> $fname
+        fi
     fi
 fi
 

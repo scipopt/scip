@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1331,39 +1331,6 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    return SCIP_OKAY;
 }
 
-/** adds the generated constraint to the Benders' decomposition cut storage
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPstoreBenderscutCons(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
-   )
-{
-   assert(scip != NULL);
-   assert(benderscut != NULL);
-   assert(cons != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBenderscutCons", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPbenderscutStoreCons(benderscut, scip->set, cons) );
-
-   /* capturing the stored constraint */
-   SCIP_CALL( SCIPcaptureCons(scip, cons) );
-
-   return SCIP_OKAY;
-}
-
 /** adds the generated cuts to the Benders' cut storage
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1380,19 +1347,21 @@ SCIP_RETCODE SCIPstoreBenderscutCons(
 SCIP_RETCODE SCIPstoreBenderscutCut(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
+   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             rhs,                /**< the right hand side of the cut */
+   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    )
 {
    assert(scip != NULL);
    assert(benderscut != NULL);
-   assert(cut != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, cut) );
-
-   /* capturing the row */
-   SCIP_CALL( SCIPcaptureRow(scip, cut) );
+   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, vars, vals, lhs, rhs, nvars) );
 
    return SCIP_OKAY;
 }

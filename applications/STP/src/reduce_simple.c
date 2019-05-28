@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -749,7 +749,6 @@ SCIP_RETCODE reduce_simple_sap(
    int i2;
    int e1;
    int e2;
-   int root;
    int nnodes;
    int* pnode;
    char rerun;
@@ -758,7 +757,6 @@ SCIP_RETCODE reduce_simple_sap(
    assert(fixed  != NULL);
    assert(count != NULL);
 
-   root = g->source;
    rerun = TRUE;
    nnodes = g->knots;
 
@@ -786,9 +784,19 @@ SCIP_RETCODE reduce_simple_sap(
 
             if( Is_term(g->term[i]) )
             {
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL) );
-               *fixed += g->cost[e1];
-               SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+               if( i == g->source )
+               {
+                  e2 = flipedge(e1);
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e2], NULL) );
+                  *fixed += g->cost[e2];
+                  SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+               }
+               else
+               {
+                  SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL));
+                  *fixed += g->cost[e1];
+                  SCIP_CALL(graph_knot_contract(scip, g, NULL, i1, i));
+               }
             }
             else
             {
@@ -846,7 +854,7 @@ SCIP_RETCODE reduce_simple_sap(
    }
 
    /* delete all arcs in \delta^-(root) */
-   for( e = g->inpbeg[root]; e != EAT_LAST; e = g->ieat[e] )
+   for( e = g->inpbeg[g->source]; e != EAT_LAST; e = g->ieat[e] )
       g->cost[e] = FARAWAY;
 
    /* delete all nodes not reachable from the root by forward arcs */
@@ -857,8 +865,8 @@ SCIP_RETCODE reduce_simple_sap(
    for (i = 0; i < nnodes; i++)
       g->mark[i] = FALSE;
 
-   g->mark[root] = TRUE;
-   SCIP_CALL(SCIPqueueInsert(queue, &(root)));
+   g->mark[g->source] = TRUE;
+   SCIP_CALL(SCIPqueueInsert(queue, &(g->source)));
 
    while (!SCIPqueueIsEmpty(queue))
    {
@@ -886,7 +894,7 @@ SCIP_RETCODE reduce_simple_sap(
 
    for( i = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[i]) && i != root )
+      if( Is_term(g->term[i]) && i != g->source )
       {
          g->mark[i] = TRUE;
          SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[g->outbeg[i]])) );
@@ -897,7 +905,7 @@ SCIP_RETCODE reduce_simple_sap(
       }
    }
 
-   g->mark[root] = TRUE;
+   g->mark[g->source] = TRUE;
 
    while( !SCIPqueueIsEmpty(queue) )
    {
@@ -941,7 +949,6 @@ SCIP_RETCODE reduce_rpt(
    int i1;
    int e1;
    int old;
-   int root;
    int nnodes;
    int* dijkedge;
 
@@ -950,18 +957,17 @@ SCIP_RETCODE reduce_rpt(
    assert(fixed != NULL);
    assert(count != NULL);
 
-   root = g->source;
    nnodes = g->knots;
    *count = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
 
-   graph_path_execX(scip, g, root, g->cost, dijkdist, dijkedge);
+   graph_path_execX(scip, g, g->source, g->cost, dijkdist, dijkedge);
 
    for( i = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[i]) && i != root && g->grad[i] > 0 )
+      if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 )
       {
          e1 = dijkedge[i];
          pathcost = dijkdist[i];
@@ -1007,7 +1013,6 @@ SCIP_RETCODE reduce_simple_mw(
    )
 {
    SCIP_Real maxprize = -1.0;
-   const int root = g->source;
    const int nnodes = g->knots;
    int localcount = 0;
 
@@ -1043,7 +1048,7 @@ SCIP_RETCODE reduce_simple_mw(
          {
             const int head = g->head[e];
 
-            if( Is_term(g->term[head]) && head != root )
+            if( Is_term(g->term[head]) && head != g->source )
             {
                assert(g->mark[head]);
 
@@ -1072,7 +1077,7 @@ SCIP_RETCODE reduce_simple_mw(
             for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
             {
                const int head = g->head[e];
-               if( Is_term(g->term[head]) && head != i && head != root )
+               if( Is_term(g->term[head]) && head != i && head != g->source )
                {
                   assert(g->mark[head]);
 
@@ -1308,7 +1313,6 @@ SCIP_RETCODE reduce_simple_hc(
    int i;
    int e;
    int e2;
-   int root;
    int nnodes;
    SCIP_Bool rerun = TRUE;
 
@@ -1318,7 +1322,6 @@ SCIP_RETCODE reduce_simple_hc(
    assert(g->stp_type == STP_DHCSTP);
 
    nnodes = g->knots;
-   root = g->source;
 
    SCIPdebugMessage("basic HC test: \n");
 
@@ -1328,7 +1331,7 @@ SCIP_RETCODE reduce_simple_hc(
       rerun = FALSE;
 
       /* delete incoming arcs of the root */
-      e = g->inpbeg[root];
+      e = g->inpbeg[g->source];
       while( e != EAT_LAST )
       {
          e2 = g->ieat[e];
@@ -1351,7 +1354,7 @@ SCIP_RETCODE reduce_simple_hc(
       /* delete outgoing arcs of the terminals (other than the root) */
       for( i = 0; i < nnodes; i++ )
       {
-         if( Is_term(g->term[i]) && i != root )
+         if( Is_term(g->term[i]) && i != g->source )
          {
             e = g->outbeg[i];
             while( e != EAT_LAST )
@@ -1391,7 +1394,6 @@ SCIP_RETCODE reduce_simple_pc(
    int edges2[2];
    int nodes2[2];
    SCIP_Real maxprize = -1.0;
-   const int root = g->source;
    const int nnodes = g->knots;
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG);
    const SCIP_Bool checkstate = (edgestate != NULL);
@@ -1408,10 +1410,7 @@ SCIP_RETCODE reduce_simple_pc(
    SCIPdebugMessage("Degree Test: ");
 
    if( !pc )
-   {
-      assert(g->mark[root]);
-      g->mark[root] = FALSE;
-   }
+      g->mark[g->source] = FALSE;
 
    /* main loop */
    while( rerun )
@@ -1427,7 +1426,7 @@ SCIP_RETCODE reduce_simple_pc(
          if( !g->mark[i] || g->grad[i] == 0 )
             continue;
 
-         assert(!Is_pterm(g->term[i]) &&  i != root);
+         assert(!Is_pterm(g->term[i]) &&  i != g->source);
 
          if( !Is_term(g->term[i]) )
          {
@@ -1502,7 +1501,7 @@ SCIP_RETCODE reduce_simple_pc(
          fixedterm = (!pc && graph_pc_knotIsFixedTerm(g, i));
 
          /* terminal of 0-prize? */
-         if( SCIPisLE(scip, g->prize[i], 0.0) )
+         if( SCIPisLE(scip, g->prize[i], 0.0) && i != g->source )
          {
             adjust0term(scip, g, i);
             (*countnew) += 2;
@@ -1527,11 +1526,11 @@ SCIP_RETCODE reduce_simple_pc(
          {
             int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               if( g->mark[g->head[e]] || (!pc && g->head[e] == root) )
+               if( g->mark[g->head[e]] || (!pc && g->head[e] == g->source) )
                   break;
 
             assert(e != EAT_LAST);
-            assert(g->head[e] != root || !pc);
+            assert(g->head[e] != g->source || !pc);
 
             SCIP_CALL( trydg1edgepc(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
@@ -1544,7 +1543,7 @@ SCIP_RETCODE reduce_simple_pc(
                for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                {
                   const int i1 = g->head[e];
-                  if( g->mark[i1] || (!pc && i1 == root) )
+                  if( g->mark[i1] || (!pc && i1 == g->source) )
                   {
                      assert(i2 < 2);
 
@@ -1603,7 +1602,7 @@ SCIP_RETCODE reduce_simple_pc(
             {
                const int i1 = g->head[e1];
 
-               if( !g->mark[i1] && (pc || i1 != root) )
+               if( !g->mark[i1] && (pc || i1 != g->source) )
                   continue;
 
                if( SCIPisLT(scip, g->cost[e1], mincost) )
@@ -1644,11 +1643,13 @@ SCIP_RETCODE reduce_simple_pc(
    } /* main loops */
 
    if( !pc )
-      g->mark[root] = TRUE;
+      g->mark[g->source] = TRUE;
+
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *countnew);
 
    if( countall != NULL )
       (*countall) += (*countnew);
+
 
    assert(graph_valid(g));
 
