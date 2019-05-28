@@ -4139,6 +4139,32 @@ void graph_get_NVET(
    return;
 }
 
+/** get (real) average degree of graph */
+SCIP_Real graph_get_avgDeg(
+   const GRAPH*    graph               /**< the graph */
+   )
+{
+   int v = 0;
+   int e = 0;
+   const int vorg = graph->knots;
+
+   assert(graph);
+
+   for( int k = 0; k < vorg; k++ )
+   {
+      if( graph->grad[k] > 0 )
+      {
+         v++;
+         e += graph->grad[k];
+      }
+   }
+
+   if( v == 0 )
+      return 0.0;
+
+   return ((double) e / v );
+}
+
 /* get compressed sparse row arrays representing current graph */
 void graph_get_csr(
    const GRAPH*          g,                  /**< the graph */
@@ -5531,7 +5557,6 @@ int graph_heap_deleteMinReturnNode(
 #ifndef NDEBUG
    entries[lastentry].key = DHEAP_MAX_KEY;    /* set debug sentinel */
 #endif
-
 
    return node;
 }

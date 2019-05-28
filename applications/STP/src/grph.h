@@ -338,6 +338,8 @@ extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
 extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
 extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);
+extern SCIP_Real graph_get_avgDeg(const GRAPH*);
+
 
 /* grphpath.c
  */

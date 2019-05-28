@@ -53,7 +53,7 @@
 
 SCIP_Bool show;
 
-enum PC_REDTYPE {pc_sdc, pc_sdw1, pc_sdw2, pc_bd3};
+enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
 
 static
 int getWorkLimits_pc(
@@ -71,6 +71,9 @@ int getWorkLimits_pc(
    {
    case pc_sdc:
       limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
+      break;
+   case pc_sdstar:
+      limit = (round > 0) ? STP_RED_SDSPBOUND2 : 2 * STP_RED_SDSPBOUND;
       break;
    case pc_sdw1:
       limit = (round > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND;
@@ -91,7 +94,8 @@ int getWorkLimits_pc(
    else
       limit = (int) MAX(limit, limit * sqrt(nedges) / 150.0);
 
-   //printf("limit %d \n", limit);
+ //  printf("limit %d \n", limit);
+ //  printf("avg degree %f \n", graph_get_avgDeg(g));
 
    return limit;
 }
@@ -1653,22 +1657,21 @@ SCIP_RETCODE redLoopPc(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      if( sd || extensive )
-      {
-         SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
-               reductbound, verbose, &sd) );
-      }
-
       if( sdstar || extensive )
       {
-         SCIP_CALL( reduce_sdStar(scip, getWorkLimits_pc(g, rounds, pc_sdw1), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarnelims));
+         SCIP_CALL( reduce_sdStar(scip, getWorkLimits_pc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarnelims));
 
-       //  printf("sdstarnelims %d \n", sdstarnelims);
+        // printf("sdstarnelims %d \n", sdstarnelims);
 
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;
       }
 
+      if( sd || extensive )
+      {
+         SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
+               reductbound, verbose, &sd) );
+      }
 
       if( sdw || extensive )
       {
@@ -1683,7 +1686,7 @@ SCIP_RETCODE redLoopPc(
 
          // triggers bug in STP-DIMACS/PCSPG-hand/HAND_SMALL_ICERM/handsi04.stp
 
-//         printf("pc_sdw1 %d \n", sdwnelims);
+       //  printf("pc_sdw1 %d \n", sdwnelims);
 
 
 
