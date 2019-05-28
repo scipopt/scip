@@ -42,6 +42,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXMINORS           100 /**< default maximum number for minors (0: no limit) */
+#define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
 
 /*
  * Data structures
@@ -55,6 +56,7 @@ struct SCIP_SepaData
    int                   minorssize;         /**< size of minors array */
    int                   maxminors;          /**< maximum number for minors (0: no limit) */
    SCIP_Bool             detectedminors;     /**< has the minor detection beeing called? */
+   SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
 };
 
 /*
@@ -367,7 +369,6 @@ SCIP_RETCODE separatePoint(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_Real minefficacy;
    int i;
 
    assert(sepa != NULL);
@@ -377,9 +378,6 @@ SCIP_RETCODE separatePoint(
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-
-   /* TODO add a parameter for this */
-   minefficacy = 1e-4;
 
    /* check whether there are some minors available */
    if( sepadata->nminors == 0 )
@@ -414,7 +412,7 @@ SCIP_RETCODE separatePoint(
          SCIPvarGetName(xy), solxx, solyy, solxy, determinant);
 
       /* check whether minor is positive semi-definit in the current solution */
-      if( SCIPisFeasLT(scip, determinant, 0.0) )
+      if( SCIPisFeasLT(scip, determinant, -sepadata->mincutviol) )
       {
          SCIP_Real eigenvals[2];
          SCIP_Real matrix[4];
@@ -449,12 +447,10 @@ SCIP_RETCODE separatePoint(
             SCIP_ROWPREP* rowprep;
             SCIP_VAR* vars[3];
             SCIP_Real coefs[3];
+            SCIP_Bool success;
 
-            if( !SCIPisFeasLT(scip, eigenvals[k], 0.0) )
+            if( !SCIPisFeasLT(scip, eigenvals[k], -sepadata->mincutviol) )
                continue;
-
-            if( matrix[2*k] * matrix[2*k + 1] > 0.0 )
-               printf("XXXX %g\n", matrix[2*k] * matrix[2*k + 1]);
 
             /* create rowprep */
             SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
@@ -469,13 +465,22 @@ SCIP_RETCODE separatePoint(
 
             SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 3, vars, coefs) );
             SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
-            SCIPdebugMsg(scip, "cut violation %g minefficacy = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), minefficacy);
+            SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), sepadata->mincutviol);
+
+            /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
+            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
 
             /* check cut violation */
-            if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > minefficacy )
+            if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > sepadata->mincutviol )
             {
                SCIP_ROW* row;
                SCIP_Bool infeasible;
+               char name[SCIP_MAXSTRLEN];
+
+               /* set name of rowprep */
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "minor_%s_%s_%s", SCIPvarGetName(xx), SCIPvarGetName(yy),
+                  SCIPvarGetName(xy));
+               memcpy(rowprep->name, name, (unsigned long)SCIP_MAXSTRLEN);
 
                /* create, add, and release row */
                SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
@@ -491,8 +496,6 @@ SCIP_RETCODE separatePoint(
          }
       }
    }
-
-   /* TODO generate a/several cut/cuts */
 
    return SCIP_OKAY;
 }
@@ -664,6 +667,11 @@ SCIP_RETCODE SCIPincludeSepaMinor(
          "separating/" SEPA_NAME "/maxminors",
          "maximum number for minors (0: no limit)",
          &sepadata->maxminors, FALSE, DEFAULT_MAXMINORS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/mincutviol",
+         "minimum required violation of a cut",
+         &sepadata->mincutviol, FALSE, DEFAULT_MINCUTVIOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
