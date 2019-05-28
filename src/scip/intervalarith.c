@@ -36,9 +36,23 @@
 
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
- * Unfortunately, this does not always help with GCC 5.4 and 8.3, see #2650
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
+#ifndef __clang__
 #pragma STD FENV_ACCESS ON
+#endif
+
+/* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
+ * see #2650 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=34678.
+ * There are ways to work around this by declaring variables volatile or inserting more assembler code,
+ * but there is always the danger that something would be overlooked.
+ * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
+ * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
+ */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
 
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
@@ -2254,15 +2268,13 @@ void SCIPintervalSignPowerScalar(
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
-   SCIP_INTERVAL         operand_            /**< operand of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
    SCIP_ROUNDMODE roundmode;
-   /* the volatile here seems to prevent some wrong GCC optimizations in this routine, which lead to wrong results, #2650 */
-   volatile SCIP_INTERVAL operand = operand_;
 
    assert(resultant != NULL);
-   assert(!SCIPintervalIsEmpty(infinity, operand_));
+   assert(!SCIPintervalIsEmpty(infinity, operand));
 
    if( operand.inf == 0.0 && operand.sup == 0.0 )
    { /* 1/0 = [-inf,inf] */
@@ -4352,3 +4364,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIPintervalIntersect(resultant, *resultant, xbnds);
    }
 }
+
+/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC pop_options
+#endif
