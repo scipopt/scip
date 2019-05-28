@@ -336,7 +336,8 @@ Fixed bugs
 - improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
 - fixed bug related to releasing pending bound changes in tree.c
 - set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
-- workaround problem with wrong GCC optimizations in SCIPintervalReciprocal
+- disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
+- fixed wrong assert in cons_xor concerning the variable type
 
 Miscellaneous
 -------------

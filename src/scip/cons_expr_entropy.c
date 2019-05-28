@@ -117,7 +117,7 @@ SCIP_RETCODE reverseProp(
 
    /* check whether domain is empty, i.e., bounds on -x*log(x) > 1/e */
    if( SCIPisGT(scip, SCIPintervalGetInf(exprinterval), exp(-1.0))
-      || SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval) )
+      || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
    {
       SCIPintervalSetEmpty(interval);
       return SCIP_OKAY;
@@ -379,9 +379,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalEntropy(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
