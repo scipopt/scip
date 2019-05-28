@@ -5393,8 +5393,10 @@ SCIP_RETCODE graph_heap_create(
    (*heap)->position = position_heap;
    (*heap)->entries = entries_heap;
 
-   /* sentinels */
+   /* sentinel */
    entries_heap[0].key = DHEAP_MIN_KEY;
+
+   /* debug sentinel */
    entries_heap[capacity + 1].key = DHEAP_MAX_KEY;
 
    graph_heap_clean(TRUE, *heap);
@@ -5526,9 +5528,10 @@ int graph_heap_deleteMinReturnNode(
    if( hole != lastentry )
       position[entries[hole].node] = hole;
 
-   int todo; // only for debug...
-   /* set sentinel */
-   entries[lastentry].key = DHEAP_MAX_KEY;
+#ifndef NDEBUG
+   entries[lastentry].key = DHEAP_MAX_KEY;    /* set debug sentinel */
+#endif
+
 
    return node;
 }
@@ -5565,7 +5568,7 @@ void graph_heap_correct(
       hole = position[node];
 
       assert(entries[hole].node == node);
-      assert(entries[hole].key >= newkey);
+      assert(GE(entries[hole].key, newkey));
    }
 
    parent = hole / 2;

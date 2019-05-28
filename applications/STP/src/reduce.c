@@ -1665,7 +1665,6 @@ SCIP_RETCODE redLoopPc(
 
        //  printf("sdstarnelims %d \n", sdstarnelims);
 
-
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;
       }
