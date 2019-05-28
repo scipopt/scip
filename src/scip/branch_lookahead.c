@@ -5572,7 +5572,10 @@ SCIP_RETCODE selectVarStart(
                //    bestscore, firstscore);
 
                if( candidatelist->ncandidates > 1 )
-                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n",
+               {
+                  SCIP_Real bestmin, bestmax;
+                  SCIP_Real newmin, newmax;
+                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f",
                      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
                      scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                      scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
@@ -5581,10 +5584,48 @@ SCIP_RETCODE selectVarStart(
                      scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                      scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                      scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)]
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]
                      );
+                  bestmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]);
+                  bestmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]);
+                  if( candidatelist->ncandidates > 3 )
+                  {
+                     printf(",%.9f,%.9f,%.9f,%.9f",
+                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
+                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]
+                        );
+
+                     newmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]);
+                     newmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]);
+                     bestmin = MAX(bestmin, newmin);
+                     bestmax = MAX(bestmax, newmax);
+                  }
+                  else if( candidatelist->ncandidates > 2 )
+                  {
+                     printf(",%.9f,%.9f,-2,0,-2.0",
+                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]
+                        );
+
+                     newmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]);
+                     newmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
+                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]);
+                     bestmin = MAX(bestmin, newmin);
+                     bestmax = MAX(bestmax, newmax);
+
+                  }
+                  else
+                     printf(",-2,0,-2.0,-2,0,-2.0");
+
+                  printf(",%.9f,%.9f,%d\n", bestmin, bestmax, candidatelist->ncandidates);
+               }
             }
             else
                assert(!performedlab);
