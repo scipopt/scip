@@ -123,6 +123,7 @@
                                                     *   child gains (taken from the paper) */
 #define DEFAULT_DBFACTOR                     1.0   /**< factor to weight proven dual bound from 2nd level vs. LP dual bound in 'l' scoring */
 #define DEFAULT_WORSEFACTOR                 -1.0   /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
+#define DEFAULT_FILTERBYMAXGAIN             FALSE  /**< should lookahead branching only be applied if the max gain in level 1 is not uniquely that of the best candidate? */
 
 #ifdef SCIP_DEBUG
 /* Adjusted debug message that also prints the current probing depth. */
@@ -1066,6 +1067,7 @@ typedef struct
    SCIP_Real             minweight;          /**< weight of the min gain of two child problems */
    SCIP_Real             dbfactor;           /**< factor to weight proven dual bound from 2nd level vs. LP dual bound in 'l' scoring */
    SCIP_Real             worsefactor;        /**< if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable) */
+   SCIP_Bool             filterbymaxgain;    /**< should lookahead branching only be applied if the max gain in level 1 is not uniquely that of the best candidate? */
 } CONFIGURATION;
 
 
@@ -4293,6 +4295,9 @@ SCIP_RETCODE filterCandidates(
 
          sortFirstCandidatesByScore(scip, candidatelist, scorecontainer, nusedcands);
 
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Best candidate according to FSB scores: <%s>\n",
+            SCIPvarGetName(candidatelist->candidates[0]->branchvar));
+
          if( config->worsefactor >= 0 )
          {
             for( i = 1; i < nusedcands; ++i )
@@ -4304,10 +4309,28 @@ SCIP_RETCODE filterCandidates(
             nusedcands = i;
          }
 
-         SCIP_CALL( candidateListKeep(scip, candidatelist, nusedcands) );
+         if( config->filterbymaxgain && SCIPgetProbingDepth(scip) == 0 )
+         {
+            SCIP_Real maxgain = 0.0;
 
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Best candidate according to FSB scores: <%s>\n",
-            SCIPvarGetName(candidatelist->candidates[0]->branchvar));
+            for( i = 1; i < nusedcands; ++i )
+            {
+               maxgain = MAX(maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
+               maxgain = MAX(maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
+            }
+            if( SCIPisLT(scip, maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)])
+               && SCIPisLT(scip, maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]) )
+            {
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stop lookahead branching, because the best candidate has gains %g/%g and the maximum gain of the remaining candidates is %g\n",
+                  scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                  scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                  maxgain);
+
+               nusedcands = 1;
+            }
+         }
+
+         SCIP_CALL( candidateListKeep(scip, candidatelist, nusedcands) );
       }
 #ifdef SCIP_DEBUG
       else
@@ -5571,7 +5594,7 @@ SCIP_RETCODE selectVarStart(
                //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                //    bestscore, firstscore);
 
-               if( candidatelist->ncandidates > 1 )
+               if( FALSE && candidatelist->ncandidates > 1 )
                {
                   SCIP_Real bestmin, bestmax;
                   SCIP_Real newmin, newmax;
@@ -6350,6 +6373,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/worsefactor",
          "if the FSB score is of a candidate is worse than the best by this factor, skip this candidate (-1: disable)",
          &branchruledata->config->worsefactor, TRUE, DEFAULT_WORSEFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/filterbymaxgain",
+         "should lookahead branching only be applied if the max gain in level 1 is not uniquely that of the best candidate?",
+         &branchruledata->config->filterbymaxgain, TRUE, DEFAULT_FILTERBYMAXGAIN, NULL, NULL) );
 
    return SCIP_OKAY;
 }
