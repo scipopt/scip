@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ extern "C" {
  */
 
 /** create and resets an epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
@@ -67,13 +67,13 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    );
 
 /** get weights array of epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetWeightsEpsgreedy(
    SCIP_BANDIT*          epsgreedy           /**< epsilon greedy bandit algorithm */
    );
 
 /** set epsilon parameter of epsilon greedy bandit algorithm */
-EXTERN
+SCIP_EXPORT
 void SCIPsetEpsilonEpsgreedy(
    SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
    SCIP_Real             eps                 /**< parameter to increase probability for exploration between all actions */

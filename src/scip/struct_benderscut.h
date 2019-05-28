@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,16 @@
 extern "C" {
 #endif
 
+struct SCIP_BenderscutCut
+{
+   SCIP_VAR**            vars;               /**< the variables forming the cut */
+   SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs;                /**< the left hand side of the cut */
+   SCIP_Real             rhs;                /**< the right hand side of the cut */
+   int                   nvars;              /**< the number of variables in the cut */
+};
+typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
+
 /** Benders' decomposition cuts data */
 struct SCIP_Benderscut
 {
@@ -54,11 +64,8 @@ struct SCIP_Benderscut
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */
 
-   SCIP_CONS**           addedconss;         /**< an array to store the added constraints */
-   SCIP_ROW**            addedcuts;          /**< an array to store the added cuts */
-   int                   addedconsssize;     /**< the size of the added constraint array */
+   SCIP_BENDERSCUTCUT**  addedcuts;          /**< array to store the data required to form a cut/constraint */
    int                   addedcutssize;      /**< the size of the added cuts array */
-   int                   naddedconss;        /**< the number of the added constraint */
    int                   naddedcuts;         /**< the number of the added cuts */
 
    /* additional Benders' decomposition cuts parameters */

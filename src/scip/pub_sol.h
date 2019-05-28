@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,110 +45,110 @@ extern "C" {
 
 
 /** gets origin of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_SOLORIGIN SCIPsolGetOrigin(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** returns whether the given solution is defined on original variables */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** returns whether the given solution is partial */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPsolIsPartial(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets objective value of primal CIP solution which lives in the original problem space */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets clock time, when this solution was found */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetTime(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets branch and bound run number, where this solution was found */
-EXTERN
+SCIP_EXPORT
 int SCIPsolGetRunnum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node number of the specific branch and bound run, where this solution was found */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPsolGetNodenum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node's depth, where this solution was found */
-EXTERN
+SCIP_EXPORT
 int SCIPsolGetDepth(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets heuristic, that found this solution (or NULL if it's from the tree) */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR* SCIPsolGetHeur(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** informs the solution that it now belongs to the given primal heuristic */
-EXTERN
+SCIP_EXPORT
 void SCIPsolSetHeur(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** returns unique index of given solution */
-EXTERN
+SCIP_EXPORT
 int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum absolute bound violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetAbsBoundViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum relative bound violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetRelBoundViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum absolute integrality violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetAbsIntegralityViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum absolute LP row violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetAbsLPRowViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum relative LP row violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetRelLPRowViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum absolute constraint violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetAbsConsViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** get maximum relative constraint violation of solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPsolGetRelConsViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -108,4 +108,9 @@
  * Iterate over the remaining variables in nonincreasing order of their LP value \f$ x_e \f$  and add
  * the corresponding edge \f$ e \f$ ,
  * if it does not close a subtour.
+ *
+ * Installation
+ * ------------
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  */

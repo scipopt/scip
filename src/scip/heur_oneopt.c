@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -280,7 +280,7 @@ static
 SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_HEUR*            heur,               /**< mutation heuristic */
+   SCIP_HEUR*            heur,               /**< oneopt heuristic */
    SCIP_VAR**            vars,               /**< SCIP variables */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
    SCIP_SOL*             bestsol,            /**< incumbent solution */

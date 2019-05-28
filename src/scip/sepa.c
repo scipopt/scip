@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -410,6 +410,8 @@ SCIP_RETCODE SCIPsepaExecLP(
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
+         SCIP_CUTPOOL* cutpool;
+         SCIP_CUTPOOL* delayedcutpool;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
          int oldncuts;
@@ -418,9 +420,11 @@ SCIP_RETCODE SCIPsepaExecLP(
 
          SCIPsetDebugMsg(set, "executing separator <%s> on LP solution\n", sepa->name);
 
+         cutpool = SCIPgetGlobalCutpool(set->scip);
+         delayedcutpool = SCIPgetDelayedGlobalCutpool(set->scip);
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldncuts = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool);
          oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -448,7 +452,10 @@ SCIP_RETCODE SCIPsepaExecLP(
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
-         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) +
+            SCIPcutpoolGetNCuts(delayedcutpool) - oldncuts;
+
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
          sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/

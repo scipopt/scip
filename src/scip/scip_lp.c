@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1598,6 +1598,11 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
  *        initialization sets the lp solution value) to 0.0. (This leads to the conclusion that, if a constraint was
  *        violated, the linear relaxation might not be violated anymore.)
+ *
+ *  @note If the variable being added is FIXED (as given by the status SCIP_VARSTATUS_FIXED), then the variable is not
+ *        added to the row, but the corresponding constant is added. Similarly, if the input variable is aggregated (as
+ *        given by the status SCIP_VARSTATUS_AGGREGATED), then the input variable is substituted with its aggregation.
+ *        For other cases, and to better understand the function behavior, please check the code of SCIPvarAddToRow.
  */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */

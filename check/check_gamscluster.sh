@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -311,9 +311,9 @@ do
        INPUTDIR=`pwd`/`dirname $i`
     fi
     case $GMSFILE in
-      *.gms )
+      *.gms | *.gms.gz )
         ;;
-      *.gms.gz | *.gms.z )
+      *.gms.z )
         echo "Temporarily decompressing $i."
         GMSFILE=${GMSFILE/%.gz/}
         GMSFILE=${GMSFILE/%.z/}
@@ -344,23 +344,23 @@ do
     esac
 
     # get modeltype of instance and convert into capitals
-    MODTYPE=`grep -i '^[^*]' $INPUTDIR/$GMSFILE | tr '[a-z]' '[A-Z]' | sed -n -e '/SOLVE.* USING/s/\(.* USING [ %]*\)\([^ %]*\)\(.*\)/\2/p'`
+    MODTYPE=`zgrep -i '^[^*]' $INPUTDIR/$GMSFILE | tr '[a-z]' '[A-Z]' | sed -n -e '/SOLVE.* USING/s/\(.* USING [ %]*\)\([^ %]*\)\(.*\)/\2/p'`
     #echo "Modeltype: ${MODTYPE:-UNKNOWN!}"
 
     if test -z "$MODTYPE"
     then
-      echo "Could not recognize model type. Skip instance."
-      continue
+      echo "Could not recognize model type. Using SOLVER."
+      MODTYPE=SOLVER
     fi
 
     if test $KEEPSOLS = 1
     then
-      GDXFILE="gdx=$SOLDIR/${GMSFILE/%gms/gdx}"
+      GDXFILE="gdx=$SOLDIR/${GMSFILE/%.gms*/.gdx}"
     fi
 
     if test $SETCUTOFF = 1 || test $SETCUTOFF = true
     then
-      export CUTOFF=`grep ${GMSFILE/%.gms/} $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+      export CUTOFF=`grep ${GMSFILE/%.gms*/} $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
     fi
 
     # additional environment variables needed by rungamscluster.sh

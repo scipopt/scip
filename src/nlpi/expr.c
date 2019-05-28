@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4987,7 +4987,7 @@ SCIP_RETCODE exprparseReadVariable(
 
       /* store index of variable and variable name in varnames buffer */
       **varnames = varidx;
-      strcpy((char*)(*varnames + 1), varname);
+      (void) SCIPstrncpy((char*)(*varnames + 1), varname, (int)strlen(varname)+1);
 
       /* insert variable into hashtable */
       SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
@@ -8391,7 +8391,7 @@ void SCIPexprPrint(
 
       if( expr->nchildren == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
          break;
       }
 
@@ -8399,12 +8399,12 @@ void SCIPexprPrint(
 
       if( constant != 0.0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
       }
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", ((SCIP_Real*)expr->data.data)[i]);
          SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
       }
 
@@ -8423,20 +8423,20 @@ void SCIPexprPrint(
       SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->lincoefs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->lincoefs[i]);
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->quadelems[i].coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->quadelems[i].coef);
          SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], messagehdlr, file, varnames, paramnames, paramvals);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
          {
@@ -8467,13 +8467,13 @@ void SCIPexprPrint(
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g", monomialdata->coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
@@ -8482,11 +8482,11 @@ void SCIPexprPrint(
             SCIPexprPrint(expr->children[monomialdata->childidxs[j]], messagehdlr, file, varnames, paramnames, paramvals);
             if( monomialdata->exponents[j] < 0.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.20g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.15g)", monomialdata->exponents[j]);
             }
             else if( monomialdata->exponents[j] != 1.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^%.20g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%.15g", monomialdata->exponents[j]);
             }
          }
       }
@@ -11846,6 +11846,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
       break;
    }
@@ -11854,6 +11855,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
       break;
    }
@@ -11867,6 +11869,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 2);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11885,6 +11888,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }
@@ -11944,6 +11948,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
       else
          userdata = exprdata->userdata;
 
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
@@ -12042,6 +12047,7 @@ void exprgraphNodeCheckSeparabilityComponent(
          varcomps[i] = varcomps[varidx];
    for( i = 0; i < nchildcomps; ++i )
       if( childcomps[i] == *compnr )
+         /* coverity[copy_paste_error] */
          childcomps[i] = varcomps[varidx];
    *compnr = varcomps[varidx];
 }
@@ -12119,7 +12125,7 @@ SCIP_RETCODE exprgraphRemoveVar(
       exprgraph->varbounds[varidx] = exprgraph->varbounds[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]  = exprgraph->varnodes[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]->data.intval = varidx;
-      SCIP_CALL( SCIPhashmapSetImage(exprgraph->varidxs, exprgraph->vars[varidx], (void*)(size_t)(varidx)) );
+      SCIP_CALL( SCIPhashmapSetImageInt(exprgraph->varidxs, exprgraph->vars[varidx], varidx) );
    }
    --exprgraph->nvars;
 
@@ -15006,7 +15012,7 @@ void SCIPexprgraphSetVarBounds(
    assert(var != NULL);
    assert(SCIPhashmapExists(exprgraph->varidxs, var));
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
    assert(exprgraph->vars[pos] == var);
 
@@ -15305,7 +15311,7 @@ SCIP_RETCODE SCIPexprgraphAddVars(
       exprgraph->vars[exprgraph->nvars] = vars[i];  /*lint !e613*/
       exprgraph->varnodes[exprgraph->nvars] = node;
       SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-      SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[i], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+      SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[i], exprgraph->nvars) ); /*lint !e613*/
       ++exprgraph->nvars;
 
       if( varnodes != NULL )
@@ -15398,6 +15404,7 @@ SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
       assert(exprtrees[0] != NULL);
       assert(exprtrees[0]->vars != NULL || exprtrees[0]->nvars == 0);
 
+      /* coverity[var_deref_model] */
       SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[0]->root, exprtrees[0]->vars, exprtrees[0]->params, rootnode, rootnodeisnew) );
    }
    else
@@ -15534,7 +15541,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
    assert(coefs != NULL || ncoefs == 0);
    assert(vars  != NULL || ncoefs == 0);
 
-   varidx = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   varidx = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(varidx < exprgraph->nvars);
    assert(exprgraph->vars[varidx] == var);
    varnode = exprgraph->varnodes[varidx];
@@ -15626,7 +15633,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
          exprgraph->vars[exprgraph->nvars] = vars[0];  /*lint !e613*/
          exprgraph->varnodes[exprgraph->nvars] = varnode;
          SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-         SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[0], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+         SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[0], exprgraph->nvars) ); /*lint !e613*/
          ++exprgraph->nvars;
 
          /* call callback method, if set */
@@ -15704,7 +15711,7 @@ SCIP_Bool SCIPexprgraphFindVarNode(
       return FALSE;
    }
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
 
    *varnode = exprgraph->varnodes[pos];
@@ -16013,7 +16020,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          if( node->nuses > 0 )
          {
             ensureBlockMemoryArraySize(exprgraph->blkmem, &testvals, &testvalssize, ntestvals+1);
-            SCIP_CALL( SCIPhashmapInsert(testvalidx, (void*)node, (void*)(size_t)ntestvals) );
+            SCIP_CALL( SCIPhashmapInsertInt(testvalidx, (void*)node, ntestvals) );
             testvals[ntestvals] = SCIPexprgraphGetNodeVal(node);  /*lint !e613 !e794*/
             ++ntestvals;
          }
@@ -16201,8 +16208,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             assert(SCIPhashmapExists(testvalidx, (void*)node));
 
-            idx = (int)(size_t)(void*)SCIPhashmapGetImage(testvalidx, (void*)node);
+            idx = SCIPhashmapGetImageInt(testvalidx, (void*)node);
             assert(idx < ntestvals);
+            assert(testvals != NULL);
 
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);

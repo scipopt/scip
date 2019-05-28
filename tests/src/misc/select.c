@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,16 +24,26 @@
 #include "include/scip_test.h"
 
 /** GLOBAL VARIABLES **/
+#define ARRAYMEMSIZE 700
 static SCIP_RANDNUMGEN* randgen;
 static SCIP* scip;
 static unsigned int randomseed = 42;
+static int key[ARRAYMEMSIZE];
+static int items[ARRAYMEMSIZE];
+SCIP_Real weights[ARRAYMEMSIZE];
+
 
 /* TEST SUITE */
 static
 void setup(void)
 {
+   int i;
+
    SCIPcreate(&scip);
    SCIPcreateRandom(scip, &randgen, randomseed, TRUE);
+
+   for( i = 0; i < ARRAYMEMSIZE; ++i )
+      items[i] = i;
 }
 
 static
@@ -50,12 +60,9 @@ Test(select, create_and_free)
 {
    /* calls setup and teardown */
 }
-
-#define ARRAYMEMSIZE 700
 Test(select, random_permutation, .description = "tests selection on a bunch of random permutations of the integers 1...n")
 {
    int len = ARRAYMEMSIZE;
-   int key[ARRAYMEMSIZE];
    int i;
    int j;
    /* initialize key */
@@ -100,7 +107,6 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
 Test(select, zero_capacity, .description = "tests if weighted median selection always returns the minimum element when the capacity is zero")
 {
    int i;
-   int key[ARRAYMEMSIZE];
 
    /* initialize key to be all ones */
    for( i = 0; i < ARRAYMEMSIZE; ++i )
@@ -119,4 +125,86 @@ Test(select, zero_capacity, .description = "tests if weighted median selection a
       /* start next iteration with an all 1-s array */
       key[0] = 1;
    }
+}
+
+Test(select, exactIntegerSolution, .description="tests the correct behavior if a knapsack has integral LP solution")
+{
+   int medianpos;
+   SCIP_Real profits[ARRAYMEMSIZE];
+   SCIP_Real capacity = 12;
+   int len = 4;
+
+   weights[0] = 6; /* 0 is the worst item and should be last */
+   weights[1] = 5;
+   weights[2] = 4;
+   weights[3] = 3;
+
+   /* the profits already represent the cost/weight */
+   profits[0] = 1;
+   profits[1] = 2;
+   profits[2] = 3;
+   profits[3] = 4;
+
+   SCIPselectWeightedDownRealInt(profits, items, weights, capacity, len, &medianpos);
+
+   cr_assert_eq(medianpos, 3, "Median position %d should be the last item", medianpos);
+   cr_assert_eq(items[3],0, "Wrong last item %d after selection", items[3]);
+}
+
+
+Test(select, exactIntegerSolution2, .description="second test for the correct behavior for slightly larger coefficients")
+{
+   int medianpos;
+   SCIP_Real profits[ARRAYMEMSIZE];
+   SCIP_Real capacity = 150;
+   int len = 5;
+
+   weights[0] = 50;
+   weights[1] = 50;
+   weights[2] = 50;
+   weights[3] = 50;
+   weights[4] = 50;
+
+   /* the profits already represent the cost/weight */
+   profits[0] = 4;
+   profits[1] = 1;
+   profits[2] = 3;
+   profits[3] = 2;
+   profits[4] = 5;
+
+   SCIPselectWeightedDownRealInt(profits, items, weights, capacity, len, &medianpos);
+
+   cr_assert_eq(medianpos, 3, "Median position %d should be the last item", medianpos);
+   cr_assert_eq(items[3],3, "Wrong median item %d after selection", items[4]);
+   cr_assert_eq(items[4],1);
+}
+
+Test(select, everythingFits, .description="realistic example where all items fit that has failed")
+{
+   SCIP_Real testweights[] = {
+            2, 2, 1, 1, 3, 1, 1, 2, 2, 1,
+            1, 1, 2, 2, 1, 1, 1, 6, 1, 3,
+            1, 1, 3, 2, 1, 1, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6, 6, 6
+   };
+   SCIP_Real testprofits[] = {
+            0.16788881410750284, 0.16788881410750284, 0.33577762821500567, 0.33577762821500567,
+            0.11192587607166793, 0.33577762821500567, 0.33577762821500567, 0.16788881410750284,
+            0.16788881410750284, 0.33577762821500379, 0.33577762821500567, 0.33577762821500567,
+            0.16788881410750284, 0.16788881410750284, 0.33577762821500567, 0.33577762821500567,
+            0.33577762821500567, 0.11465122453401815, 0.33577762821500567, 0.11192587607166855,
+            0.68790734720410884, 0.33577762821500567, 0.11192587607166855, 0.16788881410750284,
+            0.33577762821500567, 0.33577762821500567, 0.05596293803583427, 0.05596293803583427,
+            0.05596293803583427, 0.05596293803583427, 0.05596293803583427, 0.05596293803583427,
+            0.05596293803583427, 0.05596293803583427, 0.05596293803583427, 0.05596293803583427,
+            0.05596293803583427, 0.05596293803583427, 0.05596293803583427, 0.05596293803583427
+   };
+
+   int len = 40;
+   SCIP_Real capacity = 255;
+   int medianpos;
+
+   SCIPselectWeightedDownRealInt(testprofits, items, testweights, capacity, len, &medianpos);
+
+   cr_assert_eq(medianpos, len, "Medianposition %d != %d", medianpos, len);
 }

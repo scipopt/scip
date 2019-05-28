@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -282,7 +282,6 @@ SCIP_RETCODE getScoreLikeCoefdiving(
       *score = downweight + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND);
    }
 
-
    /* penalize too small fractions */
    if( SCIPisEQ(scip, candsfrac, 0.01) )
    {
@@ -526,7 +525,6 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lockweight",
          "weight used in a convex combination of conflict and variable locks",
          &heurdata->lockweight, TRUE, DEFAULT_LOCKWEIGHT, 0.0, 1.0, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

@@ -2,7 +2,7 @@ CC		=	cc
 CXX		=	CC
 LINKCC		=	cc
 LINKCXX		=	CC
-FLAGS		+=	-DNDEBUG -I/client/include -DNO_STRERROR_R -DROUNDING_FE
+FLAGS		+=	-DNDEBUG -I/client/include -DNO_STRERROR_R -DSCIP_ROUNDING_FE
 OFLAGS		+=	-xO5 -xprefetch=auto -xipo=2
 CFLAGS		+=	-Xa -errtags=yes -erroff=E_STATEMENT_NOT_REACHED
 CXXFLAGS	+= -std=c++0x

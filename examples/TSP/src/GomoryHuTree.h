@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,7 +46,6 @@ typedef struct GraphNode
    struct GraphNode      *bfs_link;     /**< for one way BFS working queue */
    struct GraphNode      *stack_link;   /**< for stack of active node */
    struct GraphNode      *parent;       /**< pointer of Gomory-Hu cut tree */
-
 } GRAPHNODE;
 
 
@@ -62,7 +61,6 @@ typedef struct GraphEdge
    GRAPHNODE             *adjac;        /**< pointer to adjacent node */
    
    SCIP_VAR*             var;
-
 } GRAPHEDGE;
 
 
@@ -76,23 +74,17 @@ typedef struct Graph
    GRAPHNODE             *nodes;        /**< array containing the nodes of the graph */
 
    GRAPHEDGE             *edges;        /**< array containing all halfedges (thus, it's size is two times nedges) */
-
 } GRAPH;
 
 
-extern
 SCIP_Bool create_graph(int n, int m, GRAPH** gr);
 
-extern
 void capture_graph(GRAPH* gr);
    
-extern
 void release_graph(GRAPH** gr);
    
-extern
 SCIP_Bool gmincut(GRAPH *gr, double *mincap, long *n_shore);
 
-extern
-SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol);
+SCIP_Bool ghc_tree(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol);
 
 #endif

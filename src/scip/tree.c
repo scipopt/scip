@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2240,7 +2240,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
-            return SCIP_OKAY;
+            break; /* break here to clear all pending bound changes */
          else
             continue;
       }
@@ -2261,11 +2261,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 
          lb = SCIPvarGetLbLocal(var);
          if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
-         {
-            /* release the variable */
-            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
-         }
       }
       else
       {
@@ -2274,11 +2270,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          ub = SCIPvarGetUbLocal(var);
          if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
-         {
-            /* release the variable */
-            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
-         }
       }
 
       SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -2286,10 +2278,18 @@ SCIP_RETCODE treeApplyPendingBdchgs(
             tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
             tree->pendingbdchgs[i].probingchange) );
       assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
+   }
+
+   /* clear pending bound changes */
+   for( i = 0; i < tree->npendingbdchgs; ++i )
+   {
+      var = tree->pendingbdchgs[i].var;
+      assert(var != NULL);
 
       /* release the variable */
       SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
    }
+
    tree->npendingbdchgs = 0;
 
    return SCIP_OKAY;
@@ -3055,11 +3055,13 @@ SCIP_RETCODE treeSwitchPath(
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
+
    while( focusnode != fork )
    {
       assert(focusnode != NULL);
       assert(!focusnode->active);
       assert(!focusnode->cutoff);
+      /* coverity[var_deref_op] */
       tree->path[focusnode->depth] = focusnode;
       focusnode = focusnode->parent;
    }
@@ -4360,6 +4362,7 @@ SCIP_RETCODE SCIPnodeFocus(
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
+   /* coverity[var_compare_op] */
    if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
    {
       SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, oldcutoffdepth);

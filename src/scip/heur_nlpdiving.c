@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1965,7 +1965,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             if( SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT )
             {
                assert(!SCIPhashmapExists(varincover, covervars[c]));
-               SCIP_CALL( SCIPhashmapInsert(varincover, covervars[c], (void*) (size_t) (c+1)) );
+               SCIP_CALL( SCIPhashmapInsertInt(varincover, covervars[c], c+1) );
             }
 
             /* catch bound change events of cover variables */
@@ -2662,16 +2662,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    else
       assert(varincover == NULL);
 
-   /* free array of cover variables */
-   if( heurdata->prefercover || heurdata->solvesubmip )
-   {
-      assert(covervars != NULL || !covercomputed);
-      if( covervars != NULL )
-         SCIPfreeBufferArray(scip, &covervars);
-   }
-   else
-      assert(covervars == NULL);
-
    /* free NLP start solution */
    if( nlpstartsol != NULL )
    {
@@ -2696,14 +2686,24 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       assert(pseudocandsnlpsol != NULL);
       assert(pseudocandsnlpsol != NULL);
-      SCIPfreeBufferArray(scip, &pseudocandslpsol);
       SCIPfreeBufferArray(scip, &pseudocandsnlpsol);
+      SCIPfreeBufferArray(scip, &pseudocandslpsol);
    }
    else
    {
       assert(pseudocandsnlpsol == NULL);
       assert(pseudocandsnlpsol == NULL);
    }
+
+   /* free array of cover variables */
+   if( heurdata->prefercover || heurdata->solvesubmip )
+   {
+      assert(covervars != NULL || !covercomputed);
+      if( covervars != NULL )
+         SCIPfreeBufferArray(scip, &covervars);
+   }
+   else
+      assert(covervars == NULL);
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;

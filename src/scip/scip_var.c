@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1186,14 +1186,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
       SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
+      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialvars);
-   SCIPfreeBufferArray(scip, monomialexps);
    SCIPfreeBufferArray(scip, monomialcoefs);
    SCIPfreeBufferArray(scip, monomialnvars);
+   SCIPfreeBufferArray(scip, monomialexps);
+   SCIPfreeBufferArray(scip, monomialvars);
 }
 
 /** increases usage counter of variable
@@ -3099,8 +3099,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL ) /*lint !e774*/
-         *cutoff = FALSE;
+      *cutoff = FALSE;
 
       if( conflict != NULL )
          *conflict = FALSE;
@@ -5130,10 +5129,10 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -5246,10 +5245,10 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Real ub;
 
    assert(infeasible != NULL);
-   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
-   assert(!SCIPinDive(scip));
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -6700,6 +6699,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
+   SCIP_VAR* implprobvar;
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if ( nbdchgs != NULL )
@@ -6711,21 +6711,31 @@ SCIP_RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   /* transform implication containing two binary variables to clique */
-   if( SCIPvarIsBinary(implvar) )
+   implprobvar = SCIPvarGetProbvar(implvar);
+   /* transform implication containing two binary variables to clique; condition ensures that the active representative
+    * of implvar is actually binary
+    */
+   if( SCIPvarIsBinary(implvar) && (SCIPvarIsActive(implvar) || (implprobvar != NULL && SCIPvarIsBinary(implprobvar))) )
    {
-      SCIP_VAR* vars[2];
-      SCIP_Bool vals[2];
-
       assert(SCIPisFeasEQ(scip, implbound, 1.0) || SCIPisFeasZero(scip, implbound));
       assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPisFeasZero(scip, implbound));
 
-      vars[0] = var;
-      vars[1] = implvar;
-      vals[0] = varfixing;
-      vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+      /* only add clique if implication is not redundant with respect to global bounds of the implication variable */
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPvarGetLbGlobal(implvar) < 0.5) ||
+         (impltype == SCIP_BOUNDTYPE_UPPER && SCIPvarGetUbGlobal(implvar) > 0.5)
+               )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
 
-      SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         SCIP_CALL( SCIPaddClique(scip, vars, vals, 2, FALSE, infeasible, nbdchgs) );
+      }
 
       return SCIP_OKAY;
    }
@@ -6884,11 +6894,11 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
+            SCIP_CALL( SCIPhashmapInsertInt(classidx2newlabel, (void*)(size_t)currentlabel, classidx) ); /*lint !e571*/
          }
          else
          {
-            localclassidx = (int)(size_t)SCIPhashmapGetImage(classidx2newlabel, (void*)(size_t)currentlabel);
+            localclassidx = SCIPhashmapGetImageInt(classidx2newlabel, (void*)(size_t)currentlabel); /*lint !e571*/
          }
       }
       assert(localclassidx - 1 >= 0);
@@ -7679,7 +7689,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
 	 {
             assert(id1 >= 0);
-	    SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1), fclose(gmlfile) );
+	    SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
@@ -7706,7 +7716,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
 	    {
                assert(id2 >= 0);
-	       SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1), fclose(gmlfile) );
+	       SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
 
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
@@ -8234,13 +8244,29 @@ SCIP_RETCODE SCIPfixVar(
    case SCIP_STAGE_SOLVING:
       if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         *fixed = TRUE;
+         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
       }
       if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         *fixed = TRUE;
+         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
       }
       return SCIP_OKAY;
 

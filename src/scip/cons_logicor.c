@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1988,6 +1988,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
          /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         /* coverity[swapped_arguments] */
          SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
          /* delete consdel */
@@ -2115,7 +2116,7 @@ void removeConsFromOccurList(
 
       assert(SCIPhashmapExists(varstopos, (void*) var));
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2177,7 +2178,7 @@ void findShortestOccurlist(
          return;
       }
 
-      pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+      pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
       assert(0 < pos && pos <= occurlistlength);
 
       --pos;
@@ -2391,13 +2392,13 @@ SCIP_RETCODE addConsToOccurList(
          ++(noccurlistentries[pos]);
 
          /* add new variable to map */
-         SCIP_CALL( SCIPhashmapInsert(varstopos, var, (void*) (size_t) (pos + 1)) );
+         SCIP_CALL( SCIPhashmapInsertInt(varstopos, var, pos + 1) );
 
          ++(*occurlistlength);
       }
       else
       {
-         pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)var);
+         pos = SCIPhashmapGetImageInt(varstopos, (void*)var);
          assert(0 < pos && pos <= *occurlistlength);
 
          --pos;
@@ -2618,7 +2619,7 @@ SCIP_RETCODE removeRedundantNonZeros(
 
                   if( consdata1->nvars > nvars )
                   {
-                     pos = (int) (size_t) SCIPhashmapGetImage(varstopos, (void*)artvar);
+                     pos = SCIPhashmapGetImageInt(varstopos, (void*)artvar);
                      assert(0 < pos && pos <= occurlistlength);
 
                      --pos;

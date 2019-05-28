@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8951,12 +8951,12 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
    int                   nfinished,          /**< number of jobs that finished before curtime or at curtime */
-   SCIP_Bool             lower               /**< shall cuts be created due to lower or upper bounds? */
+   SCIP_Bool             lower,              /**< shall cuts be created due to lower or upper bounds? */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was detected */
    )
 {
    SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
-   SCIP_Bool infeasible;
    int lhs; /* left hand side of constraint */
 
    SCIP_VAR** activevars;
@@ -8998,8 +8998,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
-   assert( ! infeasible );
+   SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -9016,7 +9015,8 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    SCIP_CONS*            cons,               /**< cumulative constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             lower,              /**< shall cuts be created according to lower bounds? */
-   SCIP_Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -9068,7 +9068,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
    hmax = consdata->hmax;
 
    /* check each startpoint of a job whether the capacity is kept or not */
-   for( j = 0; j < nvars; ++j )
+   for( j = 0; j < nvars && !(*cutoff); ++j )
    {
       curtime = starttimes[j];
 
@@ -9091,7 +9091,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
       if( freecapacity < 0 && curtime >= hmin)
       {
          /* create capacity restriction row for current event point */
-         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower) );
+         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower, cutoff) );
          *separated = TRUE;
       }
    } /*lint --e{850}*/
@@ -11335,7 +11335,7 @@ SCIP_RETCODE getNodeIdx(
    {
       if( SCIPhashmapExists(tcliquegraph->varmap, (void*)var) )
       {
-         (*idx) = (int)(size_t) SCIPhashmapGetImage(tcliquegraph->varmap, (void*)var);
+         (*idx) = SCIPhashmapGetImageInt(tcliquegraph->varmap, (void*)var);
       }
       else
       {
@@ -11379,7 +11379,7 @@ SCIP_RETCODE getNodeIdx(
          SCIP_CALL( SCIPallocBufferArray(scip, &tcliquegraph->demandmatrix[pos], tcliquegraph->size) ); /*lint !e866*/
          BMSclearMemoryArray(tcliquegraph->demandmatrix[pos], tcliquegraph->nnodes); /*lint !e866*/
 
-         SCIP_CALL( SCIPhashmapInsert(tcliquegraph->varmap, (void*)var, (void*)(size_t)(pos)) );
+         SCIP_CALL( SCIPhashmapInsertInt(tcliquegraph->varmap, (void*)var, pos) );
 
          tcliquegraph->nnodes++;
 
@@ -11394,7 +11394,7 @@ SCIP_RETCODE getNodeIdx(
    }
    else
    {
-      assert(*idx == (int)(size_t)SCIPhashmapGetImage(tcliquegraph->varmap, (void*)var));
+      assert(*idx == SCIPhashmapGetImageInt(tcliquegraph->varmap, (void*)var));
    }
 
    assert(SCIPhashmapExists(tcliquegraph->varmap, (void*)var));
@@ -12134,7 +12134,7 @@ SCIP_RETCODE createTcliqueGraph(
 
       /* insert all active variables into the garph */
       assert(SCIPvarGetProbindex(var) == v);
-      SCIP_CALL( SCIPhashmapInsert(varmap, (void*)var, (void*)(size_t)v) ); /*lint !e571*/
+      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)var, v) );
    }
 
    (*tcliquegraph)->nnodes = nvars;
@@ -12380,6 +12380,7 @@ SCIP_RETCODE removeRedundantConss(
                   initializeLocks(consdata1, TRUE);
                }
 
+               /* coverity[swapped_arguments] */
                SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
                SCIP_CALL( SCIPdelCons(scip, cons0) );
@@ -12887,8 +12888,8 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
       /* separate cuts containing only integer variables */
       for( c = 0; c < nusefulconss; ++c )
       {
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated) );
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated, &cutoff) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated, &cutoff) );
       }
    }
 
@@ -12947,8 +12948,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
       /* separate cuts containing only integer variables */
       for( c = 0; c < nusefulconss; ++c )
       {
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated) );
-         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, TRUE, &separated, &cutoff) );
+         SCIP_CALL( separateConsOnIntegerVariables(scip, conss[c], NULL, FALSE, &separated, &cutoff) );
       }
    }
 
@@ -14420,7 +14421,7 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
 
       if( est == impliedest && lct == impliedlct )
       {
-         SCIP_CALL( SCIPhashmapInsert(addedvars, (void*)var, (void*)(size_t)duration) );
+         SCIP_CALL( SCIPhashmapInsertInt(addedvars, (void*)var, duration) );
       }
    }
 

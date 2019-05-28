@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,12 +19,12 @@
  * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
- * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
+ * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref STP_CONS page.
  *
- * @page CONS Separating violated constraints
+ * @page STP_CONS Separating violated constraints
  *
  * In this file a constraint handler checking solutions for feasibility and separating violated model constraints is implemented.
- * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max-flow algorithm in
+ * The separation problem for the cut inequalities described in \ref STP_PROBLEM can be solved by a max-flow algorithm in
  * polynomial time.  Regarding the variable values of a given LP solution as capacities on the edges, one can check for each
  * \f$ t \in T \setminus \{r\} \f$, with \f$ r \f$ being the root, whether the minimal \f$ (r, t) \f$-cut is less than one. In this case,
  * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut an adaptation of Hao
