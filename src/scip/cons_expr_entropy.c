@@ -169,8 +169,13 @@ SCIP_RETCODE reverseProp(
    /*
     * check whether upper bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childsup, childsup);
-   SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   if( childsup < SCIP_INTERVAL_INFINITY )
+   {
+      SCIPintervalSetBounds(&tmp, childsup, childsup);
+      SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   }
+   else
+      SCIPintervalSetBounds(&tmp, -SCIP_INTERVAL_INFINITY, -SCIP_INTERVAL_INFINITY);  /* entropy(inf) = -inf */
 
    /* entropy(childsup) < intersection.inf -> consider [MAX(childinf,extremum), childsup] */
    if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) < SCIPintervalGetInf(intersection) )
