@@ -20,8 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include <cmath>
-#include <vector>
 #include "blockmemshell/memory.h"
 #include "scip/rational.h"
 #include "scip/multiprecision.hpp"
@@ -32,7 +30,7 @@
 #include "scip/intervalarith.h"
 #include <iostream>
 #include <time.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 #ifdef WITH_GMP
 #include <gmp.h>
@@ -785,15 +783,29 @@ void Rmin(
    SCIP_Rational*        r2                  /**< the second rational */
    )
 {
+   SCIP_Bool positive;
    assert(r1 != NULL && r2 != NULL);
 
-   if( r2->isinf )
-      *(ret->r) = *(r2->r) > 0 ? *(r1->r) : *(r2->r);
-   else if( r1->isinf )
-      *(ret->r) = *(r1->r) > 0 ? *(r2->r) : *(r1->r);
+   if( r1->isinf )
+   {
+      if( *(r1->r) > 0 )
+         Rset(ret, r2);
+      else
+         Rset(ret, r1);
+   }
+   else if( r2->isinf )
+   {
+      if( *(r2->r) > 0 )
+         Rset(ret, r1);
+      else
+         Rset(ret, r2);
+   }
    else
-   *ret->r = min(*r1->r, *r2->r);
-   ret->fpexact = FALSE;
+   {
+      *(ret->r) = min(*(r1->r), *(r2->r));
+      ret->isinf = FALSE;
+      ret->fpexact = SCIP_FPEXACT_UNKNOWN;
+   }
 }
 
 /** compute the minimum of two rationals */
@@ -803,24 +815,29 @@ void Rmax(
    SCIP_Rational*        r2                  /**< the second rational */
    )
 {
+   SCIP_Bool positive;
    assert(r1 != NULL && r2 != NULL);
 
    if( r1->isinf )
    {
-      *(ret->r) = *(r1->r) > 0 ? *(r1->r) : *(r2->r);
-      ret->isinf = *(r1->r) > 0 ? TRUE : r2->isinf;
+      if( *(r1->r) > 0 )
+         Rset(ret, r1);
+      else
+         Rset(ret, r2);
    }
    else if( r2->isinf )
    {
-      *(ret->r) = *(r2->r) > 0 ? *(r1->r) : *(r1->r);
-      ret->isinf = *(r2->r) > 0 ? TRUE : r1->isinf;
+      if( *(r2->r) > 0 )
+         Rset(ret, r2);
+      else
+         Rset(ret, r1);
    }
    else
    {
       *(ret->r) = max(*(r1->r), *(r2->r));
       ret->isinf = FALSE;
+      ret->fpexact = SCIP_FPEXACT_UNKNOWN;
    }
-   ret->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
 /** check if two rationals are equal */

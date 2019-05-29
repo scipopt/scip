@@ -25,6 +25,7 @@
 #define __SCIP_RATIONAL_H__
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include "scip/def.h"
 #include "scip/intervalarith.h"
 #include "scip/mem.h"
