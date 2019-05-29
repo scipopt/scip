@@ -703,7 +703,7 @@ SCIP_RETCODE SCIPcomputeComponents(
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
 
-#if SCIP_OUTPUT
+#ifdef SCIP_OUTPUT
    printf("number of components: %d\n", propdata->ncomponents);
    for (i = 0; i < *ncomponents; ++i)
    {
