@@ -234,6 +234,15 @@ SCIP_COLEX* SCIPcolGetExCol(
    SCIP_COL*             col                 /**< SCIP col */
    );
 
+/** calculates the Farkas coefficient or reduced cost of a column i using the given dual Farkas vector y */
+void SCIPcolexCalcFarkasRedcostCoef(
+   SCIP_COLEX*           col,                /**< LP column */
+   SCIP_SET*             set,                /**< SCIP settings pointer */
+   SCIP_Rational*        result,             /**< rational to store the result */
+   SCIP_Rational**       dual,               /**< dense dual Farkas vector, NULL to use internal row-values */
+   SCIP_Bool             usefarkas           /**< should the farkas coefficient be computed ? */
+   );
+
 /** creates and captures an LP row */
 extern
 SCIP_RETCODE SCIProwCreateExact(
