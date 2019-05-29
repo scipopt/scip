@@ -338,6 +338,61 @@ SCIP_RETCODE getPermProperties(
 }
 
 
+/** determine whether binary variable is affected (and potentially compute number of affected variables) */
+SCIP_RETCODE SCIPdetermineBinvarAffected(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
+   int                   npermvars,          /**< number of permvars in perms */
+   SCIP_Bool             completestatistic,  /**< whether number of affected vars should be computed */
+   int*                  naffected           /**< pointer to store number of affected vars */
+   )
+{
+   SCIP_Shortbool* affected;
+   SCIP_Bool binvaraffected = FALSE;
+   int i;
+   int p;
+
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( naffected != NULL );
+
+   *naffected = 0;
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, npermvars) );
+
+   /* iterate over permutations and check which variables are affected by some symmetry */
+   for (p = 0; p < nperms && (completestatistic || ! binvaraffected); ++p)
+   {
+      for (i = 0; i < npermvars; ++i)
+      {
+         if ( affected[i] )
+            continue;
+
+         if ( perms[p][i] != i )
+         {
+            if ( SCIPvarIsBinary(permvars[i]) )
+            {
+               binvaraffected = TRUE;
+
+               if ( ! completestatistic )
+                  break;
+            }
+
+            affected[i] = TRUE;
+            ++(*naffected);
+         }
+      }
+   }
+   SCIPfreeBufferArray(scip, &affected);
+
+   return SCIP_OKAY;
+}
+
+
 /** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.

@@ -501,6 +501,8 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 }
 
 
+
+
 /*
  * Local methods
  */
@@ -1737,71 +1739,6 @@ SCIP_RETCODE computeComponents(
 }
 
 
-/** determine whether binary variable is effected (and potentially compute number of affected variables) */
-static
-SCIP_RETCODE determineBinvarAffected(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_Bool             completestatistic   /**< whether number of affected vars should be computed */
-   )
-{
-   int** perms;
-   int nperms;
-   int nvars;
-   SCIP_Shortbool* affected;
-   int i;
-   int p;
-   int naffected = 0;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   if ( propdata->binvaraffected && !completestatistic )
-      return SCIP_OKAY;
-
-   assert( propdata->perms != NULL );
-   assert( propdata->nperms > 0 );
-   assert( propdata->npermvars > 0 );
-
-   perms = propdata->perms;
-   nperms = propdata->nperms;
-   nvars = propdata->npermvars;
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, nvars) );
-
-   /* iterate over permutations and check which variables are affected by some symmetry */
-   for (p = 0; p < nperms && (completestatistic || ! propdata->binvaraffected); ++p)
-   {
-      for (i = 0; i < nvars; ++i)
-      {
-         if ( affected[i] )
-            continue;
-
-         if ( perms[p][i] != i )
-         {
-            if ( SCIPvarIsBinary(propdata->permvars[i]) )
-            {
-               propdata->binvaraffected = TRUE;
-
-               if ( ! completestatistic )
-                  break;
-            }
-
-            affected[i] = TRUE;
-            ++naffected;
-         }
-      }
-   }
-
-   if ( completestatistic )
-      propdata->norbitvars = naffected;
-
-   SCIPfreeBufferArray(scip, &affected);
-
-   return SCIP_OKAY;
-}
-
-
 /** determine symmetry */
 static
 SCIP_RETCODE determineSymmetry(
@@ -1930,11 +1867,13 @@ SCIP_RETCODE determineSymmetry(
 
       if ( propdata->displaynorbitvars )
       {
-         SCIP_CALL( determineBinvarAffected(scip, propdata, TRUE) );
+         SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
+               propdata->npermvars, TRUE, &propdata->norbitvars) );
       }
       else if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
       {
-         SCIP_CALL( determineBinvarAffected(scip, propdata, FALSE) );
+         SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
+               propdata->npermvars, FALSE, &propdata->norbitvars) );
       }
 
       /* display statistics: number of generators */

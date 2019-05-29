@@ -105,6 +105,18 @@ SCIP_RETCODE getPermProperties(
    );
 
 
+/** determine whether binary variable is affected (and potentially compute number of affected variables) */
+SCIP_RETCODE SCIPdetermineBinvarAffected(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
+   int                   npermvars,          /**< number of permvars in perms */
+   SCIP_Bool             completestatistic,  /**< whether number of affected vars should be computed */
+   int*                  naffected           /**< pointer to store number of affected vars */
+   );
+
+
 /** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.
