@@ -203,7 +203,6 @@ struct SCIP_PropData
 
    /* further symmetry information */
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
-   int                   norbitvars;         /**< number of vars that are contained in a non-trivial orbit */
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
 
 
@@ -1649,18 +1648,24 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
    else
    {
+      int norbitbinvars = 0;
+
       assert( propdata->nperms > 0 );
 
       if ( propdata->displaynorbitvars )
       {
          SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
-               propdata->npermvars, TRUE, &propdata->norbitvars) );
+               propdata->npermvars, TRUE, &norbitbinvars) );
       }
       else if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
       {
          SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
-               propdata->npermvars, FALSE, &propdata->norbitvars) );
+               propdata->npermvars, FALSE, &norbitbinvars) );
       }
+
+      /* store whether binary variables are affected by some permutations (needed for polyhedral symmetry techniques) */
+      if ( norbitbinvars > 0 )
+         propdata->binvaraffected = TRUE;
 
       /* display statistics: number of generators */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -1678,7 +1683,7 @@ SCIP_RETCODE determineSymmetry(
 
       /* display statistics: number of affected vars*/
       if ( propdata->displaynorbitvars )
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", propdata->norbitvars);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", norbitbinvars);
       else
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
@@ -3156,7 +3161,6 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->componentblocked = NULL;
 
    propdata->log10groupsize = -1.0;
-   propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
 
    propdata->usesymmetry = 0;
@@ -3258,7 +3262,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->componentblocked = NULL;
 
    propdata->log10groupsize = -1.0;
-   propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
 
    propdata->usesymmetry = 0;
@@ -3489,7 +3492,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       propdata->npermvars = 0;
       propdata->nperms = 0;
       propdata->nmaxperms = 0;
-      propdata->norbitvars = 0;
       propdata->binvaraffected = FALSE;
       propdata->computedsymmetry = FALSE;
       propdata->ncomponents = -1;
