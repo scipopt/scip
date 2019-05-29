@@ -2838,11 +2838,6 @@ void SCIPintervalEntropy(
       sup = MAX(supcand1, supcand2);
 
    assert(inf <= sup);
-
-   /* adjust bounds depending on the given interval infinity */
-   inf = MAX(inf, -infinity);
-   sup = MAX(inf, sup);
-
    SCIPintervalSetBounds(resultant, inf, sup);
 }
 
