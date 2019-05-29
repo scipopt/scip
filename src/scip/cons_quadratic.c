@@ -16170,7 +16170,7 @@ void SCIPaddRowprepConstant(
  */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
    SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
    )
@@ -16250,6 +16250,26 @@ SCIP_Real SCIPgetRowprepViolation(
    }
 
    return MAX(violation, 0.0);
+}
+
+/** computes violation of cut in a given solution and reports whether that value seem numerically reliable
+ *
+ * @see SCIPgetRowprepViolation
+ */
+SCIP_Bool SCIPisRowprepViolationReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+)
+{
+   SCIP_Bool reliable;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   (void) SCIPgetRowprepViolation(scip, rowprep, sol, &reliable);
+
+   return reliable;
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.

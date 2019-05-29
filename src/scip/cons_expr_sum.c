@@ -1262,9 +1262,10 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
    /* separation must have failed because we had to relax the row (?)
     * or the minimal cut violation was too large during separation
+    * or the cut violation was not reliable numerically
     * or the LP could not be solved (enfops)
     */
-   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
+   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || !SCIPisRowprepViolationReliable(scip, rowprep, sol) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
 
    /* if no modifications in coefficients, then we cannot point to any branching candidates */
    if( rowprep->nmodifiedvars == 0 )
