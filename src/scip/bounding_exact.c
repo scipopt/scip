@@ -142,6 +142,8 @@ SCIP_RETCODE solveLpExact(
    else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
    {
       SCIP_Bool valid;
+      lpex->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
+
       SCIP_CALL( SCIPlpexGetDualfarkas(lpex, set, stat, &valid) );
       if( valid )
       {
@@ -2237,8 +2239,7 @@ SCIP_RETCODE getPSdual(
        assert(RisZero(approxdual[i]));
       else
       {
-         Rmult(tmp, approxdual[i], costvect[i]);
-         Radd(dualbound, dualbound,tmp);
+         RaddProd(dualbound, approxdual[i], costvect[i]);
       }
    }
 
@@ -2276,10 +2277,12 @@ SCIP_RETCODE getPSdual(
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         Rmult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
-         Rdiff(violation[currentrow], violation[currentrow], tmp);
-         Rmult(tmp, approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
-         Radd(violation[currentrow], violation[currentrow], tmp);
+         /* avoid expensive null-sum */
+         if( RisEqual(approxdual[i], approxdual[i+nrowsps]) )
+            continue;
+
+         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RaddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
       }
    }
 
@@ -2294,14 +2297,16 @@ SCIP_RETCODE getPSdual(
             RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
 
          currentrow = lpex->rows[i]->cols_index[j];
-         Rmult(tmp, tmp, lpex->rows[i]->vals[j]);
-         Rdiff(violation[currentrow], violation[currentrow], tmp);
+         RdiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
       }
    }
 
    /* A^ty for y corresponding to bound constraints */
    for( i = 0; i < ncols; i++ )
    {
+      /* avoid expensive null-sum */
+      if( RisEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
+            continue;
       Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
       Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
@@ -2431,11 +2436,7 @@ SCIP_RETCODE getPSdual(
       }
       for( i =0; i < nextendedrows; i++ )
       {
-         if( useinteriorpoint )
-            Rmult(tmp, psdata->interiorpt[i], lambda2);
-         else
-            Rmult(tmp, psdata->interiorray[i], lambda2);
-         Radd(approxdual[i], approxdual[i], tmp);
+         RaddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[i] : psdata->interiorray[i], lambda2);
       }
    }
 
@@ -2447,10 +2448,7 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < nrowsps; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      if( RisGT(approxdual[i], approxdual[i+nrowsps]) )
-         Rset(tmp, approxdual[i+nrowsps]);
-      else
-         Rset(tmp, approxdual[i]);
+      Rmin(tmp, approxdual[i], approxdual[i+nrowsps]);
 
       /* shift if both are nonzero */
       if( RisPositive(tmp) )
@@ -2463,10 +2461,7 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      if( RisGT(approxdual[i + 2*nrowsps], approxdual[i + 2*nrowsps + ncols]) )
-         Rset(tmp, approxdual[i + 2*nrowsps + ncols]);
-      else
-         Rset(tmp, approxdual[i + 2*nrowsps]);
+      Rmin(tmp, approxdual[i + 2*nrowsps], approxdual[i + 2*nrowsps + ncols]);
 
       /* shift if both are nonzero */
       if( RisPositive(tmp) )
@@ -2504,14 +2499,18 @@ SCIP_RETCODE getPSdual(
       for( j = 0; j < lpex->rows[i]->len; j++ )
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         Rmult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
-         Rdiff(violation[currentrow], violation[currentrow], tmp);
-         Rmult(tmp, approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
-         Radd(violation[currentrow], violation[currentrow], tmp);
+         /* avoid expensive null-sum */
+         if( RisEqual(approxdual[i], approxdual[i+nrowsps]) )
+            continue;
+         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RaddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
+      /* avoid expensive null-sum */
+      if( RisEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
+         continue;
       Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
       Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
@@ -2526,8 +2525,7 @@ SCIP_RETCODE getPSdual(
             RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
 
          currentrow = lpex->rows[i]->cols_index[j];
-         Rmult(tmp, tmp, lpex->rows[i]->vals[j]);
-         Rdiff(violation[currentrow], violation[currentrow], tmp);
+         RdiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
       }
    }
 
@@ -2557,8 +2555,7 @@ SCIP_RETCODE getPSdual(
    RsetInt(dualbound, 0, 1);
    for( i = 0; i < nextendedrows; i++ )
    {
-      Rmult(tmp, approxdual[i], costvect[i]);
-      Radd(dualbound, dualbound, tmp);
+      RaddProd(dualbound, approxdual[i], costvect[i]);
    }
 
    if( !usefarkas )
@@ -3044,7 +3041,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    char dualboundmethod;
 
    /* If we are not in exact solving mode, just return */
-   if( !set->misc_exactsolve )
+   if( !set->misc_exactsolve || lp->hasprovedbound )
       return SCIP_OKAY;
 
    assert(set->misc_exactsolve);
