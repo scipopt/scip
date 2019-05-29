@@ -1162,7 +1162,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
    viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
 
-   SCIPdebugMsg(scip, "sepaSum %d children sol %p: rowprep viol %g (reliable: %d min: %g)\n", SCIPgetConsExprExprNChildren(expr), sol, viol, violreliable, mincutviolation);
+   SCIPdebugMsg(scip, "sepaSum %p with %d children sol %p: rowprep viol %g (reliable: %d min: %g)\n", (void*) expr, SCIPgetConsExprExprNChildren(expr), sol, viol, violreliable, mincutviolation);
    if( SCIPisZero(scip, viol) )
    {
       SCIPfreeRowprep(scip, &rowprep);
@@ -1178,11 +1178,12 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above minviolation
+   /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above mincutviolation
+    * (use a factor of 2 to get strictly above mincutviolation, also for numerics in the assert below)
     * if the violation is not reliable, then we better go to the more powerful cleanup
     */
    if( violreliable )
-      (void) SCIPscaleupRowprep(scip, rowprep, mincutviolation / viol, &success);
+      (void) SCIPscaleupRowprep(scip, rowprep, 2.0 * mincutviolation / viol, &success);
 
    if( !success )
    {
@@ -1198,6 +1199,11 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
+      /* this assert may fail in unfortunate situations, e.g., a violation may initially look reliable
+       * this should not really change due to scaleup, but if it barely looked reliable at the beginning
+       * (difference of exponents == 50), then sceleup can tip it over to non-reliable by increasing the
+       * difference of exponents by one (essentially due to a different "rounding")
+       */
       assert(SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable) >= mincutviolation && violreliable);
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
@@ -1221,6 +1227,12 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
+   /* else
+   {
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
+      SCIPdebugMsg(scip, "cleanup failed; viol %g reliable %u\n", viol, violreliable);
+      SCIPprintRowprep(scip, rowprep, NULL);
+   } */
 
    /* free rowprep */
    SCIPfreeRowprep(scip, &rowprep);
@@ -1233,6 +1245,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 {
    SCIP_ROWPREP* rowprep;
    SCIP_Real violation;
+   SCIP_Real rowviol;
    SCIP_VAR* auxvar;
    int pos;
    int i;
@@ -1248,7 +1261,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
    violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
    assert(violation != 0.0);
 
-   SCIPdebugMsg(scip, "branchscoresum sol %p viol %g\n", sol, violation);
+   SCIPdebugMsg(scip, "branchscoresum %p sol %p viol %g\n", (void*)expr, sol, violation);
 
    /* create rowprep */
    SCIP_CALL( separatePointSum(scip, expr, violation > 0.0, &rowprep) );
@@ -1256,16 +1269,16 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 
    /* clean-up rowprep and remember where modifications happened */
    rowprep->recordmodifications = TRUE;
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPfeastol(scip), NULL, NULL) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPfeastol(scip), &rowviol, NULL) );
 
    SCIPdebugMsg(scip, "cleanupRowprep modified %d coefficents and %smodified side\n", rowprep->nmodifiedvars, rowprep->modifiedside ? "" : "not ");
 
    /* separation must have failed because we had to relax the row (?)
     * or the minimal cut violation was too large during separation
-    * or the cut violation was not reliable numerically
+    * or the cut violation was not reliable numerically (before cleanup or after cleanup, which may have reordered terms, which can lead to a different violation if unreliable)
     * or the LP could not be solved (enfops)
     */
-   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || !SCIPisRowprepViolationReliable(scip, rowprep, sol) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
+   assert(rowprep->nmodifiedvars > 0 || rowprep->modifiedside || violation <= SCIPfeastol(scip) || rowviol <= SCIPfeastol(scip) || !SCIPisRowprepViolationReliable(scip, rowprep, sol) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL);
 
    /* if no modifications in coefficients, then we cannot point to any branching candidates */
    if( rowprep->nmodifiedvars == 0 )
