@@ -314,6 +314,20 @@ void RdivReal(
    SCIP_Real             op2                 /**< second operand */
    );
 
+/* Computes res += op1 * op2 and saves the result in res */
+void RaddProd(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
+   );
+
+/* Computes res -= op1 * op2 and saves the result in res */
+void RdiffProd(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
+   );
+
 /** set res to -op */
 EXTERN
 void Rneg(

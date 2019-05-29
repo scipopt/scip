@@ -520,19 +520,15 @@ void Radd(
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
 
-   if( op1->isinf && op2->isinf )
+   if( op1->isinf || op2->isinf )
    {
-      Rset(res, op1);
-      if( op1->r->sign() != op2->r->sign() )
+      Rset(res, op1->isinf ? op1 : op2 );
+      if( op1->r->sign() != op2->r->sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
          SCIPABORT();
       }
    }
-   else if( op1->isinf )
-      Rset(res, op1);
-   else if( op2->isinf )
-      Rset(res, op2);
    else
    {
       res->isinf = FALSE;
@@ -550,10 +546,7 @@ void RaddReal(
 {
    assert(res != NULL && rat != NULL);
    if( rat->isinf )
-   {
-      res->isinf = TRUE;
-      res->r = rat->r;
-   }
+      Rset(res, rat);
    else
    {
       res->isinf = FALSE;
@@ -562,7 +555,7 @@ void RaddReal(
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
-/** subtract two rationals and save the result in res*/
+/*** subtract two rationals and save the result in res*/
 void Rdiff(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -571,19 +564,15 @@ void Rdiff(
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
 
-   if( op1->isinf && op2->isinf )
+   if( op1->isinf || op2->isinf )
    {
-      Rset(res, op1);
-      if( op1->r->sign() != op2->r->sign() )
+      Rset(res, op1->isinf ? op1 : op2 );
+      if( op1->r->sign() != op2->r->sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
          SCIPABORT();
       }
    }
-   else if( op1->isinf )
-      Rset(res, op1);
-   else if( op2->isinf )
-      Rneg(res, op2);
    else
    {
       res->isinf = FALSE;
@@ -602,10 +591,7 @@ void RdiffReal(
    assert(res != NULL && rat != NULL);
 
    if( rat->isinf )
-   {
-      res->isinf = TRUE;
-      res->r = rat->r;
-   }
+      Rset(res, rat);
    else
    {
       res->isinf = FALSE;
@@ -729,6 +715,66 @@ void RdivReal(
    RmultReal(res, op1, 1.0 / op2 );
 }
 
+/* Computes res += op1 * op2 and saves the result in res */
+void RaddProd(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf || op2->isinf )
+   {
+      if( op1->r->is_zero() || op2->r->is_zero() )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         *res->r = op1->r->sign() * op2->r->sign();
+         res->isinf = TRUE;
+         res->fpexact = SCIP_FPEXACT_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      *(res->r) += *(op1->r) * (*(op2->r));
+   }
+   res->fpexact = SCIP_FPEXACT_UNKNOWN;
+}
+
+/* Computes res -= op1 * op2 and saves the result in res */
+void RdiffProd(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Rational*        op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf || op2->isinf )
+   {
+      if( op1->r->is_zero() || op2->r->is_zero() )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         *res->r = op1->r->sign() * op2->r->sign();
+         res->isinf = TRUE;
+         res->fpexact = SCIP_FPEXACT_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      *(res->r) -= *(op1->r) * (*(op2->r));
+   }
+   res->fpexact = SCIP_FPEXACT_UNKNOWN;
+}
+
 /** set res to -op */
 void Rneg(
    SCIP_Rational*        res,                /**< the result */
@@ -848,17 +894,10 @@ SCIP_Bool RisEqual(
 {
    assert(r1 != NULL && r2 != NULL);
 
-   if( r1->isinf )
-   {
-      if( !r2->isinf )
-         return FALSE;
-      else
-         return *(r1->r) == *(r2->r);
-   }
-   else if( r2->isinf )
-      return FALSE;
-   else
-      return *(r1->r) == *(r2->r);
+   if( *(r1->r) == *(r2->r) )
+      return (r1->isinf == r2->isinf);
+
+   return FALSE;
 }
 
 /** check if a rational and a real are equal */
@@ -869,12 +908,7 @@ SCIP_Bool RisEqualReal(
 {
    assert(r1 != NULL);
 
-   if( r1->isinf )
-   {
-      return FALSE;
-   }
-   else
-      return *(r1->r) == r2;
+   return !r1->isinf && *(r1->r) == r2;
 }
 
 /** check if real approx of rational and a real are equal */
