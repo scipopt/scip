@@ -1061,10 +1061,10 @@ SCIP_RETCODE SCIPsolexSetVal(
 
             SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
             obj = SCIPvarGetObjExact(var);
-            Rmult(tmp, obj, oldval);
-            Rdiff(sol->obj, sol->obj, tmp);
-            Rmult(tmp, obj, val);
-            Radd(sol->obj, sol->obj, tmp);
+            RdiffProd(sol->obj, obj, oldval);
+
+            RaddProd(sol->obj, obj, val);
+
          }
       }
       else
@@ -1081,10 +1081,10 @@ SCIP_RETCODE SCIPsolexSetVal(
          SCIP_Rational* obj;
          SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
          obj = SCIPvarGetObjExact(var);
-         Rmult(tmp, obj, oldval);
-         Rdiff(sol->obj, sol->obj, tmp);
-         Rmult(tmp, obj, val);
-         Radd(sol->obj, sol->obj, tmp);
+         RdiffProd(sol->obj, obj, oldval);
+
+         RaddProd(sol->obj, obj, val);
+
       }
       return SCIP_OKAY;
 

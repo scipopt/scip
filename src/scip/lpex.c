@@ -4269,8 +4269,8 @@ void SCIProwexGetSolActivity(
             RmultReal(solval, solval, 0.5);
       }
 
-      Rmult(solval, solval, rowex->vals[i]);
-      Radd(result, result, solval);
+      RaddProd(result, solval, rowex->vals[i]);
+
    }
 
    RdeleteTemp(set->buffer, &solval);
@@ -4473,8 +4473,8 @@ void SCIProwexRecalcLPActivity(
       assert(!RisInfinity(colex->primsol));
       assert(col->lppos >= 0);
       assert(row->linkpos[c] >= 0);
-      Rmult(tmp, rowex->vals[c], colex->primsol);
-      Radd(rowex->activity, rowex->activity, tmp);
+      RaddProd(rowex->activity, rowex->vals[c], colex->primsol);
+
    }
 
    if( row->nunlinked > 0 )
@@ -4490,8 +4490,8 @@ void SCIProwexRecalcLPActivity(
          assert(col->lppos == -1 || row->linkpos[c] == -1);
          if( col->lppos >= 0 )
          {
-            Rmult(tmp, rowex->vals[c], colex->primsol);
-            Radd(rowex->activity, rowex->activity, tmp);
+            RaddProd(rowex->activity, rowex->vals[c], colex->primsol);
+
          }
       }
    }
@@ -5443,8 +5443,8 @@ SCIP_RETCODE SCIPlpexGetSol(
          stillprimalfeasible =
             (RisNegInfinity(lpicols[c]->lb) || !RisLT(lpicols[c]->primsol, lpicols[c]->lb))
             && (RisInfinity(lpicols[c]->ub) || !RisGT(lpicols[c]->primsol, lpicols[c]->ub));
-         Rmult(tmp, lpicols[c]->primsol, lpicols[c]->obj);
-         Radd(primalbound, primalbound, tmp);
+         RaddProd(primalbound, lpicols[c]->primsol, lpicols[c]->obj);
+
       }
 
       /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
@@ -5480,13 +5480,13 @@ SCIP_RETCODE SCIPlpexGetSol(
       {
          if( RisPositive(lpicols[c]->redcost) && !RisNegInfinity(lpicols[c]->lb) )
          {
-            Rmult(tmp, lpicols[c]->redcost, lpicols[c]->lb);
-            Radd(dualbound, dualbound, tmp);
+            RaddProd(dualbound, lpicols[c]->redcost, lpicols[c]->lb);
+
          }
          else if( RisNegative(lpicols[c]->redcost) && !RisInfinity(lpicols[c]->ub) )
          {
-            Rmult(tmp, lpicols[c]->redcost, lpicols[c]->ub);
-            Radd(dualbound, dualbound, tmp);
+            RaddProd(dualbound, lpicols[c]->redcost, lpicols[c]->ub);
+
          }
       }
    }
@@ -5535,14 +5535,14 @@ SCIP_RETCODE SCIPlpexGetSol(
          if( RisPositive(lpirows[r]->dualsol) && !RisNegInfinity(lpirows[r]->lhs) )
          {
             Rdiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
-            Rmult(tmp, tmp, lpirows[r]->dualsol);
-            Radd(dualbound, dualbound, tmp);
+            RaddProd(dualbound, tmp, lpirows[r]->dualsol);
+
          }
          else if( RisNegative(lpirows[r]->dualsol) && !RisInfinity(lpirows[r]->rhs) )
          {
             Rdiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
-            Rmult(tmp, tmp, lpirows[r]->dualsol);
-            Radd(dualbound, dualbound, tmp);
+            RaddProd(dualbound, tmp, lpirows[r]->dualsol);
+
          }
       }
    }
@@ -5674,8 +5674,8 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
 
       if( !RisZero(ray[c]) )
       {
-         Rmult(tmp, ray[c], col->obj);
-         Radd(rayobjval, rayobjval, tmp);
+         RaddProd(rayobjval, ray[c], col->obj);
+
       }
 
       /* Many LP solvers cannot directly provide a feasible solution if they detected unboundedness. We therefore first
@@ -5726,8 +5726,8 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
 
             if( col->lppos >= 0 )
             {
-               Rmult(tmp, row->vals[c], primsol[col->lppos]);
-               Radd(act, act, tmp);
+               RaddProd(act, row->vals[c], primsol[col->lppos]);
+
             }
          }
       }
@@ -6016,8 +6016,8 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
                continue;
 
             assert(pos >= 0 && pos < nlpicols);
-            Rmult(tmp, dualfarkas[r], lpirows[r]->vals[c]);
-            Radd(farkascoefs[pos], farkascoefs[pos], tmp);
+            RaddProd(farkascoefs[pos], dualfarkas[r], lpirows[r]->vals[c]);
+
          }
 
          /* the row contributes with its left-hand side to the proof */
@@ -6025,16 +6025,16 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
          {
             assert(!RisNegInfinity(lpirows[r]->lhs));
             Rdiff(tmp, lpirows[r]->lhs, lpirows[r]->constant);
-            Rmult(tmp, tmp, dualfarkas[r]);
-            Radd(farkaslhs, farkaslhs, tmp);
+            RaddProd(farkaslhs, tmp, dualfarkas[r]);
+
          }
          /* the row contributes with its right-hand side to the proof */
          else if( RisNegative(dualfarkas[r]) )
          {
             assert(!RisInfinity(lpirows[r]->rhs));
             Rdiff(tmp, lpirows[r]->rhs, lpirows[r]->constant);
-            Rmult(tmp, tmp, dualfarkas[r]);
-            Radd(farkaslhs, farkaslhs, tmp);
+            RaddProd(farkaslhs, tmp, dualfarkas[r]);
+
          }
       }
    }

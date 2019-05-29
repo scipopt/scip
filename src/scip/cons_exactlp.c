@@ -1328,8 +1328,8 @@ void consdataComputePseudoActivity(
          }
          else
          {
-            Rmult(val, val, bound);
-            Radd(pseudoactivity, pseudoactivity, val);
+            RaddProd(pseudoactivity, val, bound);
+
          }
       }
    }
@@ -1362,8 +1362,8 @@ void consdataRecomputeMinactivity(
       bound = RisPositive(consdata->vals[i]) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
       if( !RisAbsInfinity(bound) )
       {
-         Rmult(addval, consdata->vals[i], bound);
-         Radd(consdata->minactivity, consdata->minactivity, addval);
+         RaddProd(consdata->minactivity, consdata->vals[i], bound);
+
       }
    }
 
@@ -1394,8 +1394,8 @@ void consdataRecomputeMaxactivity(
       bound = RisPositive(consdata->vals[i]) ? SCIPvarGetUbLocalExact(consdata->vars[i]) : SCIPvarGetLbLocalExact(consdata->vars[i]);
       if( !RisAbsInfinity(bound) )
       {
-         Rmult(addval, consdata->vals[i], bound);
-         Radd(consdata->minactivity, consdata->minactivity, addval);
+         RaddProd(consdata->minactivity, consdata->vals[i], bound);
+
       }
    }
 
@@ -1426,8 +1426,8 @@ void consdataRecomputeGlbMinactivity(
       bound = RisPositive(consdata->vals[i]) ? SCIPvarGetLbGlobalExact(consdata->vars[i]) : SCIPvarGetUbGlobalExact(consdata->vars[i]);
       if( !RisAbsInfinity(bound) )
       {
-         Rmult(tmp, consdata->vals[i], bound);
-         Radd(consdata->glbminactivity, consdata->glbminactivity, tmp);
+         RaddProd(consdata->glbminactivity, consdata->vals[i], bound);
+
       }
    }
 
@@ -1458,8 +1458,8 @@ void consdataRecomputeGlbMaxactivity(
       bound = RisPositive(consdata->vals[i]) ? SCIPvarGetUbGlobalExact(consdata->vars[i]) : SCIPvarGetLbGlobalExact(consdata->vars[i]);
       if( RisAbsInfinity(bound) )
       {
-         Rmult(tmp, consdata->vals[i], bound);
-         Radd(consdata->glbmaxactivity, consdata->glbmaxactivity, tmp);
+         RaddProd(consdata->glbmaxactivity, consdata->vals[i], bound);
+
       }
    }
 
@@ -2591,14 +2591,14 @@ void consdataGetReliableResidualActivity(
          if( isminresact )
          {
             assert(!RisNegInfinity(lb));
-            Rmult(tmp, val, lb);
-            Radd(resactivity, resactivity, tmp);
+            RaddProd(resactivity, val, lb);
+
          }
          else
          {
             assert(!RisInfinity(ub));
-            Rmult(tmp, val, ub);
-            Radd(resactivity, resactivity, tmp);
+            RaddProd(resactivity, val, ub);
+
          }
       }
       else
@@ -2606,14 +2606,14 @@ void consdataGetReliableResidualActivity(
          if( isminresact)
          {
             assert(!RisInfinity(ub));
-            Rmult(tmp, val, ub);
-            Radd(resactivity, resactivity, tmp);
+            RaddProd(resactivity, val, ub);
+
          }
          else
          {
             assert(!RisNegInfinity(lb));
-            Rmult(tmp, val, lb);
-            Radd(resactivity, resactivity, tmp);
+            RaddProd(resactivity, val, lb);
+
          }
       }
    }
@@ -2987,8 +2987,8 @@ void consdataGetActivity(
             ++nneginf;
          else
          {
-            Rmult(solval, solval, consdata->vals[v]);
-            Radd(activity, activity, solval);
+            RaddProd(activity, solval, consdata->vals[v]);
+
          }
       }
       assert(nneginf >= 0 && nposinf >= 0);

@@ -1290,8 +1290,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( usefarkas )
          {
             val = certificate->workbound->boundval;
-            Rmult(tmp, vals[len], val);
-            Radd(farkasrhs, farkasrhs, tmp);
+            RaddProd(farkasrhs, vals[len], val);
+
          }
          len++;
       }
@@ -1324,8 +1324,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( usefarkas )
          {
             val = RisPositive(vals[len]) ? row->lhs : row->rhs;
-            Rmult(tmp, vals[len], val);
-            Radd(farkasrhs, farkasrhs, tmp);
+            RaddProd(farkasrhs, vals[len], val);
+
          }
 
          len++;
