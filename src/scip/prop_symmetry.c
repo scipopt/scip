@@ -212,7 +212,6 @@ struct SCIP_PropData
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
-   SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
 
    /* for symmetry constraints */
@@ -1816,6 +1815,7 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 {
+   SCIP_Bool successful;
    int maxgenerators;
    int type = 0;
    int nvars;
@@ -1918,13 +1918,13 @@ SCIP_RETCODE determineSymmetry(
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
          &propdata->npermvars, &propdata->permvars, &propdata->permvarsobj, &propdata->nperms,
          &propdata->nmaxperms, &propdata->perms, &propdata->permstrans,
-         &propdata->log10groupsize, propdata->usesymmetry, &propdata->successful) );
+         &propdata->log10groupsize, propdata->usesymmetry, &successful) );
 
    /* store restart level */
    propdata->lastrestart = SCIPgetNRuns(scip);
 
    /* output statistics */
-   if ( ! propdata->successful )
+   if ( ! successful )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
    else if ( propdata->nperms == 0 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
@@ -3456,7 +3456,6 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
 
-   propdata->successful = FALSE;
    propdata->usesymmetry = 0;
    propdata->symconsenabled = FALSE;
    propdata->addedconss = FALSE;
@@ -3562,7 +3561,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->norbitvars = 0;
    propdata->binvaraffected = FALSE;
 
-   propdata->successful = FALSE;
    propdata->usesymmetry = 0;
    propdata->symconsenabled = FALSE;
    propdata->addedconss = FALSE;
@@ -3802,7 +3800,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       propdata->norbitvars = 0;
       propdata->binvaraffected = FALSE;
       propdata->computedsymmetry = FALSE;
-      propdata->successful = FALSE;
       propdata->ncomponents = -1;
       propdata->nbg0 = 0;
       propdata->nbg1 = 0;
